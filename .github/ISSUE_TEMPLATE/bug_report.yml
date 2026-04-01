@@ -1,0 +1,93 @@
+name: 🐛 Bug Report
+description: Report something that is not working correctly.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below as completely as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: Questorr Version
+      description: Which version are you running? (check the footer of the dashboard or `package.json`)
+      placeholder: "e.g. 2.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker Compose
+        - Portainer Stack
+        - Manual (Node.js)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I click X, Y happens instead of Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste any relevant log output from the Logs tab or Docker logs. This will be automatically formatted as code.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please provide the following information:
+      placeholder: |
+        - OS: Ubuntu 22.04 / Windows 11 / Synology DSM 7
+        - Browser: Chrome 120 / Firefox 121
+        - Jellyfin version: 10.9.x
+        - Jellyseerr/Overseerr version: x.x.x
+        - Behind reverse proxy: Yes (Nginx Proxy Manager) / No
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: I have checked the logs for relevant error messages.
+          required: true
+        - label: I am running the latest version of Questorr.
+          required: false
