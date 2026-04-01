@@ -232,7 +232,7 @@ docker compose up -d
 
 ---
 
-## 📄 [License](https://www.gnu.org/licenses/agpl-3.0.html#license-text)
+## 📄 [License](https://www.gnu.org/licenses/agpl-3.0.html)
 
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
