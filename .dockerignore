@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+config.json
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+DOCKER_BUILD.md
+LICENSE
+.github
+.claude
+.DS_Store
+*.log
+logs/

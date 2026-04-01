@@ -1,0 +1,39 @@
+services:
+  questorr:
+    image: jellyforge/questorr:latest
+    container_name: questorr
+    restart: unless-stopped
+    environment:
+      - WEBHOOK_PORT=8282
+      - NODE_ENV=production
+      - BIND_HOST=0.0.0.0
+      # Optional: set LOG_LEVEL to verbose or debug for more detailed logs
+      # - LOG_LEVEL=verbose
+    ports:
+      - "8282:8282"
+    volumes:
+      # Config persists in ./questorr-data/config.json
+      # Change "./questorr-data" to your preferred path
+      - ./questorr-data:/usr/src/app/config
+    # For non-root: uncomment below, manually create ./questorr-data, set to your user/group ID
+    # user: "1000:1000"
+    labels:
+      - "org.opencontainers.image.title=Questorr"
+      - "org.opencontainers.image.description=Discord bot for requesting media and Jellyfin notifications"
+      - "org.unraid.icon=https://raw.githubusercontent.com/Jellyforge-Dev/Questorr/main/assets/logo.png"
+      - "webui.port=8282"
+      - "webui.protocol=http"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:8282/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
