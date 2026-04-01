@@ -73,6 +73,24 @@ services:
 
 Then open `http://your-server-ip:8282` and follow the setup wizard.
 
+## 🔒 Security & Reverse Proxy
+
+By default, the port mapping `8282:8282` in `docker-compose.yml` binds Questorr directly to all network interfaces of your host (`0.0.0.0`). This means Questorr is reachable from your local network without going through a reverse proxy.
+
+**If you use a reverse proxy** (Nginx Proxy Manager, Traefik, Caddy etc.), it is recommended to bind the port to `localhost` only so that Questorr is only accessible through the proxy:
+
+```yaml
+ports:
+  # Behind a reverse proxy (recommended):
+  - "127.0.0.1:8282:8282"
+
+  # Accessible directly from your network:
+  # - "8282:8282"
+```
+
+> **Note:** `BIND_HOST=0.0.0.0` is required for Docker's internal routing and should not be changed — it only controls how the Node.js process listens *inside* the container, not how the port is exposed to the outside.
+
+---
 ### Docker Tags
 
 | Tag | Description |
@@ -80,6 +98,7 @@ Then open `http://your-server-ip:8282` and follow the setup wizard.
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
 | `2.1.0` | Specific version |
+---
 
 ### Manual (Development)
 
@@ -137,27 +156,6 @@ Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders*
 | `LOG_LEVEL` | `error` / `warn` / `info` / `verbose` / `debug` | `info` |
 
 All other settings are managed through the web dashboard and saved to `config/config.json`.
-
----
-
-## 🔒 Security & Reverse Proxy
-
-By default, the port mapping `8282:8282` in `docker-compose.yml` binds Questorr directly to all network interfaces of your host (`0.0.0.0`). This means Questorr is reachable from your local network without going through a reverse proxy.
-
-**If you use a reverse proxy** (Nginx Proxy Manager, Traefik, Caddy etc.), it is recommended to bind the port to `localhost` only so that Questorr is only accessible through the proxy:
-
-```yaml
-ports:
-  # Behind a reverse proxy (recommended):
-  - "127.0.0.1:8282:8282"
-
-  # Accessible directly from your network:
-  # - "8282:8282"
-```
-
-> **Note:** `BIND_HOST=0.0.0.0` is required for Docker's internal routing and should not be changed — it only controls how the Node.js process listens *inside* the container, not how the port is exposed to the outside.
-
----
 
 ## 📸 Screenshots
 
