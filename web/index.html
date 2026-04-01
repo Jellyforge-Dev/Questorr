@@ -44,7 +44,7 @@
             </li>
             <li>
               <a
-                href="https://discord.gg/J9V9ySZQKf"
+                href="https://discord.gg/X2jn8vhrN6"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -849,39 +849,53 @@
             <div class="about-content">
               <h2 data-i18n="about.title">About Questorr</h2>
               <p class="about-description" data-i18n="about.description">
-                <strong class="anchor-highlight">Questorr</strong> ist eine selbst gehostete Bridge zwischen deinem <strong style="color: var(--blue);">Jellyfin</strong>-Medienserver und <strong style="color: var(--blue);">Discord</strong>. Benachrichtige deinen Discord-Kanal wenn neue Medien verfügbar sind,h <strong style="color: var(--blue);">Seerr</strong> integration, you can search and request movies and shows directly from Discord.
+                Questorr is a self-hosted bridge between your Jellyfin media server and Discord. It connects Jellyfin and Seerr so your community can search, request and track media — all without leaving Discord.
               </p>
 
               <div class="features-list">
                 <h3 class="features-title" data-i18n="about.features_title">Features</h3>
                 <ul>
-                  <li><i class="bi bi-search"></i><div data-i18n="about.feature_search"><code>/search &lt;title&gt;</code> Search for a movie or show with auto-suggestions. An embed with detailed information is shown, from which you can request the media. For <strong style="color: var(--blue);">TV shows</strong>, you have the option to select the desired seasons for the request.</div></li>
-                  <li><i class="bi bi-send-fill"></i><div data-i18n="about.feature_request"><code>/request &lt;title&gt;</code> Instantly send a request for your chosen movie or show directly to <strong style="color: var(--blue);">Seerr</strong>. For <strong style="color: var(--blue);">TV shows</strong>, this automatically requests all seasons.</div></li>
-                  <li><i class="bi bi-bell-fill"></i><div data-i18n="about.feature_notifications">Receive beautifully formatted notifications on your selected <strong style="color: var(--blue);">Discord</strong> channel whenever new media is added to your <strong style="color: var(--blue);">Jellyfin</strong> library.</div></li>
-                  <li><i class="bi bi-film"></i><div data-i18n="about.feature_databases">Using the <strong style="color: var(--blue);">TMDB</strong> and <strong style="color: var(--blue);">OMDb</strong> databases, <strong style="color: var(--blue);">Discord</strong> messages get a beautiful and well-structured look, with essential information about the requested or added media content.</div></li>
-                  <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control permissions with <strong style="color: var(--blue);">role-based access</strong> (allowlist/blocklist), route notifications to different channels by <strong style="color: var(--blue);">Jellyfin library</strong>, and link users to <strong style="color: var(--blue);">Seerr</strong> accounts for accurate request tracking.</div></li>
-                  <li><i class="bi bi-chat-left-dots"></i><div data-i18n="about.feature_direct_messages">Get <strong style="color: var(--blue);">direct messages</strong> on <strong style="color: var(--blue);">Discord</strong> when requested content becomes available in your library. Never miss when your requests are ready!</div></li>
+                  <li><i class="bi bi-search"></i><div data-i18n="about.feature_search"><code>/search &lt;title&gt;</code> Search for movies and TV shows with auto-suggestions. A rich embed with poster, description, rating and genre is shown — request directly from the embed. For TV shows, you can select individual seasons.</div></li>
+                  <li><i class="bi bi-send-fill"></i><div data-i18n="about.feature_request"><code>/request &lt;title&gt;</code> Instantly send a media request to Seerr. For TV shows, all seasons are requested automatically. Optionally configure tag, server and quality profile selection.</div></li>
+                  <li><i class="bi bi-fire"></i><div data-i18n="about.feature_trending"><code>/trending</code> Browse the week's most popular movies and TV shows from TMDB — discover what's hot right now and request directly.</div></li>
+                  <li><i class="bi bi-bell-fill"></i><div data-i18n="about.feature_notifications">Receive rich Discord notifications for every Seerr event: pending approval, approved, available, declined, failed and issues — each routed to the right channel automatically.</div></li>
+                  <li><i class="bi bi-diagram-3-fill"></i><div data-i18n="about.feature_routing">Automatically route <strong style="color: var(--blue);">MEDIA_AVAILABLE</strong> notifications to the correct Discord channel based on the Radarr/Sonarr root folder — one channel per library category.</div></li>
+                  <li><i class="bi bi-film"></i><div data-i18n="about.feature_databases">Embeds are enriched with data from <strong style="color: var(--blue);">TMDB</strong> and <strong style="color: var(--blue);">OMDb</strong>: posters, backdrops, IMDb ratings, runtime, genre and a direct Watch Now link.</div></li>
+                  <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
+                  <li><i class="bi bi-chat-left-dots"></i><div data-i18n="about.feature_direct_messages">Users receive a <strong style="color: var(--blue);">private DM</strong> when their requested content becomes available on Jellyfin — so nobody misses the moment their request is ready.</div></li>
+                  <li><i class="bi bi-calendar-heart"></i><div data-i18n="about.feature_daily">Post a <strong style="color: var(--blue);">Daily Random Pick</strong> from TMDB or a <strong style="color: var(--blue);">Daily Recommendation</strong> from your existing Jellyfin library into a Discord channel — great for community engagement.</div></li>
+                  <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
                 </ul>
               </div>
 
               <div class="about-cards">
                 <div class="about-card support-card">
                   <i class="bi bi-heart-fill"></i>
-                  <h3 data-i18n="about.support_title">Projekt unterstützen</h3>
-                  <p data-i18n="about.support_description">Wenn dir Questorr gefällt, unterstütze gerne die Entwicklung. Jeder Kaffee hilft bei nächtlichen Coding-Sessions!</p>
-                  <a href="https://ko-fi.com/jellyforgedev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.buy_coffee">☕ ❤️ Kauf mir einen Kaffee</a>
+                  <h3 data-i18n="about.support_title">Support the Project</h3>
+                  <p data-i18n="about.support_description">If you find Questorr useful, consider supporting its development. Every coffee helps during late-night coding sessions!</p>
+                  <a href="https://ko-fi.com/jellyforgedev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.buy_coffee">☕❤️ Buy me a Coffee</a>
                 </div>
                 <div class="about-card contribute-card">
                   <i class="bi bi-github"></i>
                   <h3 data-i18n="about.contribute_title">Contribute</h3>
-                  <p data-i18n="about.contribute_description">Questorr ist Open-Source! Wenn du Entwickler bist, sind deine Beiträge willkommen. Schau dir das Projekt auf GitHub an.</p>
-                  <a href="https://github.com/Jellyforge-Dev/Questorr" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.view_github">Auf GitHub ansehen</a>
+                  <p data-i18n="about.contribute_description">Questorr is open-source under the AGPL-3.0 license. Contributions, bug reports and feature requests are very welcome — check out the project on GitHub.</p>
+                  <a href="https://github.com/Jellyforge-Dev/Questorr" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.view_github">View on GitHub</a>
+                </div>
+                <div class="about-card discord-card">
+                  <i class="bi bi-discord"></i>
+                  <h3 data-i18n="about.discord_title">Join the Community</h3>
+                  <p data-i18n="about.discord_description">Have questions or want to chat with other Questorr users? Join the Jellyforge Discord server.</p>
+                  <a href="https://discord.gg/J9V9ySZQKf" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.join_discord">Join Discord</a>
                 </div>
               </div>
 
               <div class="dev-footer">
                 <div class="dev-footer-right">
-                  <p>Danke dass du Questorr nutzt! Öffne gerne ein <a href="https://github.com/Jellyforge-Dev/Questorr/issues" target="_blank" rel="noopener noreferrer" style="color: var(--mauve);">GitHub Issue</a> bei Fragen oder Feedback.</p>
+                  <p>
+                    <span data-i18n="about.footer_thanks">Thank you for using Questorr! Feel free to open a</span>
+                    <a href="https://github.com/Jellyforge-Dev/Questorr/issues" target="_blank" rel="noopener noreferrer" style="color: var(--mauve);" data-i18n="about.footer_issue">GitHub Issue</a>
+                    <span data-i18n="about.footer_feedback">for questions or feedback.</span>
+                  </p>
                 </div>
               </div>
 

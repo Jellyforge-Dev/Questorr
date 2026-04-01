@@ -2,7 +2,9 @@
   "_meta": {
     "language_name": "Deutsch",
     "language_code": "de",
-    "contributors": ["Jellyforge-Dev"],
+    "contributors": [
+      "Jellyforge-Dev"
+    ],
     "completion": "100%",
     "last_updated": "2026-04-01",
     "notes": "Standardübersetzungen ins Deutsche"
@@ -385,20 +387,30 @@
   },
   "about": {
     "title": "Über Questorr",
-    "description": "Questorr ist eine selbst gehostete Bridge zwischen deinem Jellyfin-Medienserver und Discord.",
+    "description": "Questorr ist eine selbst gehostete Bridge zwischen deinem Jellyfin-Medienserver und Discord. Es verbindet Jellyfin und Seerr sodass deine Community Medien suchen, anfordern und verfolgen kann — ohne Discord zu verlassen.",
     "features_title": "Funktionen",
-    "feature_search": "Medien suchen",
-    "feature_request": "Medien anfordern",
-    "feature_notifications": "Benachrichtigungen",
-    "feature_databases": "Mediendatenbanken",
-    "feature_permissions": "Rollenberechtigungen",
-    "feature_direct_messages": "Direktnachrichten",
+    "feature_search": "<code>/search &lt;Titel&gt;</code> Filme und Serien mit Auto-Vorschlägen suchen. Ein schönes Embed mit Poster, Beschreibung, Bewertung und Genre wird angezeigt — direkt aus dem Embed anfordern. Bei Serien können einzelne Staffeln ausgewählt werden.",
+    "feature_request": "<code>/request &lt;Titel&gt;</code> Eine Medienanfrage direkt an Seerr senden. Bei Serien werden automatisch alle Staffeln angefragt. Optional: Tag-, Server- und Qualitätsprofil-Auswahl konfigurierbar.",
+    "feature_trending": "<code>/trending</code> Die beliebtesten Filme und Serien der Woche von TMDB durchstöbern — entdecke was gerade angesagt ist und fordere sie direkt an.",
+    "feature_notifications": "Schöne Discord-Benachrichtigungen für alle Seerr-Events: ausstehend, genehmigt, verfügbar, abgelehnt, fehlgeschlagen und Probleme — automatisch in den richtigen Kanal geroutet.",
+    "feature_routing": "Leite <strong style=\"color: var(--blue);\">MEDIA_AVAILABLE</strong>-Benachrichtigungen automatisch in den richtigen Discord-Kanal weiter — basierend auf dem Radarr/Sonarr Root-Folder. Ein Kanal pro Medienkategorie.",
+    "feature_databases": "Embeds werden mit Daten aus <strong style=\"color: var(--blue);\">TMDB</strong> und <strong style=\"color: var(--blue);\">OMDb</strong> angereichert: Poster, Backdrops, IMDb-Bewertungen, Laufzeit, Genre und ein direkter Jetzt ansehen-Link.",
+    "feature_permissions": "Steuere wer Bot-Befehle nutzen darf über Discord <strong style=\"color: var(--blue);\">Rollen Allowlist und Blocklist</strong>. Verknüpfe Discord-Accounts mit Seerr-Konten damit jede Anfrage dem richtigen Nutzer zugeordnet wird.",
+    "feature_direct_messages": "Nutzer erhalten eine <strong style=\"color: var(--blue);\">private Direktnachricht</strong> wenn ihr angeforderter Inhalt auf Jellyfin verfügbar ist — damit niemand den Moment verpasst.",
+    "feature_daily": "Poste täglich eine <strong style=\"color: var(--blue);\">Zufallsauswahl</strong> von TMDB oder eine <strong style=\"color: var(--blue);\">Empfehlung</strong> aus deiner Jellyfin-Bibliothek in einen Discord-Kanal — ideal für Community-Engagement.",
+    "feature_dashboard": "Alles über das <strong style=\"color: var(--blue);\">Web-Dashboard</strong> auf Port 8282 konfigurieren. Unterstützt Englisch und Deutsch, vollständig mobil-responsiv — funktioniert auf Smartphones und Tablets.",
     "support_title": "Projekt unterstützen",
-    "support_description": "Wenn dir Questorr gefällt, unterstütze gerne die Entwicklung. Jeder Kaffee hilft!",
+    "support_description": "Wenn dir Questorr gefällt, unterstütze gerne die Entwicklung. Jeder Kaffee hilft bei nächtlichen Coding-Sessions!",
     "contribute_title": "Mitmachen",
-    "contribute_description": "Questorr ist Open-Source! Beiträge sind willkommen. Schau dir das Projekt auf GitHub an.",
-    "buy_coffee": "Kauf mir einen Kaffee",
-    "view_github": "Auf GitHub ansehen"
+    "contribute_description": "Questorr ist Open-Source unter der AGPL-3.0-Lizenz. Beiträge, Bug-Reports und Feature-Requests sind sehr willkommen — schau dir das Projekt auf GitHub an.",
+    "buy_coffee": "☕❤️ Kauf mir einen Kaffee",
+    "view_github": "Auf GitHub ansehen",
+    "discord_title": "Community beitreten",
+    "discord_description": "Hast du Fragen oder möchtest dich mit anderen Questorr-Nutzern austauschen? Tritt dem Jellyforge Discord-Server bei.",
+    "join_discord": "Discord beitreten",
+    "footer_thanks": "Danke dass du Questorr nutzt! Öffne gerne ein",
+    "footer_issue": "GitHub Issue",
+    "footer_feedback": "bei Fragen oder Feedback."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

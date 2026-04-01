@@ -2,7 +2,9 @@
   "_meta": {
     "language_name": "English",
     "language_code": "en",
-    "contributors": ["Jellyforge-Dev"],
+    "contributors": [
+      "Jellyforge-Dev"
+    ],
     "completion": "100%",
     "last_updated": "2026-04-01",
     "notes": "Base English translations"
@@ -312,20 +314,30 @@
   },
   "about": {
     "title": "About Questorr",
-    "description": "Questorr is a self-hosted, lightweight bridge that connects your Jellyfin media server with Discord. It notifies you on a dedicated channel when new media is added to your library, and with Seerr integration, you can search and request movies and shows directly from Discord.",
+    "description": "Questorr is a self-hosted bridge between your Jellyfin media server and Discord. It connects Jellyfin and Seerr so your community can search, request and track media — all without leaving Discord.",
     "features_title": "Features",
-    "feature_search": "<code>/search &lt;title&gt;</code> Search for a movie or show with auto-suggestions. An embed with detailed information is shown, from which you can request the media. For <strong style=\"color: var(--blue);\">TV shows</strong>, you have the option to select the desired seasons for the request.",
-    "feature_request": "<code>/request &lt;title&gt;</code> Instantly send a request for your chosen movie or show directly to <strong style=\"color: var(--blue);\">Seerr</strong>. For <strong style=\"color: var(--blue);\">TV shows</strong>, this automatically requests all seasons.",
-    "feature_notifications": "Receive beautifully formatted notifications on your selected <strong style=\"color: var(--blue);\">Discord</strong> channel whenever new media is added to your <strong style=\"color: var(--blue);\">Jellyfin</strong> library.",
-    "feature_databases": "Using the <strong style=\"color: var(--blue);\">TMDB</strong> and <strong style=\"color: var(--blue);\">OMDb</strong> databases, <strong style=\"color: var(--blue);\">Discord</strong> messages get a beautiful and well-structured look, with essential information about the requested or added media content.",
-    "feature_permissions": "Control permissions with <strong style=\"color: var(--blue);\">role-based access</strong> (allowlist/blocklist), route notifications to different channels by <strong style=\"color: var(--blue);\">Jellyfin library</strong>, and link users to <strong style=\"color: var(--blue);\">Seerr</strong> accounts for accurate request tracking.",
-    "feature_direct_messages": "Get <strong style=\"color: var(--blue);\">direct messages</strong> on <strong style=\"color: var(--blue);\">Discord</strong> when requested content becomes available in your library. Never miss when your requests are ready!",
+    "feature_search": "<code>/search &lt;title&gt;</code> Search for movies and TV shows with auto-suggestions. A rich embed with poster, description, rating and genre is shown — request directly from the embed. For TV shows, you can select individual seasons.",
+    "feature_request": "<code>/request &lt;title&gt;</code> Instantly send a media request to Seerr. For TV shows, all seasons are requested automatically. Optionally configure tag, server and quality profile selection.",
+    "feature_trending": "<code>/trending</code> Browse the week's most popular movies and TV shows from TMDB — discover what's hot right now and request directly.",
+    "feature_notifications": "Receive rich Discord notifications for every Seerr event: pending approval, approved, available, declined, failed and issues — each routed to the right channel automatically.",
+    "feature_routing": "Automatically route <strong style=\"color: var(--blue);\">MEDIA_AVAILABLE</strong> notifications to the correct Discord channel based on the Radarr/Sonarr root folder — one channel per library category.",
+    "feature_databases": "Embeds are enriched with data from <strong style=\"color: var(--blue);\">TMDB</strong> and <strong style=\"color: var(--blue);\">OMDb</strong>: posters, backdrops, IMDb ratings, runtime, genre and a direct Watch Now link.",
+    "feature_permissions": "Control who can use bot commands via Discord <strong style=\"color: var(--blue);\">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.",
+    "feature_direct_messages": "Users receive a <strong style=\"color: var(--blue);\">private DM</strong> when their requested content becomes available on Jellyfin — so nobody misses the moment their request is ready.",
+    "feature_daily": "Post a <strong style=\"color: var(--blue);\">Daily Random Pick</strong> from TMDB or a <strong style=\"color: var(--blue);\">Daily Recommendation</strong> from your existing Jellyfin library into a Discord channel — great for community engagement.",
+    "feature_dashboard": "Configure everything through the <strong style=\"color: var(--blue);\">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.",
     "support_title": "Support the Project",
-    "support_description": "If you find Questorr useful, consider supporting its development. Every coffee helps fuel late-night coding sessions!",
+    "support_description": "If you find Questorr useful, consider supporting its development. Every coffee helps during late-night coding sessions!",
     "contribute_title": "Contribute",
-    "contribute_description": "Questorr is open-source! If you're a developer, your contributions are welcome. Check out the project on GitHub to get started.",
-    "buy_coffee": "Buy me a Coffee",
-    "view_github": "View on GitHub"
+    "contribute_description": "Questorr is open-source under the AGPL-3.0 license. Contributions, bug reports and feature requests are very welcome — check out the project on GitHub.",
+    "buy_coffee": "☕❤️ Buy me a Coffee",
+    "view_github": "View on GitHub",
+    "discord_title": "Join the Community",
+    "discord_description": "Have questions or want to chat with other Questorr users? Join the Jellyforge Discord server.",
+    "join_discord": "Join Discord",
+    "footer_thanks": "Thank you for using Questorr! Feel free to open a",
+    "footer_issue": "GitHub Issue",
+    "footer_feedback": "for questions or feedback."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",
