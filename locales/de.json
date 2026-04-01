@@ -303,7 +303,7 @@
     "report_bug": "Fehler melden",
     "logs": "Protokolle",
     "made_by": "erstellt von",
-    "buy_coffee": "☕ ♥️ Kauf mir einen Kaffee!",
+    "buy_coffee": "Kauf mir einen Kaffee",
     "inspired_by": "Inspiriert durch",
     "inspired_by_link": "openVESSL/Anchorr"
   },
@@ -403,7 +403,7 @@
     "support_description": "Wenn dir Questorr gefällt, unterstütze gerne die Entwicklung. Jeder Kaffee hilft bei nächtlichen Coding-Sessions!",
     "contribute_title": "Mitmachen",
     "contribute_description": "Questorr ist Open-Source unter der AGPL-3.0-Lizenz. Beiträge, Bug-Reports und Feature-Requests sind sehr willkommen — schau dir das Projekt auf GitHub an.",
-    "buy_coffee": "☕❤️ Kauf mir einen Kaffee",
+    "buy_coffee": "Kauf mir einen Kaffee",
     "view_github": "Auf GitHub ansehen",
     "discord_title": "Community beitreten",
     "discord_description": "Hast du Fragen oder möchtest dich mit anderen Questorr-Nutzern austauschen? Tritt dem Jellyforge Discord-Server bei.",
