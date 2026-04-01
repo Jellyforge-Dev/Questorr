@@ -4026,87 +4026,102 @@ body::after { display: none !important; }
   }
 }
 
+
+
 /* ── About Page Mobile ────────────────────────────────── */
 @media (max-width: 768px) {
 
+  /* Remove double padding - container already provides side padding */
   .about-page {
-    padding: 0 0.75rem 1.5rem 0.75rem !important;
+    padding: 0 0 1.5rem 0 !important;
   }
 
+  /* Title: match other section legends sizing */
   .about-content h2 {
-    font-size: 1.3rem !important;
+    font-size: 1.1rem !important;
     margin-bottom: 1rem !important;
-    letter-spacing: 0.05em !important;
   }
 
+  /* Description: left-aligned like config panes, readable size */
   .about-content .about-description {
-    font-size: 0.82rem !important;
-    margin-bottom: 1.25rem !important;
+    font-size: 0.85rem !important;
     text-align: left !important;
+    margin-bottom: 1rem !important;
+    line-height: 1.7 !important;
   }
 
-  /* Features list: tighter layout */
+  /* Features list: remove heavy padding */
   .features-list {
-    padding: 1rem 0.85rem !important;
-    margin: 1.25rem 0 !important;
-    border-radius: 12px !important;
+    padding: 1rem 0.75rem !important;
+    margin: 1rem 0 !important;
+    border-radius: 10px !important;
   }
 
   .features-list h3 {
-    font-size: 0.65rem !important;
-    margin-bottom: 0.85rem !important;
+    font-size: 0.7rem !important;
+    margin-bottom: 0.75rem !important;
   }
 
+  /* Feature items: icon stays left, text wraps naturally */
   .features-list li {
-    gap: 0.6rem !important;
-    padding: 0.65rem 0.6rem !important;
+    display: flex !important;
     align-items: flex-start !important;
+    gap: 0.65rem !important;
+    padding: 0.6rem 0.5rem !important;
   }
 
   .features-list li i {
-    font-size: 0.95rem !important;
-    margin-top: 2px !important;
+    font-size: 1rem !important;
+    margin-top: 1px !important;
     flex-shrink: 0 !important;
   }
 
-  .features-list li div {
-    font-size: 0.78rem !important;
-    line-height: 1.5 !important;
+  /* Feature text: normal readable size, no hover transform on mobile */
+  .features-list li div,
+  .features-list li div * {
+    font-size: 0.82rem !important;
+    line-height: 1.55 !important;
   }
 
-  /* Cards: single column stack */
+  .features-list li:hover {
+    transform: none !important;
+  }
+
+  /* Cards: single column */
   .about-cards {
     grid-template-columns: 1fr !important;
-    gap: 0.85rem !important;
-    margin-top: 1.25rem !important;
+    gap: 0.75rem !important;
+    margin-top: 1rem !important;
   }
 
   .about-card {
     padding: 1.25rem 1rem !important;
-    border-radius: 14px !important;
-  }
-
-  .about-card i {
-    font-size: 1.5rem !important;
+    border-radius: 12px !important;
   }
 
   .about-card h3 {
-    font-size: 0.85rem !important;
+    font-size: 0.88rem !important;
+    margin: 0.5rem 0 0.5rem !important;
   }
 
   .about-card p {
-    font-size: 0.78rem !important;
+    font-size: 0.8rem !important;
+    line-height: 1.6 !important;
   }
 
-  /* Footer text: center */
+  /* Footer: center */
   .dev-footer {
     text-align: center !important;
-    padding: 0.75rem !important;
-    font-size: 0.78rem !important;
+    font-size: 0.8rem !important;
+    margin-top: 1rem !important;
+  }
+
+  .dev-footer p {
+    text-align: center !important;
   }
 
   .version-footer {
     text-align: center !important;
-    font-size: 0.75rem !important;
+    margin-top: 0.75rem !important;
   }
 }
