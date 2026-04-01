@@ -3,3 +3,26 @@ contact_links:
   - name: 💬 Discussions
     url: https://github.com/Jellyforge-Dev/Questorr/discussions
     about: Ask general questions here
+
+# Optional: Default labels for templates
+template_selection:
+  - name: Bug report
+    description: Report a bug with detailed steps and expected behavior
+    about: Use this template for bug reports
+    label: bug
+    template: bug_report.md
+  - name: Feature request
+    description: Suggest a new feature or improvement
+    about: Use this template to propose new functionality
+    label: enhancement
+    template: feature_request.md
+  - name: Question
+    description: Ask a question or request clarification
+    about: Use this template for general questions
+    label: question
+    template: question.md
+  - name: Security
+    description: Report a security vulnerability
+    about: Use this template to report security issues
+    label: security
+    template: security.md
