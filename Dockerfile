@@ -23,7 +23,7 @@ EXPOSE 8282
 
 # Docker metadata
 LABEL org.opencontainers.image.title="Questorr" \
-      org.opencontainers.image.description="A self-hosted Discord bot for Jellyfin media requests via Jellyseerr" \
+      org.opencontainers.image.description="A self-hosted Discord bot for Jellyfin media requests via Seerr" \
       org.opencontainers.image.url="https://github.com/Jellyforge-Dev/Questorr" \
       org.opencontainers.image.documentation="https://github.com/Jellyforge-Dev/Questorr/blob/main/README.md" \
       org.opencontainers.image.source="https://github.com/Jellyforge-Dev/Questorr" \
