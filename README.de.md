@@ -232,9 +232,13 @@ docker compose up -d
 
 ---
 
-## 📄 Lizenz
+## 📄 [Lizenz](https://www.gnu.org/licenses/agpl-3.0.html)
 
-Veröffentlicht unter der [Unlicense](LICENSE) — Public Domain. Mach damit was du willst.
+Dieses Projekt steht unter der GNU Affero General Public License v3.0 (AGPL-3.0).
+
+Du darfst die Software verwenden, verändern und weitergeben, solange du dich an die Bedingungen der AGPL-3.0 hältst.
+
+Wenn du eine modifizierte Version als Dienst betreibst, musst du den Quellcode öffentlich zugänglich machen.
 
 ---
 
