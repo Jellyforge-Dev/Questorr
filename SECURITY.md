@@ -19,7 +19,7 @@ Please do **not** open a public GitHub issue for security vulnerabilities.
 Instead, report vulnerabilities privately by contacting the maintainer through one of the following private channels:
 
 - GitHub private security advisory, if enabled for this repository
-- Direct message via the official Questorr Discord server
+- Direct message via the official [JellyForge](https://discord.gg/X2jn8vhrN6) Discord server
 - Email, if a maintainer email is published in the future
 
 If no private reporting channel is available, open a minimal GitHub issue **without disclosing exploitation details**, only stating that you need a private contact for a security report.
