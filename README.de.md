@@ -64,7 +64,6 @@ services:
     environment:
       - WEBHOOK_PORT=8282
       - NODE_ENV=production
-      - BIND_HOST=0.0.0.0
     ports:
       - "8282:8282"
     volumes:
@@ -133,29 +132,9 @@ Unter **Schritt 2 → Root Folder → Kanal Zuordnung** auf **Root Folders laden
 | Variable | Beschreibung | Standard |
 |---|---|---|
 | `WEBHOOK_PORT` | Web-Server-Port | `8282` |
-| `BIND_HOST` | Bind-Adresse | `0.0.0.0` |
 | `LOG_LEVEL` | `error` / `warn` / `info` / `verbose` / `debug` | `info` |
 
 Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `config/config.json` gespeichert.
-
----
-
-## 🔒 Sicherheit & Reverse Proxy
-
-Standardmäßig bindet das Port-Mapping `8282:8282` in der `docker-compose.yml` Questorr direkt an alle Netzwerk-Interfaces des Hosts (`0.0.0.0`). Das bedeutet, Questorr ist aus dem lokalen Netzwerk erreichbar, ohne einen Reverse Proxy zu durchlaufen.
-
-**Wenn du einen Reverse Proxy verwendest** (Nginx Proxy Manager, Traefik, Caddy etc.) empfiehlt es sich, den Port nur auf `localhost` zu binden, sodass Questorr ausschließlich über den Proxy erreichbar ist:
-
-```yaml
-ports:
-  # Hinter einem Reverse Proxy (empfohlen):
-  - "127.0.0.1:8282:8282"
-
-  # Direkt aus dem Netzwerk erreichbar:
-  # - "8282:8282"
-```
-
-> **Hinweis:** `BIND_HOST=0.0.0.0` ist für das interne Docker-Routing erforderlich und sollte nicht geändert werden — es steuert nur, wie der Node.js-Prozess *innerhalb* des Containers lauscht, nicht wie der Port nach außen freigegeben wird.
 
 ---
 
