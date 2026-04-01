@@ -95,9 +95,6 @@ async function switchLanguage(language) {
   currentTranslations = await loadTranslations(language);
   updateUITranslations();
 
-  // Notify Ko-fi widget to re-render in the correct language
-  window.dispatchEvent(new CustomEvent("questorr-lang-changed", { detail: language }));
-
   // Save language preference
   try {
     await fetch('/api/config', {

@@ -979,42 +979,19 @@
             <button id="logs-page-btn" class="footer-btn" data-i18n="footer.logs">Logs</button>
             <span id="footer-version" style="color: var(--subtext0); font-size: 0.85rem; margin-left: 1rem;">...</span>
           </div>
-          <div id="kofi-widget-container"></div>
+          <div style="display:flex;align-items:center;">
+            <a id="kofi-btn" href="https://ko-fi.com/jellyforgedev" target="_blank" rel="noopener noreferrer"
+              style="display:inline-flex;align-items:center;gap:0.4rem;background:#40d1af;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.85rem;padding:0.4rem 0.9rem;border-radius:6px;text-decoration:none;line-height:1.4;">
+              <img src="https://storage.ko-fi.com/cdn/cup-border.png" alt="Ko-fi" style="height:1.2rem;width:auto;">
+              <span id="kofi-btn-text" data-i18n="footer.buy_coffee">Buy me a Coffee!</span>
+            </a>
+          </div>
         </div>
       </footer>
 
     <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
     <script src="script.js"></script>
-    <!-- Ko-fi Widget -->
-    <script type="text/javascript" src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
-    <script type="text/javascript">
-      function renderKofiWidget(lang) {
-        const container = document.getElementById("kofi-widget-container");
-        if (!container || typeof kofiwidget2 === "undefined") return;
-        container.innerHTML = "";
-        if (lang === "de") {
-          kofiwidget2.init("Kauf mir einen Kaffee", "#40d1af", "Z8Z41WWCH9");
-        } else {
-          kofiwidget2.init("Buy me a Coffee!", "#40d1af", "Z8Z41WWCH9");
-        }
-        kofiwidget2.draw();
-        // Move rendered widget into our container
-        const widget = document.getElementById("kofi-widget-overlay-iframe-id") ||
-                        document.querySelector(".kofi-widget-overlay");
-        if (widget && widget.parentNode !== container) {
-          container.appendChild(widget);
-        }
-      }
-      // Initial render after page load
-      window.addEventListener("load", function() {
-        const lang = localStorage.getItem("questorr_language") || "en";
-        renderKofiWidget(lang);
-      });
-      // Re-render when language changes
-      window.addEventListener("questorr-lang-changed", function(e) {
-        renderKofiWidget(e.detail || "en");
-      });
-    </script>
+
     <script>
       // Initialize Coloris globally on page load
       document.addEventListener("DOMContentLoaded", () => {
