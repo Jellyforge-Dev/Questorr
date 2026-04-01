@@ -43,8 +43,8 @@
 
 ## 📋 Voraussetzungen
 
-- Ein laufender **Jellyfin**-Server
-- Eine laufende **Seerr**-Instanz (Jellyseerr oder Overseerr, verbunden mit Radarr/Sonarr)
+- Ein laufender **[Jellyfin](https://jellyfin.org/)**-Server
+- Eine laufende **Seerr**-Instanz ([Seerr](https://github.com/seerr-team/seerr), verbunden mit [Radarr](https://github.com/Radarr/Radarr)/[Sonarr](https://github.com/Sonarr/Sonarr))
 - Ein **Discord**-Account mit Admin-Zugriff auf einen Server
 - **Docker** (empfohlen) oder Node.js 20+
 - API-Schlüssel: [TMDB](https://www.themoviedb.org/settings/api) (erforderlich) · [OMDb](http://www.omdbapi.com/apikey.aspx) (optional)
@@ -194,9 +194,9 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 <details>
 <summary><b>Schritt 7 – Verschiedenes & Protokolle</b></summary>
 
-| Verschiedenes 1/2 | Verschiedenes 2/2 | Protokolle |
+| Verschiedenes Teil 1 | Verschiedenes Teil 2 | Protokolle |
 |---|---|---|
-| ![Verschiedenes 1/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_1-2.png) | ![Verschiedenes 2/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_2-2.png) | ![Protokolle](assets/Screenshots/DE/Desktop/DE_protokolle.png) |
+| ![Verschiedenes Teil 1](assets/Screenshots/DE/Desktop/DE_verschiedenes_1-2.png) | ![Verschiedenes Teil 2](assets/Screenshots/DE/Desktop/DE_verschiedenes_2-2.png) | ![Protokolle](assets/Screenshots/DE/Desktop/DE_protokolle.png) |
 
 </details>
 
