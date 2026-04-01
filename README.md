@@ -8,10 +8,10 @@
   [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-  [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/X2jn8vhrN6)
+  [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/J9V9ySZQKf)
   
 
-  [🇩🇪 Deutsche Dokumentation](README.de.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Report a Bug](https://github.com/Jellyforge-Dev/Questorr/issues)
+  [🇩🇪 Deutsche Dokumentation](README.de.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Report a Bug](https://github.com/Jellyforge-Dev/Questorr/issues)
 
 </div>
 
@@ -245,6 +245,6 @@ If you run a modified version of this software as a service, you must make the s
 
 <div align="center">
 
-Forked from [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev)
+Forked from [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev)
 
 </div>
