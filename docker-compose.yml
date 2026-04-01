@@ -10,7 +10,10 @@ services:
       # Optional: set LOG_LEVEL to verbose or debug for more detailed logs
       # - LOG_LEVEL=verbose
     ports:
+      # Accessible directly from your network:
       - "8282:8282"
+      # Behind a reverse proxy (recommended, localhost only):
+      # - "127.0.0.1:8282:8282"
     volumes:
       # Config persists in ./questorr-data/config.json
       # Change "./questorr-data" to your preferred path

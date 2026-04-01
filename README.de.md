@@ -7,10 +7,10 @@
 
   [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
-  ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-  [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/J9V9ySZQKf)
+  [![License](https://img.shields.io/badge/License-Unlicense-lightgrey)](LICENSE)
+  [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/X2jn8vhrN6)
 
-  [🇬🇧 English Documentation](README.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
+  [🇬🇧 English Documentation](README.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
 
 </div>
 
@@ -43,8 +43,8 @@
 
 ## 📋 Voraussetzungen
 
-- Ein laufender **[Jellyfin](https://jellyfin.org/)**-Server
-- Eine laufende **Seerr**-Instanz ([Seerr](https://github.com/seerr-team/seerr), verbunden mit [Radarr](https://github.com/Radarr/Radarr)/[Sonarr](https://github.com/Sonarr/Sonarr))
+- Ein laufender **Jellyfin**-Server
+- Eine laufende **Seerr**-Instanz (Jellyseerr oder Overseerr, verbunden mit Radarr/Sonarr)
 - Ein **Discord**-Account mit Admin-Zugriff auf einen Server
 - **Docker** (empfohlen) oder Node.js 20+
 - API-Schlüssel: [TMDB](https://www.themoviedb.org/settings/api) (erforderlich) · [OMDb](http://www.omdbapi.com/apikey.aspx) (optional)
@@ -140,6 +140,25 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 ---
 
+## 🔒 Sicherheit & Reverse Proxy
+
+Standardmäßig bindet das Port-Mapping `8282:8282` in der `docker-compose.yml` Questorr direkt an alle Netzwerk-Interfaces des Hosts (`0.0.0.0`). Das bedeutet, Questorr ist aus dem lokalen Netzwerk erreichbar, ohne einen Reverse Proxy zu durchlaufen.
+
+**Wenn du einen Reverse Proxy verwendest** (Nginx Proxy Manager, Traefik, Caddy etc.) empfiehlt es sich, den Port nur auf `localhost` zu binden, sodass Questorr ausschließlich über den Proxy erreichbar ist:
+
+```yaml
+ports:
+  # Hinter einem Reverse Proxy (empfohlen):
+  - "127.0.0.1:8282:8282"
+
+  # Direkt aus dem Netzwerk erreichbar:
+  # - "8282:8282"
+```
+
+> **Hinweis:** `BIND_HOST=0.0.0.0` ist für das interne Docker-Routing erforderlich und sollte nicht geändert werden — es steuert nur, wie der Node.js-Prozess *innerhalb* des Containers lauscht, nicht wie der Port nach außen freigegeben wird.
+
+---
+
 ## 📸 Screenshots
 
 > Screenshots stammen aus einer Demo-Umgebung ohne echte Daten. Im Livebetrieb kann die Ansicht leicht abweichen.
@@ -194,9 +213,9 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 <details>
 <summary><b>Schritt 7 – Verschiedenes & Protokolle</b></summary>
 
-| Verschiedenes Teil 1 | Verschiedenes Teil 2 | Protokolle |
+| Verschiedenes 1/2 | Verschiedenes 2/2 | Protokolle |
 |---|---|---|
-| ![Verschiedenes Teil 1](assets/Screenshots/DE/Desktop/DE_verschiedenes_1-2.png) | ![Verschiedenes Teil 2](assets/Screenshots/DE/Desktop/DE_verschiedenes_2-2.png) | ![Protokolle](assets/Screenshots/DE/Desktop/DE_protokolle.png) |
+| ![Verschiedenes 1/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_1-2.png) | ![Verschiedenes 2/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_2-2.png) | ![Protokolle](assets/Screenshots/DE/Desktop/DE_protokolle.png) |
 
 </details>
 
@@ -232,18 +251,14 @@ docker compose up -d
 
 ---
 
-## 📄 [Lizenz](https://www.gnu.org/licenses/agpl-3.0.html)
+## 📄 Lizenz
 
-Dieses Projekt steht unter der GNU Affero General Public License v3.0 (AGPL-3.0).
-
-Du darfst die Software verwenden, verändern und weitergeben, solange du dich an die Bedingungen der AGPL-3.0 hältst.
-
-Wenn du eine modifizierte Version als Dienst betreibst, musst du den Quellcode öffentlich zugänglich machen.
+Veröffentlicht unter der [Unlicense](LICENSE) — Public Domain. Mach damit was du willst.
 
 ---
 
 <div align="center">
 
-Geforkt von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
+Geforkt von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
 
 </div>

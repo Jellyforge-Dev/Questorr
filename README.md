@@ -7,11 +7,10 @@
 
   [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
-  ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-  [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/J9V9ySZQKf)
-  
+  [![License](https://img.shields.io/badge/License-Unlicense-lightgrey)](LICENSE)
+  [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/X2jn8vhrN6)
 
-  [🇩🇪 Deutsche Dokumentation](README.de.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Report a Bug](https://github.com/Jellyforge-Dev/Questorr/issues)
+  [🇩🇪 Deutsche Dokumentation](README.de.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Report a Bug](https://github.com/Jellyforge-Dev/Questorr/issues)
 
 </div>
 
@@ -44,8 +43,8 @@
 
 ## 📋 Prerequisites
 
-- A running **[Jellyfin](https://jellyfin.org/)** server
-- A running **Seerr** instance ([Seerr](https://github.com/seerr-team/seerr), connected to [Radarr](https://github.com/Radarr/Radarr)/[Sonarr](https://github.com/Sonarr/Sonarr))
+- A running **Jellyfin** server
+- A running **Seerr** instance (Jellyseerr or Overseerr, connected to Radarr/Sonarr)
 - A **Discord** account with admin access to a server
 - **Docker** (recommended) or Node.js 20+
 - API keys: [TMDB](https://www.themoviedb.org/settings/api) (required) · [OMDb](http://www.omdbapi.com/apikey.aspx) (optional)
@@ -141,6 +140,25 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 ---
 
+## 🔒 Security & Reverse Proxy
+
+By default, the port mapping `8282:8282` in `docker-compose.yml` binds Questorr directly to all network interfaces of your host (`0.0.0.0`). This means Questorr is reachable from your local network without going through a reverse proxy.
+
+**If you use a reverse proxy** (Nginx Proxy Manager, Traefik, Caddy etc.), it is recommended to bind the port to `localhost` only so that Questorr is only accessible through the proxy:
+
+```yaml
+ports:
+  # Behind a reverse proxy (recommended):
+  - "127.0.0.1:8282:8282"
+
+  # Accessible directly from your network:
+  # - "8282:8282"
+```
+
+> **Note:** `BIND_HOST=0.0.0.0` is required for Docker's internal routing and should not be changed — it only controls how the Node.js process listens *inside* the container, not how the port is exposed to the outside.
+
+---
+
 ## 📸 Screenshots
 
 > Screenshots are from a demo environment with no real data. The live version may look slightly different.
@@ -161,7 +179,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 | Part 1 | Part 2 |
 |---|---|
-| ![Discord Part 1](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord Part 2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
 
 </details>
 
@@ -170,7 +188,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 | Part 1 | Part 2 |
 |---|---|
-| ![Seerr Part 1](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr Part 2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
 
 </details>
 
@@ -195,9 +213,9 @@ All other settings are managed through the web dashboard and saved to `config/co
 <details>
 <summary><b>Step 7 – Miscellaneous & Logs</b></summary>
 
-| Miscellaneous Part 1 | Miscellaneous Part 2 | Logs |
+| Miscellaneous 1/2 | Miscellaneous 2/2 | Logs |
 |---|---|---|
-| ![Misc Part 1](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Misc Part 2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
+| ![Misc 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Misc 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
 
 </details>
 
@@ -233,18 +251,14 @@ docker compose up -d
 
 ---
 
-## 📄 [License](https://www.gnu.org/licenses/agpl-3.0.html)
+## 📄 License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-
-You are free to use, modify, and distribute this software under the terms of the AGPL-3.0 license.
-
-If you run a modified version of this software as a service, you must make the source code available.
+Released under the [Unlicense](LICENSE) — public domain. Do whatever you want with the code.
 
 ---
 
 <div align="center">
 
-Forked from [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/J9V9ySZQKf) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev)
+Forked from [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev)
 
 </div>
