@@ -4025,3 +4025,88 @@ body::after { display: none !important; }
     width: 100% !important;
   }
 }
+
+/* ── About Page Mobile ────────────────────────────────── */
+@media (max-width: 768px) {
+
+  .about-page {
+    padding: 0 0.75rem 1.5rem 0.75rem !important;
+  }
+
+  .about-content h2 {
+    font-size: 1.3rem !important;
+    margin-bottom: 1rem !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .about-content .about-description {
+    font-size: 0.82rem !important;
+    margin-bottom: 1.25rem !important;
+    text-align: left !important;
+  }
+
+  /* Features list: tighter layout */
+  .features-list {
+    padding: 1rem 0.85rem !important;
+    margin: 1.25rem 0 !important;
+    border-radius: 12px !important;
+  }
+
+  .features-list h3 {
+    font-size: 0.65rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .features-list li {
+    gap: 0.6rem !important;
+    padding: 0.65rem 0.6rem !important;
+    align-items: flex-start !important;
+  }
+
+  .features-list li i {
+    font-size: 0.95rem !important;
+    margin-top: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .features-list li div {
+    font-size: 0.78rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Cards: single column stack */
+  .about-cards {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+    margin-top: 1.25rem !important;
+  }
+
+  .about-card {
+    padding: 1.25rem 1rem !important;
+    border-radius: 14px !important;
+  }
+
+  .about-card i {
+    font-size: 1.5rem !important;
+  }
+
+  .about-card h3 {
+    font-size: 0.85rem !important;
+  }
+
+  .about-card p {
+    font-size: 0.78rem !important;
+  }
+
+  /* Footer text: center */
+  .dev-footer {
+    text-align: center !important;
+    padding: 0.75rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .version-footer {
+    text-align: center !important;
+    font-size: 0.75rem !important;
+  }
+}
