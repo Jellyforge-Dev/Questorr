@@ -44,8 +44,8 @@
 
 ## 📋 Prerequisites
 
-- A running **Jellyfin** server
-- A running **Seerr** instance (Jellyseerr or Overseerr, connected to Radarr/Sonarr)
+- A running **[Jellyfin](https://jellyfin.org/)** server
+- A running **Seerr** instance ([Seerr](https://github.com/seerr-team/seerr), connected to [Radarr](https://github.com/Radarr/Radarr)/[Sonarr](https://github.com/Sonarr/Sonarr))
 - A **Discord** account with admin access to a server
 - **Docker** (recommended) or Node.js 20+
 - API keys: [TMDB](https://www.themoviedb.org/settings/api) (required) · [OMDb](http://www.omdbapi.com/apikey.aspx) (optional)
@@ -161,7 +161,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 | Part 1 | Part 2 |
 |---|---|
-| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+| ![Discord Part 1](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord Part 2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
 
 </details>
 
@@ -170,7 +170,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 | Part 1 | Part 2 |
 |---|---|
-| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+| ![Seerr Part 1](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr Part 2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
 
 </details>
 
@@ -195,9 +195,9 @@ All other settings are managed through the web dashboard and saved to `config/co
 <details>
 <summary><b>Step 7 – Miscellaneous & Logs</b></summary>
 
-| Miscellaneous 1/2 | Miscellaneous 2/2 | Logs |
+| Miscellaneous Part 1 | Miscellaneous Part 2 | Logs |
 |---|---|---|
-| ![Misc 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Misc 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
+| ![Misc Part 1](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Misc Part 2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
 
 </details>
 
