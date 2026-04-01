@@ -77,7 +77,7 @@ Then open `http://your-server-ip:8282` and follow the setup wizard.
 
 By default, the port mapping `8282:8282` in `docker-compose.yml` binds Questorr directly to all network interfaces of your host (`0.0.0.0`). This means Questorr is reachable from your local network without going through a reverse proxy.
 
-**If you use a reverse proxy** (Nginx Proxy Manager, Traefik, Caddy etc.), it is recommended to bind the port to `localhost` only so that Questorr is only accessible through the proxy:
+**If you use a reverse proxy** ([Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager), [Traefik](https://github.com/traefik/traefik), [Caddy](https://github.com/caddyserver/caddy) etc.), it is recommended to bind the port to `localhost` only so that Questorr is only accessible through the proxy:
 
 ```yaml
 ports:
