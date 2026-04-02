@@ -44,7 +44,7 @@
             </li>
             <li>
               <a
-                href="https://discord.gg/rXANrXJqVf"
+                href="https://discord.gg/X2jn8vhrN6"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -714,39 +714,55 @@
                         </div>
                       </div>
 
-                      <!-- Request UI Options -->
+                      <!-- Bot Command Options -->
                       <div class="form-group" style="margin-top: 1.5rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--mauve);">
-                        <label style="font-weight: 700; color: var(--mauve); display: block; margin-bottom: 0.75rem;" data-i18n="config.request_ui_title">/request Command Options</label>
+                        <label style="font-weight: 700; color: var(--mauve); display: block; margin-bottom: 0.75rem;" data-i18n="config.cmd_options_title">Bot Command Options</label>
                         <div class="form-text" style="margin-bottom: 1rem;">
-                          <span data-i18n="config.request_ui_desc">Choose which optional fields are visible when users run /request.</span>
-                          
-                          <br><strong style="color: var(--peach);"><span data-i18n="config.request_ui_warning">⚠️ After changes the bot will restart automatically to update commands.</span></strong>
+                          <span data-i18n="config.cmd_options_desc">Configure which options are shown or available for each Discord command.</span>
                         </div>
 
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                            <input type="checkbox" id="SHOW_TAG_SELECTION" name="SHOW_TAG_SELECTION" checked />
-                            <div>
-                              <strong data-i18n="config.show_tag_selection">🏷️ Show Tag Selection</strong>
-                              <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_tag_selection_desc">Users can select a Radarr/Sonarr tag (e.g. 'anime')</span></div>
-                            </div>
-                          </label>
+                        <!-- /request options -->
+                        <div style="margin-bottom: 1.25rem;">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;">/request</div>
+                          <div class="form-text" style="margin-bottom: 0.75rem;">
+                            <span data-i18n="config.request_ui_desc">Choose which optional fields are visible when users run /request.</span>
+                            <br><strong style="color: var(--peach);"><span data-i18n="config.request_ui_warning">⚠️ After changes the bot will restart automatically to update commands.</span></strong>
+                          </div>
+                          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
+                              <input type="checkbox" id="SHOW_TAG_SELECTION" name="SHOW_TAG_SELECTION" checked />
+                              <div>
+                                <strong data-i18n="config.show_tag_selection">🏷️ Show Tag Selection</strong>
+                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_tag_selection_desc">Users can select a Radarr/Sonarr tag (e.g. 'anime')</span></div>
+                              </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
+                              <input type="checkbox" id="SHOW_SERVER_SELECTION" name="SHOW_SERVER_SELECTION" checked />
+                              <div>
+                                <strong data-i18n="config.show_server_selection">🖥️ Show Server Selection</strong>
+                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_server_selection_desc">Users can choose between multiple Radarr/Sonarr instances</span></div>
+                              </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
+                              <input type="checkbox" id="SHOW_QUALITY_SELECTION" name="SHOW_QUALITY_SELECTION" checked />
+                              <div>
+                                <strong data-i18n="config.show_quality_selection">🎬 Show Quality Profile Selection</strong>
+                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_quality_selection_desc">Users can select a quality profile for the download</span></div>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
 
-                          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                            <input type="checkbox" id="SHOW_SERVER_SELECTION" name="SHOW_SERVER_SELECTION" checked />
+                        <!-- /status info -->
+                        <div style="border-top: 1px solid var(--surface1); padding-top: 1rem;">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;">/status</div>
+                          <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
+                            <span style="font-size: 1.1rem; margin-top: 1px;">🔎</span>
                             <div>
-                              <strong data-i18n="config.show_server_selection">🖥️ Show Server Selection</strong>
-                              <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_server_selection_desc">Users can choose between multiple Radarr/Sonarr instances</span></div>
+                              <strong data-i18n="config.status_cmd_label">Request Status Lookup</strong>
+                              <div style="font-size: 0.82rem; color: var(--subtext0); margin-top: 0.2rem;"><span data-i18n="config.status_cmd_desc">Always available — no configuration required. Users can check the current request status of any title in Seerr directly in Discord.</span></div>
                             </div>
-                          </label>
-
-                          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                            <input type="checkbox" id="SHOW_QUALITY_SELECTION" name="SHOW_QUALITY_SELECTION" checked />
-                            <div>
-                              <strong data-i18n="config.show_quality_selection">🎬 Show Quality Profile Selection</strong>
-                              <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_quality_selection_desc">Users can select a quality profile for the download</span></div>
-                            </div>
-                          </label>
+                          </div>
                         </div>
                       </div>
 
@@ -888,7 +904,7 @@
                   <i class="bi bi-discord"></i>
                   <h3 data-i18n="about.discord_title">Join the Community</h3>
                   <p data-i18n="about.discord_description">Have questions or want to chat with other Questorr users? Join the Jellyforge Discord server.</p>
-                  <a href="https://discord.gg/rXANrXJqVf" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.join_discord">Join Discord</a>
+                  <a href="https://discord.gg/J9V9ySZQKf" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" data-i18n="about.join_discord">Join Discord</a>
                 </div>
               </div>
 
