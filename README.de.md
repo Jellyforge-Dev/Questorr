@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/X2jn8vhrN6)
 
-  [🇬🇧 English Documentation](README.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
+  [🇬🇧 English Documentation](README.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
 
 </div>
 
@@ -288,6 +288,6 @@ Dieses Projekt ist lizenziert unter der [GNU Affero General Public License v3.0 
 
 <div align="center">
 
-Geforkt von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
+Geforkt von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
 
 </div>
