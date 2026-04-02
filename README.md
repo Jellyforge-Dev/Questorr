@@ -7,7 +7,7 @@
 
   [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
-  [![License](https://img.shields.io/badge/License-Unlicense-lightgrey)](LICENSE)
+  [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/X2jn8vhrN6)
 
   [🇩🇪 Deutsche Dokumentation](README.de.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/X2jn8vhrN6) &nbsp;|&nbsp; [☕❤️ Buy me a Coffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Report a Bug](https://github.com/Jellyforge-Dev/Questorr/issues)
@@ -29,7 +29,7 @@
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
 | 🔔 Smart notifications | Rich Discord embeds for all Seerr events (pending, approved, available, declined, failed, issues) |
 | 📺 Channel routing | Notifications automatically routed to the correct channel based on Radarr/Sonarr root folder |
-| ✉️ Private DMs | Users receive a DM when their requested content becomes available on Jellyfin |
+| ✉️ Private DMs | Users receive a DM when their requested content is approved, declined or becomes available |
 | 👤 User mapping | Link Discord accounts to Seerr accounts so requests appear from the correct user |
 | 🔐 Role permissions | Control who can use bot commands via Discord role allowlist / blocklist |
 | 🌟 Daily recommendation | Post a daily pick from your existing Jellyfin library |
@@ -43,8 +43,8 @@
 
 ## 📋 Prerequisites
 
-- A running **Jellyfin** server
-- A running **Seerr** instance (Jellyseerr or Overseerr, connected to Radarr/Sonarr)
+- A running **[Jellyfin](https://jellyfin.org/)** server
+- A running **[Seerr](https://github.com/seerr-team/seerr)** instance (connected to [Radarr](https://github.com/Radarr/Radarr)/[Sonarr](https://github.com/Sonarr/Sonarr))
 - A **Discord** account with admin access to a server
 - **Docker** (recommended) or Node.js 20+
 - API keys: [TMDB](https://www.themoviedb.org/settings/api) (required) · [OMDb](http://www.omdbapi.com/apikey.aspx) (optional)
@@ -121,9 +121,20 @@ In **Seerr → Settings → Notifications → Webhook**, enter the URL shown in 
 
 > The **Copy URL** button automatically includes your webhook secret. Simply paste it into Seerr.
 
+**Recommended: enable all notification types in Seerr** so Questorr can forward the full request lifecycle to Discord:
+
+| Seerr event | What Questorr does |
+|---|---|
+| Request pending approval | Posts to admin channel |
+| Request approved / auto-approved | Posts to default channel · sends DM to user |
+| Media available | Posts to the matching root folder channel · sends DM to user |
+| Request declined | Posts to default channel · sends DM to user |
+| Download failed | Posts to admin channel |
+| Issue created / commented | Posts to default channel |
+
 ### 4. Channel Routing
 
-Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders**, then assign a Discord channel to each Radarr/Sonarr root folder. Questorr will automatically route `MEDIA_AVAILABLE` notifications to the correct channel.
+Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders**, then assign a Discord channel to each Radarr/Sonarr root folder. Questorr will automatically route `MEDIA_AVAILABLE` notifications to the correct channel — for example, anime requests go to `#anime`, movies to `#movies`.
 
 ---
 
@@ -135,6 +146,20 @@ Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders*
 | `LOG_LEVEL` | `error` / `warn` / `info` / `verbose` / `debug` | `info` |
 
 All other settings are managed through the web dashboard and saved to `config/config.json`.
+
+---
+
+## 🔮 Planned Features
+
+These features are on the roadmap and may be added in future releases:
+
+- **Request status tracking** — notify users via DM about every status change after a request (approved → downloading → available)
+- **`/status <title>`** — check the current request status of any media directly in Discord
+- **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
+- **Config Export / Import** — download and restore the full configuration as a JSON backup
+- **Bot Status Widget** — show uptime and recent activity in the dashboard
+- **Multi-language bot responses** — Discord bot replies in the user's preferred language
+- **Statistics** — `/stats` command showing library size, recent additions and request counts
 
 ---
 
@@ -232,7 +257,7 @@ docker compose up -d
 
 ## 📄 License
 
-Released under the [Unlicense](LICENSE) — public domain. Do whatever you want with the code.
+This project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). You are free to use, modify and distribute this software under the terms of the AGPL-3.0. If you run a modified version as a web service, you must make the source code available.
 
 ---
 

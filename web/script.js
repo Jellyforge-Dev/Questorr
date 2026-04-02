@@ -425,6 +425,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         fetchConfig().then(() => {
           loadDiscordGuilds();
           checkAndLoadMappingsTab();
+          // Auto-load quality profiles/servers if Seerr is already configured
+          const seerrUrl = document.getElementById("SEERR_URL")?.value;
+          const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
+          if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
         });
         startStatusPolling();
       } else {
@@ -590,6 +594,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           fetchConfig().then(() => {
             loadDiscordGuilds();
             checkAndLoadMappingsTab();
+            const seerrUrl = document.getElementById("SEERR_URL")?.value;
+            const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
+            if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
           });
           startStatusPolling();
         } else {
@@ -622,6 +629,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           fetchConfig().then(() => {
             loadDiscordGuilds();
             checkAndLoadMappingsTab();
+            const seerrUrl = document.getElementById("SEERR_URL")?.value;
+            const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
+            if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
           });
           startStatusPolling();
         } else {
@@ -1421,17 +1431,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Load Quality Profiles and Servers
   const loadSeerrOptionsBtn = document.getElementById("load-seerr-options-btn");
   const loadSeerrOptionsStatus = document.getElementById("load-seerr-options-status");
-  
-  if (loadSeerrOptionsBtn) {
-    loadSeerrOptionsBtn?.addEventListener("click", async () => {
-      const url = document.getElementById("SEERR_URL").value;
-      const apiKey = document.getElementById("SEERR_API_KEY").value;
 
-      if (!url || !apiKey) {
-        loadSeerrOptionsStatus.textContent = "Enter URL and API Key first";
-        loadSeerrOptionsStatus.style.color = "#f38ba8";
-        return;
-      }
+  async function loadSeerrProfilesAndServers(url, apiKey, silent = false) {
 
       loadSeerrOptionsBtn.disabled = true;
       loadSeerrOptionsStatus.textContent = "Loading...";
@@ -1527,14 +1528,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const totalProfiles = radarrProfiles.length + sonarrProfiles.length;
         const totalServers = radarrServers.length + sonarrServers.length;
+    if (!silent && loadSeerrOptionsStatus) {
         loadSeerrOptionsStatus.textContent = `Loaded ${totalProfiles} profiles, ${totalServers} servers`;
         loadSeerrOptionsStatus.style.color = "var(--green)";
-      } catch (error) {
+      }
+    } catch (error) {
+      if (!silent && loadSeerrOptionsStatus) {
         loadSeerrOptionsStatus.textContent = error.message || "Failed to load options";
         loadSeerrOptionsStatus.style.color = "#f38ba8";
-      } finally {
-        loadSeerrOptionsBtn.disabled = false;
       }
+    } finally {
+      if (loadSeerrOptionsBtn) loadSeerrOptionsBtn.disabled = false;
+    }
+  }
+
+  if (loadSeerrOptionsBtn) {
+    loadSeerrOptionsBtn.addEventListener("click", async () => {
+      const url = document.getElementById("SEERR_URL").value;
+      const apiKey = document.getElementById("SEERR_API_KEY").value;
+      if (!url || !apiKey) {
+        if (loadSeerrOptionsStatus) {
+          loadSeerrOptionsStatus.textContent = "Enter URL and API Key first";
+          loadSeerrOptionsStatus.style.color = "#f38ba8";
+        }
+        return;
+      }
+      await loadSeerrProfilesAndServers(url, apiKey, false);
     });
   }
 
