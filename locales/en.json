@@ -223,7 +223,11 @@
     "push_commands_error": "❌ Failed to push commands",
     "seerr_root_folder_hint": "⚠️ Click \"Load Root Folders\" first before adding a mapping.",
     "seerr_root_folder_loading": "Loading Root Folders...",
-    "seerr_root_folder_loaded": "Root Folders loaded"
+    "seerr_root_folder_loaded": "Root Folders loaded",
+    "cmd_options_title": "Bot Command Options",
+    "cmd_options_desc": "Configure which options are shown or available for each Discord command.",
+    "status_cmd_label": "🔎 Request Status Lookup",
+    "status_cmd_desc": "Always available — no configuration required. Users can check the current request status of any title in Seerr directly in Discord."
   },
   "ui": {
     "hide_header": "Hide header",

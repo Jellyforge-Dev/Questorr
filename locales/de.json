@@ -293,7 +293,11 @@
     "push_commands_error": "❌ Fehler beim Übertragen",
     "seerr_root_folder_hint": "⚠️ Klicke zuerst auf \"Root Folders laden\" bevor du ein Mapping hinzufügst.",
     "seerr_root_folder_loading": "Lade Root Folders...",
-    "seerr_root_folder_loaded": "Root Folders geladen"
+    "seerr_root_folder_loaded": "Root Folders geladen",
+    "cmd_options_title": "Bot Befehlsoptionen",
+    "cmd_options_desc": "Konfiguriere welche Optionen für jeden Discord-Befehl angezeigt oder verfügbar sind.",
+    "status_cmd_label": "🔎 Anfragestatus abfragen",
+    "status_cmd_desc": "Immer verfügbar — keine Konfiguration erforderlich. User können den aktuellen Anfragestatus eines Titels in Seerr direkt in Discord abfragen."
   },
   "ui": {
     "hide_header": "Header ausblenden",
