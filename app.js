@@ -937,7 +937,7 @@ function startServer() {
   // Default to localhost-only for bare-metal safety. Docker sets BIND_HOST=0.0.0.0
   // so that container port mapping works. Never expose the dashboard externally
   // without a reverse proxy and authentication. Must be a valid IPv4/IPv6 address.
-  const bindHost = process.env.BIND_HOST || "127.0.0.1";
+  const bindHost = process.env.BIND_HOST || "0.0.0.0";
   if (net.isIP(bindHost) === 0) {
     logger.error(
       `❌ Invalid BIND_HOST value "${bindHost}". Must be a valid IPv4 or IPv6 address (e.g. 127.0.0.1 or 0.0.0.0).`
