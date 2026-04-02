@@ -27,6 +27,7 @@
 | 🔍 `/search` | Filme und Serien suchen und direkt aus dem Embed anfordern |
 | 📤 `/request` | Sofortige Medienanfragen mit optionaler Tag-, Server- und Qualitätsauswahl |
 | 🔥 `/trending` | Wöchentlich trending Filme und Serien durchstöbern |
+| 🔎 `/status` | Aktuellen Anfragestatus eines Titels in Seerr abfragen |
 | 🔔 Intelligente Benachrichtigungen | Schöne Discord-Embeds für alle Seerr-Events (ausstehend, genehmigt, verfügbar, abgelehnt, fehlgeschlagen, Probleme) |
 | 📺 Kanal-Routing | Benachrichtigungen werden anhand des Radarr/Sonarr Root-Folders automatisch in den richtigen Kanal geroutet |
 | ✉️ Direktnachrichten | User erhalten eine DM wenn ihre Anfrage genehmigt, abgelehnt oder der Inhalt verfügbar ist |
@@ -178,8 +179,7 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 Diese Funktionen sind in Planung und können in zukünftigen Versionen hinzukommen:
 
-- **Anfragestatus-Tracking** — User per DM über jeden Statuswechsel informieren (genehmigt → Download läuft → verfügbar)
-- **`/status <Titel>`** — aktuellen Anfragestatus eines Mediums direkt in Discord abfragen
+- **`/status <Titel>`** ✅ *In v2.1.0 hinzugefügt* — aktuellen Anfragestatus eines Mediums in Seerr direkt in Discord abfragen
 - **Webhook Test Log** — letzte empfangene Webhook-Events im Dashboard anzeigen (hilfreich für Debugging)
 - **Config Export / Import** — komplette Konfiguration als JSON-Backup herunterladen und wiederherstellen
 - **Bot Status Widget** — Uptime und aktuelle Aktivität im Dashboard anzeigen

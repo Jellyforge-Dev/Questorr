@@ -82,6 +82,16 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
+    new SlashCommandBuilder()
+      .setName("status")
+      .setDescription("Check the request status of a movie or TV show in Seerr")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Title to check")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
   ].map((c) => c.toJSON());
 }
 

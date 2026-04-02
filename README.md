@@ -27,6 +27,7 @@
 | 🔍 `/search` | Search for movies and TV shows, request directly from the embed |
 | 📤 `/request` | Instant media requests with optional tag, server and quality selection |
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
+| 🔎 `/status` | Check the current request status of any title in Seerr |
 | 🔔 Smart notifications | Rich Discord embeds for all Seerr events (pending, approved, available, declined, failed, issues) |
 | 📺 Channel routing | Notifications automatically routed to the correct channel based on Radarr/Sonarr root folder |
 | ✉️ Private DMs | Users receive a DM when their requested content is approved, declined or becomes available |
@@ -178,8 +179,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 These features are on the roadmap and may be added in future releases:
 
-- **Request status tracking** — notify users via DM about every status change after a request (approved → downloading → available)
-- **`/status <title>`** — check the current request status of any media directly in Discord
+- **`/status <title>`** ✅ *Added in v2.1.0* — check the current request status of any media in Seerr directly in Discord
 - **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
 - **Config Export / Import** — download and restore the full configuration as a JSON backup
 - **Bot Status Widget** — show uptime and recent activity in the dashboard
