@@ -637,19 +637,21 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
   try {
     const user = await client.users.fetch(discordId);
 
+    // Use Seerr's own message field if present, else build a generic English fallback
+    const dmDescription = data.message
+      || (eventType === "MEDIA_AVAILABLE"
+        ? `**${data.subject}** is now available! 🎉`
+        : eventType === "MEDIA_APPROVED" || eventType === "MEDIA_AUTO_APPROVED"
+        ? `Your request for **${data.subject}** has been approved! ✅`
+        : eventType === "MEDIA_DECLINED"
+        ? `Your request for **${data.subject}** has been declined. ❌`
+        : `Your request status for **${data.subject}** has been updated.`);
+
     const dmEmbed = new EmbedBuilder()
       .setColor(cfg.color)
       .setAuthor({ name: `${cfg.emoji} ${cfg.label}` })
       .setTitle(data.subject || "Questorr Notification")
-      .setDescription(
-        eventType === "MEDIA_AVAILABLE"
-          ? `**${data.subject}** ist jetzt auf GasiFlix verfügbar! 🎉`
-          : eventType === "MEDIA_APPROVED"
-          ? `Deine Anfrage für **${data.subject}** wurde genehmigt! ✅`
-          : eventType === "MEDIA_DECLINED"
-          ? `Deine Anfrage für **${data.subject}** wurde abgelehnt. ❌`
-          : `Status deiner Anfrage für **${data.subject}** wurde aktualisiert.`
-      )
+      .setDescription(dmDescription)
       .setTimestamp();
 
     if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);

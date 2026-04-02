@@ -1,4 +1,4 @@
-import { ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
+import { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
 import * as seerrApi from "../api/seerr.js";
 import { fetchOMDbData } from "../api/omdb.js";
@@ -282,6 +282,87 @@ async function handleSearchOrRequest(
         flags: 64,
       });
     }
+  }
+}
+
+
+// ─── /status Command Handler ──────────────────────────────────────────────────
+async function handleStatusCommand(interaction) {
+  await interaction.deferReply({ flags: 64 });
+
+  const raw = interaction.options.getString("title") || "";
+  // Format: "tmdbId|media_type|title"
+  const parts = raw.split("|");
+  if (parts.length < 2) {
+    return interaction.editReply({
+      content: "❌ Please select a title from the dropdown suggestions.",
+    });
+  }
+
+  const tmdbId = parseInt(parts[0], 10);
+  const mediaType = parts[1]; // "movie" or "tv"
+  const titleFromOption = parts.slice(2).join("|");
+
+  const seerrUrl = getSeerrUrl();
+  const seerrApiKey = getSeerrApiKey();
+
+  if (!seerrUrl || !seerrApiKey) {
+    return interaction.editReply({ content: "❌ Seerr is not configured." });
+  }
+
+  try {
+    const result = await seerrApi.checkMediaStatus(tmdbId, mediaType, [], seerrUrl, seerrApiKey);
+
+    // Seerr status codes: 1=Unknown, 2=Pending, 3=Processing, 4=Partially Available, 5=Available
+    const statusMap = {
+      1: { emoji: "❓", label: "Unknown" },
+      2: { emoji: "⏳", label: "Pending Approval" },
+      3: { emoji: "⬇️", label: "Processing / Downloading" },
+      4: { emoji: "🟡", label: "Partially Available" },
+      5: { emoji: "✅", label: "Available" },
+    };
+
+    const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
+    const mediaYear = result.data?.releaseDate?.slice(0, 4)
+      || result.data?.firstAirDate?.slice(0, 4)
+      || result.data?.release_date?.slice(0, 4)
+      || result.data?.first_air_date?.slice(0, 4) || "";
+
+    if (!result.exists || result.status == null) {
+      // No request found in Seerr at all
+        const embed = new EmbedBuilder()
+        .setColor("#89b4fa")
+        .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
+        .setDescription("This title has not been requested yet.")
+        .setTimestamp();
+      return interaction.editReply({ embeds: [embed] });
+    }
+
+    const statusInfo = statusMap[result.status] || { emoji: "❓", label: `Status ${result.status}` };
+
+    const embed = new EmbedBuilder()
+      .setColor(
+        result.status === 5 ? "#1ec8a0" :
+        result.status === 4 ? "#f9e2af" :
+        result.status === 3 ? "#89b4fa" :
+        result.status === 2 ? "#f0a05a" : "#6c7086"
+      )
+      .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
+      .setDescription(`**Status:** ${statusInfo.emoji} ${statusInfo.label}`)
+      .setTimestamp();
+
+    // Add poster if available
+    if (result.data?.posterPath || result.data?.poster_path) {
+      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${result.data.posterPath || result.data.poster_path}`);
+    }
+
+    return interaction.editReply({ embeds: [embed] });
+
+  } catch (err) {
+    logger.error("Status command error:", err);
+    return interaction.editReply({
+      content: "❌ Could not fetch status from Seerr. Please try again.",
+    });
   }
 }
 
@@ -572,6 +653,28 @@ export function registerInteractions(client) {
           }
         }
 
+        // /status autocomplete – reuse TMDB search
+        if (interaction.commandName === "status") {
+          if (!focusedValue) return interaction.respond([]);
+          try {
+            const results = await tmdbApi.tmdbSearch(focusedValue);
+            const choices = results.slice(0, 10).map((r) => {
+              const title = r.title || r.name || "Unknown";
+              const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
+              const typeEmoji = r.media_type === "movie" ? "🎬" : "📺";
+              const label = `${typeEmoji} ${title}${year ? ` (${year})` : ""}`;
+              return {
+                name: label.length > 100 ? label.substring(0, 97) + "..." : label,
+                value: `${r.id}|${r.media_type}|${title}`,
+              };
+            });
+            return await interaction.respond(choices);
+          } catch (e) {
+            logger.error("Status autocomplete error:", e);
+            return interaction.respond([]);
+          }
+        }
+
         // Regular search autocomplete
         if (!focusedValue) return interaction.respond([]);
 
@@ -693,6 +796,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "trending") {
           return handleSearchOrRequest(interaction, raw, "search");
+        }
+        if (interaction.commandName === "status") {
+          return handleStatusCommand(interaction);
         }
       }
 
