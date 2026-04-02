@@ -74,7 +74,7 @@ services:
 
 Danach `http://deine-server-ip:8282` öffnen und dem Einrichtungsassistenten folgen.
 
-**Mit Reverse Proxy** (Nginx Proxy Manager, Traefik, Caddy) — `ports` entfernen und stattdessen das gemeinsame Netzwerk eintragen:
+**Mit Reverse Proxy** ([Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager), [Traefik](https://github.com/traefik/traefik), [Caddy](https://github.com/caddyserver/caddy)) — `ports` entfernen und stattdessen das gemeinsame Netzwerk eintragen:
 
 ```yaml
 services:
@@ -88,14 +88,14 @@ services:
     volumes:
       - ./questorr-data:/usr/src/app/config
     networks:
-      - proxy
+      - proxy             # Muss dem Netzwerknamen deines Reverse Proxys entsprechen
 
 networks:
-  proxy:
+  proxy:                  # Muss dem Netzwerknamen deines Reverse Proxys entsprechen
     external: true
 ```
 
-NPM-Einstellungen: Scheme: `http` · Host: `questorr` · Port: `8282`
+Reverse-Proxy-Einstellungen: Scheme: `http` · Host / Forward Hostname: `questorr` · Port: `8282`
 
 ### Docker-Tags
 
