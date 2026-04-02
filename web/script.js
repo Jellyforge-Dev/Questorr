@@ -1434,9 +1434,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadSeerrProfilesAndServers(url, apiKey, silent = false) {
 
-      loadSeerrOptionsBtn.disabled = true;
-      loadSeerrOptionsStatus.textContent = "Loading...";
-      loadSeerrOptionsStatus.style.color = "var(--text)";
+      if (!silent) {
+        if (loadSeerrOptionsBtn) loadSeerrOptionsBtn.disabled = true;
+        if (loadSeerrOptionsStatus) {
+          loadSeerrOptionsStatus.textContent = "Loading...";
+          loadSeerrOptionsStatus.style.color = "var(--text)";
+        }
+      }
 
       try {
         // Fetch quality profiles
@@ -1483,7 +1487,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const savedTvServer = tvServerSelect.dataset.savedValue || tvServerSelect.value;
 
         // Movie quality profiles (Radarr)
-        movieQualitySelect.innerHTML = '<option value="">Use Seerr default</option>';
+        const movieQualityDefaultLabel = t('config.use_seerr_default') || 'Use Seerr default';
+        movieQualitySelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
         const radarrProfiles = profilesResult.profiles.filter(p => p.type === "radarr");
         radarrProfiles.forEach(profile => {
           const option = document.createElement("option");
@@ -1494,7 +1499,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedMovieQuality) movieQualitySelect.value = savedMovieQuality;
 
         // TV quality profiles (Sonarr)
-        tvQualitySelect.innerHTML = '<option value="">Use Seerr default</option>';
+        tvQualitySelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
         const sonarrProfiles = profilesResult.profiles.filter(p => p.type === "sonarr");
         sonarrProfiles.forEach(profile => {
           const option = document.createElement("option");
@@ -1505,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedTvQuality) tvQualitySelect.value = savedTvQuality;
 
         // Movie servers (Radarr)
-        movieServerSelect.innerHTML = '<option value="">Use Seerr default</option>';
+        movieServerSelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
         const radarrServers = serversResult.servers.filter(s => s.type === "radarr");
         radarrServers.forEach(server => {
           const option = document.createElement("option");
@@ -1516,7 +1521,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedMovieServer) movieServerSelect.value = savedMovieServer;
 
         // TV servers (Sonarr)
-        tvServerSelect.innerHTML = '<option value="">Use Seerr default</option>';
+        tvServerSelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
         const sonarrServers = serversResult.servers.filter(s => s.type === "sonarr");
         sonarrServers.forEach(server => {
           const option = document.createElement("option");

@@ -36,3 +36,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+# ── Reverse Proxy (optional) ─────────────────────────────────────────────────
+# If you use Nginx Proxy Manager, Traefik or Caddy in a shared Docker network,
+# remove the "ports" section above and add the network instead:
+#
+#    networks:
+#      - proxy
+#
+# networks:
+#   proxy:
+#     external: true
+#
+# NPM forward settings: Scheme: http | Host: questorr | Port: 8282
+# ─────────────────────────────────────────────────────────────────────────────
