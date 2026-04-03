@@ -463,6 +463,13 @@ async function processEvent(data, eventType, cfg, client) {
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
   const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
 
+  // MEDIA_PENDING and MEDIA_DECLINED go only to the requester via DM (not channel)
+  const dmOnlyEvents = ["MEDIA_PENDING", "MEDIA_DECLINED"];
+  if (dmOnlyEvents.includes(eventType)) {
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    return;
+  }
+
   // Send to Discord channel
   let channel;
   try {
@@ -629,7 +636,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
 
 async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
   // DM on these events regardless of NOTIFY_ON_AVAILABLE
-  const dmEvents = ["MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
+  const dmEvents = ["MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
   if (!dmEvents.includes(eventType)) return;
 
   // Find Discord ID from user mapping
