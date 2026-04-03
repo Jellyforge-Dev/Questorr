@@ -82,16 +82,29 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
-    new SlashCommandBuilder()
-      .setName("status")
-      .setDescription("Check the request status of a movie or TV show in Seerr")
-      .addStringOption((opt) =>
-        opt
-          .setName("title")
-          .setDescription("Title to check")
-          .setRequired(true)
-          .setAutocomplete(true)
-      ),
+    ...(process.env.SHOW_STATUS_COMMAND !== "false" ? [
+      new SlashCommandBuilder()
+        .setName("status")
+        .setDescription("Check the request status of a movie or TV show in Seerr")
+        .addStringOption((opt) =>
+          opt.setName("title").setDescription("Title to check").setRequired(true).setAutocomplete(true)
+        ),
+    ] : []),
+    ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
+      new SlashCommandBuilder()
+        .setName("random")
+        .setDescription("Get a random movie or TV show from your Jellyfin library")
+        .addStringOption((opt) =>
+          opt
+            .setName("type")
+            .setDescription("Movie or Series?")
+            .setRequired(true)
+            .addChoices(
+              { name: "🎬 Movie", value: "movie" },
+              { name: "📺 Series", value: "series" }
+            )
+        ),
+    ] : []),
   ].map((c) => c.toJSON());
 }
 

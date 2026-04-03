@@ -212,7 +212,7 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
  * Instead we use the TMDB title to search, then verify the TMDB ID in ProviderIds.
  * TMDB data must be fetched before calling this function (tmdbCache must be populated).
  */
-async function findVerifiedJellyfinItem(tmdbId, mediaType) {
+export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   const apiKey = process.env.JELLYFIN_API_KEY;
   const baseUrl = process.env.JELLYFIN_BASE_URL;
   if (!apiKey || !baseUrl) return null;
@@ -373,13 +373,13 @@ async function fetchTmdbDetails(tmdbId, mediaType) {
 
 // ─── URL Builders ─────────────────────────────────────────────────────────────
 
-function buildSeerrUrl(mediaType, tmdbId) {
+export function buildSeerrUrl(mediaType, tmdbId) {
   const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
   if (!base || !tmdbId) return null;
   return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
 }
 
-function buildJellyfinUrl(itemId) {
+export function buildJellyfinUrl(itemId) {
   const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
   const serverId = process.env.JELLYFIN_SERVER_ID || "";
   if (!base || !itemId) return null;

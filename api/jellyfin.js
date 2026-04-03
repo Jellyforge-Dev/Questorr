@@ -549,3 +549,69 @@ export function transformToWebhookFormat(item, baseUrl, serverId) {
 
   return data;
 }
+
+/**
+ * Fetch a random movie or TV series from Jellyfin
+ * @param {string} apiKey - Jellyfin API key
+ * @param {string} baseUrl - Jellyfin base URL
+ * @param {string} type - "Movie" or "Series"
+ * @returns {Promise<Object|null>} Jellyfin item or null
+ */
+export async function fetchRandomJellyfinItem(apiKey, baseUrl, type = "Movie") {
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        SortBy: "Random",
+        Limit: 1,
+        IncludeItemTypes: type,
+        Fields: "Overview,ProviderIds,ProductionYear,Genres,OfficialRating",
+      },
+      timeout: 8000,
+    });
+    const items = response.data?.Items || [];
+    return items[0] || null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchRandomJellyfinItem error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Find a Jellyfin item by TMDB ID (standalone, no cache dependency)
+ * @param {string} tmdbId
+ * @param {string} mediaType - "movie" or "tv"
+ * @param {string} title - Search title from TMDB
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @returns {Promise<string|null>} Jellyfin item ID or null
+ */
+export async function findJellyfinItemByTmdbId(tmdbId, mediaType, title, apiKey, baseUrl) {
+  if (!apiKey || !baseUrl || !title) return null;
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const itemType = mediaType === "movie" ? "Movie" : "Series";
+    const res = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        searchTerm: title,
+        IncludeItemTypes: itemType,
+        Fields: "ProviderIds,Name,ProductionYear",
+        Limit: 20,
+      },
+      timeout: 8000,
+    });
+    const items = res.data?.Items || [];
+    for (const item of items) {
+      const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+      if (String(itemTmdbId) === String(tmdbId)) return item.Id;
+    }
+    return null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] findJellyfinItemByTmdbId error: ${err.message}`);
+    return null;
+  }
+}

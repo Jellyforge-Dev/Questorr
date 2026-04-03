@@ -646,13 +646,12 @@ function configureWebServer() {
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via Authorization header.
-      // Seerr sends this via the "Authorization Header" field in webhook settings.
-      // Using a header prevents the secret from appearing in reverse proxy logs
-      // or browser history.
+      // Validate webhook secret via X-Webhook-Secret request header.
+	  // Using a header instead of a query parameter prevents the secret from
+	  // being captured in reverse proxy logs, browser history, or referrer headers.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.headers["authorization"] || "";
+        const incomingSecret = req.headers["x-webhook-secret"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           return res.status(401).send("Unauthorized");
@@ -693,6 +692,8 @@ function configureWebServer() {
       const oldShowTag = process.env.SHOW_TAG_SELECTION;
       const oldShowServer = process.env.SHOW_SERVER_SELECTION;
       const oldShowQuality = process.env.SHOW_QUALITY_SELECTION;
+      const oldShowStatus = process.env.SHOW_STATUS_COMMAND;
+      const oldShowRandom = process.env.SHOW_RANDOM_COMMAND;
 
       // Normalize SEERR_URL to remove /api/v1 suffix if present
       if (
@@ -770,7 +771,9 @@ function configureWebServer() {
       const commandOptionsChanged =
         oldShowTag !== configData.SHOW_TAG_SELECTION ||
         oldShowServer !== configData.SHOW_SERVER_SELECTION ||
-        oldShowQuality !== configData.SHOW_QUALITY_SELECTION;
+        oldShowQuality !== configData.SHOW_QUALITY_SELECTION ||
+        oldShowStatus !== configData.SHOW_STATUS_COMMAND ||
+        oldShowRandom !== configData.SHOW_RANDOM_COMMAND;
 
       if (commandOptionsChanged) {
         const changes = [];
