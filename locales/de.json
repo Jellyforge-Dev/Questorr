@@ -433,7 +433,10 @@
     "join_discord": "Discord beitreten",
     "footer_thanks": "Danke dass du Questorr nutzt! Öffne gerne ein",
     "footer_issue": "GitHub Issue",
-    "footer_feedback": "bei Fragen oder Feedback."
+    "footer_feedback": "bei Fragen oder Feedback.",
+    "feature_status": "<code>/status &lt;Titel&gt;</code> Aktuellen <strong style=\"color: var(--blue);\">Seerr-Anfragestatus</strong> direkt in Discord abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt.",
+    "feature_random": "<code>/random movie</code> oder <code>/random series</code> — Zufälligen <strong style=\"color: var(--blue);\">Vorschlag aus Jellyfin</strong> anzeigen mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Watch Now Button.",
+    "feature_button_toggles": "Konfiguriere welche Benachrichtigungs-Buttons (In Seerr ansehen, Jetzt ansehen, Letterboxd, IMDb) in Discord-Embeds erscheinen — individuell im Dashboard ein- und ausschaltbar."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

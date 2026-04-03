@@ -474,7 +474,7 @@ async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
   }
-  await interaction.deferReply({ flags: 64 });
+  await interaction.deferReply();
 
   const type = interaction.options.getString("type") || "movie";
   const itemType = type === "movie" ? "Movie" : "Series";
@@ -829,7 +829,7 @@ export function registerInteractions(client) {
         if (interaction.commandName === "status") {
           if (!focusedValue) return interaction.respond([]);
           try {
-            const results = await tmdbApi.tmdbSearch(focusedValue);
+            const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
             const choices = results.slice(0, 10).map((r) => {
               const title = r.title || r.name || "Unknown";
               const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
