@@ -474,7 +474,7 @@ async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
   }
-  await interaction.deferReply({ flags: 64 });
+  await interaction.deferReply();
 
   const type = interaction.options.getString("type") || "movie";
   const itemType = type === "movie" ? "Movie" : "Series";
@@ -518,17 +518,8 @@ async function handleRandomCommand(interaction) {
       .setDescription(description || "No description available.")
       .setTimestamp();
 
-        // Fetch poster via TMDB if Jellyfin item has a TMDB ID
-    const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
-    if (tmdbIdFromJf && getTmdbApiKey()) {
-      try {
-        const tmdbType = itemType === "Movie" ? "movie" : "tv";
-        const tmdbData = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
-        if (tmdbData?.poster_path) {
-          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbData.poster_path);
-        }
-      } catch (_) {}
-    }
+    const jfBase = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
+    embed.setThumbnail(`${jfBase}/Items/${item.Id}/Images/Primary?api_key=${apiKey}&maxHeight=400&quality=90`);
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
@@ -838,7 +829,7 @@ export function registerInteractions(client) {
         if (interaction.commandName === "status") {
           if (!focusedValue) return interaction.respond([]);
           try {
-            const results = await tmdbApi.tmdbSearch(focusedValue);
+            const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
             const choices = results.slice(0, 10).map((r) => {
               const title = r.title || r.name || "Unknown";
               const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
