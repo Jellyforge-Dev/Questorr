@@ -5,7 +5,7 @@
 
   **Ein selbst gehosteter Discord-Bot der Jellyfin und Seerr verbindet — mit intelligenten Benachrichtigungen, automatischem Kanal-Routing und einem vollständigen Web-Dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.1.1-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.2.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -104,7 +104,7 @@ Reverse-Proxy-Einstellungen: Scheme: `http` · Host / Forward Hostname: `questor
 |---|---|
 | `latest` | Neueste stabile Version |
 | `dev` | Entwicklungs-Build (kann instabil sein) |
-| `2.1.1` | Bestimmte Version |
+| `2.2.0` | Bestimmte Version |
 
 ### Manuell (Entwicklung)
 
