@@ -474,7 +474,7 @@ async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
   }
-  await interaction.deferReply();
+  await interaction.deferReply({ flags: 64 });
 
   const type = interaction.options.getString("type") || "movie";
   const itemType = type === "movie" ? "Movie" : "Series";
