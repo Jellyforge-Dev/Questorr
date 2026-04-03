@@ -204,6 +204,7 @@ function configureWebServer() {
         ],
         styleSrc: [
           "'self'",
+		  "'unsafe-inline'",
           "https://cdn.jsdelivr.net",          // Coloris CSS
           "https://cdnjs.cloudflare.com",      // Bootstrap Icons
           "https://fonts.googleapis.com",      // Google Fonts
