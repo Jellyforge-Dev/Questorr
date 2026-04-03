@@ -17,6 +17,23 @@ import {
 import { getUserMappings } from "../utils/configFile.js";
 import { getSeerrApiUrl } from "../utils/seerrUrl.js";
 import logger from "../utils/logger.js";
+import { isValidUrl } from "../utils/url.js";
+import { fetchRandomJellyfinItem, findJellyfinItemByTmdbId } from "../api/jellyfin.js";
+import { ButtonBuilder, ButtonStyle } from "discord.js";
+
+// ─── URL helpers (mirrors seerrWebhook.js) ────────────────────────────────────
+function buildSeerrUrl(mediaType, tmdbId) {
+  const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  if (!base || !tmdbId) return null;
+  return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
+}
+function buildJellyfinUrl(itemId) {
+  const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
+  const serverId = process.env.JELLYFIN_SERVER_ID || "";
+  if (!base || !itemId) return null;
+  return `${base}/web/index.html#!/details?id=${itemId}&serverId=${serverId}`;
+}
+
 
 // Convenience accessors — read process.env at call time so config reloads are respected
 const getSeerrUrl = () => getSeerrApiUrl(process.env.SEERR_URL || "");
@@ -31,7 +48,7 @@ async function handleSearchOrRequest(
   tags = [],
   options = {}
 ) {
-  const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true";
+  const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true" || options.ephemeral === true;
 
   try {
     await interaction.deferReply({ ephemeral: isPrivateMode });
@@ -287,7 +304,42 @@ async function handleSearchOrRequest(
 
 
 // ─── /status Command Handler ──────────────────────────────────────────────────
+
+// ─── Build rich description for /status embed ─────────────────────────────────
+function buildStatusDescription(tmdbDetails, statusLine) {
+  const parts = [statusLine];
+  if (tmdbDetails) {
+    const overview = tmdbDetails.overview;
+    const genres = (tmdbDetails.genres || []).slice(0, 3).map(g => g.name).join(", ");
+    const runtime = tmdbDetails.runtime
+      ? `${Math.floor(tmdbDetails.runtime / 60)}h ${tmdbDetails.runtime % 60}m`
+      : (tmdbDetails.episode_run_time?.[0]
+        ? `~${tmdbDetails.episode_run_time[0]}m / ep`
+        : null);
+    const rating = tmdbDetails.vote_average ? `${tmdbDetails.vote_average.toFixed(1)}/10` : null;
+    const ageRating = tmdbDetails.content_ratings?.results?.find(r => r.iso_3166_1 === "US")?.rating
+      || tmdbDetails.release_dates?.results?.find(r => r.iso_3166_1 === "US")
+         ?.release_dates?.find(d => d.certification)?.certification
+      || null;
+
+    const meta = [];
+    if (genres) meta.push(`**Genre:** ${genres}`);
+    if (runtime) meta.push(`**Runtime:** ${runtime}`);
+    if (rating) meta.push(`**Rating:** ⭐ ${rating}`);
+    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+    if (meta.length > 0) parts.push(meta.join(" · "));
+    if (overview) {
+      const trimmed = overview.length > 300 ? overview.substring(0, 297) + "..." : overview;
+      parts.push("\n" + trimmed);
+    }
+  }
+  return parts.join("\n");
+}
+
 async function handleStatusCommand(interaction) {
+  if (process.env.SHOW_STATUS_COMMAND === "false") {
+    return interaction.reply({ content: "⚠️ The /status command is currently disabled.", flags: 64 });
+  }
   await interaction.deferReply({ flags: 64 });
 
   const raw = interaction.options.getString("title") || "";
@@ -306,6 +358,12 @@ async function handleStatusCommand(interaction) {
   const seerrUrl = getSeerrUrl();
   const seerrApiKey = getSeerrApiKey();
 
+  // Fetch full TMDB details for rich embed (genres, runtime, rating, poster)
+  let tmdbDetails = null;
+  try {
+    tmdbDetails = await tmdbApi.tmdbGetDetails(tmdbId, mediaType, getTmdbApiKey());
+  } catch (_) {}
+
   if (!seerrUrl || !seerrApiKey) {
     return interaction.editReply({ content: "❌ Seerr is not configured." });
   }
@@ -320,6 +378,8 @@ async function handleStatusCommand(interaction) {
       3: { emoji: "⬇️", label: "Processing / Downloading" },
       4: { emoji: "🟡", label: "Partially Available" },
       5: { emoji: "✅", label: "Available" },
+      6: { emoji: "🗑️", label: "Deleted" },
+      7: { emoji: "🔄", label: "Pending" },
     };
 
     const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
@@ -329,17 +389,31 @@ async function handleStatusCommand(interaction) {
       || result.data?.first_air_date?.slice(0, 4) || "";
 
     if (!result.exists || result.status == null) {
-      // No request found in Seerr at all
-        const embed = new EmbedBuilder()
+      const nfDesc = buildStatusDescription(tmdbDetails, "This title has not been requested yet.");
+      const embed = new EmbedBuilder()
         .setColor("#89b4fa")
         .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
-        .setDescription("This title has not been requested yet.")
+        .setDescription(nfDesc)
         .setTimestamp();
-      return interaction.editReply({ embeds: [embed] });
+      if (tmdbDetails?.poster_path) {
+        embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
+      }
+      const nfButtons = [
+        new ButtonBuilder()
+          .setCustomId(`status_request_btn|${tmdbId}|${mediaType}|${titleFromOption}`)
+          .setLabel("📥 Request")
+          .setStyle(ButtonStyle.Primary),
+      ];
+      const seerrNF = buildSeerrUrl(mediaType, tmdbId);
+      if (seerrNF && isValidUrl(seerrNF)) {
+        nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrNF));
+      }
+      return interaction.editReply({ embeds: [embed], components: [new ActionRowBuilder().addComponents(nfButtons)] });
     }
 
     const statusInfo = statusMap[result.status] || { emoji: "❓", label: `Status ${result.status}` };
 
+    const resultDesc = buildStatusDescription(tmdbDetails, `**Status:** ${statusInfo.emoji} ${statusInfo.label}`);
     const embed = new EmbedBuilder()
       .setColor(
         result.status === 5 ? "#1ec8a0" :
@@ -348,21 +422,127 @@ async function handleStatusCommand(interaction) {
         result.status === 2 ? "#f0a05a" : "#6c7086"
       )
       .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
-      .setDescription(`**Status:** ${statusInfo.emoji} ${statusInfo.label}`)
+      .setDescription(resultDesc)
       .setTimestamp();
 
-    // Add poster if available
-    if (result.data?.posterPath || result.data?.poster_path) {
-      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${result.data.posterPath || result.data.poster_path}`);
+    // Poster: prefer TMDB, fallback to Seerr data
+    const posterPath = tmdbDetails?.poster_path || result.data?.posterPath || result.data?.poster_path;
+    if (posterPath) {
+      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${posterPath}`);
     }
 
-    return interaction.editReply({ embeds: [embed] });
+    const statusButtons = [];
+    const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
+    const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+
+    if (showSeerr) {
+      const seerrLink = buildSeerrUrl(mediaType, tmdbId);
+      if (seerrLink && isValidUrl(seerrLink)) {
+        statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrLink));
+      }
+    }
+    if (showWatch && result.status === 5) {
+      const jfKey = process.env.JELLYFIN_API_KEY;
+      const jfBase = process.env.JELLYFIN_BASE_URL;
+      if (jfKey && jfBase) {
+        try {
+          const jfId = await findJellyfinItemByTmdbId(tmdbId, mediaType, titleFromOption, jfKey, jfBase);
+          if (jfId) {
+            const watchUrl = buildJellyfinUrl(jfId);
+            if (watchUrl && isValidUrl(watchUrl)) {
+              statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("▶ Watch Now!").setURL(watchUrl));
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    const replyOpts = { embeds: [embed] };
+    if (statusButtons.length > 0) replyOpts.components = [new ActionRowBuilder().addComponents(statusButtons)];
+    return interaction.editReply(replyOpts);
 
   } catch (err) {
     logger.error("Status command error:", err);
     return interaction.editReply({
       content: "❌ Could not fetch status from Seerr. Please try again.",
     });
+  }
+}
+
+
+// ─── /random Command Handler ──────────────────────────────────────────────────
+async function handleRandomCommand(interaction) {
+  if (process.env.SHOW_RANDOM_COMMAND === "false") {
+    return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
+  }
+  await interaction.deferReply({ flags: 64 });
+
+  const type = interaction.options.getString("type") || "movie";
+  const itemType = type === "movie" ? "Movie" : "Series";
+  const emoji = type === "movie" ? "🎬" : "📺";
+  const apiKey = process.env.JELLYFIN_API_KEY;
+  const baseUrl = process.env.JELLYFIN_BASE_URL;
+
+  if (!apiKey || !baseUrl) {
+    return interaction.editReply({ content: "❌ Jellyfin is not configured." });
+  }
+
+  try {
+    const item = await fetchRandomJellyfinItem(apiKey, baseUrl, itemType);
+    if (!item) {
+      return interaction.editReply({ content: `❌ No ${type} found in your Jellyfin library.` });
+    }
+
+    const year = item.ProductionYear ? ` (${item.ProductionYear})` : "";
+    const genres = item.Genres?.slice(0, 3).join(", ") || "";
+    const ageRating = item.OfficialRating || "";
+    const communityRating = item.CommunityRating ? `${item.CommunityRating.toFixed(1)}/10` : null;
+    const runtimeMin = item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null;
+    const runtime = runtimeMin ? `${Math.floor(runtimeMin / 60)}h ${runtimeMin % 60}m` : null;
+    const overview = item.Overview
+      ? (item.Overview.length > 300 ? item.Overview.substring(0, 297) + "..." : item.Overview)
+      : "";
+
+    const meta = [];
+    if (genres) meta.push(`**Genre:** ${genres}`);
+    if (runtime) meta.push(`**Runtime:** ${runtime}`);
+    if (communityRating) meta.push(`**Rating:** ⭐ ${communityRating}`);
+    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+
+    let description = meta.join(" · ");
+    if (overview) description += `\n\n${overview}`;
+
+    const embed = new EmbedBuilder()
+      .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
+      .setAuthor({ name: `🎲 Random ${itemType}` })
+      .setTitle(`${emoji} ${item.Name}${year}`)
+      .setDescription(description || "No description available.")
+      .setTimestamp();
+
+        const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    if (tmdbIdFromJf && getTmdbApiKey()) {
+      try {
+        const tmdbType = itemType === "Movie" ? "movie" : "tv";
+        const tmdbData = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        if (tmdbData?.poster_path) {
+          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbData.poster_path);
+        }
+      } catch (_) {}
+    }
+
+    const watchUrl = buildJellyfinUrl(item.Id);
+    const components = [];
+    const showWatchRandom = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+    if (showWatchRandom && watchUrl && isValidUrl(watchUrl)) {
+      components.push(
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("▶ Watch Now!").setURL(watchUrl)
+        )
+      );
+    }
+    return interaction.editReply({ embeds: [embed], components });
+  } catch (err) {
+    logger.error("Random command error:", err);
+    return interaction.editReply({ content: "❌ Could not fetch a random title. Please try again." });
   }
 }
 
@@ -657,7 +837,7 @@ export function registerInteractions(client) {
         if (interaction.commandName === "status") {
           if (!focusedValue) return interaction.respond([]);
           try {
-            const results = await tmdbApi.tmdbSearch(focusedValue);
+            const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
             const choices = results.slice(0, 10).map((r) => {
               const title = r.title || r.name || "Unknown";
               const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
@@ -770,6 +950,16 @@ export function registerInteractions(client) {
         }
       }
 
+      // status_request_btn — quick request from /status embed
+      if (interaction.isButton() && interaction.customId.startsWith("status_request_btn|")) {
+        const parts = interaction.customId.split("|");
+        const tmdbId = parseInt(parts[1], 10);
+        const mediaType = parts[2] || "movie";
+        const title = parts.slice(3).join("|");
+        if (!tmdbId) return interaction.reply({ content: "⚠️ Invalid request.", flags: 64 });
+        return handleSearchOrRequest(interaction, `${tmdbId}|${mediaType}|${title}`, "request", [], { ephemeral: true });
+      }
+
       // Commands
       if (interaction.isCommand()) {
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
@@ -799,6 +989,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "status") {
           return handleStatusCommand(interaction);
+        }
+        if (interaction.commandName === "random") {
+          return handleRandomCommand(interaction);
         }
       }
 

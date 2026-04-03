@@ -221,6 +221,11 @@
     "show_server_selection_desc": "User können zwischen mehreren Radarr/Sonarr-Instanzen wählen",
     "show_quality_selection": "🎬 Qualitätsprofil-Auswahl anzeigen",
     "show_quality_selection_desc": "User können ein Qualitätsprofil für den Download wählen",
+    "command_toggles_title": "Discord-Befehle",
+    "show_status_command": "🔎 /status Befehl aktivieren",
+    "show_status_command_desc": "Seerr-Anfragestatus eines Titels abfragen",
+    "show_random_command": "🎲 /random Befehl aktivieren",
+    "show_random_command_desc": "Zufälligen Film oder Serie aus Jellyfin anzeigen",
     "daily_recommendation_title": "Tägliche Empfehlung aktivieren",
     "daily_recommendation_desc": "Täglich eine Empfehlung aus deiner Jellyfin-Library in einen Discord-Channel senden.",
     "test_sent": "Gesendet!",
@@ -229,6 +234,8 @@
     "seerr_webhook_box_desc": "Gehe in Seerr → Einstellungen → Benachrichtigungen → Webhook und trage diese URL ein:",
     "seerr_webhook_copy": "URL kopieren",
     "seerr_webhook_replace": "Ersetze localhost durch die IP deines Servers wenn du Docker nutzt.",
+    "seerr_webhook_header_desc": "Füge in Seerr außerdem einen Autorisierungs-Header zur Authentifizierung hinzu:",
+    "seerr_webhook_copy_secret": "Secret kopieren",
     "seerr_root_folder_load": "Root Folders laden",
     "jellyfin_fallback_channel": "📢 Standard-Benachrichtigungskanal",
     "jellyfin_fallback_desc": "Der Fallback-Kanal wird im Tab 1. Discord → Standard-Benachrichtigungskanal konfiguriert.",
@@ -297,7 +304,19 @@
     "cmd_options_title": "Bot Befehlsoptionen",
     "cmd_options_desc": "Konfiguriere welche Optionen für jeden Discord-Befehl angezeigt oder verfügbar sind.",
     "status_cmd_label": "🔎 Anfragestatus abfragen",
-    "status_cmd_desc": "Immer verfügbar — keine Konfiguration erforderlich. User können den aktuellen Anfragestatus eines Titels in Seerr direkt in Discord abfragen."
+    "status_cmd_desc": "Immer verfügbar — keine Konfiguration erforderlich. User können den aktuellen Anfragestatus eines Titels in Seerr direkt in Discord abfragen.",
+    "notification_buttons_title": "Benachrichtigungs-Buttons",
+    "notification_buttons_desc": "Wähle welche Buttons in Discord-Benachrichtigungs-Embeds erscheinen.",
+    "btn_view_seerr": "In Seerr ansehen",
+    "btn_view_seerr_desc": "Link zur Medienseite in Seerr",
+    "btn_watch_now": "▶ Jetzt ansehen!",
+    "btn_watch_now_desc": "Direktlink zum Jellyfin-Player (nur für verfügbare Inhalte)",
+    "btn_letterboxd": "Letterboxd",
+    "btn_letterboxd_desc": "Link zur Letterboxd-Seite (nur Filme)",
+    "btn_imdb": "IMDb",
+    "btn_imdb_desc": "Link zur IMDb-Seite",
+    "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
+    "test_notification_buttons": "Buttons testen"
   },
   "ui": {
     "hide_header": "Header ausblenden",
@@ -414,7 +433,10 @@
     "join_discord": "Discord beitreten",
     "footer_thanks": "Danke dass du Questorr nutzt! Öffne gerne ein",
     "footer_issue": "GitHub Issue",
-    "footer_feedback": "bei Fragen oder Feedback."
+    "footer_feedback": "bei Fragen oder Feedback.",
+    "feature_status": "<code>/status &lt;Titel&gt;</code> Aktuellen <strong style=\"color: var(--blue);\">Seerr-Anfragestatus</strong> direkt in Discord abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt.",
+    "feature_random": "<code>/random movie</code> oder <code>/random series</code> — Zufälligen <strong style=\"color: var(--blue);\">Vorschlag aus Jellyfin</strong> anzeigen mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Watch Now Button.",
+    "feature_button_toggles": "Konfiguriere welche Benachrichtigungs-Buttons (In Seerr ansehen, Jetzt ansehen, Letterboxd, IMDb) in Discord-Embeds erscheinen — individuell im Dashboard ein- und ausschaltbar."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

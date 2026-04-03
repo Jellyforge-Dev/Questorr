@@ -387,14 +387,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const baseUrl = `${origin}/seerr-webhook`;
 
-    if (useSecret) {
-      seerrWebhookUrlEl.textContent = `${baseUrl}?secret=••••••••`;
-      seerrWebhookUrlEl.dataset.realUrl = `${baseUrl}?secret=${useSecret}`;
-    } else {
-      // No secret yet – show placeholder hint
-      seerrWebhookUrlEl.textContent = baseUrl;
-      seerrWebhookUrlEl.dataset.realUrl = baseUrl;
-    }
+	// URL is always shown without the secret – the secret is transmitted
+	// as an X-Webhook-Secret header, not as a query parameter.
+	seerrWebhookUrlEl.textContent = baseUrl;
+	seerrWebhookUrlEl.dataset.realUrl = baseUrl;
+
+	// Update the separate secret display element
+	const secretDisplayEl = document.getElementById("seerr-webhook-secret-display");
+	if (secretDisplayEl) {
+		if (useSecret) {
+			secretDisplayEl.textContent = "••••••••";
+			secretDisplayEl.dataset.realSecret = useSecret;
+		} else {
+			secretDisplayEl.textContent = "–";
+			secretDisplayEl.dataset.realSecret = "";
+		}
+	}
   }
 
   // --- Auth Logic ---
@@ -1086,12 +1094,61 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
+  // Test Notification Buttons
+  const testNotifBtnsBtn = document.getElementById("test-notification-buttons-btn");
+  const testNotifBtnsStatus = document.getElementById("test-notification-buttons-status");
+  if (testNotifBtnsBtn) {
+    testNotifBtnsBtn.addEventListener("click", async () => {
+      testNotifBtnsBtn.disabled = true;
+      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "Sending...";
+      try {
+        const response = await fetch("/api/test-notification-buttons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (data.success || response.ok) {
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + (data.message || t("config.test_sent") || "Sent!");
+          showToast(data.message || "Test notification sent!");
+        } else {
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (data.message || "Failed");
+          showToast(data.message || "Test failed.");
+        }
+      } catch (err) {
+        if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ Error";
+        showToast("Error sending test notification.");
+      } finally {
+        testNotifBtnsBtn.disabled = false;
+        setTimeout(() => { if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = ""; }, 4000);
+      }
+    });
+  }
+
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
   if (copySeerrWebhookBtn) {
     copySeerrWebhookBtn?.addEventListener("click", () => {
       const el = document.getElementById("seerr-webhook-url");
       const textToCopy = el?.dataset.realUrl || el?.textContent || "";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => showToast(t("ui.copied") || "Kopiert!"))
+          .catch(() => fallbackCopyTextToClipboard(textToCopy));
+      } else {
+        fallbackCopyTextToClipboard(textToCopy);
+      }
+    });
+  }
+
+  // Copy Seerr webhook secret (header value)
+  const copySeerrWebhookSecretBtn = document.getElementById("copy-seerr-webhook-secret-btn");
+  if (copySeerrWebhookSecretBtn) {
+    copySeerrWebhookSecretBtn.addEventListener("click", () => {
+      const el = document.getElementById("seerr-webhook-secret-display");
+      const textToCopy = el?.dataset.realSecret || "";
+      if (!textToCopy) return;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy)
           .then(() => showToast(t("ui.copied") || "Kopiert!"))
@@ -3831,4 +3888,120 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }, 200);
 
+});
+
+// =============================================================================
+// Coloris Color Picker + Debounce Input
+// (Previously an inline <script> in index.html — moved here for CSP compliance)
+// =============================================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  Coloris({
+    el: "[data-coloris]",
+    theme: "large",
+    themeMode: "dark",
+    format: "hex",
+    swatches: [
+      "#cba6f7", // Mauve
+      "#89b4fa", // Blue
+      "#a6e3a1", // Green
+      "#ef9f76", // Peach
+      "#f38ba8", // Red
+      "#f9e2af", // Yellow
+    ],
+  });
+
+  // Sync debounce seconds input with milliseconds hidden field
+  const secondsInput = document.getElementById('WEBHOOK_DEBOUNCE_SECONDS');
+  const msInput = document.getElementById('WEBHOOK_DEBOUNCE_MS');
+  const upArrow = document.getElementById('debounce-up');
+  const downArrow = document.getElementById('debounce-down');
+
+  if (secondsInput && msInput) {
+    // Convert seconds to milliseconds on input
+    secondsInput.addEventListener('input', function() {
+      let seconds = parseInt(this.value) || 60;
+      // Clamp to valid range
+      if (seconds < 1) seconds = 1;
+      if (seconds > 600) seconds = 600;
+      this.value = seconds;
+      msInput.value = seconds * 1000;
+    });
+
+    // Hold-to-repeat functionality
+    let repeatInterval = null;
+    let repeatTimeout = null;
+
+    const startRepeat = function(direction) {
+      const increment = function() {
+        let current = parseInt(secondsInput.value) || 60;
+        if (direction === 'up' && current < 600) {
+          secondsInput.value = current + 1;
+          msInput.value = (current + 1) * 1000;
+        } else if (direction === 'down' && current > 1) {
+          secondsInput.value = current - 1;
+          msInput.value = (current - 1) * 1000;
+        }
+      };
+
+      // Immediate increment on first click
+      increment();
+
+      // Start repeating after 300ms delay at max speed (50ms interval)
+      repeatTimeout = setTimeout(function() {
+        repeatInterval = setInterval(increment, 50);
+      }, 300);
+    };
+
+    const stopRepeat = function() {
+      if (repeatTimeout) {
+        clearTimeout(repeatTimeout);
+        repeatTimeout = null;
+      }
+      if (repeatInterval) {
+        clearInterval(repeatInterval);
+        repeatInterval = null;
+      }
+    };
+
+    // Up arrow events
+    if (upArrow) {
+      upArrow.addEventListener('mousedown', () => startRepeat('up'));
+      upArrow.addEventListener('mouseup', stopRepeat);
+      upArrow.addEventListener('mouseleave', stopRepeat);
+      upArrow.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startRepeat('up');
+      });
+      upArrow.addEventListener('touchend', stopRepeat);
+    }
+
+    // Down arrow events
+    if (downArrow) {
+      downArrow.addEventListener('mousedown', () => startRepeat('down'));
+      downArrow.addEventListener('mouseup', stopRepeat);
+      downArrow.addEventListener('mouseleave', stopRepeat);
+      downArrow.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startRepeat('down');
+      });
+      downArrow.addEventListener('touchend', stopRepeat);
+    }
+
+    // Convert milliseconds to seconds when loading config
+    const updateSecondsFromMs = function() {
+      const ms = parseInt(msInput.value);
+      if (!isNaN(ms) && ms > 0) {
+        const seconds = Math.round(ms / 1000);
+        secondsInput.value = seconds;
+      }
+    };
+
+    // Watch for changes to the hidden field (when config loads)
+    const observer = new MutationObserver(updateSecondsFromMs);
+    observer.observe(msInput, { attributes: true, attributeFilter: ['value'] });
+
+    // Also update immediately if there's already a value
+    updateSecondsFromMs();
+  }
 });

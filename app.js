@@ -180,23 +180,59 @@ function verifyVolumeConfiguration() {
 const app = express();
 let port = process.env.WEBHOOK_PORT || 8282;
 
-// Enable trust proxy - required when running behind Nginx Proxy Manager or any reverse proxy.
-// This ensures rate limiting and IP detection work correctly with X-Forwarded-For headers.
-app.set("trust proxy", 1);
+// Trust proxy configuration.
+// Enable when running behind a reverse proxy (Nginx Proxy Manager, Traefik, Caddy etc.)
+// so that rate limiting and IP detection use the real client IP from X-Forwarded-For.
+// Set TRUST_PROXY=false in your environment when running without a reverse proxy
+// to prevent clients from spoofing X-Forwarded-For headers.
+const trustProxy = process.env.TRUST_PROXY !== "false";
+app.set("trust proxy", trustProxy);
+if (trustProxy) {
+  logger.info("ℹ️  Trust proxy enabled (set TRUST_PROXY=false to disable)");
+}
 
 function configureWebServer() {
-  // Security headers
+  // Security headers via Helmet (CSP, etc.)
+  // Must be registered at the top level, not inside a request handler.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "https://cdn.jsdelivr.net",          // Coloris color picker
+        ],
+        styleSrc: [
+          "'self'",
+		  "'unsafe-inline'",
+          "https://cdn.jsdelivr.net",          // Coloris CSS
+          "https://cdnjs.cloudflare.com",      // Bootstrap Icons
+          "https://fonts.googleapis.com",      // Google Fonts
+        ],
+        fontSrc: [
+          "'self'",
+          "https://fonts.gstatic.com",         // Google Fonts files
+          "https://cdnjs.cloudflare.com",      // Bootstrap Icons font files
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",                             // base64 avatars / inline images
+          "https://storage.ko-fi.com",         // Ko-fi button icon
+          "https:",                            // Discord CDN avatars, TMDB posters
+        ],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // Additional manual security headers
   app.use((_req, res, next) => {
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-XSS-Protection", "1; mode=block");
-    // Security headers via helmet
-  app.use(helmet({
-    contentSecurityPolicy: false, // disabled to allow inline scripts in dashboard
-    crossOriginEmbedderPolicy: false,
-  }));
-
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     next();
   });
 
@@ -214,6 +250,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const configLimiter = rateLimit({
@@ -225,6 +262,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Auth routes (before general rate limiter so authLimiter applies)
@@ -606,14 +644,17 @@ function configureWebServer() {
     message: { success: false, error: "Too many webhook requests." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via ?secret= query parameter
+      // Validate webhook secret via Authorization header.
+      // Seerr sends this via the "Authorization Header" field in webhook settings.
+      // Using a header prevents the secret from appearing in reverse proxy logs.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.query.secret || "";
+        const incomingSecret = req.headers["authorization"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           return res.status(401).send("Unauthorized");
@@ -654,6 +695,8 @@ function configureWebServer() {
       const oldShowTag = process.env.SHOW_TAG_SELECTION;
       const oldShowServer = process.env.SHOW_SERVER_SELECTION;
       const oldShowQuality = process.env.SHOW_QUALITY_SELECTION;
+      const oldShowStatus = process.env.SHOW_STATUS_COMMAND;
+      const oldShowRandom = process.env.SHOW_RANDOM_COMMAND;
 
       // Normalize SEERR_URL to remove /api/v1 suffix if present
       if (
@@ -731,7 +774,9 @@ function configureWebServer() {
       const commandOptionsChanged =
         oldShowTag !== configData.SHOW_TAG_SELECTION ||
         oldShowServer !== configData.SHOW_SERVER_SELECTION ||
-        oldShowQuality !== configData.SHOW_QUALITY_SELECTION;
+        oldShowQuality !== configData.SHOW_QUALITY_SELECTION ||
+        oldShowStatus !== configData.SHOW_STATUS_COMMAND ||
+        oldShowRandom !== configData.SHOW_RANDOM_COMMAND;
 
       if (commandOptionsChanged) {
         const changes = [];

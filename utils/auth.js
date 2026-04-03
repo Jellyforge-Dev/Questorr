@@ -1,8 +1,10 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import logger from "./logger.js";
-import { readConfig, updateConfig } from "./configFile.js";
+import { readConfig, updateConfig, CONFIG_PATH } from "./configFile.js";
 import { getUsers, saveUser as saveUserToConfig } from "./userStore.js";
 
 const AUTH_TOKEN_EXPIRATION = "7d";
@@ -13,14 +15,60 @@ const MAX_FAILED_ATTEMPTS = 5;          // lock after this many consecutive fail
 const LOCKOUT_DURATION_MS = 10 * 60 * 1000; // 10 min lockout
 const BASE_DELAY_MS = 300;              // progressive delay per failure: attempt * 300ms
 const MAX_DELAY_MS = 4000;             // cap at 4s
-
+ 
 // username → { count: number, lockedUntil: number, timerId: NodeJS.Timeout|null }
 const failedAttempts = new Map();
-
+ 
+// Persist active lockouts to disk so they survive container restarts.
+// Only locked accounts (lockedUntil > now) are written – partial failure
+// counts below the threshold are intentionally not persisted.
+const LOCKOUTS_PATH = path.join(path.dirname(CONFIG_PATH), "lockouts.json");
+ 
+function saveLockoutsToDisk() {
+  try {
+    const now = Date.now();
+    const toSave = {};
+    for (const [username, entry] of failedAttempts) {
+      if (entry.lockedUntil > now) {
+        toSave[username] = { count: entry.count, lockedUntil: entry.lockedUntil };
+      }
+    }
+    fs.writeFileSync(LOCKOUTS_PATH, JSON.stringify(toSave, null, 2), { mode: 0o600 });
+  } catch (err) {
+    logger.warn("[Auth] Could not persist lockouts to disk:", err.message);
+  }
+}
+ 
+function loadLockoutsFromDisk() {
+  try {
+    if (!fs.existsSync(LOCKOUTS_PATH)) return;
+    const raw = fs.readFileSync(LOCKOUTS_PATH, "utf-8");
+    const saved = JSON.parse(raw);
+    const now = Date.now();
+    for (const [username, entry] of Object.entries(saved)) {
+      if (entry.lockedUntil > now) {
+        // Re-arm the auto-cleanup timer
+        const timerId = setTimeout(
+          () => { failedAttempts.delete(username); saveLockoutsToDisk(); },
+          entry.lockedUntil - now + 5000
+        );
+        if (typeof timerId.unref === "function") timerId.unref();
+        failedAttempts.set(username, { count: entry.count, lockedUntil: entry.lockedUntil, timerId });
+        logger.info(`[Auth] Restored active lockout for "${username}" (${Math.ceil((entry.lockedUntil - now) / 1000)}s remaining)`);
+      }
+    }
+  } catch (err) {
+    logger.warn("[Auth] Could not load lockouts from disk:", err.message);
+  }
+}
+ 
+// Load persisted lockouts on module init
+loadLockoutsFromDisk();
+ 
 function getAttemptEntry(username) {
   return failedAttempts.get(username) || { count: 0, lockedUntil: 0, timerId: null };
 }
-
+ 
 function recordFailure(username) {
   const entry = getAttemptEntry(username);
   // Cancel the previous cleanup timer so only one is active per username
@@ -30,18 +78,21 @@ function recordFailure(username) {
     count >= MAX_FAILED_ATTEMPTS ? Date.now() + LOCKOUT_DURATION_MS : entry.lockedUntil;
   // Auto-cleanup so the map doesn't grow unbounded
   const timerId = setTimeout(
-    () => failedAttempts.delete(username),
+    () => { failedAttempts.delete(username); saveLockoutsToDisk(); },
     LOCKOUT_DURATION_MS + 5000
   );
   if (typeof timerId.unref === "function") timerId.unref();
   failedAttempts.set(username, { count, lockedUntil, timerId });
+  // Persist to disk if this triggered a lockout
+  if (lockedUntil > Date.now()) saveLockoutsToDisk();
   return { count, lockedUntil };
 }
-
+ 
 function clearFailures(username) {
   failedAttempts.delete(username);
+  saveLockoutsToDisk();
 }
-
+ 
 function checkLockout(username) {
   const entry = getAttemptEntry(username);
   if (entry.lockedUntil > Date.now()) {
@@ -49,7 +100,7 @@ function checkLockout(username) {
   }
   return 0;
 }
-
+ 
 function progressiveDelay(username) {
   const { count } = getAttemptEntry(username);
   const ms = Math.min(count * BASE_DELAY_MS, MAX_DELAY_MS);

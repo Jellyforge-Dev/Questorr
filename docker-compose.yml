@@ -8,14 +8,17 @@ services:
       - NODE_ENV=production
       # Optional: set LOG_LEVEL to verbose or debug for more detailed logs
       # - LOG_LEVEL=verbose
+      # Disable trust proxy if running WITHOUT a reverse proxy (direct Docker access).
+      # When enabled, X-Forwarded-For is trusted for rate limiting and IP detection.
+      # - TRUST_PROXY=false
     ports:
       - "8282:8282"
     volumes:
       # Config persists in ./questorr-data/config.json
       # Change "./questorr-data" to your preferred path
       - ./questorr-data:/usr/src/app/config
-    # For non-root: uncomment below, manually create ./questorr-data, set to your user/group ID
-    # user: "1000:1000"
+    # The container runs as a non-root user automatically via entrypoint.sh.
+    # No manual user configuration required.
     labels:
       - "org.opencontainers.image.title=Questorr"
       - "org.opencontainers.image.description=Discord bot for requesting media and Jellyfin notifications"

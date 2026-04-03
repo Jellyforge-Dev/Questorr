@@ -212,7 +212,7 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
  * Instead we use the TMDB title to search, then verify the TMDB ID in ProviderIds.
  * TMDB data must be fetched before calling this function (tmdbCache must be populated).
  */
-async function findVerifiedJellyfinItem(tmdbId, mediaType) {
+export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   const apiKey = process.env.JELLYFIN_API_KEY;
   const baseUrl = process.env.JELLYFIN_BASE_URL;
   if (!apiKey || !baseUrl) return null;
@@ -373,13 +373,13 @@ async function fetchTmdbDetails(tmdbId, mediaType) {
 
 // ─── URL Builders ─────────────────────────────────────────────────────────────
 
-function buildSeerrUrl(mediaType, tmdbId) {
+export function buildSeerrUrl(mediaType, tmdbId) {
   const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
   if (!base || !tmdbId) return null;
   return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
 }
 
-function buildJellyfinUrl(itemId) {
+export function buildJellyfinUrl(itemId) {
   const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
   const serverId = process.env.JELLYFIN_SERVER_ID || "";
   if (!base || !itemId) return null;
@@ -462,6 +462,13 @@ async function processEvent(data, eventType, cfg, client) {
   // Build embed and buttons
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
   const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+
+  // MEDIA_PENDING and MEDIA_DECLINED go only to the requester via DM (not channel)
+  const dmOnlyEvents = ["MEDIA_PENDING", "MEDIA_DECLINED"];
+  if (dmOnlyEvents.includes(eventType)) {
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    return;
+  }
 
   // Send to Discord channel
   let channel;
@@ -578,19 +585,25 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   const components = [];
 
+  const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
+  const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+  const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+
   // View on Seerr
-  const seerrUrl = buildSeerrUrl(mediaType, tmdbId);
-  if (seerrUrl && isValidUrl(seerrUrl)) {
-    components.push(
-      new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setLabel("View on Seerr")
-        .setURL(seerrUrl)
-    );
+  if (showSeerr) {
+    const seerrUrl = buildSeerrUrl(mediaType, tmdbId);
+    if (seerrUrl && isValidUrl(seerrUrl)) {
+      components.push(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("View on Seerr")
+          .setURL(seerrUrl)
+      );
+    }
   }
 
   // Watch Now on Jellyfin – only for MEDIA_AVAILABLE
-  if (eventType === "MEDIA_AVAILABLE" && jellyfinItemId) {
+  if (showWatch && eventType === "MEDIA_AVAILABLE" && jellyfinItemId) {
     const watchUrl = buildJellyfinUrl(jellyfinItemId);
     if (watchUrl && isValidUrl(watchUrl)) {
       components.push(
@@ -603,7 +616,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   }
 
   // IMDb – from TMDB external_ids (most reliable)
-  if (imdbId) {
+  if (showImdb && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
       components.push(
@@ -623,7 +636,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
 
 async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
   // DM on these events regardless of NOTIFY_ON_AVAILABLE
-  const dmEvents = ["MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
+  const dmEvents = ["MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
   if (!dmEvents.includes(eventType)) return;
 
   // Find Discord ID from user mapping

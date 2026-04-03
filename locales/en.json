@@ -149,6 +149,11 @@
     "show_server_selection_desc": "Users can choose between multiple Radarr/Sonarr instances",
     "show_quality_selection": "🎬 Show Quality Profile Selection",
     "show_quality_selection_desc": "Users can select a quality profile for the download",
+    "command_toggles_title": "Discord Commands",
+    "show_status_command": "🔎 Enable /status Command",
+    "show_status_command_desc": "Check the Seerr request status of any title",
+    "show_random_command": "🎲 Enable /random Command",
+    "show_random_command_desc": "Pick a random movie or series from Jellyfin",
     "daily_recommendation_title": "Enable Daily Recommendation",
     "daily_recommendation_desc": "Send a daily recommendation from your existing Jellyfin library to a Discord channel.",
     "test_sent": "Sent!",
@@ -157,6 +162,8 @@
     "seerr_webhook_box_desc": "Go to Seerr → Settings → Notifications → Webhook and enter this URL:",
     "seerr_webhook_copy": "Copy URL",
     "seerr_webhook_replace": "Replace localhost with your server IP if using Docker.",
+    "seerr_webhook_header_desc": "In Seerr, also add an authorization header to authenticate the webhook:",
+    "seerr_webhook_copy_secret": "Copy Secret",
     "seerr_root_folder_load": "Load Root Folders",
     "jellyfin_fallback_channel": "📢 Default Notification Channel",
     "jellyfin_fallback_desc": "The fallback channel is configured in tab 1. Discord → Default Notification Channel.",
@@ -227,7 +234,19 @@
     "cmd_options_title": "Bot Command Options",
     "cmd_options_desc": "Configure which options are shown or available for each Discord command.",
     "status_cmd_label": "🔎 Request Status Lookup",
-    "status_cmd_desc": "Always available — no configuration required. Users can check the current request status of any title in Seerr directly in Discord."
+    "status_cmd_desc": "Always available — no configuration required. Users can check the current request status of any title in Seerr directly in Discord.",
+    "notification_buttons_title": "Notification Buttons",
+    "notification_buttons_desc": "Choose which buttons appear on Discord notification embeds.",
+    "btn_view_seerr": "View on Seerr",
+    "btn_view_seerr_desc": "Link to the media page in Seerr",
+    "btn_watch_now": "▶ Watch Now!",
+    "btn_watch_now_desc": "Direct link to the Jellyfin player (available content only)",
+    "btn_letterboxd": "Letterboxd",
+    "btn_letterboxd_desc": "Link to the Letterboxd page (movies only)",
+    "btn_imdb": "IMDb",
+    "btn_imdb_desc": "Link to the IMDb page",
+    "command_toggles_desc": "Enable or disable individual Discord slash commands.",
+    "test_notification_buttons": "Test Buttons"
   },
   "ui": {
     "hide_header": "Hide header",
@@ -341,7 +360,10 @@
     "join_discord": "Join Discord",
     "footer_thanks": "Thank you for using Questorr! Feel free to open a",
     "footer_issue": "GitHub Issue",
-    "footer_feedback": "for questions or feedback."
+    "footer_feedback": "for questions or feedback.",
+    "feature_status": "<code>/status &lt;title&gt;</code> Check the current <strong style=\"color: var(--blue);\">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.",
+    "feature_random": "<code>/random movie</code> or <code>/random series</code> — get a <strong style=\"color: var(--blue);\">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.",
+    "feature_button_toggles": "Configure which notification buttons (View on Seerr, Watch Now, Letterboxd, IMDb) appear on Discord embeds — individually togglable in the dashboard."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",
