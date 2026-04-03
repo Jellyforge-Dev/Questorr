@@ -927,8 +927,7 @@ function configureWebServer() {
         .setColor("#1ec8a0")
         .setAuthor({ name: "🎉 Now Available!" })
         .setTitle("🎬 Test Movie (2024)")
-        .setDescription("This is a test notification to preview your button configuration.
-Enabled buttons are shown below.")
+        .setDescription("This is a test notification to preview your button configuration.\nEnabled buttons are shown below.")
         .setThumbnail("https://image.tmdb.org/t/p/w500/test.jpg")
         .setTimestamp();
 
