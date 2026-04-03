@@ -157,7 +157,7 @@
     "seerr_webhook_box_desc": "Go to Seerr → Settings → Notifications → Webhook and enter this URL:",
     "seerr_webhook_copy": "Copy URL",
     "seerr_webhook_replace": "Replace localhost with your server IP if using Docker.",
-	"seerr_webhook_header_desc": "In Jellyseerr, also add a custom header to authenticate the webhook:",
+	"seerr_webhook_header_desc": "In Seerr, also add an authorization header to authenticate the webhook:",
 	"seerr_webhook_copy_secret": "Copy Secret",
     "seerr_root_folder_load": "Load Root Folders",
     "jellyfin_fallback_channel": "📢 Default Notification Channel",

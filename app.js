@@ -646,12 +646,13 @@ function configureWebServer() {
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via X-Webhook-Secret request header.
-	  // Using a header instead of a query parameter prevents the secret from
-	  // being captured in reverse proxy logs, browser history, or referrer headers.
+      // Validate webhook secret via Authorization header.
+      // Seerr sends this via the "Authorization Header" field in webhook settings.
+      // Using a header prevents the secret from appearing in reverse proxy logs
+      // or browser history.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.headers["x-webhook-secret"] || "";
+        const incomingSecret = req.headers["authorization"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           return res.status(401).send("Unauthorized");
