@@ -1094,6 +1094,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
+  // Test Notification Buttons
+  const testNotifBtnsBtn = document.getElementById("test-notification-buttons-btn");
+  const testNotifBtnsStatus = document.getElementById("test-notification-buttons-status");
+  if (testNotifBtnsBtn) {
+    testNotifBtnsBtn.addEventListener("click", async () => {
+      testNotifBtnsBtn.disabled = true;
+      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "Sending...";
+      try {
+        const response = await fetch("/api/test-notification-buttons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (data.success || response.ok) {
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + (data.message || t("config.test_sent") || "Sent!");
+          showToast(data.message || "Test notification sent!");
+        } else {
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (data.message || "Failed");
+          showToast(data.message || "Test failed.");
+        }
+      } catch (err) {
+        if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ Error";
+        showToast("Error sending test notification.");
+      } finally {
+        testNotifBtnsBtn.disabled = false;
+        setTimeout(() => { if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = ""; }, 4000);
+      }
+    });
+  }
+
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
   if (copySeerrWebhookBtn) {
