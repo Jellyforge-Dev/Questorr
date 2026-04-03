@@ -180,23 +180,58 @@ function verifyVolumeConfiguration() {
 const app = express();
 let port = process.env.WEBHOOK_PORT || 8282;
 
-// Enable trust proxy - required when running behind Nginx Proxy Manager or any reverse proxy.
-// This ensures rate limiting and IP detection work correctly with X-Forwarded-For headers.
-app.set("trust proxy", 1);
+// Trust proxy configuration.
+// Enable when running behind a reverse proxy (Nginx Proxy Manager, Traefik, Caddy etc.)
+// so that rate limiting and IP detection use the real client IP from X-Forwarded-For.
+// Set TRUST_PROXY=false in your environment when running without a reverse proxy
+// to prevent clients from spoofing X-Forwarded-For headers.
+const trustProxy = process.env.TRUST_PROXY !== "false";
+app.set("trust proxy", trustProxy);
+if (trustProxy) {
+  logger.info("ℹ️  Trust proxy enabled (set TRUST_PROXY=false to disable)");
+}
 
 function configureWebServer() {
-  // Security headers
+  // Security headers via Helmet (CSP, etc.)
+  // Must be registered at the top level, not inside a request handler.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "https://cdn.jsdelivr.net",          // Coloris color picker
+        ],
+        styleSrc: [
+          "'self'",
+          "https://cdn.jsdelivr.net",          // Coloris CSS
+          "https://cdnjs.cloudflare.com",      // Bootstrap Icons
+          "https://fonts.googleapis.com",      // Google Fonts
+        ],
+        fontSrc: [
+          "'self'",
+          "https://fonts.gstatic.com",         // Google Fonts files
+          "https://cdnjs.cloudflare.com",      // Bootstrap Icons font files
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",                             // base64 avatars / inline images
+          "https://storage.ko-fi.com",         // Ko-fi button icon
+          "https:",                            // Discord CDN avatars, TMDB posters
+        ],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // Additional manual security headers
   app.use((_req, res, next) => {
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-XSS-Protection", "1; mode=block");
-    // Security headers via helmet
-  app.use(helmet({
-    contentSecurityPolicy: false, // disabled to allow inline scripts in dashboard
-    crossOriginEmbedderPolicy: false,
-  }));
-
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     next();
   });
 
@@ -610,10 +645,12 @@ function configureWebServer() {
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via ?secret= query parameter
+      // Validate webhook secret via X-Webhook-Secret request header.
+	  // Using a header instead of a query parameter prevents the secret from
+	  // being captured in reverse proxy logs, browser history, or referrer headers.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.query.secret || "";
+        const incomingSecret = req.headers["x-webhook-secret"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           return res.status(401).send("Unauthorized");

@@ -390,6 +390,15 @@
                           <button type="button" id="copy-seerr-webhook-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.seerr_webhook_copy">Copy URL</button>
                         </div>
                         <p style="margin: 0.6rem 0 0 0; font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.seerr_webhook_replace">Replace <code>localhost</code> with your server IP if using Docker.</p>
+						
+						<!-- Webhook secret as custom header (not in URL) -->
+						<p style="margin: 0.75rem 0 0.4rem 0; font-size: 0.9rem;" data-i18n="config.seerr_webhook_header_desc">In Jellyseerr, also add a custom header to authenticate the webhook:</p>
+						<div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem;">
+							<code style="padding: 0.4rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.9rem; color: var(--subtext1); white-space: nowrap;">X-Webhook-Secret</code>
+							<span style="font-size: 0.85rem; color: var(--subtext0);">→</span>
+							<code id="seerr-webhook-secret-display" style="flex: 1; padding: 0.4rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.9rem; min-width: 120px;">–</code>
+							<button type="button" id="copy-seerr-webhook-secret-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.seerr_webhook_copy_secret">Copy Secret</button>
+						</div>
                         <div style="margin-top: 0.75rem;">
                           <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">
                             <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Webhook testen</span>
@@ -1008,121 +1017,6 @@
 
     <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
     <script src="script.js"></script>
-
-    <script>
-      // Initialize Coloris globally on page load
-      document.addEventListener("DOMContentLoaded", () => {
-        Coloris({
-          el: "[data-coloris]",
-          theme: "large",
-          themeMode: "dark",
-          format: "hex",
-          swatches: [
-            "#cba6f7", // Mauve
-            "#89b4fa", // Blue
-            "#a6e3a1", // Green
-            "#ef9f76", // Peach
-            "#f38ba8", // Red
-            "#f9e2af", // Yellow
-          ],
-        });
-
-        // Sync debounce seconds input with milliseconds hidden field
-        const secondsInput = document.getElementById('WEBHOOK_DEBOUNCE_SECONDS');
-        const msInput = document.getElementById('WEBHOOK_DEBOUNCE_MS');
-        const upArrow = document.getElementById('debounce-up');
-        const downArrow = document.getElementById('debounce-down');
-        
-        if (secondsInput && msInput) {
-          // Convert seconds to milliseconds on input
-          secondsInput.addEventListener('input', function() {
-            let seconds = parseInt(this.value) || 60;
-            // Clamp to valid range
-            if (seconds < 1) seconds = 1;
-            if (seconds > 600) seconds = 600;
-            this.value = seconds;
-            msInput.value = seconds * 1000;
-          });
-          
-          // Hold-to-repeat functionality
-          let repeatInterval = null;
-          let repeatTimeout = null;
-          
-          const startRepeat = function(direction) {
-            const increment = function() {
-              let current = parseInt(secondsInput.value) || 60;
-              if (direction === 'up' && current < 600) {
-                secondsInput.value = current + 1;
-                msInput.value = (current + 1) * 1000;
-              } else if (direction === 'down' && current > 1) {
-                secondsInput.value = current - 1;
-                msInput.value = (current - 1) * 1000;
-              }
-            };
-            
-            // Immediate increment on first click
-            increment();
-            
-            // Start repeating after 300ms delay at max speed (50ms interval)
-            repeatTimeout = setTimeout(function() {
-              repeatInterval = setInterval(increment, 50);
-            }, 300);
-          };
-          
-          const stopRepeat = function() {
-            if (repeatTimeout) {
-              clearTimeout(repeatTimeout);
-              repeatTimeout = null;
-            }
-            if (repeatInterval) {
-              clearInterval(repeatInterval);
-              repeatInterval = null;
-            }
-          };
-          
-          // Up arrow events
-          if (upArrow) {
-            upArrow.addEventListener('mousedown', () => startRepeat('up'));
-            upArrow.addEventListener('mouseup', stopRepeat);
-            upArrow.addEventListener('mouseleave', stopRepeat);
-            upArrow.addEventListener('touchstart', (e) => {
-              e.preventDefault();
-              startRepeat('up');
-            });
-            upArrow.addEventListener('touchend', stopRepeat);
-          }
-          
-          // Down arrow events
-          if (downArrow) {
-            downArrow.addEventListener('mousedown', () => startRepeat('down'));
-            downArrow.addEventListener('mouseup', stopRepeat);
-            downArrow.addEventListener('mouseleave', stopRepeat);
-            downArrow.addEventListener('touchstart', (e) => {
-              e.preventDefault();
-              startRepeat('down');
-            });
-            downArrow.addEventListener('touchend', stopRepeat);
-          }
-          
-          // Convert milliseconds to seconds when loading config
-          // This runs when the config is loaded from the server
-          const updateSecondsFromMs = function() {
-            const ms = parseInt(msInput.value);
-            if (!isNaN(ms) && ms > 0) {
-              const seconds = Math.round(ms / 1000);
-              secondsInput.value = seconds;
-            }
-          };
-          
-          // Watch for changes to the hidden field (when config loads)
-          const observer = new MutationObserver(updateSecondsFromMs);
-          observer.observe(msInput, { attributes: true, attributeFilter: ['value'] });
-          
-          // Also update immediately if there's already a value
-          updateSecondsFromMs();
-        }
-      });
-    </script>
 
     <!-- Bot Auto-Start Confirmation Modal -->
     <div id="bot-autostart-modal" class="modal-overlay" style="display: none;">

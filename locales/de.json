@@ -229,6 +229,8 @@
     "seerr_webhook_box_desc": "Gehe in Seerr → Einstellungen → Benachrichtigungen → Webhook und trage diese URL ein:",
     "seerr_webhook_copy": "URL kopieren",
     "seerr_webhook_replace": "Ersetze localhost durch die IP deines Servers wenn du Docker nutzt.",
+	"seerr_webhook_header_desc": "Füge in Jellyseerr außerdem einen Custom Header zur Authentifizierung hinzu:",
+	"seerr_webhook_copy_secret": "Secret kopieren",
     "seerr_root_folder_load": "Root Folders laden",
     "jellyfin_fallback_channel": "📢 Standard-Benachrichtigungskanal",
     "jellyfin_fallback_desc": "Der Fallback-Kanal wird im Tab 1. Discord → Standard-Benachrichtigungskanal konfiguriert.",
