@@ -5,7 +5,7 @@
 
   **Ein selbst gehosteter Discord-Bot der Jellyfin und Seerr verbindet — mit intelligenten Benachrichtigungen, automatischem Kanal-Routing und einem vollständigen Web-Dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.1.1-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -104,7 +104,7 @@ Reverse-Proxy-Einstellungen: Scheme: `http` · Host / Forward Hostname: `questor
 |---|---|
 | `latest` | Neueste stabile Version |
 | `dev` | Entwicklungs-Build (kann instabil sein) |
-| `2.1.0` | Bestimmte Version |
+| `2.1.1` | Bestimmte Version |
 
 ### Manuell (Entwicklung)
 
@@ -179,7 +179,7 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 Diese Funktionen sind in Planung und können in zukünftigen Versionen hinzukommen:
 
-- **`/status <Titel>`** ✅ *In v2.1.0 hinzugefügt* — aktuellen Anfragestatus eines Mediums in Seerr direkt in Discord abfragen
+- **`/status <Titel>`** ✅ *In v2.1.1 hinzugefügt* — aktuellen Anfragestatus eines Mediums in Seerr direkt in Discord abfragen
 - **Webhook Test Log** — letzte empfangene Webhook-Events im Dashboard anzeigen (hilfreich für Debugging)
 - **Config Export / Import** — komplette Konfiguration als JSON-Backup herunterladen und wiederherstellen
 - **Bot Status Widget** — Uptime und aktuelle Aktivität im Dashboard anzeigen

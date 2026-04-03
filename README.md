@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.1.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.1.1-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -104,7 +104,7 @@ Reverse proxy forward settings: Scheme: `http` · Host / Forward hostname: `ques
 |---|---|
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
-| `2.1.0` | Specific version |
+| `2.1.1` | Specific version |
 
 ### Manual (Development)
 
@@ -179,7 +179,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 These features are on the roadmap and may be added in future releases:
 
-- **`/status <title>`** ✅ *Added in v2.1.0* — check the current request status of any media in Seerr directly in Discord
+- **`/status <title>`** ✅ *Added in v2.1.1* — check the current request status of any media in Seerr directly in Discord
 - **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
 - **Config Export / Import** — download and restore the full configuration as a JSON backup
 - **Bot Status Widget** — show uptime and recent activity in the dashboard
