@@ -250,7 +250,6 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false },
   });
 
   const configLimiter = rateLimit({
@@ -262,7 +261,6 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false },
   });
 
   // Auth routes (before general rate limiter so authLimiter applies)
@@ -644,17 +642,16 @@ function configureWebServer() {
     message: { success: false, error: "Too many webhook requests." },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false },
   });
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via X-Webhook-Secret request header.
-	  // Using a header instead of a query parameter prevents the secret from
-	  // being captured in reverse proxy logs, browser history, or referrer headers.
+      // Validate webhook secret via Authorization header.
+      // Seerr sends this via the "Authorization Header" field in webhook settings.
+      // Using a header prevents the secret from appearing in reverse proxy logs.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.headers["x-webhook-secret"] || "";
+        const incomingSecret = req.headers["authorization"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           return res.status(401).send("Unauthorized");
@@ -902,58 +899,6 @@ function configureWebServer() {
       res.status(500).json({ success: false, message: err.message });
     }
   });
-
-  // Test notification buttons endpoint
-  app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
-    try {
-      if (!botState.isBotRunning || !botState.discordClient) {
-        return res.status(400).json({ success: false, message: "Bot is not running" });
-      }
-      const channelId = process.env.SEERR_ADMIN_CHANNEL_ID || process.env.SEERR_CHANNEL_ID;
-      if (!channelId) {
-        return res.status(400).json({ success: false, message: "No admin or Seerr channel configured (Step 2)." });
-      }
-      const channel = await botState.discordClient.channels.fetch(channelId);
-      const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
-      const { isValidUrl } = await import("./utils/url.js");
-      const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR     !== "false";
-      const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH      !== "false";
-      const showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-      const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB       !== "false";
-      const embed = new EmbedBuilder()
-        .setColor("#1ec8a0")
-        .setAuthor({ name: "Now Available!" })
-        .setTitle("Test Movie (2024)")
-        .setDescription("Test notification — shows currently enabled buttons.")
-        .setTimestamp();
-      const buttons = [];
-      const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
-      const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-      if (showSeerr && seerrBase && isValidUrl(seerrBase + "/movie/550")) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrBase + "/movie/550"));
-      }
-      if (showWatch && jfBase && isValidUrl(jfBase + "/web/index.html")) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Watch Now!").setURL(jfBase + "/web/index.html"));
-      }
-      if (showLboxd) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Letterboxd").setURL("https://letterboxd.com/imdb/tt0137523/"));
-      }
-      if (showImdb) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("IMDb").setURL("https://www.imdb.com/title/tt0137523/"));
-      }
-      const msgOptions = { embeds: [embed] };
-      if (buttons.length > 0) {
-        msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
-      }
-      await channel.send(msgOptions);
-      const labels = [showSeerr?"View on Seerr":null, showWatch?"Watch Now":null, showLboxd?"Letterboxd":null, showImdb?"IMDb":null].filter(Boolean);
-      res.json({ success: true, message: "Test sent with: " + (labels.join(", ") || "no buttons") });
-    } catch (err) {
-      logger.error("Error sending test notification buttons:", err);
-      res.status(500).json({ success: false, message: err.message });
-    }
-  });
-
 
   app.post("/api/test-daily-recommendation", authenticateToken, async (_req, res) => {
     try {
