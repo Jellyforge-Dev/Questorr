@@ -250,6 +250,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const configLimiter = rateLimit({
@@ -261,6 +262,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Auth routes (before general rate limiter so authLimiter applies)
@@ -642,6 +644,7 @@ function configureWebServer() {
     message: { success: false, error: "Too many webhook requests." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {

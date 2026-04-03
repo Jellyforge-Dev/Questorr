@@ -27,10 +27,13 @@
 | 🔍 `/search` | Search for movies and TV shows, request directly from the embed |
 | 📤 `/request` | Instant media requests with optional tag, server and quality selection |
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
-| 🔎 `/status` | Check the current request status of any title in Seerr |
+| 🔎 `/status` | Check the Seerr request status of any title — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested |
+| 🎲 `/random` | Get a random movie or series from your Jellyfin library — with poster, summary, genre, runtime and rating. Only visible to the user who ran the command |
 | 🔔 Smart notifications | Rich Discord embeds for all Seerr events (pending, approved, available, declined, failed, issues) |
 | 📺 Channel routing | Notifications automatically routed to the correct channel based on Radarr/Sonarr root folder |
+| 🔕 Private events | New request and declined notifications go directly to the requester as a DM — not to the public channel |
 | ✉️ Private DMs | Users receive a DM when their requested content is approved, declined or becomes available |
+| 🔘 Button toggles | Choose which buttons (View on Seerr, Watch Now, Letterboxd, IMDb) appear on notification embeds |
 | 👤 User mapping | Link Discord accounts to Seerr accounts so requests appear from the correct user |
 | 🔐 Role permissions | Control who can use bot commands via Discord role allowlist / blocklist |
 | 🌟 Daily recommendation | Post a daily pick from your existing Jellyfin library |
@@ -139,28 +142,46 @@ Open `http://your-server-ip:8282`, create an account and complete all steps:
 | 4. Jellyfin | Server URL, API key, server ID, notification channel |
 | 5. User Mapping | Link Discord users to Seerr accounts |
 | 6. Role Permissions | Allowlist / blocklist for bot commands |
-| 7. Miscellaneous | Auto-start, DMs, daily picks, embed colors, /request options |
+| 7. Miscellaneous | Auto-start, DMs, daily picks, embed colors, `/request` options, Discord commands, notification buttons |
 
 ### 3. Configure Seerr Webhook
 
-In **Seerr → Settings → Notifications → Webhook**, enter the URL shown in Questorr under **Step 2 → Seerr Webhook URL**.
+In **Seerr → Settings → Notifications → Webhook**, configure the following:
 
-> The **Copy URL** button automatically includes your webhook secret. Simply paste it into Seerr.
+| Field | Value |
+|---|---|
+| Webhook URL | The URL shown in Questorr under **Step 2 → Seerr Webhook URL** |
+| Authorization Header | Paste the secret shown under **Step 2 → Copy Secret** |
+
+> The secret is transmitted via the `Authorization` header — it never appears in the URL or server logs.
 
 **Recommended: enable all notification types in Seerr** so Questorr can forward the full request lifecycle to Discord:
 
 | Seerr event | What Questorr does |
 |---|---|
-| Request pending approval | Posts to admin channel |
-| Request approved / auto-approved | Posts to default channel · sends DM to user |
-| Media available | Posts to the matching root folder channel · sends DM to user |
-| Request declined | Posts to default channel · sends DM to user |
+| Request pending approval | Sends DM to the requester only |
+| Request approved / auto-approved | Posts to default channel · sends DM to requester |
+| Media available | Posts to the matching root folder channel · sends DM to requester |
+| Request declined | Sends DM to the requester only |
 | Download failed | Posts to admin channel |
 | Issue created / commented | Posts to default channel |
 
 ### 4. Channel Routing
 
 Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders**, then assign a Discord channel to each Radarr/Sonarr root folder. Questorr will automatically route `MEDIA_AVAILABLE` notifications to the correct channel — for example, anime requests go to `#anime`, movies to `#movies`.
+
+### 5. Notification Buttons
+
+Under **Step 7 → Notification Buttons**, you can individually enable or disable which buttons appear on Discord notification embeds:
+
+| Button | Description |
+|---|---|
+| View on Seerr | Links to the media page in Seerr |
+| ▶ Watch Now! | Direct link to the Jellyfin player (available content only) |
+| Letterboxd | Links to the Letterboxd page (movies only) |
+| IMDb | Links to the IMDb page |
+
+Use the **Test Buttons** button to send a preview notification to your admin channel showing the currently active buttons.
 
 ---
 
@@ -170,8 +191,24 @@ Under **Step 2 → Root Folder → Channel Mapping**, click **Load Root Folders*
 |---|---|---|
 | `WEBHOOK_PORT` | Web server port | `8282` |
 | `LOG_LEVEL` | `error` / `warn` / `info` / `verbose` / `debug` | `info` |
+| `TRUST_PROXY` | Set to `false` to disable trust proxy (e.g. without reverse proxy) | `true` |
 
 All other settings are managed through the web dashboard and saved to `config/config.json`.
+
+---
+
+## 🔒 Security
+
+Questorr v2.2.0 includes the following security hardening:
+
+| Feature | Details |
+|---|---|
+| Non-root container | Process runs as `app` user via `entrypoint.sh` + `su-exec` |
+| Content Security Policy | Strict CSP headers via `helmet` — inline scripts blocked, `frame-ancestors: none` |
+| Authorization header | Webhook secret transmitted via `Authorization` header, never in the URL |
+| Brute-force protection | Login lockouts persist across container restarts (written to disk) |
+| Rate limiting | API, config and webhook endpoints are rate-limited |
+| Configurable trust proxy | `TRUST_PROXY=false` disables proxy trust for direct deployments |
 
 ---
 
@@ -179,7 +216,9 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 These features are on the roadmap and may be added in future releases:
 
-- **`/status <title>`** ✅ *Added in v2.1.1* — check the current request status of any media in Seerr directly in Discord
+- **`/status <title>`** ✅ *Added in v2.1.1*
+- **`/random movie|series`** ✅ *Added in v2.2.0*
+- **Notification button toggles** ✅ *Added in v2.2.0*
 - **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
 - **Config Export / Import** — download and restore the full configuration as a JSON backup
 - **Bot Status Widget** — show uptime and recent activity in the dashboard
