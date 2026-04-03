@@ -900,7 +900,7 @@ function configureWebServer() {
     }
   });
 
-  // Test notification buttons – sends a fake MEDIA_AVAILABLE embed to the admin channel
+  // Test notification buttons – sends a test embed to the admin channel
   // showing exactly which buttons are currently enabled
   app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
     try {
@@ -918,22 +918,23 @@ function configureWebServer() {
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
       const { isValidUrl } = await import("./utils/url.js");
 
-      const showSeerr    = process.env.EMBED_SHOW_BUTTON_SEERR     !== "false";
-      const showWatch    = process.env.EMBED_SHOW_BUTTON_WATCH      !== "false";
-      const showLboxd    = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-      const showImdb     = process.env.EMBED_SHOW_BUTTON_IMDB       !== "false";
+      const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR     !== "false";
+      const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH      !== "false";
+      const showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
+      const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB       !== "false";
 
       const embed = new EmbedBuilder()
         .setColor("#1ec8a0")
         .setAuthor({ name: "🎉 Now Available!" })
         .setTitle("🎬 Test Movie (2024)")
         .setDescription("This is a test notification to preview your button configuration.\nEnabled buttons are shown below.")
-        .setThumbnail("https://image.tmdb.org/t/p/w500/test.jpg")
         .setTimestamp();
 
       const buttons = [];
-      const seerrUrl = process.env.SEERR_URL ? \`\${process.env.SEERR_URL.replace(/\/$/, "")}/movie/550\` : null;
-      const jellyfinUrl = process.env.JELLYFIN_BASE_URL ? \`\${process.env.JELLYFIN_BASE_URL.replace(/\/$/, "")}/web/index.html\` : null;
+      const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
+      const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
+      const seerrUrl    = seerrBase ? seerrBase + "/movie/550" : null;
+      const jellyfinUrl = jfBase    ? jfBase    + "/web/index.html" : null;
 
       if (showSeerr && seerrUrl && isValidUrl(seerrUrl)) {
         buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrUrl));
@@ -954,14 +955,19 @@ function configureWebServer() {
       }
 
       await channel.send(msgOptions);
-      const enabledLabels = [
+
+      const labels = [
         showSeerr ? "View on Seerr" : null,
-        showWatch ? "▶ Watch Now!" : null,
+        showWatch ? "Watch Now" : null,
         showLboxd ? "Letterboxd" : null,
-        showImdb ? "IMDb" : null,
+        showImdb  ? "IMDb" : null,
       ].filter(Boolean);
 
-      res.json({ success: true, message: \`Test notification sent with \${enabledLabels.length > 0 ? enabledLabels.join(", ") : "no"} button(s).\` });
+      const msg = labels.length > 0
+        ? "Test notification sent with: " + labels.join(", ")
+        : "Test notification sent (no buttons enabled).";
+
+      res.json({ success: true, message: msg });
     } catch (err) {
       logger.error("Error sending test notification buttons:", err);
       res.status(500).json({ success: false, message: err.message });
