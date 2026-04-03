@@ -330,12 +330,10 @@ function buildStatusDescription(tmdbDetails, statusLine) {
     if (meta.length > 0) parts.push(meta.join(" · "));
     if (overview) {
       const trimmed = overview.length > 300 ? overview.substring(0, 297) + "..." : overview;
-      parts.push(`
-${trimmed}`);
+      parts.push("\n" + trimmed);
     }
   }
-  return parts.join("
-");
+  return parts.join("\n");
 }
 
 async function handleStatusCommand(interaction) {
