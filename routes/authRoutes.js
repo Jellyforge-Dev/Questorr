@@ -10,6 +10,7 @@ const authLimiter = rateLimit({
   message: { success: false, error: "Too many attempts, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
 });
 
 router.post("/auth/login", authLimiter, login);

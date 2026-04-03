@@ -250,6 +250,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   const configLimiter = rateLimit({
@@ -261,6 +262,7 @@ function configureWebServer() {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   // Auth routes (before general rate limiter so authLimiter applies)
@@ -642,11 +644,12 @@ function configureWebServer() {
     message: { success: false, error: "Too many webhook requests." },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
   });
 
   app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
-      // Validate webhook secret via X-Webhook-Secret request header.
+      // Validate webhook secret via Authorization header.
 	  // Using a header instead of a query parameter prevents the secret from
 	  // being captured in reverse proxy logs, browser history, or referrer headers.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
