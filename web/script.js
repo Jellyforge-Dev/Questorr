@@ -403,6 +403,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 			secretDisplayEl.dataset.realSecret = "";
 		}
 	}
+  }
 
   // --- Auth Logic ---
   const mainHero = document.getElementById("main-hero");
@@ -1106,21 +1107,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         fallbackCopyTextToClipboard(textToCopy);
       }
-	// Copy Seerr webhook secret (header value)
-	const copySeerrWebhookSecretBtn = document.getElementById("copy-seerr-webhook-secret-btn");
-	if (copySeerrWebhookSecretBtn) {
-		  copySeerrWebhookSecretBtn.addEventListener("click", () => {
-			const el = document.getElementById("seerr-webhook-secret-display");
-			const textToCopy = el?.dataset.realSecret || "";
-			if (!textToCopy) return;
-			if (navigator.clipboard && navigator.clipboard.writeText) {
-				navigator.clipboard.writeText(textToCopy)
-					.then(() => showToast(t("ui.copied") || "Kopiert!"))
-					.catch(() => fallbackCopyTextToClipboard(textToCopy));
-			} else {
-				fallbackCopyTextToClipboard(textToCopy);
-			});
-		}
+    });
+  }
+
+  // Copy Seerr webhook secret (header value)
+  const copySeerrWebhookSecretBtn = document.getElementById("copy-seerr-webhook-secret-btn");
+  if (copySeerrWebhookSecretBtn) {
+    copySeerrWebhookSecretBtn.addEventListener("click", () => {
+      const el = document.getElementById("seerr-webhook-secret-display");
+      const textToCopy = el?.dataset.realSecret || "";
+      if (!textToCopy) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => showToast(t("ui.copied") || "Kopiert!"))
+          .catch(() => fallbackCopyTextToClipboard(textToCopy));
+      } else {
+        fallbackCopyTextToClipboard(textToCopy);
+      }
+    });
+  }
 
   // ── Root Folder → Channel Mapping UI ─────────────────────────────────────
   let availableRootFolders = [];
