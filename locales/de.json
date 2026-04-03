@@ -234,7 +234,7 @@
     "seerr_webhook_box_desc": "Gehe in Seerr → Einstellungen → Benachrichtigungen → Webhook und trage diese URL ein:",
     "seerr_webhook_copy": "URL kopieren",
     "seerr_webhook_replace": "Ersetze localhost durch die IP deines Servers wenn du Docker nutzt.",
-    "seerr_webhook_header_desc": "Füge in Jellyseerr außerdem einen Custom Header zur Authentifizierung hinzu:",
+    "seerr_webhook_header_desc": "Füge in Seerr außerdem einen Autorisierungs-Header zur Authentifizierung hinzu:",
     "seerr_webhook_copy_secret": "Secret kopieren",
     "seerr_root_folder_load": "Root Folders laden",
     "jellyfin_fallback_channel": "📢 Standard-Benachrichtigungskanal",
@@ -315,8 +315,8 @@
     "btn_letterboxd_desc": "Link zur Letterboxd-Seite (nur Filme)",
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link zur IMDb-Seite",
-    "test_notification_buttons": "Buttons testen",
-    "test_notification_buttons_desc": "Sendet eine Test-Benachrichtigung an den Admin-Kanal zur Vorschau der aktivierten Buttons"
+    "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
+    "test_notification_buttons": "Buttons testen"
   },
   "ui": {
     "hide_header": "Header ausblenden",
@@ -433,9 +433,7 @@
     "join_discord": "Discord beitreten",
     "footer_thanks": "Danke dass du Questorr nutzt! Öffne gerne ein",
     "footer_issue": "GitHub Issue",
-    "footer_feedback": "bei Fragen oder Feedback.",
-    "feature_status": "<code>/status &lt;Titel&gt;</code> Aktuellen <strong style=\"color: var(--blue);\">Seerr-Anfragestatus</strong> direkt in Discord abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt.",
-    "feature_random": "<code>/random movie</code> oder <code>/random series</code> — Zufälligen <strong style=\"color: var(--blue);\">Vorschlag aus Jellyfin</strong> anzeigen mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Watch Now Button."
+    "footer_feedback": "bei Fragen oder Feedback."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

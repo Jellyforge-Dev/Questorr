@@ -162,7 +162,7 @@
     "seerr_webhook_box_desc": "Go to Seerr → Settings → Notifications → Webhook and enter this URL:",
     "seerr_webhook_copy": "Copy URL",
     "seerr_webhook_replace": "Replace localhost with your server IP if using Docker.",
-    "seerr_webhook_header_desc": "In Jellyseerr, also add a custom header to authenticate the webhook:",
+    "seerr_webhook_header_desc": "In Seerr, also add an authorization header to authenticate the webhook:",
     "seerr_webhook_copy_secret": "Copy Secret",
     "seerr_root_folder_load": "Load Root Folders",
     "jellyfin_fallback_channel": "📢 Default Notification Channel",
@@ -245,8 +245,8 @@
     "btn_letterboxd_desc": "Link to the Letterboxd page (movies only)",
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link to the IMDb page",
-    "test_notification_buttons": "Test Buttons",
-    "test_notification_buttons_desc": "Send a test notification to the admin channel to preview enabled buttons"
+    "command_toggles_desc": "Enable or disable individual Discord slash commands.",
+    "test_notification_buttons": "Test Buttons"
   },
   "ui": {
     "hide_header": "Hide header",
@@ -360,9 +360,7 @@
     "join_discord": "Join Discord",
     "footer_thanks": "Thank you for using Questorr! Feel free to open a",
     "footer_issue": "GitHub Issue",
-    "footer_feedback": "for questions or feedback.",
-    "feature_status": "<code>/status &lt;title&gt;</code> Check the current <strong style=\"color: var(--blue);\">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.",
-    "feature_random": "<code>/random movie</code> or <code>/random series</code> — get a <strong style=\"color: var(--blue);\">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and a Watch Now button."
+    "footer_feedback": "for questions or feedback."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",
