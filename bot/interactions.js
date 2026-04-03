@@ -518,8 +518,16 @@ async function handleRandomCommand(interaction) {
       .setDescription(description || "No description available.")
       .setTimestamp();
 
-    const jfBase = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-    embed.setThumbnail(`${jfBase}/Items/${item.Id}/Images/Primary?api_key=${apiKey}&maxHeight=400&quality=90`);
+        const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    if (tmdbIdFromJf && getTmdbApiKey()) {
+      try {
+        const tmdbType = itemType === "Movie" ? "movie" : "tv";
+        const tmdbData = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        if (tmdbData?.poster_path) {
+          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbData.poster_path);
+        }
+      } catch (_) {}
+    }
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
