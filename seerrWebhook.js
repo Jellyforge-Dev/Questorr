@@ -578,19 +578,25 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   const components = [];
 
+  const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
+  const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+  const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+
   // View on Seerr
-  const seerrUrl = buildSeerrUrl(mediaType, tmdbId);
-  if (seerrUrl && isValidUrl(seerrUrl)) {
-    components.push(
-      new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setLabel("View on Seerr")
-        .setURL(seerrUrl)
-    );
+  if (showSeerr) {
+    const seerrUrl = buildSeerrUrl(mediaType, tmdbId);
+    if (seerrUrl && isValidUrl(seerrUrl)) {
+      components.push(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel("View on Seerr")
+          .setURL(seerrUrl)
+      );
+    }
   }
 
   // Watch Now on Jellyfin – only for MEDIA_AVAILABLE
-  if (eventType === "MEDIA_AVAILABLE" && jellyfinItemId) {
+  if (showWatch && eventType === "MEDIA_AVAILABLE" && jellyfinItemId) {
     const watchUrl = buildJellyfinUrl(jellyfinItemId);
     if (watchUrl && isValidUrl(watchUrl)) {
       components.push(
@@ -603,7 +609,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   }
 
   // IMDb – from TMDB external_ids (most reliable)
-  if (imdbId) {
+  if (showImdb && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
       components.push(

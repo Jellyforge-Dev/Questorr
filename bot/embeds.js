@@ -136,11 +136,14 @@ export function buildButtons(
   const rows = [];
   const buttons = [];
 
+  const showLetterboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
+  const showImdb = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+
   if (imdbId) {
     const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
 
-    if (isValidUrl(letterboxdUrl)) {
+    if (showLetterboxd && isValidUrl(letterboxdUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
@@ -149,7 +152,7 @@ export function buildButtons(
       );
     }
 
-    if (isValidUrl(imdbUrl)) {
+    if (showImdb && isValidUrl(imdbUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)

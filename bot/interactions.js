@@ -48,7 +48,7 @@ async function handleSearchOrRequest(
   tags = [],
   options = {}
 ) {
-  const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true";
+  const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true" || options.ephemeral === true;
 
   try {
     await interaction.deferReply({ ephemeral: isPrivateMode });
@@ -304,6 +304,40 @@ async function handleSearchOrRequest(
 
 
 // ─── /status Command Handler ──────────────────────────────────────────────────
+
+// ─── Build rich description for /status embed ─────────────────────────────────
+function buildStatusDescription(tmdbDetails, statusLine) {
+  const parts = [statusLine];
+  if (tmdbDetails) {
+    const overview = tmdbDetails.overview;
+    const genres = (tmdbDetails.genres || []).slice(0, 3).map(g => g.name).join(", ");
+    const runtime = tmdbDetails.runtime
+      ? `${Math.floor(tmdbDetails.runtime / 60)}h ${tmdbDetails.runtime % 60}m`
+      : (tmdbDetails.episode_run_time?.[0]
+        ? `~${tmdbDetails.episode_run_time[0]}m / ep`
+        : null);
+    const rating = tmdbDetails.vote_average ? `${tmdbDetails.vote_average.toFixed(1)}/10` : null;
+    const ageRating = tmdbDetails.content_ratings?.results?.find(r => r.iso_3166_1 === "US")?.rating
+      || tmdbDetails.release_dates?.results?.find(r => r.iso_3166_1 === "US")
+         ?.release_dates?.find(d => d.certification)?.certification
+      || null;
+
+    const meta = [];
+    if (genres) meta.push(`**Genre:** ${genres}`);
+    if (runtime) meta.push(`**Runtime:** ${runtime}`);
+    if (rating) meta.push(`**Rating:** ⭐ ${rating}`);
+    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+    if (meta.length > 0) parts.push(meta.join(" · "));
+    if (overview) {
+      const trimmed = overview.length > 300 ? overview.substring(0, 297) + "..." : overview;
+      parts.push(`
+${trimmed}`);
+    }
+  }
+  return parts.join("
+");
+}
+
 async function handleStatusCommand(interaction) {
   if (process.env.SHOW_STATUS_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /status command is currently disabled.", flags: 64 });
@@ -325,6 +359,12 @@ async function handleStatusCommand(interaction) {
 
   const seerrUrl = getSeerrUrl();
   const seerrApiKey = getSeerrApiKey();
+
+  // Fetch full TMDB details for rich embed (genres, runtime, rating, poster)
+  let tmdbDetails = null;
+  try {
+    tmdbDetails = await tmdbApi.tmdbGetDetails(tmdbId, mediaType, getTmdbApiKey());
+  } catch (_) {}
 
   if (!seerrUrl || !seerrApiKey) {
     return interaction.editReply({ content: "❌ Seerr is not configured." });
@@ -351,11 +391,15 @@ async function handleStatusCommand(interaction) {
       || result.data?.first_air_date?.slice(0, 4) || "";
 
     if (!result.exists || result.status == null) {
+      const nfDesc = buildStatusDescription(tmdbDetails, "This title has not been requested yet.");
       const embed = new EmbedBuilder()
         .setColor("#89b4fa")
         .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
-        .setDescription("This title has not been requested yet.")
+        .setDescription(nfDesc)
         .setTimestamp();
+      if (tmdbDetails?.poster_path) {
+        embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
+      }
       const nfButtons = [
         new ButtonBuilder()
           .setCustomId(`status_request_btn|${tmdbId}|${mediaType}|${titleFromOption}`)
@@ -371,6 +415,7 @@ async function handleStatusCommand(interaction) {
 
     const statusInfo = statusMap[result.status] || { emoji: "❓", label: `Status ${result.status}` };
 
+    const resultDesc = buildStatusDescription(tmdbDetails, `**Status:** ${statusInfo.emoji} ${statusInfo.label}`);
     const embed = new EmbedBuilder()
       .setColor(
         result.status === 5 ? "#1ec8a0" :
@@ -379,20 +424,26 @@ async function handleStatusCommand(interaction) {
         result.status === 2 ? "#f0a05a" : "#6c7086"
       )
       .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
-      .setDescription(`**Status:** ${statusInfo.emoji} ${statusInfo.label}`)
+      .setDescription(resultDesc)
       .setTimestamp();
 
-    // Add poster if available
-    if (result.data?.posterPath || result.data?.poster_path) {
-      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${result.data.posterPath || result.data.poster_path}`);
+    // Poster: prefer TMDB, fallback to Seerr data
+    const posterPath = tmdbDetails?.poster_path || result.data?.posterPath || result.data?.poster_path;
+    if (posterPath) {
+      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${posterPath}`);
     }
 
     const statusButtons = [];
-    const seerrLink = buildSeerrUrl(mediaType, tmdbId);
-    if (seerrLink && isValidUrl(seerrLink)) {
-      statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrLink));
+    const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
+    const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+
+    if (showSeerr) {
+      const seerrLink = buildSeerrUrl(mediaType, tmdbId);
+      if (seerrLink && isValidUrl(seerrLink)) {
+        statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrLink));
+      }
     }
-    if (result.status === 5) {
+    if (showWatch && result.status === 5) {
       const jfKey = process.env.JELLYFIN_API_KEY;
       const jfBase = process.env.JELLYFIN_BASE_URL;
       if (jfKey && jfBase) {
@@ -425,7 +476,7 @@ async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
   }
-  await interaction.deferReply({ flags: 64 });
+  await interaction.deferReply();
 
   const type = interaction.options.getString("type") || "movie";
   const itemType = type === "movie" ? "Movie" : "Series";
@@ -445,15 +496,22 @@ async function handleRandomCommand(interaction) {
 
     const year = item.ProductionYear ? ` (${item.ProductionYear})` : "";
     const genres = item.Genres?.slice(0, 3).join(", ") || "";
-    const rating = item.OfficialRating || "";
+    const ageRating = item.OfficialRating || "";
+    const communityRating = item.CommunityRating ? `${item.CommunityRating.toFixed(1)}/10` : null;
+    const runtimeMin = item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null;
+    const runtime = runtimeMin ? `${Math.floor(runtimeMin / 60)}h ${runtimeMin % 60}m` : null;
     const overview = item.Overview
       ? (item.Overview.length > 300 ? item.Overview.substring(0, 297) + "..." : item.Overview)
       : "";
 
-    let description = "";
-    if (genres) description += `**Genre:** ${genres}\n`;
-    if (rating) description += `**Rating:** ${rating}\n`;
-    if (overview) description += `\n${overview}`;
+    const meta = [];
+    if (genres) meta.push(`**Genre:** ${genres}`);
+    if (runtime) meta.push(`**Runtime:** ${runtime}`);
+    if (communityRating) meta.push(`**Rating:** ⭐ ${communityRating}`);
+    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+
+    let description = meta.join(" · ");
+    if (overview) description += `\n\n${overview}`;
 
     const embed = new EmbedBuilder()
       .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
@@ -467,7 +525,8 @@ async function handleRandomCommand(interaction) {
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
-    if (watchUrl && isValidUrl(watchUrl)) {
+    const showWatchRandom = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
+    if (showWatchRandom && watchUrl && isValidUrl(watchUrl)) {
       components.push(
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("▶ Watch Now!").setURL(watchUrl)
@@ -772,7 +831,7 @@ export function registerInteractions(client) {
         if (interaction.commandName === "status") {
           if (!focusedValue) return interaction.respond([]);
           try {
-            const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
+            const results = await tmdbApi.tmdbSearch(focusedValue);
             const choices = results.slice(0, 10).map((r) => {
               const title = r.title || r.name || "Unknown";
               const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
@@ -892,7 +951,7 @@ export function registerInteractions(client) {
         const mediaType = parts[2] || "movie";
         const title = parts.slice(3).join("|");
         if (!tmdbId) return interaction.reply({ content: "⚠️ Invalid request.", flags: 64 });
-        return handleSearchOrRequest(interaction, `${tmdbId}|${mediaType}|${title}`, "request");
+        return handleSearchOrRequest(interaction, `${tmdbId}|${mediaType}|${title}`, "request", [], { ephemeral: true });
       }
 
       // Commands
