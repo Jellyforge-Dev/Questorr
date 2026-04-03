@@ -425,7 +425,7 @@ async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
     return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
   }
-  await interaction.deferReply();
+  await interaction.deferReply({ flags: 64 });
 
   const type = interaction.options.getString("type") || "movie";
   const itemType = type === "movie" ? "Movie" : "Series";
@@ -463,7 +463,7 @@ async function handleRandomCommand(interaction) {
       .setTimestamp();
 
     const jfBase = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-    embed.setThumbnail(`${jfBase}/Items/${item.Id}/Images/Primary?maxHeight=400&quality=90`);
+    embed.setThumbnail(`${jfBase}/Items/${item.Id}/Images/Primary?api_key=${apiKey}&maxHeight=400&quality=90`);
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
@@ -772,7 +772,7 @@ export function registerInteractions(client) {
         if (interaction.commandName === "status") {
           if (!focusedValue) return interaction.respond([]);
           try {
-            const results = await tmdbApi.tmdbSearch(focusedValue);
+            const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
             const choices = results.slice(0, 10).map((r) => {
               const title = r.title || r.name || "Unknown";
               const year = r.release_date?.slice(0, 4) || r.first_air_date?.slice(0, 4) || "";
