@@ -1127,44 +1127,70 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  // Config Import handler
-  const importConfigInput = document.getElementById("import-config-input");
-  const importConfigStatus = document.getElementById("import-config-status");
-  if (importConfigInput) {
-    importConfigInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (!file.name.endsWith(".json")) {
-        if (importConfigStatus) importConfigStatus.textContent = "❌ Please select a .json file";
+  // ─── Webhook Event Log ──────────────────────────────────────────────────────
+  const webhookLogContainer = document.getElementById("webhook-log-container");
+  const webhookLogRefreshBtn = document.getElementById("webhook-log-refresh-btn");
+  const webhookLogClearBtn = document.getElementById("webhook-log-clear-btn");
+
+  const EVENT_COLORS = {
+    AUTH_FAIL:          "#f38ba8",
+    MEDIA_AVAILABLE:    "#1ec8a0",
+    MEDIA_PENDING:      "#f9e2af",
+    MEDIA_APPROVED:     "#a6e3a1",
+    MEDIA_AUTO_APPROVED:"#a6e3a1",
+    MEDIA_DECLINED:     "#f38ba8",
+    MEDIA_FAILED:       "#f38ba8",
+    TEST_NOTIFICATION:  "#89b4fa",
+  };
+
+  async function loadWebhookLog() {
+    if (!webhookLogContainer) return;
+    try {
+      const res = await fetch("/api/webhook-log", { credentials: "include" });
+      const data = await res.json();
+      if (!data.success || !data.events.length) {
+        webhookLogContainer.innerHTML = '<div style="color: var(--subtext0); padding: 0.5rem;" data-i18n="config.webhook_log_empty">No webhook events received yet.</div>';
         return;
       }
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        if (importConfigStatus) importConfigStatus.textContent = "⏳ Importing...";
-        const response = await fetch("/api/config/import", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(json),
-        });
-        const data = await response.json();
-        if (data.success) {
-          if (importConfigStatus) importConfigStatus.textContent = "✅ " + (data.message || "Imported!");
-          showToast(data.message || "Config imported successfully!");
-          setTimeout(() => location.reload(), 2000);
-        } else {
-          if (importConfigStatus) importConfigStatus.textContent = "❌ " + (data.message || "Failed");
-          showToast(data.message || "Import failed.");
-        }
-      } catch (err) {
-        if (importConfigStatus) importConfigStatus.textContent = "❌ Invalid JSON file";
-        showToast("Error reading file.");
-      } finally {
-        importConfigInput.value = "";
-        setTimeout(() => { if (importConfigStatus) importConfigStatus.textContent = ""; }, 5000);
+      webhookLogContainer.innerHTML = data.events.map(e => {
+        const color = EVENT_COLORS[e.event] || "var(--text)";
+        const statusIcon = e.status === "unauthorized" ? "⛔" : e.status === "received" ? "✅" : "⚠️";
+        const time = new Date(e.ts).toLocaleTimeString();
+        return '<div style="padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--surface1); display: flex; gap: 0.75rem; align-items: baseline;">' +
+          '<span style="color: var(--subtext0); flex-shrink: 0;">' + time + '</span>' +
+          '<span style="color: ' + color + '; flex-shrink: 0; min-width: 160px;">' + statusIcon + ' ' + e.event + '</span>' +
+          '<span style="color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (e.subject || "—") + '</span>' +
+          '<span style="color: var(--subtext0); flex-shrink: 0; margin-left: auto; font-size: 0.72rem;">' + (e.ip || "") + '</span>' +
+          '</div>';
+      }).join("");
+    } catch (err) {
+      if (webhookLogContainer) webhookLogContainer.innerHTML = '<div style="color: var(--red); padding: 0.5rem;">Error loading log.</div>';
+    }
+  }
+
+  if (webhookLogRefreshBtn) {
+    webhookLogRefreshBtn.addEventListener("click", loadWebhookLog);
+  }
+
+  if (webhookLogClearBtn) {
+    webhookLogClearBtn.addEventListener("click", async () => {
+      await fetch("/api/webhook-log", { method: "DELETE", credentials: "include" });
+      loadWebhookLog();
+    });
+  }
+
+  // Auto-load when Seerr tab becomes active
+  document.querySelectorAll(".nav-item[data-target]").forEach(item => {
+    item.addEventListener("click", () => {
+      if (item.dataset.target === "seerr") {
+        setTimeout(loadWebhookLog, 100);
       }
     });
+  });
+
+  // Initial load if seerr pane is active
+  if (document.getElementById("config-pane-seerr")?.classList.contains("active")) {
+    loadWebhookLog();
   }
 
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)

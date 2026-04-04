@@ -317,10 +317,11 @@
     "btn_imdb_desc": "Link zur IMDb-Seite",
     "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
     "test_notification_buttons": "Buttons testen",
-    "export_import_title": "Konfig Export / Import",
-    "export_import_desc": "Aktuelle Konfiguration als Backup herunterladen oder aus einer zuvor exportierten Datei wiederherstellen. API-Schlüssel werden im Export maskiert — sie werden beim Import nicht überschrieben.",
-    "export_config": "Konfig exportieren",
-    "import_config": "Konfig importieren"
+    "webhook_log_title": "Webhook-Ereignisprotokoll",
+    "webhook_log_desc": "Die letzten 50 Webhook-Ereignisse von Seerr. Nützlich zum Überprüfen des Authorization-Headers und der Webhook-Konfiguration.",
+    "webhook_log_refresh": "Aktualisieren",
+    "webhook_log_clear": "Löschen",
+    "webhook_log_empty": "Noch keine Webhook-Ereignisse empfangen. Sende eine Testbenachrichtigung aus Seerr um die Konfiguration zu prüfen."
   },
   "ui": {
     "hide_header": "Header ausblenden",

@@ -657,11 +657,18 @@ function configureWebServer() {
         const incomingSecret = req.headers["authorization"] || "";
         if (incomingSecret !== configuredSecret.trim()) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
+          appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
           return res.status(401).send("Unauthorized");
         }
       }
 
       logger.info(`[SEERR WEBHOOK] 📥 Received webhook | event: ${req.body?.notification_type || "UNKNOWN"} | subject: "${req.body?.subject || "–"}"`);
+      appendWebhookLog({
+        event: req.body?.notification_type || "UNKNOWN",
+        subject: req.body?.subject || "—",
+        status: "received",
+        ip: req.ip,
+      });
       logger.debug(`[SEERR WEBHOOK] Headers: ${JSON.stringify(req.headers)}`);
 
       if (!req.body || Object.keys(req.body).length === 0) {
@@ -968,80 +975,25 @@ function configureWebServer() {
   });
 
 
-  // ─── Config Export ────────────────────────────────────────────────────────────
-  app.get("/api/config/export", authenticateToken, (req, res) => {
-    try {
-      const config = readConfig();
-      if (!config) {
-        return res.status(500).json({ success: false, message: "No config found." });
-      }
+  // ─── Webhook Event Log ───────────────────────────────────────────────────────
+  // In-memory ring buffer – stores last 50 webhook events
+  const webhookEventLog = [];
+  const WEBHOOK_LOG_MAX = 50;
 
-      // Strip sensitive fields that should never leave the server
-      const exportable = { ...config };
-      const STRIP = ["JWT_SECRET", "WEBHOOK_SECRET"];
-      const MASK_SUFFIX = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+  function appendWebhookLog(entry) {
+    webhookEventLog.unshift({ ...entry, ts: new Date().toISOString() });
+    if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
+  }
 
-      for (const f of STRIP) delete exportable[f];
-      for (const f of MASK_SUFFIX) {
-        if (exportable[f] && typeof exportable[f] === "string" && exportable[f].length > 4) {
-          exportable[f] = "MASKED:" + exportable[f].slice(-4);
-        }
-      }
-      // Strip password hashes from users
-      if (Array.isArray(exportable.USERS)) {
-        exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
-      }
-      // Add export metadata
-      exportable._exportedAt = new Date().toISOString();
-      exportable._questorrVersion = "2.2.0";
-
-      const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
-      res.setHeader("Content-Disposition", "attachment; filename=" + filename);
-      res.setHeader("Content-Type", "application/json");
-      res.send(JSON.stringify(exportable, null, 2));
-      logger.info("[Config] Configuration exported by user");
-    } catch (err) {
-      logger.error("[Config] Export error:", err);
-      res.status(500).json({ success: false, message: err.message });
-    }
+  app.get("/api/webhook-log", authenticateToken, (req, res) => {
+    res.json({ success: true, events: webhookEventLog });
   });
 
-  // ─── Config Import ────────────────────────────────────────────────────────────
-  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
-    try {
-      const imported = req.body;
-      if (!imported || typeof imported !== "object") {
-        return res.status(400).json({ success: false, message: "Invalid JSON payload." });
-      }
-
-      // Remove export metadata fields
-      delete imported._exportedAt;
-      delete imported._questorrVersion;
-
-      const existing = readConfig() || {};
-
-      // Merge: keep existing secrets when import value is masked
-      const merged = { ...existing };
-      const MASKED_FIELDS = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
-
-      for (const [key, value] of Object.entries(imported)) {
-        if (key === "USERS" || key === "JWT_SECRET" || key === "WEBHOOK_SECRET") continue;
-        if (MASKED_FIELDS.includes(key) && typeof value === "string" && value.startsWith("MASKED:")) {
-          // Keep existing value — don't overwrite with masked placeholder
-          continue;
-        }
-        merged[key] = value;
-      }
-
-      writeConfig(merged);
-      loadConfigToEnv(merged);
-      logger.info("[Config] Configuration imported successfully");
-      res.json({ success: true, message: "Configuration imported. Please save settings and restart the bot." });
-    } catch (err) {
-      logger.error("[Config] Import error:", err);
-      res.status(500).json({ success: false, message: err.message });
-    }
+  app.delete("/api/webhook-log", authenticateToken, (req, res) => {
+    webhookEventLog.length = 0;
+    res.json({ success: true, message: "Webhook log cleared." });
   });
+
 
   app.post("/api/test-daily-recommendation", authenticateToken, async (_req, res) => {
     try {

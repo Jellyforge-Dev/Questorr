@@ -247,10 +247,11 @@
     "btn_imdb_desc": "Link to the IMDb page",
     "command_toggles_desc": "Enable or disable individual Discord slash commands.",
     "test_notification_buttons": "Test Buttons",
-    "export_import_title": "Config Export / Import",
-    "export_import_desc": "Download your current configuration as a backup, or restore it from a previously exported file. API keys are masked in the export — they will not be overwritten on import.",
-    "export_config": "Export Config",
-    "import_config": "Import Config"
+    "webhook_log_title": "Webhook Event Log",
+    "webhook_log_desc": "Last 50 webhook events received from Seerr. Useful for verifying your Authorization header and webhook configuration.",
+    "webhook_log_refresh": "Refresh",
+    "webhook_log_clear": "Clear",
+    "webhook_log_empty": "No webhook events received yet. Send a test notification from Seerr to verify your configuration."
   },
   "ui": {
     "hide_header": "Hide header",
