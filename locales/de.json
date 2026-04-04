@@ -316,7 +316,11 @@
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link zur IMDb-Seite",
     "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
-    "test_notification_buttons": "Buttons testen"
+    "test_notification_buttons": "Buttons testen",
+    "export_import_title": "Konfig Export / Import",
+    "export_import_desc": "Aktuelle Konfiguration als Backup herunterladen oder aus einer zuvor exportierten Datei wiederherstellen. API-Schlüssel werden im Export maskiert — sie werden beim Import nicht überschrieben.",
+    "export_config": "Konfig exportieren",
+    "import_config": "Konfig importieren"
   },
   "ui": {
     "hide_header": "Header ausblenden",

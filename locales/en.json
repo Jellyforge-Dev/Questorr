@@ -246,7 +246,11 @@
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link to the IMDb page",
     "command_toggles_desc": "Enable or disable individual Discord slash commands.",
-    "test_notification_buttons": "Test Buttons"
+    "test_notification_buttons": "Test Buttons",
+    "export_import_title": "Config Export / Import",
+    "export_import_desc": "Download your current configuration as a backup, or restore it from a previously exported file. API keys are masked in the export — they will not be overwritten on import.",
+    "export_config": "Export Config",
+    "import_config": "Import Config"
   },
   "ui": {
     "hide_header": "Hide header",

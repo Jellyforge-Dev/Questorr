@@ -1126,6 +1126,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
+  // Config Import handler
+  const importConfigInput = document.getElementById("import-config-input");
+  const importConfigStatus = document.getElementById("import-config-status");
+  if (importConfigInput) {
+    importConfigInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.name.endsWith(".json")) {
+        if (importConfigStatus) importConfigStatus.textContent = "❌ Please select a .json file";
+        return;
+      }
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        if (importConfigStatus) importConfigStatus.textContent = "⏳ Importing...";
+        const response = await fetch("/api/config/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(json),
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (importConfigStatus) importConfigStatus.textContent = "✅ " + (data.message || "Imported!");
+          showToast(data.message || "Config imported successfully!");
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          if (importConfigStatus) importConfigStatus.textContent = "❌ " + (data.message || "Failed");
+          showToast(data.message || "Import failed.");
+        }
+      } catch (err) {
+        if (importConfigStatus) importConfigStatus.textContent = "❌ Invalid JSON file";
+        showToast("Error reading file.");
+      } finally {
+        importConfigInput.value = "";
+        setTimeout(() => { if (importConfigStatus) importConfigStatus.textContent = ""; }, 5000);
+      }
+    });
+  }
+
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
   if (copySeerrWebhookBtn) {

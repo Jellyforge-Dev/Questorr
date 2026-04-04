@@ -903,66 +903,77 @@ function configureWebServer() {
     }
   });
 
-  // Test notification buttons – sends a test embed to the admin channel
-  app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
+  // ─── Config Export ────────────────────────────────────────────────────────────
+  app.get("/api/config/export", authenticateToken, (req, res) => {
     try {
-      if (!botState.isBotRunning || !botState.discordClient) {
-        return res.status(400).json({ success: false, message: "Bot is not running" });
-      }
-      const channelId = process.env.SEERR_ADMIN_CHANNEL_ID || process.env.SEERR_CHANNEL_ID;
-      if (!channelId) {
-        return res.status(400).json({ success: false, message: "No admin or Seerr channel configured (Step 2)." });
-      }
-      const channel = await botState.discordClient.channels.fetch(channelId);
-      const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
-
-      const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR     !== "false";
-      const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH      !== "false";
-      const showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-      const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB       !== "false";
-
-      const embed = new EmbedBuilder()
-        .setColor("#1ec8a0")
-        .setAuthor({ name: "Now Available!" })
-        .setTitle("Test Movie (2024)")
-        .setDescription("Test notification — shows currently enabled buttons.")
-        .setTimestamp();
-
-      const buttons = [];
-      const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
-      const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-
-      function isUrl(u) { try { new URL(u); return true; } catch { return false; } }
-
-      if (showSeerr && seerrBase && isUrl(seerrBase + "/movie/550")) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrBase + "/movie/550"));
-      }
-      if (showWatch && jfBase && isUrl(jfBase + "/web/index.html")) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Watch Now!").setURL(jfBase + "/web/index.html"));
-      }
-      if (showLboxd) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Letterboxd").setURL("https://letterboxd.com/imdb/tt0137523/"));
-      }
-      if (showImdb) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("IMDb").setURL("https://www.imdb.com/title/tt0137523/"));
+      const config = readConfig();
+      if (!config) {
+        return res.status(500).json({ success: false, message: "No config found." });
       }
 
-      const msgOptions = { embeds: [embed] };
-      if (buttons.length > 0) {
-        msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
+      // Strip sensitive fields that should never leave the server
+      const exportable = { ...config };
+      const STRIP = ["JWT_SECRET", "WEBHOOK_SECRET"];
+      const MASK_SUFFIX = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+
+      for (const f of STRIP) delete exportable[f];
+      for (const f of MASK_SUFFIX) {
+        if (exportable[f] && typeof exportable[f] === "string" && exportable[f].length > 4) {
+          exportable[f] = "MASKED:" + exportable[f].slice(-4);
+        }
       }
-      await channel.send(msgOptions);
+      // Strip password hashes from users
+      if (Array.isArray(exportable.USERS)) {
+        exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
+      }
+      // Add export metadata
+      exportable._exportedAt = new Date().toISOString();
+      exportable._questorrVersion = "2.2.0";
 
-      const labels = [
-        showSeerr ? "View on Seerr" : null,
-        showWatch ? "Watch Now"     : null,
-        showLboxd ? "Letterboxd"    : null,
-        showImdb  ? "IMDb"          : null,
-      ].filter(Boolean);
-
-      res.json({ success: true, message: "Test sent with: " + (labels.join(", ") || "no buttons") });
+      const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
+      res.setHeader("Content-Disposition", "attachment; filename=" + filename);
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(exportable, null, 2));
+      logger.info("[Config] Configuration exported by user");
     } catch (err) {
-      logger.error("Error sending test notification buttons:", err);
+      logger.error("[Config] Export error:", err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ─── Config Import ────────────────────────────────────────────────────────────
+  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
+    try {
+      const imported = req.body;
+      if (!imported || typeof imported !== "object") {
+        return res.status(400).json({ success: false, message: "Invalid JSON payload." });
+      }
+
+      // Remove export metadata fields
+      delete imported._exportedAt;
+      delete imported._questorrVersion;
+
+      const existing = readConfig() || {};
+
+      // Merge: keep existing secrets when import value is masked
+      const merged = { ...existing };
+      const MASKED_FIELDS = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+
+      for (const [key, value] of Object.entries(imported)) {
+        if (key === "USERS" || key === "JWT_SECRET" || key === "WEBHOOK_SECRET") continue;
+        if (MASKED_FIELDS.includes(key) && typeof value === "string" && value.startsWith("MASKED:")) {
+          // Keep existing value — don't overwrite with masked placeholder
+          continue;
+        }
+        merged[key] = value;
+      }
+
+      writeConfig(merged);
+      loadConfigToEnv(merged);
+      logger.info("[Config] Configuration imported successfully");
+      res.json({ success: true, message: "Configuration imported. Please save settings and restart the bot." });
+    } catch (err) {
+      logger.error("[Config] Import error:", err);
       res.status(500).json({ success: false, message: err.message });
     }
   });
