@@ -267,7 +267,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, duration);
   }
 
-
   // ─── Per-event notification buttons table ────────────────────────────────────
   const NOTIF_EVENTS = [
     { key: "MEDIA_PENDING",        label: "New Request (Pending)" },
@@ -282,50 +281,70 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "ISSUE_REOPENED",       label: "Issue Reopened" },
     { key: "TEST_NOTIFICATION",    label: "Test Notification" },
   ];
-  const BTN_TYPES = ["seerr", "watch", "letterboxd", "imdb"];
+  const BTN_TYPES = [
+    { key: "seerr",      label: "Seerr" },
+    { key: "watch",      label: "Watch" },
+    { key: "letterboxd", label: "Ltrbxd" },
+    { key: "imdb",       label: "IMDb" },
+  ];
+
+  function getGlobalBtnDefault(btnKey) {
+    // Read current global checkbox state
+    const map = {
+      seerr:      document.getElementById("EMBED_SHOW_BUTTON_SEERR"),
+      watch:      document.getElementById("EMBED_SHOW_BUTTON_WATCH"),
+      letterboxd: document.getElementById("EMBED_SHOW_BUTTON_LETTERBOXD"),
+      imdb:       document.getElementById("EMBED_SHOW_BUTTON_IMDB"),
+    };
+    const el = map[btnKey];
+    return el ? el.checked : true;
+  }
 
   function buildNotifButtonsTable(configData) {
     const tbody = document.getElementById("notif-buttons-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
+
     for (const evt of NOTIF_EVENTS) {
       const envKey = "NOTIF_BUTTONS_" + evt.key;
       const raw = (configData && configData[envKey]) || "";
-      const active = raw ? raw.toLowerCase().split(",").map(s => s.trim()) : null; // null = use global
+      // Parse saved value: "seerr,watch,-letterboxd,-imdb" or ""
+      let savedOn = null, savedOff = null;
+      if (raw) {
+        const parts = raw.toLowerCase().split(",").map(s => s.trim());
+        savedOn  = parts.filter(p => !p.startsWith("-"));
+        savedOff = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+      }
+
       const tr = document.createElement("tr");
       tr.style.borderBottom = "1px solid var(--surface1)";
-      // Label cell
+
+      // Event label cell
       const td0 = document.createElement("td");
-      td0.style.cssText = "padding: 0.35rem 0.5rem; color: var(--text);";
+      td0.style.cssText = "padding: 0.5rem 0.75rem; color: var(--text); font-size: 0.82rem;";
       td0.textContent = evt.label;
       tr.appendChild(td0);
-      // Button checkboxes: three-state via data-state
+
+      // One checkbox per button type
       for (const btn of BTN_TYPES) {
         const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.35rem 0.25rem;";
-        // state: null=inherit, true=on, false=off
-        let state = null;
-        if (active !== null) state = active.includes(btn);
-        const span = document.createElement("span");
-        span.dataset.event = evt.key;
-        span.dataset.btn = btn;
-        span.dataset.state = state === null ? "inherit" : state ? "on" : "off";
-        span.style.cssText = "cursor: pointer; font-size: 1.1rem; user-select: none;";
-        span.title = "Click to cycle: inherit (global) → on → off";
-        function updateSpan(s) {
-          if (s === "on")      { span.textContent = "✅"; }
-          else if (s === "off"){ span.textContent = "☐"; }
-          else                 { span.textContent = "—"; }
+        td.style.cssText = "text-align: center; padding: 0.5rem 0.25rem;";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.event = evt.key;
+        cb.dataset.btn = btn.key;
+        cb.style.cssText = "width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal);";
+
+        // Determine checked state
+        if (savedOn !== null) {
+          cb.checked = savedOn.includes(btn.key);
+        } else {
+          cb.checked = getGlobalBtnDefault(btn.key);
         }
-        updateSpan(span.dataset.state);
-        span.addEventListener("click", () => {
-          const cur = span.dataset.state;
-          const next = cur === "inherit" ? "on" : cur === "on" ? "off" : "inherit";
-          span.dataset.state = next;
-          updateSpan(next);
-          saveNotifButtonsRow(evt.key);
-        });
-        td.appendChild(span);
+
+        cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
+        td.appendChild(cb);
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
@@ -333,28 +352,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function saveNotifButtonsRow(eventKey) {
-    const spans = document.querySelectorAll(`[data-event="${eventKey}"]`);
+    const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
     const on = [], off = [];
-    for (const s of spans) {
-      if (s.dataset.state === "on")  on.push(s.dataset.btn);
-      if (s.dataset.state === "off") off.push(s.dataset.btn);
+    for (const cb of cbs) {
+      if (cb.checked) on.push(cb.dataset.btn);
+      else            off.push("-" + cb.dataset.btn);
     }
     const envKey = "NOTIF_BUTTONS_" + eventKey;
-    const inp = document.getElementById(envKey) || (() => {
-      const hidden = document.createElement("input");
-      hidden.type = "hidden";
-      hidden.id = envKey;
-      hidden.name = envKey;
-      document.getElementById("config-form")?.appendChild(hidden);
-      return hidden;
-    })();
-    // Encode: on buttons listed; off buttons prefixed with "-"; if all inherit → empty string
-    if (on.length === 0 && off.length === 0) {
-      inp.value = "";
-    } else {
-      inp.value = [...on, ...off.map(b => "-" + b)].join(",");
+    let inp = document.getElementById(envKey);
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "hidden";
+      inp.id = envKey;
+      inp.name = envKey;
+      document.getElementById("config-form")?.appendChild(inp);
     }
+    inp.value = [...on, ...off].join(",");
   }
+
 
   async function fetchConfig() {
     try {
@@ -1217,6 +1232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
 
 
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
