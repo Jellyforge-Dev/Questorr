@@ -316,12 +316,7 @@
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link zur IMDb-Seite",
     "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
-    "test_notification_buttons": "Buttons testen",
-    "webhook_log_title": "Webhook-Ereignisprotokoll",
-    "webhook_log_desc": "Die letzten 50 Webhook-Ereignisse von Seerr. Nützlich zum Überprüfen des Authorization-Headers und der Webhook-Konfiguration.",
-    "webhook_log_refresh": "Aktualisieren",
-    "webhook_log_clear": "Löschen",
-    "webhook_log_empty": "Noch keine Webhook-Ereignisse empfangen. Sende eine Testbenachrichtigung aus Seerr um die Konfiguration zu prüfen."
+    "test_notification_buttons": "Buttons testen"
   },
   "ui": {
     "hide_header": "Header ausblenden",
@@ -341,7 +336,8 @@
     "all_logs": "Alle",
     "errors": "Fehler",
     "refresh": "Aktualisieren",
-    "loading": "Lade Protokolle..."
+    "loading": "Lade Protokolle...",
+    "webhook": "Webhook"
   },
   "bot": {
     "start": "Bot starten",

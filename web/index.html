@@ -461,27 +461,7 @@
                       </div>
 
                     </fieldset>
-                  
-
-                      <!-- Webhook Test Log -->
-                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
-                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.webhook_log_title">Webhook Test Log</div>
-                          <div style="display: flex; gap: 0.5rem;">
-                            <button type="button" id="webhook-log-refresh-btn" class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">
-                              <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.webhook_log_refresh">Refresh</span>
-                            </button>
-                            <button type="button" id="webhook-log-clear-btn" class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">
-                              <i class="bi bi-trash"></i> <span data-i18n="config.webhook_log_clear">Clear</span>
-                            </button>
-                          </div>
-                        </div>
-                        <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.75rem;" data-i18n="config.webhook_log_desc">Last 50 webhook events received from Seerr. Useful for verifying your Authorization header and webhook configuration.</div>
-                        <div id="webhook-log-container" style="font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; max-height: 320px; overflow-y: auto; background: var(--base); border: 1px solid var(--surface1); border-radius: 6px; padding: 0.5rem;">
-                          <div style="color: var(--subtext0); padding: 0.5rem;" data-i18n="config.webhook_log_empty">No webhook events received yet. Send a test notification from Seerr to verify your configuration.</div>
-                        </div>
-                      </div>
-                    </div>
+                  </div>
 
                   <!-- Media Databases Pane -->
                   <div id="config-pane-media" class="config-pane">
@@ -1012,6 +992,9 @@
               </button>
               <button type="button" class="logs-tab-btn" data-target="error" data-i18n="logs.errors" data-i18n="logs.errors">
                 Errors
+              </button>
+              <button type="button" class="logs-tab-btn" data-target="webhook" data-i18n="logs.webhook">
+                Webhook
               </button>
               <button type="button" id="refresh-logs-btn" class="logs-tab-btn" title="Refresh logs" data-i18n="logs.refresh" data-i18n-attr="title">
                 <i class="bi bi-arrow-clockwise"></i>

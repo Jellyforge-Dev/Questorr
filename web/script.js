@@ -1126,73 +1126,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-
-  // ─── Webhook Event Log ──────────────────────────────────────────────────────
-  const webhookLogContainer = document.getElementById("webhook-log-container");
-  const webhookLogRefreshBtn = document.getElementById("webhook-log-refresh-btn");
-  const webhookLogClearBtn = document.getElementById("webhook-log-clear-btn");
-
-  const EVENT_COLORS = {
-    AUTH_FAIL:          "#f38ba8",
-    MEDIA_AVAILABLE:    "#1ec8a0",
-    MEDIA_PENDING:      "#f9e2af",
-    MEDIA_APPROVED:     "#a6e3a1",
-    MEDIA_AUTO_APPROVED:"#a6e3a1",
-    MEDIA_DECLINED:     "#f38ba8",
-    MEDIA_FAILED:       "#f38ba8",
-    TEST_NOTIFICATION:  "#89b4fa",
-  };
-
-  async function loadWebhookLog() {
-    if (!webhookLogContainer) return;
-    try {
-      const res = await fetch("/api/webhook-log", { credentials: "include" });
-      const data = await res.json();
-      if (!data.success || !data.events.length) {
-        webhookLogContainer.innerHTML = '<div style="color: var(--subtext0); padding: 0.5rem;" data-i18n="config.webhook_log_empty">No webhook events received yet.</div>';
-        return;
-      }
-      webhookLogContainer.innerHTML = data.events.map(e => {
-        const color = EVENT_COLORS[e.event] || "var(--text)";
-        const statusIcon = e.status === "unauthorized" ? "⛔" : e.status === "received" ? "✅" : "⚠️";
-        const time = new Date(e.ts).toLocaleTimeString();
-        return '<div style="padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--surface1); display: flex; gap: 0.75rem; align-items: baseline;">' +
-          '<span style="color: var(--subtext0); flex-shrink: 0;">' + time + '</span>' +
-          '<span style="color: ' + color + '; flex-shrink: 0; min-width: 160px;">' + statusIcon + ' ' + e.event + '</span>' +
-          '<span style="color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + (e.subject || "—") + '</span>' +
-          '<span style="color: var(--subtext0); flex-shrink: 0; margin-left: auto; font-size: 0.72rem;">' + (e.ip || "") + '</span>' +
-          '</div>';
-      }).join("");
-    } catch (err) {
-      if (webhookLogContainer) webhookLogContainer.innerHTML = '<div style="color: var(--red); padding: 0.5rem;">Error loading log.</div>';
-    }
-  }
-
-  if (webhookLogRefreshBtn) {
-    webhookLogRefreshBtn.addEventListener("click", loadWebhookLog);
-  }
-
-  if (webhookLogClearBtn) {
-    webhookLogClearBtn.addEventListener("click", async () => {
-      await fetch("/api/webhook-log", { method: "DELETE", credentials: "include" });
-      loadWebhookLog();
-    });
-  }
-
-  // Auto-load when Seerr tab becomes active
-  document.querySelectorAll(".nav-item[data-target]").forEach(item => {
-    item.addEventListener("click", () => {
-      if (item.dataset.target === "seerr") {
-        setTimeout(loadWebhookLog, 100);
-      }
-    });
-  });
-
-  // Initial load if seerr pane is active
-  if (document.getElementById("config-pane-seerr")?.classList.contains("active")) {
-    loadWebhookLog();
-  }
-
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
   if (copySeerrWebhookBtn) {
@@ -3602,21 +3535,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       logsContainer.innerHTML =
         '<div style="text-align: center; color: var(--subtext0); padding: 2rem;">Loading logs...</div>';
+      // Webhook filter uses all logs endpoint, then filters client-side
       const endpoint = type === "error" ? "/api/logs/error" : "/api/logs/all";
       const response = await fetch(endpoint);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      if (data.entries.length === 0) {
+      // Filter entries for webhook tab
+      let entries = data.entries;
+      if (type === "webhook") {
+        entries = entries.filter(e => e.message && e.message.includes("[SEERR WEBHOOK]"));
+      }
+
+      if (entries.length === 0) {
         const emptyMessage =
-          type === "error" ? "No errors found" : "No logs available";
+          type === "error" ? "No errors found" :
+          type === "webhook" ? "No webhook events in log yet." :
+          "No logs available";
         logsContainer.innerHTML = `<div class="logs-empty">${emptyMessage}</div>`;
         return;
       }
 
       // Build log entries HTML
-      const logsHtml = data.entries
+      const logsHtml = entries
         .map(
           (entry) => `
         <div class="log-entry">
