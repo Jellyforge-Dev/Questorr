@@ -267,6 +267,95 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, duration);
   }
 
+
+  // ─── Per-event notification buttons table ────────────────────────────────────
+  const NOTIF_EVENTS = [
+    { key: "MEDIA_PENDING",        label: "New Request (Pending)" },
+    { key: "MEDIA_APPROVED",       label: "Request Approved" },
+    { key: "MEDIA_AUTO_APPROVED",  label: "Auto-Approved" },
+    { key: "MEDIA_AVAILABLE",      label: "Now Available" },
+    { key: "MEDIA_DECLINED",       label: "Request Declined" },
+    { key: "MEDIA_FAILED",         label: "Download Failed" },
+    { key: "ISSUE_CREATED",        label: "Issue Reported" },
+    { key: "ISSUE_COMMENT",        label: "Issue Comment" },
+    { key: "ISSUE_RESOLVED",       label: "Issue Resolved" },
+    { key: "ISSUE_REOPENED",       label: "Issue Reopened" },
+    { key: "TEST_NOTIFICATION",    label: "Test Notification" },
+  ];
+  const BTN_TYPES = ["seerr", "watch", "letterboxd", "imdb"];
+
+  function buildNotifButtonsTable(configData) {
+    const tbody = document.getElementById("notif-buttons-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    for (const evt of NOTIF_EVENTS) {
+      const envKey = "NOTIF_BUTTONS_" + evt.key;
+      const raw = (configData && configData[envKey]) || "";
+      const active = raw ? raw.toLowerCase().split(",").map(s => s.trim()) : null; // null = use global
+      const tr = document.createElement("tr");
+      tr.style.borderBottom = "1px solid var(--surface1)";
+      // Label cell
+      const td0 = document.createElement("td");
+      td0.style.cssText = "padding: 0.35rem 0.5rem; color: var(--text);";
+      td0.textContent = evt.label;
+      tr.appendChild(td0);
+      // Button checkboxes: three-state via data-state
+      for (const btn of BTN_TYPES) {
+        const td = document.createElement("td");
+        td.style.cssText = "text-align: center; padding: 0.35rem 0.25rem;";
+        // state: null=inherit, true=on, false=off
+        let state = null;
+        if (active !== null) state = active.includes(btn);
+        const span = document.createElement("span");
+        span.dataset.event = evt.key;
+        span.dataset.btn = btn;
+        span.dataset.state = state === null ? "inherit" : state ? "on" : "off";
+        span.style.cssText = "cursor: pointer; font-size: 1.1rem; user-select: none;";
+        span.title = "Click to cycle: inherit (global) → on → off";
+        function updateSpan(s) {
+          if (s === "on")      { span.textContent = "✅"; }
+          else if (s === "off"){ span.textContent = "☐"; }
+          else                 { span.textContent = "—"; }
+        }
+        updateSpan(span.dataset.state);
+        span.addEventListener("click", () => {
+          const cur = span.dataset.state;
+          const next = cur === "inherit" ? "on" : cur === "on" ? "off" : "inherit";
+          span.dataset.state = next;
+          updateSpan(next);
+          saveNotifButtonsRow(evt.key);
+        });
+        td.appendChild(span);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
+  function saveNotifButtonsRow(eventKey) {
+    const spans = document.querySelectorAll(`[data-event="${eventKey}"]`);
+    const on = [], off = [];
+    for (const s of spans) {
+      if (s.dataset.state === "on")  on.push(s.dataset.btn);
+      if (s.dataset.state === "off") off.push(s.dataset.btn);
+    }
+    const envKey = "NOTIF_BUTTONS_" + eventKey;
+    const inp = document.getElementById(envKey) || (() => {
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.id = envKey;
+      hidden.name = envKey;
+      document.getElementById("config-form")?.appendChild(hidden);
+      return hidden;
+    })();
+    // Encode: on buttons listed; off buttons prefixed with "-"; if all inherit → empty string
+    if (on.length === 0 && off.length === 0) {
+      inp.value = "";
+    } else {
+      inp.value = [...on, ...off.map(b => "-" + b)].join(",");
+    }
+  }
+
   async function fetchConfig() {
     try {
       const response = await fetch("/api/config");
@@ -1129,94 +1218,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-
-  // ─── Per-event notification buttons table ────────────────────────────────────
-  const NOTIF_EVENTS = [
-    { key: "MEDIA_PENDING",        label: "New Request (Pending)" },
-    { key: "MEDIA_APPROVED",       label: "Request Approved" },
-    { key: "MEDIA_AUTO_APPROVED",  label: "Auto-Approved" },
-    { key: "MEDIA_AVAILABLE",      label: "Now Available" },
-    { key: "MEDIA_DECLINED",       label: "Request Declined" },
-    { key: "MEDIA_FAILED",         label: "Download Failed" },
-    { key: "ISSUE_CREATED",        label: "Issue Reported" },
-    { key: "ISSUE_COMMENT",        label: "Issue Comment" },
-    { key: "ISSUE_RESOLVED",       label: "Issue Resolved" },
-    { key: "ISSUE_REOPENED",       label: "Issue Reopened" },
-    { key: "TEST_NOTIFICATION",    label: "Test Notification" },
-  ];
-  const BTN_TYPES = ["seerr", "watch", "letterboxd", "imdb"];
-
-  function buildNotifButtonsTable(configData) {
-    const tbody = document.getElementById("notif-buttons-table-body");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    for (const evt of NOTIF_EVENTS) {
-      const envKey = "NOTIF_BUTTONS_" + evt.key;
-      const raw = (configData && configData[envKey]) || "";
-      const active = raw ? raw.toLowerCase().split(",").map(s => s.trim()) : null; // null = use global
-      const tr = document.createElement("tr");
-      tr.style.borderBottom = "1px solid var(--surface1)";
-      // Label cell
-      const td0 = document.createElement("td");
-      td0.style.cssText = "padding: 0.35rem 0.5rem; color: var(--text);";
-      td0.textContent = evt.label;
-      tr.appendChild(td0);
-      // Button checkboxes: three-state via data-state
-      for (const btn of BTN_TYPES) {
-        const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.35rem 0.25rem;";
-        // state: null=inherit, true=on, false=off
-        let state = null;
-        if (active !== null) state = active.includes(btn);
-        const span = document.createElement("span");
-        span.dataset.event = evt.key;
-        span.dataset.btn = btn;
-        span.dataset.state = state === null ? "inherit" : state ? "on" : "off";
-        span.style.cssText = "cursor: pointer; font-size: 1.1rem; user-select: none;";
-        span.title = "Click to cycle: inherit (global) → on → off";
-        function updateSpan(s) {
-          if (s === "on")      { span.textContent = "✅"; }
-          else if (s === "off"){ span.textContent = "☐"; }
-          else                 { span.textContent = "—"; }
-        }
-        updateSpan(span.dataset.state);
-        span.addEventListener("click", () => {
-          const cur = span.dataset.state;
-          const next = cur === "inherit" ? "on" : cur === "on" ? "off" : "inherit";
-          span.dataset.state = next;
-          updateSpan(next);
-          saveNotifButtonsRow(evt.key);
-        });
-        td.appendChild(span);
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    }
-  }
-
-  function saveNotifButtonsRow(eventKey) {
-    const spans = document.querySelectorAll(`[data-event="${eventKey}"]`);
-    const on = [], off = [];
-    for (const s of spans) {
-      if (s.dataset.state === "on")  on.push(s.dataset.btn);
-      if (s.dataset.state === "off") off.push(s.dataset.btn);
-    }
-    const envKey = "NOTIF_BUTTONS_" + eventKey;
-    const inp = document.getElementById(envKey) || (() => {
-      const hidden = document.createElement("input");
-      hidden.type = "hidden";
-      hidden.id = envKey;
-      hidden.name = envKey;
-      document.getElementById("config-form")?.appendChild(hidden);
-      return hidden;
-    })();
-    // Encode: on buttons listed; off buttons prefixed with "-"; if all inherit → empty string
-    if (on.length === 0 && off.length === 0) {
-      inp.value = "";
-    } else {
-      inp.value = [...on, ...off.map(b => "-" + b)].join(",");
-    }
-  }
 
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
