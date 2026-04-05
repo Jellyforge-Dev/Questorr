@@ -267,38 +267,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, duration);
   }
 
-  // ─── Per-event notification buttons table ────────────────────────────────────
+
+  // ─── Per-event notification buttons table ─────────────────────────────────
   const NOTIF_EVENTS = [
-    { key: "MEDIA_PENDING",        label: "New Request (Pending)" },
-    { key: "MEDIA_APPROVED",       label: "Request Approved" },
-    { key: "MEDIA_AUTO_APPROVED",  label: "Auto-Approved" },
-    { key: "MEDIA_AVAILABLE",      label: "Now Available" },
-    { key: "MEDIA_DECLINED",       label: "Request Declined" },
-    { key: "MEDIA_FAILED",         label: "Download Failed" },
-    { key: "ISSUE_CREATED",        label: "Issue Reported" },
-    { key: "ISSUE_COMMENT",        label: "Issue Comment" },
-    { key: "ISSUE_RESOLVED",       label: "Issue Resolved" },
-    { key: "ISSUE_REOPENED",       label: "Issue Reopened" },
-    { key: "TEST_NOTIFICATION",    label: "Test Notification" },
+    { key: "MEDIA_PENDING",       label: "New Request (Pending)" },
+    { key: "MEDIA_APPROVED",      label: "Request Approved" },
+    { key: "MEDIA_AUTO_APPROVED", label: "Auto-Approved" },
+    { key: "MEDIA_AVAILABLE",     label: "Now Available" },
+    { key: "MEDIA_DECLINED",      label: "Request Declined" },
+    { key: "MEDIA_FAILED",        label: "Download Failed" },
+    { key: "ISSUE_CREATED",       label: "Issue Reported" },
+    { key: "ISSUE_COMMENT",       label: "Issue Comment" },
+    { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
+    { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
+    { key: "TEST_NOTIFICATION",   label: "Test Notification" },
   ];
   const BTN_TYPES = [
-    { key: "seerr",      label: "Seerr" },
-    { key: "watch",      label: "Watch" },
-    { key: "letterboxd", label: "Ltrbxd" },
-    { key: "imdb",       label: "IMDb" },
+    { key: "seerr",      label: "Seerr",  envKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      label: "Watch",  envKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", label: "Ltrbxd", envKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       label: "IMDb",   envKey: "EMBED_SHOW_BUTTON_IMDB" },
   ];
-
-  function getGlobalBtnDefault(btnKey) {
-    // Read current global checkbox state
-    const map = {
-      seerr:      document.getElementById("EMBED_SHOW_BUTTON_SEERR"),
-      watch:      document.getElementById("EMBED_SHOW_BUTTON_WATCH"),
-      letterboxd: document.getElementById("EMBED_SHOW_BUTTON_LETTERBOXD"),
-      imdb:       document.getElementById("EMBED_SHOW_BUTTON_IMDB"),
-    };
-    const el = map[btnKey];
-    return el ? el.checked : true;
-  }
 
   function buildNotifButtonsTable(configData) {
     const tbody = document.getElementById("notif-buttons-table-body");
@@ -308,7 +297,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     for (const evt of NOTIF_EVENTS) {
       const envKey = "NOTIF_BUTTONS_" + evt.key;
       const raw = (configData && configData[envKey]) || "";
-      // Parse saved value: "seerr,watch,-letterboxd,-imdb" or ""
       let savedOn = null, savedOff = null;
       if (raw) {
         const parts = raw.toLowerCase().split(",").map(s => s.trim());
@@ -319,13 +307,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       tr.style.borderBottom = "1px solid var(--surface1)";
 
-      // Event label cell
       const td0 = document.createElement("td");
       td0.style.cssText = "padding: 0.5rem 0.75rem; color: var(--text); font-size: 0.82rem;";
       td0.textContent = evt.label;
       tr.appendChild(td0);
 
-      // One checkbox per button type
       for (const btn of BTN_TYPES) {
         const td = document.createElement("td");
         td.style.cssText = "text-align: center; padding: 0.5rem 0.25rem;";
@@ -334,13 +320,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         cb.type = "checkbox";
         cb.dataset.event = evt.key;
         cb.dataset.btn = btn.key;
-        cb.style.cssText = "width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal);";
+        cb.style.cssText = "width: 16px; height: 16px; cursor: pointer;";
 
-        // Determine checked state
         if (savedOn !== null) {
           cb.checked = savedOn.includes(btn.key);
         } else {
-          cb.checked = getGlobalBtnDefault(btn.key);
+          // Fall back to global checkbox state
+          const globalCb = document.getElementById(btn.envKey);
+          cb.checked = globalCb ? globalCb.checked : true;
         }
 
         cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
@@ -369,7 +356,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     inp.value = [...on, ...off].join(",");
   }
-
 
   async function fetchConfig() {
     try {
@@ -1232,7 +1218,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
 
 
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
