@@ -2455,7 +2455,7 @@ input:checked + .slider:before {
   padding: 1.5rem 0;
   margin-top: 58px;
   box-sizing: border-box;
-  height: calc(100vh - 58px);
+  min-height: calc(100vh - 58px);
   overflow: hidden;
 }
 
