@@ -16,7 +16,7 @@
  *   4. JELLYFIN_CHANNEL_ID
  */
 
-import { t } from "./utils/botStrings.js";
+import { t, tNotif } from "./utils/botStrings.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -33,67 +33,67 @@ import { findBestBackdrop } from "./api/tmdb.js";
 const EVENT_CONFIG = {
   MEDIA_PENDING: {
     emoji: "⏳",
-    label: t("event_pending"),
+    label: tNotif("event_pending",       "NOTIF_TITLE_MEDIA_PENDING"),
     color: "#f9e2af",
     adminOnly: true,
   },
   MEDIA_APPROVED: {
     emoji: "✅",
-    label: t("event_approved"),
+    label: tNotif("event_approved",       "NOTIF_TITLE_MEDIA_APPROVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AUTO_APPROVED: {
     emoji: "⚡",
-    label: t("event_auto_approved"),
+    label: tNotif("event_auto_approved",  "NOTIF_TITLE_MEDIA_AUTO_APPROVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AVAILABLE: {
     emoji: "🎉",
-    label: t("event_available"),
+    label: tNotif("event_available",      "NOTIF_TITLE_MEDIA_AVAILABLE"),
     color: "#1ec8a0",
     adminOnly: false,
   },
   MEDIA_DECLINED: {
     emoji: "❌",
-    label: t("event_declined"),
+    label: tNotif("event_declined",       "NOTIF_TITLE_MEDIA_DECLINED"),
     color: "#f38ba8",
     adminOnly: false,
   },
   MEDIA_FAILED: {
     emoji: "💥",
-    label: t("event_failed"),
+    label: tNotif("event_failed",         "NOTIF_TITLE_MEDIA_FAILED"),
     color: "#f38ba8",
     adminOnly: true,
   },
   ISSUE_CREATED: {
     emoji: "🐛",
-    label: t("event_issue_created"),
+    label: tNotif("event_issue_created",  "NOTIF_TITLE_ISSUE_CREATED"),
     color: "#ef9f76",
     adminOnly: false,
   },
   ISSUE_COMMENT: {
     emoji: "💬",
-    label: t("event_issue_comment"),
+    label: tNotif("event_issue_comment",  "NOTIF_TITLE_ISSUE_COMMENT"),
     color: "#89b4fa",
     adminOnly: false,
   },
   ISSUE_RESOLVED: {
     emoji: "✔️",
-    label: t("event_issue_resolved"),
+    label: tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   ISSUE_REOPENED: {
     emoji: "🔄",
-    label: t("event_issue_reopened"),
+    label: tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"),
     color: "#ef9f76",
     adminOnly: false,
   },
   TEST_NOTIFICATION: {
     emoji: "🔔",
-    label: t("event_test"),
+    label: tNotif("event_test",           "NOTIF_TITLE_TEST"),
     color: "#89b4fa",
     adminOnly: false,
   },

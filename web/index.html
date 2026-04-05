@@ -901,9 +901,57 @@
                           </div>
                         </div>
                       
+                      <!-- Notification Title Customization -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_titles_title">Notification Titles</div>
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1.25rem;" data-i18n="config.notif_titles_desc">Customize the title line of each Discord notification. Leave empty to use the default for the selected Bot Language.</div>
+
+                        <div style="display: grid; gap: 0.6rem;">
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_pending">New Request</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_PENDING" name="NOTIF_TITLE_MEDIA_PENDING" class="form-control" placeholder="New Request – Pending Approval" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_approved">Request Approved</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_APPROVED" name="NOTIF_TITLE_MEDIA_APPROVED" class="form-control" placeholder="Request Approved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_auto_approved">Request Auto-Approved</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AUTO_APPROVED" name="NOTIF_TITLE_MEDIA_AUTO_APPROVED" class="form-control" placeholder="Request Auto-Approved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_available">Now Available</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AVAILABLE" name="NOTIF_TITLE_MEDIA_AVAILABLE" class="form-control" placeholder="Now Available!" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_declined">Request Declined</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_DECLINED" name="NOTIF_TITLE_MEDIA_DECLINED" class="form-control" placeholder="Request Declined" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_failed">Download Failed</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_FAILED" name="NOTIF_TITLE_MEDIA_FAILED" class="form-control" placeholder="Download Failed" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_created">Issue Reported</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_CREATED" name="NOTIF_TITLE_ISSUE_CREATED" class="form-control" placeholder="Issue Reported" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_comment">Issue Comment</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_COMMENT" name="NOTIF_TITLE_ISSUE_COMMENT" class="form-control" placeholder="Issue Comment" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_resolved">Issue Resolved</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_RESOLVED" name="NOTIF_TITLE_ISSUE_RESOLVED" class="form-control" placeholder="Issue Resolved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_reopened">Issue Reopened</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_REOPENED" name="NOTIF_TITLE_ISSUE_REOPENED" class="form-control" placeholder="Issue Reopened" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_test">Test Notification</label>
+                          <input type="text" id="NOTIF_TITLE_TEST" name="NOTIF_TITLE_TEST" class="form-control" placeholder="Test Notification" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_random">Daily Random Pick</label>
+                          <input type="text" id="NOTIF_TITLE_DAILY_RANDOM" name="NOTIF_TITLE_DAILY_RANDOM" class="form-control" placeholder="Today's Random Pick" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_recommendation">Daily Recommendation</label>
+                          <input type="text" id="NOTIF_TITLE_DAILY_RECOMMENDATION" name="NOTIF_TITLE_DAILY_RECOMMENDATION" class="form-control" placeholder="Today's Recommendation from your Library" style="margin-bottom: 0.5rem;" />
+
+                        </div>
+                      </div>
 
                       <!-- Bot Language Section -->
-                      <div class="form-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <label for="bot-language" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.bot_language_label">Bot Language</label>
                         <select id="bot-language" name="BOT_LANGUAGE" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
                           <option value="en">English</option>
@@ -929,7 +977,8 @@
                           <span id="import-config-status" style="font-size: 0.9rem;"></span>
                         </div>
                       </div>
-                    </div>
+                    
+</div>
                     </fieldset>
                   </div>
 

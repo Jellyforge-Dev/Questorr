@@ -1,4 +1,4 @@
-import { t } from "../utils/botStrings.js";
+import { t, tNotif } from "../utils/botStrings.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -85,7 +85,7 @@ export async function sendDailyRandomPick(client) {
     }
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: t("daily_random_pick") })
+      .setAuthor({ name: tNotif("daily_random_pick", "NOTIF_TITLE_DAILY_RANDOM") })
       .setTitle(`${title}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#f5a962")
@@ -296,7 +296,7 @@ export async function sendDailyRecommendation(client) {
       : null;
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: t("daily_recommendation") })
+      .setAuthor({ name: tNotif("daily_recommendation", "NOTIF_TITLE_DAILY_RECOMMENDATION") })
       .setTitle(`${item.Name}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#1ec8a0")
