@@ -647,7 +647,15 @@ function configureWebServer() {
     validate: { trustProxy: false },
   });
 
-  app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
+  // ─── Webhook Event Log buffer ──────────────────────────────────────────────
+  const webhookEventLog = [];
+  const WEBHOOK_LOG_MAX = 50;
+  function appendWebhookLog(entry) {
+    webhookEventLog.unshift({ ...entry, ts: new Date().toISOString() });
+    if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
+  }
+
+    app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
       // Validate webhook secret via Authorization header.
       // Seerr sends this via the "Authorization Header" field in webhook settings.
@@ -975,16 +983,7 @@ function configureWebServer() {
   });
 
 
-  // ─── Webhook Event Log ───────────────────────────────────────────────────────
-  // In-memory ring buffer – stores last 50 webhook events
-  const webhookEventLog = [];
-  const WEBHOOK_LOG_MAX = 50;
-
-  function appendWebhookLog(entry) {
-    webhookEventLog.unshift({ ...entry, ts: new Date().toISOString() });
-    if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
-  }
-
+  // ─── Webhook Log API ─────────────────────────────────────────────────────────
   app.get("/api/webhook-log", authenticateToken, (req, res) => {
     res.json({ success: true, events: webhookEventLog });
   });
@@ -992,6 +991,57 @@ function configureWebServer() {
   app.delete("/api/webhook-log", authenticateToken, (req, res) => {
     webhookEventLog.length = 0;
     res.json({ success: true, message: "Webhook log cleared." });
+  });
+
+
+  // ─── Config Export ────────────────────────────────────────────────────────────
+  app.get("/api/config/export", authenticateToken, (req, res) => {
+    try {
+      const config = readConfig();
+      if (!config) return res.status(500).json({ success: false, message: "No config found." });
+      const exportable = { ...config };
+      const STRIP = ["JWT_SECRET", "WEBHOOK_SECRET"];
+      const MASK = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+      for (const f of STRIP) delete exportable[f];
+      for (const f of MASK) {
+        if (exportable[f] && typeof exportable[f] === "string" && exportable[f].length > 4)
+          exportable[f] = "MASKED:" + exportable[f].slice(-4);
+      }
+      if (Array.isArray(exportable.USERS)) exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
+      exportable._exportedAt = new Date().toISOString();
+      exportable._questorrVersion = "2.2.0";
+      const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
+      res.setHeader("Content-Disposition", "attachment; filename=" + filename);
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(exportable, null, 2));
+      logger.info("[Config] Configuration exported");
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ─── Config Import ────────────────────────────────────────────────────────────
+  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
+    try {
+      const imported = req.body;
+      if (!imported || typeof imported !== "object") return res.status(400).json({ success: false, message: "Invalid JSON." });
+      delete imported._exportedAt;
+      delete imported._questorrVersion;
+      const existing = readConfig() || {};
+      const merged = { ...existing };
+      const MASKED_FIELDS = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+      for (const [key, value] of Object.entries(imported)) {
+        if (["USERS", "JWT_SECRET", "WEBHOOK_SECRET"].includes(key)) continue;
+        if (MASKED_FIELDS.includes(key) && typeof value === "string" && value.startsWith("MASKED:")) continue;
+        merged[key] = value;
+      }
+      writeConfig(merged);
+      loadConfigToEnv(merged);
+      logger.info("[Config] Configuration imported");
+      res.json({ success: true, message: "Configuration imported. Please save settings and restart the bot." });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
   });
 
 
