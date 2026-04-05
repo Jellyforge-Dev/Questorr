@@ -282,11 +282,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
     { key: "TEST_NOTIFICATION",   label: "Test Notification" },
   ];
-  const BTN_TYPES = [
-    { key: "seerr",      label: "Seerr",  envKey: "EMBED_SHOW_BUTTON_SEERR" },
-    { key: "watch",      label: "Watch",  envKey: "EMBED_SHOW_BUTTON_WATCH" },
-    { key: "letterboxd", label: "Ltrbxd", envKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
-    { key: "imdb",       label: "IMDb",   envKey: "EMBED_SHOW_BUTTON_IMDB" },
+  const BTN_DEFS = [
+    { key: "seerr",      label: "Seerr",      globalKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      label: "Watch",      globalKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", label: "Letterboxd", globalKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       label: "IMDb",       globalKey: "EMBED_SHOW_BUTTON_IMDB" },
   ];
 
   function buildNotifButtonsTable(configData) {
@@ -297,54 +297,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     for (const evt of NOTIF_EVENTS) {
       const envKey = "NOTIF_BUTTONS_" + evt.key;
       const raw = (configData && configData[envKey]) || "";
-      let savedOn = null, savedOff = null;
+
+      // Parse saved value
+      let checkedKeys = null;
       if (raw) {
         const parts = raw.toLowerCase().split(",").map(s => s.trim());
-        savedOn  = parts.filter(p => !p.startsWith("-"));
-        savedOff = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        const on  = parts.filter(p => !p.startsWith("-"));
+        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        checkedKeys = BTN_DEFS.map(b => {
+          if (on.includes(b.key))  return true;
+          if (off.includes(b.key)) return false;
+          const globalCb = document.getElementById(b.globalKey);
+          return globalCb ? globalCb.checked : true;
+        });
       }
 
       const tr = document.createElement("tr");
-      tr.style.borderBottom = "1px solid var(--surface1)";
+      tr.style.cssText = "border-bottom: 0.5px solid var(--color-border-tertiary);";
 
-      const td0 = document.createElement("td");
-      td0.style.cssText = "padding: 0.5rem 0.75rem; color: var(--text); font-size: 0.82rem;";
-      td0.textContent = evt.label;
-      tr.appendChild(td0);
+      // Label
+      const tdLabel = document.createElement("td");
+      tdLabel.style.cssText = "padding: 0.6rem 0.75rem; font-size: 0.82rem; color: var(--color-text-primary); white-space: nowrap;";
+      tdLabel.textContent = evt.label;
+      tr.appendChild(tdLabel);
 
-      for (const btn of BTN_TYPES) {
+      // Checkbox per button
+      BTN_DEFS.forEach((btn, idx) => {
         const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.5rem 0.25rem;";
+        td.style.cssText = "text-align: center; padding: 0.6rem 0.5rem;";
+
+        const label = document.createElement("label");
+        label.style.cssText = "display: inline-flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-size: 0.72rem; color: var(--color-text-secondary);";
 
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.dataset.event = evt.key;
         cb.dataset.btn = btn.key;
-        cb.style.cssText = "width: 16px; height: 16px; cursor: pointer;";
+        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: var(--teal, #1ec8a0);";
 
-        if (savedOn !== null) {
-          cb.checked = savedOn.includes(btn.key);
+        // Set initial state
+        if (checkedKeys !== null) {
+          cb.checked = checkedKeys[idx];
         } else {
-          // Fall back to global checkbox state
-          const globalCb = document.getElementById(btn.envKey);
+          const globalCb = document.getElementById(btn.globalKey);
           cb.checked = globalCb ? globalCb.checked : true;
         }
 
         cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
-        td.appendChild(cb);
+        label.appendChild(cb);
+        td.appendChild(label);
         tr.appendChild(td);
-      }
+      });
+
       tbody.appendChild(tr);
     }
   }
 
   function saveNotifButtonsRow(eventKey) {
     const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
-    const on = [], off = [];
-    for (const cb of cbs) {
-      if (cb.checked) on.push(cb.dataset.btn);
-      else            off.push("-" + cb.dataset.btn);
-    }
+    const result = [];
+    cbs.forEach(cb => {
+      result.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
+    });
     const envKey = "NOTIF_BUTTONS_" + eventKey;
     let inp = document.getElementById(envKey);
     if (!inp) {
@@ -354,7 +368,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       inp.name = envKey;
       document.getElementById("config-form")?.appendChild(inp);
     }
-    inp.value = [...on, ...off].join(",");
+    inp.value = result.join(",");
   }
 
   async function fetchConfig() {
