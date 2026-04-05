@@ -283,10 +283,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "TEST_NOTIFICATION",   label: "Test Notification" },
   ];
   const BTN_DEFS = [
-    { key: "seerr",      label: "Seerr",      globalKey: "EMBED_SHOW_BUTTON_SEERR" },
-    { key: "watch",      label: "Watch",      globalKey: "EMBED_SHOW_BUTTON_WATCH" },
-    { key: "letterboxd", label: "Letterboxd", globalKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
-    { key: "imdb",       label: "IMDb",       globalKey: "EMBED_SHOW_BUTTON_IMDB" },
+    { key: "seerr",      label: "Seerr",       configKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      label: "Watch",       configKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", label: "Letterboxd",  configKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       label: "IMDb",        configKey: "EMBED_SHOW_BUTTON_IMDB" },
   ];
 
   function buildNotifButtonsTable(configData) {
@@ -295,80 +295,70 @@ document.addEventListener("DOMContentLoaded", async () => {
     tbody.innerHTML = "";
 
     for (const evt of NOTIF_EVENTS) {
-      const envKey = "NOTIF_BUTTONS_" + evt.key;
-      const raw = (configData && configData[envKey]) || "";
+      const perEventKey = "NOTIF_BUTTONS_" + evt.key;
+      const raw = (configData && configData[perEventKey]) || "";
 
-      // Parse saved value
-      let checkedKeys = null;
+      // Parse saved per-event value: "seerr,watch,-letterboxd,-imdb"
+      let savedOn = null, savedOff = null;
       if (raw) {
         const parts = raw.toLowerCase().split(",").map(s => s.trim());
-        const on  = parts.filter(p => !p.startsWith("-"));
-        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
-        checkedKeys = BTN_DEFS.map(b => {
-          if (on.includes(b.key))  return true;
-          if (off.includes(b.key)) return false;
-          const globalCb = document.getElementById(b.globalKey);
-          return globalCb ? globalCb.checked : true;
-        });
+        savedOn  = parts.filter(p => !p.startsWith("-"));
+        savedOff = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
       }
 
       const tr = document.createElement("tr");
-      tr.style.cssText = "border-bottom: 0.5px solid var(--color-border-tertiary);";
+      tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
 
-      // Label
+      // Event label
       const tdLabel = document.createElement("td");
-      tdLabel.style.cssText = "padding: 0.6rem 0.75rem; font-size: 0.82rem; color: var(--color-text-primary); white-space: nowrap;";
+      tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
       tdLabel.textContent = evt.label;
       tr.appendChild(tdLabel);
 
-      // Checkbox per button
-      BTN_DEFS.forEach((btn, idx) => {
+      // One checkbox per button type
+      for (const btn of BTN_DEFS) {
         const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.6rem 0.5rem;";
-
-        const label = document.createElement("label");
-        label.style.cssText = "display: inline-flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-size: 0.72rem; color: var(--color-text-secondary);";
+        td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
 
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.dataset.event = evt.key;
-        cb.dataset.btn = btn.key;
-        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: var(--teal, #1ec8a0);";
+        cb.dataset.btn   = btn.key;
+        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
 
-        // Set initial state
-        if (checkedKeys !== null) {
-          cb.checked = checkedKeys[idx];
+        // Determine state: per-event config takes priority, else global config default
+        if (savedOn !== null) {
+          cb.checked = savedOn.includes(btn.key);
         } else {
-          const globalCb = document.getElementById(btn.globalKey);
-          cb.checked = globalCb ? globalCb.checked : true;
+          // Read global setting directly from configData (not DOM)
+          const globalVal = configData && configData[btn.configKey];
+          cb.checked = globalVal !== "false" && globalVal !== false;
         }
 
         cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
-        label.appendChild(cb);
-        td.appendChild(label);
+        td.appendChild(cb);
         tr.appendChild(td);
-      });
-
+      }
       tbody.appendChild(tr);
     }
   }
 
   function saveNotifButtonsRow(eventKey) {
     const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
-    const result = [];
+    const parts = [];
     cbs.forEach(cb => {
-      result.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
+      parts.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
     });
     const envKey = "NOTIF_BUTTONS_" + eventKey;
     let inp = document.getElementById(envKey);
     if (!inp) {
       inp = document.createElement("input");
       inp.type = "hidden";
-      inp.id = envKey;
+      inp.id   = envKey;
       inp.name = envKey;
       document.getElementById("config-form")?.appendChild(inp);
     }
-    inp.value = result.join(",");
+    inp.value = parts.join(",");
   }
 
   async function fetchConfig() {
@@ -409,7 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
       
-      // Build per-event buttons table
+      // Build per-event buttons table with configData defaults
       buildNotifButtonsTable(config);
 
       // Sync app-language selector with LANGUAGE config value
