@@ -381,6 +381,138 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
+  // ─── Per-event notification buttons table ─────────────────────────────────
+  const NOTIF_EVENTS = [
+    { key: "MEDIA_PENDING",       label: "New Request (Pending)" },
+    { key: "MEDIA_APPROVED",      label: "Request Approved" },
+    { key: "MEDIA_AUTO_APPROVED", label: "Auto-Approved" },
+    { key: "MEDIA_AVAILABLE",     label: "Now Available" },
+    { key: "MEDIA_DECLINED",      label: "Request Declined" },
+    { key: "MEDIA_FAILED",        label: "Download Failed" },
+    { key: "ISSUE_CREATED",       label: "Issue Reported" },
+    { key: "ISSUE_COMMENT",       label: "Issue Comment" },
+    { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
+    { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
+    { key: "TEST_NOTIFICATION",   label: "Test Notification" },
+  ];
+  const BTN_DEFS = [
+    { key: "seerr",      configKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      configKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", configKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       configKey: "EMBED_SHOW_BUTTON_IMDB" },
+  ];
+
+  function globalBtnDefault(configData, btn) {
+    const val = configData && configData[btn.configKey];
+    return val !== false && val !== "false";
+  }
+
+  function buildNotifButtonsTable(configData, resetToGlobal) {
+    const tbody = document.getElementById("notif-buttons-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    for (const evt of NOTIF_EVENTS) {
+      const perEventKey = "NOTIF_BUTTONS_" + evt.key;
+      const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
+
+      let checkedMap = null;
+      if (raw) {
+        const parts = raw.toLowerCase().split(",").map(s => s.trim());
+        const on  = parts.filter(p => !p.startsWith("-"));
+        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        checkedMap = {};
+        for (const b of BTN_DEFS) {
+          if (on.includes(b.key))       checkedMap[b.key] = true;
+          else if (off.includes(b.key)) checkedMap[b.key] = false;
+          else                          checkedMap[b.key] = globalBtnDefault(configData, b);
+        }
+      }
+
+      const tr = document.createElement("tr");
+      tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
+
+      // Event label
+      const tdLabel = document.createElement("td");
+      tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
+      tdLabel.textContent = evt.label;
+      tr.appendChild(tdLabel);
+
+      // Checkbox per button type
+      for (const btn of BTN_DEFS) {
+        const td = document.createElement("td");
+        td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.event = evt.key;
+        cb.dataset.btn   = btn.key;
+        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
+        cb.checked = checkedMap ? checkedMap[btn.key] : globalBtnDefault(configData, btn);
+        cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
+        td.appendChild(cb);
+        tr.appendChild(td);
+      }
+
+      // Test button column
+      const tdTest = document.createElement("td");
+      tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem;";
+      const testBtn = document.createElement("button");
+      testBtn.type = "button";
+      testBtn.dataset.eventKey = evt.key;
+      testBtn.textContent = "▶";
+      testBtn.title = "Send test to admin channel";
+      testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 7px; font-size: 0.78rem; cursor: pointer; transition: background 0.15s;";
+      testBtn.addEventListener("mouseenter", () => { testBtn.style.background = "var(--surface1)"; });
+      testBtn.addEventListener("mouseleave", () => { testBtn.style.background = "transparent"; });
+      testBtn.addEventListener("click", async () => {
+        testBtn.disabled = true;
+        testBtn.textContent = "…";
+        try {
+          const res = await fetch("/api/test-notification-buttons", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ eventType: evt.key }),
+          });
+          const data = await res.json();
+          testBtn.textContent = data.success ? "✅" : "❌";
+          if (typeof showToast === "function") showToast(data.message || (data.success ? "Sent!" : "Error"), 3000);
+        } catch (e) {
+          testBtn.textContent = "❌";
+        }
+        setTimeout(() => { testBtn.disabled = false; testBtn.textContent = "▶"; }, 3000);
+      });
+      tdTest.appendChild(testBtn);
+      tr.appendChild(tdTest);
+
+      tbody.appendChild(tr);
+    }
+
+    if (resetToGlobal) {
+      for (const evt of NOTIF_EVENTS) saveNotifButtonsRow(evt.key);
+    }
+  }
+
+  function saveNotifButtonsRow(eventKey) {
+    const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
+    const parts = [];
+    cbs.forEach(cb => parts.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn));
+    const envKey = "NOTIF_BUTTONS_" + eventKey;
+    let inp = document.getElementById(envKey);
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "hidden"; inp.id = envKey; inp.name = envKey;
+      document.getElementById("config-form")?.appendChild(inp);
+    }
+    inp.value = parts.join(",");
+  }
+
+  function initNotifButtonsReset(configData) {
+    const btn = document.getElementById("reset-notif-buttons-btn");
+    if (btn) btn.addEventListener("click", () => buildNotifButtonsTable(configData, true));
+  }
+
   async function fetchConfig() {
     try {
       const response = await fetch("/api/config");
@@ -420,6 +552,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       
       // Build per-event buttons table (reads from configData, not DOM)
+      buildNotifButtonsTable(config);
+      initNotifButtonsReset(config);
+
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
 

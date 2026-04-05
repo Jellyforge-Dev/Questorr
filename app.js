@@ -931,22 +931,52 @@ function configureWebServer() {
       const channel = await botState.discordClient.channels.fetch(channelId);
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
 
-      const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR     !== "false";
-      const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH      !== "false";
-      const showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-      const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB       !== "false";
+      const eventType = (req.body && req.body.eventType) || "MEDIA_AVAILABLE";
+
+      // Resolve per-event button config (same logic as getEventButtons in seerrWebhook)
+      const perEventRaw = process.env["NOTIF_BUTTONS_" + eventType] || "";
+      let showSeerr, showWatch, showLboxd, showImdb;
+      if (perEventRaw) {
+        const parts = perEventRaw.toLowerCase().split(",").map(function(s) { return s.trim(); });
+        const on  = parts.filter(function(p) { return !p.startsWith("-"); });
+        const off = parts.filter(function(p) { return  p.startsWith("-"); }).map(function(p) { return p.slice(1); });
+        showSeerr = on.includes("seerr")      ? true : off.includes("seerr")      ? false : process.env.EMBED_SHOW_BUTTON_SEERR      !== "false";
+        showWatch = on.includes("watch")      ? true : off.includes("watch")      ? false : process.env.EMBED_SHOW_BUTTON_WATCH       !== "false";
+        showLboxd = on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false";
+        showImdb  = on.includes("imdb")       ? true : off.includes("imdb")       ? false : process.env.EMBED_SHOW_BUTTON_IMDB        !== "false";
+      } else {
+        showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR      !== "false";
+        showWatch = process.env.EMBED_SHOW_BUTTON_WATCH       !== "false";
+        showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false";
+        showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB        !== "false";
+      }
+
+      const EVENT_LABELS = {
+        MEDIA_PENDING: "New Request – Pending Approval",
+        MEDIA_APPROVED: "Request Approved",
+        MEDIA_AUTO_APPROVED: "Request Auto-Approved",
+        MEDIA_AVAILABLE: "Now Available!",
+        MEDIA_DECLINED: "Request Declined",
+        MEDIA_FAILED: "Download Failed",
+        ISSUE_CREATED: "Issue Reported",
+        ISSUE_COMMENT: "Issue Comment",
+        ISSUE_RESOLVED: "Issue Resolved",
+        ISSUE_REOPENED: "Issue Reopened",
+        TEST_NOTIFICATION: "Test Notification",
+      };
+
+      const eventLabel = EVENT_LABELS[eventType] || eventType;
 
       const embed = new EmbedBuilder()
         .setColor("#1ec8a0")
-        .setAuthor({ name: "Now Available!" })
+        .setAuthor({ name: eventLabel })
         .setTitle("Test Movie (2024)")
-        .setDescription("Test notification — shows currently enabled buttons.")
+        .setDescription("Test notification — shows buttons for this event type.")
         .setTimestamp();
 
       const buttons = [];
       const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
       const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-
       function isUrl(u) { try { new URL(u); return true; } catch { return false; } }
 
       if (showSeerr && seerrBase && isUrl(seerrBase + "/movie/550")) {
@@ -963,19 +993,17 @@ function configureWebServer() {
       }
 
       const msgOptions = { embeds: [embed] };
-      if (buttons.length > 0) {
-        msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
-      }
+      if (buttons.length > 0) msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
       await channel.send(msgOptions);
 
-      const labels = [
-        showSeerr ? "View on Seerr" : null,
-        showWatch ? "Watch Now"     : null,
-        showLboxd ? "Letterboxd"    : null,
-        showImdb  ? "IMDb"          : null,
+      const activeLabels = [
+        showSeerr ? "Seerr"     : null,
+        showWatch ? "Watch"     : null,
+        showLboxd ? "Letterboxd": null,
+        showImdb  ? "IMDb"      : null,
       ].filter(Boolean);
 
-      res.json({ success: true, message: "Test sent with: " + (labels.join(", ") || "no buttons") });
+      res.json({ success: true, message: "[" + eventLabel + "] Sent with: " + (activeLabels.join(", ") || "no buttons") });
     } catch (err) {
       logger.error("Error sending test notification buttons:", err);
       res.status(500).json({ success: false, message: err.message });

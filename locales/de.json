@@ -343,7 +343,8 @@
     "notif_btn_col_event": "Ereignis",
     "notif_btn_col_hint": "— = globale Einstellung | ✅ = immer anzeigen | ☐ = immer ausblenden",
     "notif_buttons_reset": "↺ Auf Standard zurücksetzen",
-    "notif_buttons_reset_hint": "Setzt alle Zeilen auf die Standard-Buttons oben zurück."
+    "notif_buttons_reset_hint": "Setzt alle Zeilen auf die Standard-Buttons oben zurück.",
+    "notif_btn_col_test": "Test"
   },
   "ui": {
     "hide_header": "Header ausblenden",
