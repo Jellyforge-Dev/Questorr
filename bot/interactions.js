@@ -405,8 +405,18 @@ async function handleStatusCommand(interaction) {
           .setLabel(t("btn_request"))
           .setStyle(ButtonStyle.Primary),
       ];
+      // Per-command button config for /status
+      const _rawStatus = process.env.NOTIF_BUTTONS_STATUS || "";
+      const _onStatus  = _rawStatus ? _rawStatus.toLowerCase().split(",").map(s => s.trim()).filter(p => !p.startsWith("-")) : null;
+      const _offStatus = _rawStatus ? _rawStatus.toLowerCase().split(",").map(s => s.trim()).filter(p => p.startsWith("-")).map(p => p.slice(1)) : null;
+      function _showStatus(btn) {
+        if (!_rawStatus) return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+        if (_onStatus && _onStatus.includes(btn))  return true;
+        if (_offStatus && _offStatus.includes(btn)) return false;
+        return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+      }
       const seerrNF = buildSeerrUrl(mediaType, tmdbId);
-      if (seerrNF && isValidUrl(seerrNF)) {
+      if (_showStatus("seerr") && seerrNF && isValidUrl(seerrNF)) {
         nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrNF));
       }
       return interaction.editReply({ embeds: [embed], components: [new ActionRowBuilder().addComponents(nfButtons)] });
@@ -433,16 +443,23 @@ async function handleStatusCommand(interaction) {
     }
 
     const statusButtons = [];
-    const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
-    const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
-
-    if (showSeerr) {
+    // Per-command button config: NOTIF_BUTTONS_STATUS overrides globals
+    const _rawSt = process.env.NOTIF_BUTTONS_STATUS || "";
+    const _onSt  = _rawSt ? _rawSt.toLowerCase().split(",").map(s => s.trim()).filter(p => !p.startsWith("-")) : null;
+    const _offSt = _rawSt ? _rawSt.toLowerCase().split(",").map(s => s.trim()).filter(p => p.startsWith("-")).map(p => p.slice(1)) : null;
+    function _showSt(btn) {
+      if (!_rawSt) return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+      if (_onSt && _onSt.includes(btn))  return true;
+      if (_offSt && _offSt.includes(btn)) return false;
+      return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+    }
+    if (_showSt("seerr")) {
       const seerrLink = buildSeerrUrl(mediaType, tmdbId);
       if (seerrLink && isValidUrl(seerrLink)) {
         statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrLink));
       }
     }
-    if (showWatch && result.status === 5) {
+    if (_showSt("watch") && result.status === 5) {
       const jfKey = process.env.JELLYFIN_API_KEY;
       const jfBase = process.env.JELLYFIN_BASE_URL;
       if (jfKey && jfBase) {
@@ -532,8 +549,17 @@ async function handleRandomCommand(interaction) {
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
-    const showWatchRandom = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
-    if (showWatchRandom && watchUrl && isValidUrl(watchUrl)) {
+    // Per-command button config: NOTIF_BUTTONS_RANDOM overrides globals
+    const _rawRandom = process.env.NOTIF_BUTTONS_RANDOM || "";
+    const _onRandom  = _rawRandom ? _rawRandom.toLowerCase().split(",").map(s => s.trim()).filter(p => !p.startsWith("-")) : null;
+    const _offRandom = _rawRandom ? _rawRandom.toLowerCase().split(",").map(s => s.trim()).filter(p => p.startsWith("-")).map(p => p.slice(1)) : null;
+    function _showRandom(btn) {
+      if (!_rawRandom) return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+      if (_onRandom.includes(btn))  return true;
+      if (_offRandom.includes(btn)) return false;
+      return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
+    }
+    if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
       components.push(
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl)

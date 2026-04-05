@@ -281,6 +281,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
     { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
     { key: "TEST_NOTIFICATION",   label: "Test Notification" },
+    { key: "RANDOM",               label: "/random" },
+    { key: "STATUS",               label: "/status" },
   ];
   const BTN_DEFS = [
     { key: "seerr",      configKey: "EMBED_SHOW_BUTTON_SEERR" },

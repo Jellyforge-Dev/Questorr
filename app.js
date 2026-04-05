@@ -933,7 +933,25 @@ function configureWebServer() {
 
       const eventType = (req.body && req.body.eventType) || "MEDIA_AVAILABLE";
 
-      // Resolve per-event button config (same logic as getEventButtons in seerrWebhook)
+      // Realistic test data pool
+      const MOVIES = [
+        { title: "Fight Club", year: 1999, tmdbId: 550,   imdbId: "tt0137523", overview: "An insomniac office worker forms an underground fight club with a soap salesman.", poster: "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg" },
+        { title: "John Wick",  year: 2014, tmdbId: 245891, imdbId: "tt2911666", overview: "An ex-hitman comes out of retirement to track down the gangsters that took everything from him.", poster: "https://image.tmdb.org/t/p/w500/fZPSd91yGE9fCcCe6OoQr6E3Bev.jpg" },
+        { title: "The Dark Knight", year: 2008, tmdbId: 155, imdbId: "tt0468569", overview: "Batman raises the stakes in his war on crime with the help of Lt. Jim Gordon.", poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg" },
+        { title: "Interstellar", year: 2014, tmdbId: 157336, imdbId: "tt0816692", overview: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.", poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg" },
+      ];
+      const TV_SHOWS = [
+        { title: "Breaking Bad",      year: 2008, tmdbId: 1396,  imdbId: "tt0903747", overview: "A chemistry teacher diagnosed with cancer turns to manufacturing methamphetamine.", poster: "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg" },
+        { title: "Two and a Half Men",year: 2003, tmdbId: 1900,  imdbId: "tt0369179", overview: "A hedonistic jingle writer's free-wheeling life is upended when his uptight brother moves in.", poster: "https://image.tmdb.org/t/p/w500/ez9Evx2yyEGFpCe2wYRNxstPFNn.jpg" },
+        { title: "The Office",        year: 2005, tmdbId: 2316,  imdbId: "tt0386676", overview: "A mockumentary on a group of typical office workers at a paper supply company.", poster: "https://image.tmdb.org/t/p/w500/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg" },
+      ];
+
+      const isIssue = eventType.startsWith("ISSUE_");
+      const pool = isIssue ? MOVIES : (Math.random() < 0.7 ? MOVIES : TV_SHOWS);
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      const mediaType = TV_SHOWS.includes(item) ? "tv" : "movie";
+
+      // Per-event button config
       const perEventRaw = process.env["NOTIF_BUTTONS_" + eventType] || "";
       let showSeerr, showWatch, showLboxd, showImdb;
       if (perEventRaw) {
@@ -952,64 +970,52 @@ function configureWebServer() {
       }
 
       const EVENT_LABELS = {
-        MEDIA_PENDING: "New Request – Pending Approval",
-        MEDIA_APPROVED: "Request Approved",
-        MEDIA_AUTO_APPROVED: "Request Auto-Approved",
-        MEDIA_AVAILABLE: "Now Available!",
-        MEDIA_DECLINED: "Request Declined",
-        MEDIA_FAILED: "Download Failed",
-        ISSUE_CREATED: "Issue Reported",
-        ISSUE_COMMENT: "Issue Comment",
-        ISSUE_RESOLVED: "Issue Resolved",
-        ISSUE_REOPENED: "Issue Reopened",
+        MEDIA_PENDING: "New Request – Pending Approval", MEDIA_APPROVED: "Request Approved",
+        MEDIA_AUTO_APPROVED: "Request Auto-Approved",        MEDIA_AVAILABLE: "Now Available!",
+        MEDIA_DECLINED: "Request Declined",                  MEDIA_FAILED: "Download Failed",
+        ISSUE_CREATED: "Issue Reported",                     ISSUE_COMMENT: "Issue Comment",
+        ISSUE_RESOLVED: "Issue Resolved",                    ISSUE_REOPENED: "Issue Reopened",
         TEST_NOTIFICATION: "Test Notification",
       };
 
-      const eventLabel = EVENT_LABELS[eventType] || eventType;
-
       const embed = new EmbedBuilder()
         .setColor("#1ec8a0")
-        .setAuthor({ name: eventLabel })
-        .setTitle("Test Movie (2024)")
-        .setDescription("Test notification — shows buttons for this event type.")
+        .setAuthor({ name: EVENT_LABELS[eventType] || eventType })
+        .setTitle(item.title + " (" + item.year + ")")
+        .setDescription(item.overview)
+        .setThumbnail(item.poster)
         .setTimestamp();
 
-      const buttons = [];
       const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
       const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
       function isUrl(u) { try { new URL(u); return true; } catch { return false; } }
 
-      if (showSeerr && seerrBase && isUrl(seerrBase + "/movie/550")) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrBase + "/movie/550"));
+      const buttons = [];
+      if (showSeerr && seerrBase) {
+        const seerrUrl = seerrBase + "/" + mediaType + "/" + item.tmdbId;
+        if (isUrl(seerrUrl)) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrUrl));
       }
       if (showWatch && jfBase && isUrl(jfBase + "/web/index.html")) {
         buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Watch Now!").setURL(jfBase + "/web/index.html"));
       }
-      if (showLboxd) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Letterboxd").setURL("https://letterboxd.com/imdb/tt0137523/"));
+      if (showLboxd && mediaType === "movie") {
+        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Letterboxd").setURL("https://letterboxd.com/imdb/" + item.imdbId + "/"));
       }
       if (showImdb) {
-        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("IMDb").setURL("https://www.imdb.com/title/tt0137523/"));
+        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("IMDb").setURL("https://www.imdb.com/title/" + item.imdbId + "/"));
       }
 
       const msgOptions = { embeds: [embed] };
       if (buttons.length > 0) msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
       await channel.send(msgOptions);
 
-      const activeLabels = [
-        showSeerr ? "Seerr"     : null,
-        showWatch ? "Watch"     : null,
-        showLboxd ? "Letterboxd": null,
-        showImdb  ? "IMDb"      : null,
-      ].filter(Boolean);
-
-      res.json({ success: true, message: "[" + eventLabel + "] Sent with: " + (activeLabels.join(", ") || "no buttons") });
+      const activeLabels = [showSeerr ? "Seerr" : null, showWatch ? "Watch" : null, showLboxd ? "Ltrbxd" : null, showImdb ? "IMDb" : null].filter(Boolean);
+      res.json({ success: true, message: "[" + (EVENT_LABELS[eventType] || eventType) + "] " + item.title + " — " + (activeLabels.join(", ") || "no buttons") });
     } catch (err) {
       logger.error("Error sending test notification buttons:", err);
       res.status(500).json({ success: false, message: err.message });
     }
   });
-
 
   // ─── Webhook Log API ─────────────────────────────────────────────────────────
   app.get("/api/webhook-log", authenticateToken, (req, res) => {
