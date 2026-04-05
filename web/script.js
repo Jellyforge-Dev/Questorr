@@ -283,39 +283,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "TEST_NOTIFICATION",   label: "Test Notification" },
   ];
   const BTN_DEFS = [
-    { key: "seerr",      label: "Seerr",       configKey: "EMBED_SHOW_BUTTON_SEERR" },
-    { key: "watch",      label: "Watch",       configKey: "EMBED_SHOW_BUTTON_WATCH" },
-    { key: "letterboxd", label: "Letterboxd",  configKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
-    { key: "imdb",       label: "IMDb",        configKey: "EMBED_SHOW_BUTTON_IMDB" },
+    { key: "seerr",      configKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      configKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", configKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       configKey: "EMBED_SHOW_BUTTON_IMDB" },
   ];
 
-  function buildNotifButtonsTable(configData) {
+  // Returns true if the global default for this button is ON
+  function globalBtnDefault(configData, btn) {
+    const val = configData && configData[btn.configKey];
+    // stored as "true"/"false" string, or boolean, or missing → default true
+    if (val === false || val === "false") return false;
+    return true;
+  }
+
+  function buildNotifButtonsTable(configData, resetToGlobal) {
     const tbody = document.getElementById("notif-buttons-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
 
     for (const evt of NOTIF_EVENTS) {
       const perEventKey = "NOTIF_BUTTONS_" + evt.key;
-      const raw = (configData && configData[perEventKey]) || "";
+      const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
 
-      // Parse saved per-event value: "seerr,watch,-letterboxd,-imdb"
-      let savedOn = null, savedOff = null;
+      // Parse saved per-event value
+      let checkedMap = null;
       if (raw) {
         const parts = raw.toLowerCase().split(",").map(s => s.trim());
-        savedOn  = parts.filter(p => !p.startsWith("-"));
-        savedOff = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        const on  = parts.filter(p => !p.startsWith("-"));
+        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        checkedMap = {};
+        for (const b of BTN_DEFS) {
+          if (on.includes(b.key))       checkedMap[b.key] = true;
+          else if (off.includes(b.key)) checkedMap[b.key] = false;
+          else                          checkedMap[b.key] = globalBtnDefault(configData, b);
+        }
       }
 
       const tr = document.createElement("tr");
       tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
 
-      // Event label
       const tdLabel = document.createElement("td");
       tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
       tdLabel.textContent = evt.label;
       tr.appendChild(tdLabel);
 
-      // One checkbox per button type
       for (const btn of BTN_DEFS) {
         const td = document.createElement("td");
         td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
@@ -325,21 +337,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         cb.dataset.event = evt.key;
         cb.dataset.btn   = btn.key;
         cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
-
-        // Determine state: per-event config takes priority, else global config default
-        if (savedOn !== null) {
-          cb.checked = savedOn.includes(btn.key);
-        } else {
-          // Read global setting directly from configData (not DOM)
-          const globalVal = configData && configData[btn.configKey];
-          cb.checked = globalVal !== "false" && globalVal !== false;
-        }
+        cb.checked = checkedMap ? checkedMap[btn.key] : globalBtnDefault(configData, btn);
 
         cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
         td.appendChild(cb);
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
+    }
+
+    // If reset: write empty values so save will clear per-event config
+    if (resetToGlobal) {
+      for (const evt of NOTIF_EVENTS) {
+        saveNotifButtonsRow(evt.key);
+      }
     }
   }
 
@@ -359,6 +370,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("config-form")?.appendChild(inp);
     }
     inp.value = parts.join(",");
+  }
+
+  // Reset button handler — wired up after DOM ready
+  function initNotifButtonsReset(configData) {
+    const btn = document.getElementById("reset-notif-buttons-btn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      buildNotifButtonsTable(configData, true);
+    });
   }
 
   async function fetchConfig() {
@@ -399,8 +419,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
       
-      // Build per-event buttons table with configData defaults
+      // Build per-event buttons table (reads from configData, not DOM)
       buildNotifButtonsTable(config);
+      initNotifButtonsReset(config);
 
       // Sync app-language selector with LANGUAGE config value
       if (config.LANGUAGE) {

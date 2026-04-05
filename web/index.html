@@ -782,7 +782,7 @@
                           </label>
                           <div style="border-top: 1px solid var(--surface1); padding-top: 0.75rem;">
                             <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notification_buttons_title">Notification Buttons</div>
-                            <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.6rem;" data-i18n="config.notification_buttons_desc">Default buttons for all notifications. Use the table below to override per event type.</div>
+                            <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.6rem;" data-i18n="config.notification_buttons_desc">Choose which buttons appear on Discord notification embeds.</div>
                             <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.4rem 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.4rem;">
                               <input type="checkbox" id="EMBED_SHOW_BUTTON_SEERR" name="EMBED_SHOW_BUTTON_SEERR" checked style="margin-top: 3px; flex-shrink: 0;" />
                               <div><strong data-i18n="config.btn_view_seerr">View on Seerr</strong>
@@ -954,7 +954,7 @@
                       <!-- Per-Event Notification Buttons -->
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_buttons_per_event_title">Buttons per Notification</div>
-                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Überschreibe die Standard-Buttons pro Ereignistyp. Die Checkboxen sind mit den Standard-Buttons vorbelegt.</div>
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
                         <div style="overflow-x: auto;">
                           <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace;">
                             <thead>
@@ -962,7 +962,7 @@
                                 <th style="text-align: left; padding: 0.4rem 0.5rem; font-weight: 600;" data-i18n="config.notif_btn_col_event">Event</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">Seerr</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">Watch</th>
-                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Letterboxd</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Ltrbxd</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">IMDb</th>
                               </tr>
                             </thead>
@@ -970,7 +970,12 @@
                             </tbody>
                           </table>
                         </div>
-                        <div style="font-size: 0.78rem; color: var(--subtext0); margin-top: 0.5rem;" data-i18n="config.notif_btn_col_hint">— = use global setting &nbsp;|&nbsp; ✅ = always show &nbsp;|&nbsp; ☐ = always hide</div>
+                        <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                          <button type="button" id="reset-notif-buttons-btn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.75rem;" data-i18n="config.notif_buttons_reset">↺ Reset to defaults</button>
+                          <span style="font-size: 0.78rem; color: var(--subtext0);" data-i18n="config.notif_buttons_reset_hint">Resets all rows to the Standard-Buttons above.</span>
+                        </div>
+                      </div>
+                        
                       </div>
 
 <!-- Bot Language Section -->

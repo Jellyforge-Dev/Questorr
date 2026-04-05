@@ -271,7 +271,9 @@
     "notif_buttons_per_event_title": "Buttons per Notification",
     "notif_buttons_per_event_desc": "Override the default buttons per event type. Pre-filled from Default Buttons above.",
     "notif_btn_col_event": "Event",
-    "notif_btn_col_hint": "— = use global setting | ✅ = always show | ☐ = always hide"
+    "notif_btn_col_hint": "— = use global setting | ✅ = always show | ☐ = always hide",
+    "notif_buttons_reset": "↺ Reset to defaults",
+    "notif_buttons_reset_hint": "Resets all rows to the Standard-Buttons above."
   },
   "ui": {
     "hide_header": "Hide header",

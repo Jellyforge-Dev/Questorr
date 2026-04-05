@@ -341,7 +341,9 @@
     "notif_buttons_per_event_title": "Buttons je Benachrichtigung",
     "notif_buttons_per_event_desc": "Standard-Buttons pro Ereignistyp überschreiben. Vorbelegt aus Standard-Buttons oben.",
     "notif_btn_col_event": "Ereignis",
-    "notif_btn_col_hint": "— = globale Einstellung | ✅ = immer anzeigen | ☐ = immer ausblenden"
+    "notif_btn_col_hint": "— = globale Einstellung | ✅ = immer anzeigen | ☐ = immer ausblenden",
+    "notif_buttons_reset": "↺ Auf Standard zurücksetzen",
+    "notif_buttons_reset_hint": "Setzt alle Zeilen auf die Standard-Buttons oben zurück."
   },
   "ui": {
     "hide_header": "Header ausblenden",
