@@ -555,9 +555,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
 
-      buildNotifButtonsTable(config);
-      initNotifButtonsReset(config);
-
       // Sync app-language selector with LANGUAGE config value
       if (config.LANGUAGE) {
         const appLanguageSelect = document.getElementById('app-language');
@@ -2299,6 +2296,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           select.value = currentChannel;
         }
       });
+
+      buildNotifButtonsTable(config);
+      initNotifButtonsReset(config);
 
       // Populate Episodes and Seasons channel selects
       const episodesSelect = document.getElementById("episodes-channel-select");
