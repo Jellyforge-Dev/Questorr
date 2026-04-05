@@ -1,7 +1,6 @@
 /**
  * Bot-side translation helper.
- * Reads BOT_LANGUAGE (or falls back to LANGUAGE) from environment.
- * Supported: "en" (default) and "de".
+ * Reads BOT_LANGUAGE (or LANGUAGE) from environment. Supports "en" and "de".
  */
 
 const strings = {
@@ -21,8 +20,6 @@ const strings = {
     field_type:           "Type",
     field_type_movie:     "\uD83C\uDFAC Movie",
     field_type_tv:        "\uD83D\uDCFA TV Show",
-    field_status:         "Request Status",
-    field_seasons:        "Requested Seasons",
     field_reason:         "Reason",
     field_rating:         "Rating",
     btn_view_seerr:       "View on Seerr",
@@ -32,7 +29,7 @@ const strings = {
     btn_request:          "\uD83D\uDCE5 Request",
     btn_watch_now_short:  "\u25B6 Watch Now",
     daily_random_pick:    "Today\u2019s Random Pick",
-    daily_recommendation: "\uD83C\uDFAC Today\u2019s Recommendation from your Library",
+    daily_recommendation: "\uD83C\uDFAC Today\u2019s Recommendation on Jellyfin",
     status_unknown:       "Unknown",
     status_pending:       "Pending Approval",
     status_processing:    "Processing / Downloading",
@@ -52,9 +49,6 @@ const strings = {
     all_seasons:          "All Seasons",
     season_label:         "Season",
     episodes_label:       "episodes",
-    with_label:           "with",
-    tag_label:            "tag",
-    tags_label:           "tags",
     stay_tuned:           "stay tuned!",
     random_movie:         "Random Movie",
     random_series:        "Random Series",
@@ -75,8 +69,6 @@ const strings = {
     field_type:           "Typ",
     field_type_movie:     "\uD83C\uDFAC Film",
     field_type_tv:        "\uD83D\uDCFA Serie",
-    field_status:         "Anfragestatus",
-    field_seasons:        "Angeforderte Staffeln",
     field_reason:         "Grund",
     field_rating:         "Bewertung",
     btn_view_seerr:       "In Seerr ansehen",
@@ -86,7 +78,7 @@ const strings = {
     btn_request:          "\uD83D\uDCE5 Anfragen",
     btn_watch_now_short:  "\u25B6 Jetzt ansehen",
     daily_random_pick:    "Heutiger Zufallstitel",
-    daily_recommendation: "\uD83C\uDFAC Heutige Empfehlung aus deiner Library",
+    daily_recommendation: "\uD83C\uDFAC Heutige Empfehlung auf Jellyfin",
     status_unknown:       "Unbekannt",
     status_pending:       "Ausstehend",
     status_processing:    "Wird verarbeitet / heruntergeladen",
@@ -106,9 +98,6 @@ const strings = {
     all_seasons:          "Alle Staffeln",
     season_label:         "Staffel",
     episodes_label:       "Episoden",
-    with_label:           "mit",
-    tag_label:            "Tag",
-    tags_label:           "Tags",
     stay_tuned:           "bleibt gespannt!",
     random_movie:         "Zuf\u00E4lliger Film",
     random_series:        "Zuf\u00E4llige Serie",

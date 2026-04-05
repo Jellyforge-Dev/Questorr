@@ -267,7 +267,11 @@
     "export_import_title": "Config Export / Import",
     "export_import_desc": "Download your current configuration as a backup, or restore it from a previously exported file. API keys are masked in the export — they will not be overwritten on import.",
     "export_config": "Export Config",
-    "import_config": "Import Config"
+    "import_config": "Import Config",
+    "notif_buttons_per_event_title": "Buttons per Notification",
+    "notif_buttons_per_event_desc": "Define which buttons appear for each event type. Leave empty to use the global button settings above.",
+    "notif_btn_col_event": "Event",
+    "notif_btn_col_hint": "— = use global setting | ✅ = always show | ☐ = always hide"
   },
   "ui": {
     "hide_header": "Hide header",

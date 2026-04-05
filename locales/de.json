@@ -337,7 +337,11 @@
     "export_import_title": "Konfig Export / Import",
     "export_import_desc": "Aktuelle Konfiguration als Backup herunterladen oder aus einer zuvor exportierten Datei wiederherstellen. API-Schlüssel werden im Export maskiert.",
     "export_config": "Konfig exportieren",
-    "import_config": "Konfig importieren"
+    "import_config": "Konfig importieren",
+    "notif_buttons_per_event_title": "Buttons je Benachrichtigung",
+    "notif_buttons_per_event_desc": "Lege fest welche Buttons für jeden Ereignistyp erscheinen. Leer lassen um die globalen Button-Einstellungen zu verwenden.",
+    "notif_btn_col_event": "Ereignis",
+    "notif_btn_col_hint": "— = globale Einstellung | ✅ = immer anzeigen | ☐ = immer ausblenden"
   },
   "ui": {
     "hide_header": "Header ausblenden",

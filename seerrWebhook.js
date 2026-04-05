@@ -583,12 +583,41 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
+function getEventButtons(eventType) {
+  // Per-event button config: NOTIF_BUTTONS_MEDIA_AVAILABLE=seerr,watch,-letterboxd,-imdb
+  // Positive = always show, -negative = always hide, missing = use global toggle
+  const envKey = "NOTIF_BUTTONS_" + eventType;
+  const custom = process.env[envKey];
+  if (custom !== undefined && custom !== "") {
+    const parts = custom.toLowerCase().split(",").map(s => s.trim());
+    const on  = parts.filter(p => !p.startsWith("-"));
+    const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+    const glob = {
+      showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
+      showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
+      showLetterboxd: process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false",
+      showImdb:       process.env.EMBED_SHOW_BUTTON_IMDB        !== "false",
+    };
+    return {
+      showSeerr:      on.includes("seerr")      ? true : off.includes("seerr")      ? false : glob.showSeerr,
+      showWatch:      on.includes("watch")      ? true : off.includes("watch")      ? false : glob.showWatch,
+      showLetterboxd: on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : glob.showLetterboxd,
+      showImdb:       on.includes("imdb")       ? true : off.includes("imdb")       ? false : glob.showImdb,
+    };
+  }
+  // Fall back to global toggles
+  return {
+    showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
+    showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
+    showLetterboxd: process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false",
+    showImdb:       process.env.EMBED_SHOW_BUTTON_IMDB        !== "false",
+  };
+}
+
 function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   const components = [];
 
-  const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
-  const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
-  const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+  const { showSeerr, showWatch, showImdb } = getEventButtons(eventType);
 
   // View on Seerr
   if (showSeerr) {
@@ -616,7 +645,21 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
     }
   }
 
-  // IMDb – from TMDB external_ids (most reliable)
+  // Letterboxd – movies only
+  const { showLetterboxd } = getEventButtons(eventType);
+  if (showLetterboxd && imdbId && mediaType === "movie") {
+    const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
+    if (isValidUrl(lboxdUrl)) {
+      components.push(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel(t("btn_letterboxd"))
+          .setURL(lboxdUrl)
+      );
+    }
+  }
+
+  // IMDb
   if (showImdb && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
