@@ -358,15 +358,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           btn.disabled = true;
           btn.textContent = "\u2026";
           try {
-            const res = await fetch("/api/test-notification-buttons", {
+            const r = await fetch("/api/test-notification-buttons", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
               body: JSON.stringify({ eventType: evtKey }),
             });
-            const data = await res.json();
-            btn.textContent = data.success ? "\u2705" : "\u274C";
-            if (typeof showToast === "function") showToast(data.message || (data.success ? "Sent!" : "Error"), 3000);
+            const d = await r.json();
+            btn.textContent = d.success ? "\u2705" : "\u274C";
+            if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
           } catch (e) {
             btn.textContent = "\u274C";
           }
