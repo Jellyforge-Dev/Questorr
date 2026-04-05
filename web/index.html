@@ -900,7 +900,36 @@
                             <span data-i18n="config.language_help">Select the language for the Questorr dashboard.</span>
                           </div>
                         </div>
+                      
+
+                      <!-- Bot Language Section -->
+                      <div class="form-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <label for="bot-language" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.bot_language_label">Bot Language</label>
+                        <select id="bot-language" name="BOT_LANGUAGE" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                          <option value="en">English</option>
+                          <option value="de">Deutsch</option>
+                        </select>
+                        <div class="form-text" style="margin-top: 0.5rem;">
+                          <span data-i18n="config.bot_language_help">Language for Discord notifications, bot messages and button labels.</span>
+                        </div>
                       </div>
+
+                      <!-- Config Export / Import -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.export_import_title">Config Export / Import</div>
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.export_import_desc">Download your current configuration as a backup, or restore it from a previously exported file. API keys are masked in the export — they will not be overwritten on import.</div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                          <a id="export-config-btn" href="/api/config/export" download style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem; text-decoration: none;" class="btn btn-secondary">
+                            <i class="bi bi-download"></i> <span data-i18n="config.export_config">Export Config</span>
+                          </a>
+                          <label class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem; cursor: pointer; margin: 0;">
+                            <i class="bi bi-upload"></i> <span data-i18n="config.import_config">Import Config</span>
+                            <input type="file" id="import-config-input" accept=".json" style="display: none;" />
+                          </label>
+                          <span id="import-config-status" style="font-size: 0.9rem;"></span>
+                        </div>
+                      </div>
+                    </div>
                     </fieldset>
                   </div>
 

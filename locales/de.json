@@ -316,7 +316,9 @@
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link zur IMDb-Seite",
     "command_toggles_desc": "Einzelne Discord-Slash-Befehle aktivieren oder deaktivieren.",
-    "test_notification_buttons": "Buttons testen"
+    "test_notification_buttons": "Buttons testen",
+    "bot_language_label": "Bot-Sprache",
+    "bot_language_help": "Sprache für Discord-Benachrichtigungen, Bot-Nachrichten und Button-Beschriftungen."
   },
   "ui": {
     "hide_header": "Header ausblenden",

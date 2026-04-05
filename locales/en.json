@@ -246,7 +246,9 @@
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link to the IMDb page",
     "command_toggles_desc": "Enable or disable individual Discord slash commands.",
-    "test_notification_buttons": "Test Buttons"
+    "test_notification_buttons": "Test Buttons",
+    "bot_language_label": "Bot Language",
+    "bot_language_help": "Language for Discord notifications, bot messages and button labels."
   },
   "ui": {
     "hide_header": "Hide header",

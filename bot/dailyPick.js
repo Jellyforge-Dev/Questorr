@@ -1,3 +1,4 @@
+import { t } from "../utils/botStrings.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -84,12 +85,12 @@ export async function sendDailyRandomPick(client) {
     }
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: `${emoji} Today's Random Pick` })
+      .setAuthor({ name: t("daily_random_pick") })
       .setTitle(`${title}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#f5a962")
       .addFields({
-        name: "Rating",
+        name: t("field_rating"),
         value: randomMedia.vote_average
           ? `⭐ ${randomMedia.vote_average.toFixed(1)}/10`
           : "N/A",
@@ -115,7 +116,7 @@ export async function sendDailyRandomPick(client) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("Letterboxd")
+            .setLabel(t("btn_letterboxd"))
             .setURL(letterboxdUrl)
         );
       }
@@ -131,7 +132,7 @@ export async function sendDailyRandomPick(client) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("IMDb")
+            .setLabel(t("btn_imdb"))
             .setURL(imdbUrl)
         );
       }
@@ -140,7 +141,7 @@ export async function sendDailyRandomPick(client) {
     buttonComponents.push(
       new ButtonBuilder()
         .setStyle(ButtonStyle.Primary)
-        .setLabel("Request")
+        .setLabel(t("btn_request"))
         .setCustomId(`request_random_${randomMedia.id}_${mediaType}`)
     );
 
@@ -295,7 +296,7 @@ export async function sendDailyRecommendation(client) {
       : null;
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: `${emoji} Heutige Empfehlung aus deiner Library` })
+      .setAuthor({ name: t("daily_recommendation") })
       .setTitle(`${item.Name}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#1ec8a0")
@@ -316,7 +317,7 @@ export async function sendDailyRecommendation(client) {
       buttonComponents.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("▶ Jetzt ansehen")
+          .setLabel(t("btn_watch_now_short"))
           .setURL(watchUrl)
       );
     }
@@ -327,7 +328,7 @@ export async function sendDailyRecommendation(client) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("IMDb")
+            .setLabel(t("btn_imdb"))
             .setURL(imdbUrl)
         );
       }
@@ -339,7 +340,7 @@ export async function sendDailyRecommendation(client) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("Letterboxd")
+            .setLabel(t("btn_letterboxd"))
             .setURL(letterboxdUrl)
         );
       }

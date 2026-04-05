@@ -1,3 +1,4 @@
+import { t } from "../utils/botStrings.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -27,7 +28,7 @@ export function buildNotificationEmbed(
 
   const authorName =
     status === "success"
-      ? "✅ Successfully requested!"
+      ? t("successfully_requested")
       : mediaType === "movie"
         ? "🎬 Movie found:"
         : "📺 TV show found:";
@@ -147,7 +148,7 @@ export function buildButtons(
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("Letterboxd")
+          .setLabel(t("btn_letterboxd"))
           .setURL(letterboxdUrl)
       );
     }
@@ -156,24 +157,24 @@ export function buildButtons(
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("IMDb")
+          .setLabel(t("btn_imdb"))
           .setURL(imdbUrl)
       );
     }
   }
 
   if (requested) {
-    let successLabel = "Requested";
+    let successLabel = t("requested_label");
 
     if (mediaType === "tv" && requestedSeasons.length > 0) {
       if (requestedSeasons.includes("all")) {
-        successLabel = "Requested all seasons";
+        successLabel = t("requested_all_seasons");
       } else if (requestedSeasons.length === 1) {
-        successLabel = `Requested season ${requestedSeasons[0]}`;
+        successLabel = t("requested_season") + " " + requestedSeasons[0];
       } else {
         const seasons = [...requestedSeasons];
         const lastSeason = seasons.pop();
-        successLabel = `Requested seasons ${seasons.join(", ")} and ${lastSeason}`;
+        successLabel = t("requested_seasons") + " " + seasons.join(", ") + " and " + lastSeason;
       }
     }
     if (requestedTags.length > 0) {
@@ -184,7 +185,7 @@ export function buildButtons(
       successLabel += ` with ${tagLabel} tag${requestedTags.length > 1 ? "s" : ""}`;
     }
 
-    successLabel += ", stay tuned!";
+    successLabel += ", " + t("stay_tuned");
 
     buttons.push(
       new ButtonBuilder()
@@ -194,17 +195,17 @@ export function buildButtons(
         .setDisabled(true)
     );
   } else {
-    let requestLabel = "Request";
+    let requestLabel = t("btn_request").replace("📥 ", "");
 
     if (mediaType === "tv" && selectedSeasons.length > 0) {
       if (selectedSeasons.includes("all")) {
-        requestLabel = "Request all seasons";
+        requestLabel = t("request_all_seasons");
       } else if (selectedSeasons.length === 1) {
-        requestLabel = `Request season ${selectedSeasons[0]}`;
+        requestLabel = t("request_season") + " " + selectedSeasons[0];
       } else {
         const seasons = [...selectedSeasons];
         const lastSeason = seasons.pop();
-        requestLabel = `Request seasons ${seasons.join(", ")} and ${lastSeason}`;
+        requestLabel = t("request_seasons") + " " + seasons.join(", ") + " and " + lastSeason;
       }
     }
 
@@ -251,9 +252,9 @@ export function buildButtons(
 
     if (uniqueSeasons.length <= 24) {
       const seasonOptions = [
-        { label: "All Seasons", value: "all" },
+        { label: t("all_seasons"), value: "all" },
         ...uniqueSeasons.map((s) => ({
-          label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+          label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
           value: String(s.season_number),
         })),
       ];
@@ -272,9 +273,9 @@ export function buildButtons(
 
       const firstBatchSeasons = uniqueSeasons.slice(0, SEASONS_PER_MENU);
       const firstMenuOptions = [
-        { label: "All Seasons", value: "all" },
+        { label: t("all_seasons"), value: "all" },
         ...firstBatchSeasons.map((s) => ({
-          label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+          label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
           value: String(s.season_number),
         })),
       ];
@@ -298,7 +299,7 @@ export function buildButtons(
 
         if (batchSeasons.length > 0) {
           const batchOptions = batchSeasons.map((s) => ({
-            label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+            label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
             value: String(s.season_number),
           }));
 

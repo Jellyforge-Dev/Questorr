@@ -16,6 +16,7 @@
  *   4. JELLYFIN_CHANNEL_ID
  */
 
+import { t } from "./utils/botStrings.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -32,67 +33,67 @@ import { findBestBackdrop } from "./api/tmdb.js";
 const EVENT_CONFIG = {
   MEDIA_PENDING: {
     emoji: "⏳",
-    label: "New Request – Pending Approval",
+    label: t("event_pending"),
     color: "#f9e2af",
     adminOnly: true,
   },
   MEDIA_APPROVED: {
     emoji: "✅",
-    label: "Request Approved",
+    label: t("event_approved"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AUTO_APPROVED: {
     emoji: "⚡",
-    label: "Request Auto-Approved",
+    label: t("event_auto_approved"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AVAILABLE: {
     emoji: "🎉",
-    label: "Now Available!",
+    label: t("event_available"),
     color: "#1ec8a0",
     adminOnly: false,
   },
   MEDIA_DECLINED: {
     emoji: "❌",
-    label: "Request Declined",
+    label: t("event_declined"),
     color: "#f38ba8",
     adminOnly: false,
   },
   MEDIA_FAILED: {
     emoji: "💥",
-    label: "Download Failed",
+    label: t("event_failed"),
     color: "#f38ba8",
     adminOnly: true,
   },
   ISSUE_CREATED: {
     emoji: "🐛",
-    label: "Issue Reported",
+    label: t("event_issue_created"),
     color: "#ef9f76",
     adminOnly: false,
   },
   ISSUE_COMMENT: {
     emoji: "💬",
-    label: "Issue Comment",
+    label: t("event_issue_comment"),
     color: "#89b4fa",
     adminOnly: false,
   },
   ISSUE_RESOLVED: {
     emoji: "✔️",
-    label: "Issue Resolved",
+    label: t("event_issue_resolved"),
     color: "#2eb87e",
     adminOnly: false,
   },
   ISSUE_REOPENED: {
     emoji: "🔄",
-    label: "Issue Reopened",
+    label: t("event_issue_reopened"),
     color: "#ef9f76",
     adminOnly: false,
   },
   TEST_NOTIFICATION: {
     emoji: "🔔",
-    label: "Test Notification",
+    label: t("event_test"),
     color: "#89b4fa",
     adminOnly: false,
   },
@@ -534,13 +535,13 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     case "MEDIA_FAILED": {
       const fields = [];
       if (mediaType) {
-        fields.push({ name: "Type", value: mediaType === "movie" ? "🎬 Movie" : "📺 TV Show", inline: true });
+        fields.push({ name: "Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       }
       if (request?.requestedBy_username) {
-        fields.push({ name: "Requested by", value: request.requestedBy_username, inline: true });
+        fields.push({ name: t("field_requested_by"), value: request.requestedBy_username, inline: true });
       }
       if ((eventType === "MEDIA_DECLINED" || eventType === "MEDIA_FAILED") && request?.comment) {
-        fields.push({ name: "Reason", value: request.comment, inline: false });
+        fields.push({ name: t("field_reason"), value: request.comment, inline: false });
       }
       if (Array.isArray(extra) && extra.length > 0) {
         for (const item of extra) {
@@ -557,7 +558,7 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
       const fields = [];
       if (issue?.issue_type) fields.push({ name: "Issue Type", value: issue.issue_type, inline: true });
       if (issue?.reportedBy_username) fields.push({ name: "Reported by", value: issue.reportedBy_username, inline: true });
-      if (mediaType) fields.push({ name: "Media Type", value: mediaType === "movie" ? "🎬 Movie" : "📺 TV Show", inline: true });
+      if (mediaType) fields.push({ name: "Media Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       if (fields.length > 0) embed.addFields(...fields);
       break;
     }
@@ -596,7 +597,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("View on Seerr")
+          .setLabel(t("btn_view_seerr"))
           .setURL(seerrUrl)
       );
     }
@@ -609,7 +610,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("▶ Watch Now!")
+          .setLabel(t("btn_watch_now"))
           .setURL(watchUrl)
       );
     }
@@ -622,7 +623,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("IMDb")
+          .setLabel(t("btn_imdb"))
           .setURL(imdbUrl)
       );
     }

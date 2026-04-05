@@ -1,3 +1,4 @@
+import { t } from "../utils/botStrings.js";
 import { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
 import * as seerrApi from "../api/seerr.js";
@@ -373,13 +374,13 @@ async function handleStatusCommand(interaction) {
 
     // Seerr status codes: 1=Unknown, 2=Pending, 3=Processing, 4=Partially Available, 5=Available
     const statusMap = {
-      1: { emoji: "❓", label: "Unknown" },
-      2: { emoji: "⏳", label: "Pending Approval" },
-      3: { emoji: "⬇️", label: "Processing / Downloading" },
-      4: { emoji: "🟡", label: "Partially Available" },
-      5: { emoji: "✅", label: "Available" },
-      6: { emoji: "🗑️", label: "Deleted" },
-      7: { emoji: "🔄", label: "Pending" },
+      1: { emoji: "❓", label: t("status_unknown") },
+      2: { emoji: "⏳", label: t("status_pending") },
+      3: { emoji: "⬇️", label: t("status_processing") },
+      4: { emoji: "🟡", label: t("status_partial") },
+      5: { emoji: "✅", label: t("status_available") },
+      6: { emoji: "🗑️", label: t("status_deleted") },
+      7: { emoji: "🔄", label: t("status_pending_short") },
     };
 
     const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
@@ -389,7 +390,7 @@ async function handleStatusCommand(interaction) {
       || result.data?.first_air_date?.slice(0, 4) || "";
 
     if (!result.exists || result.status == null) {
-      const nfDesc = buildStatusDescription(tmdbDetails, "This title has not been requested yet.");
+      const nfDesc = buildStatusDescription(tmdbDetails, t("status_not_requested"));
       const embed = new EmbedBuilder()
         .setColor("#89b4fa")
         .setTitle(`${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}${mediaYear ? ` (${mediaYear})` : ""}`)
@@ -401,12 +402,12 @@ async function handleStatusCommand(interaction) {
       const nfButtons = [
         new ButtonBuilder()
           .setCustomId(`status_request_btn|${tmdbId}|${mediaType}|${titleFromOption}`)
-          .setLabel("📥 Request")
+          .setLabel(t("btn_request"))
           .setStyle(ButtonStyle.Primary),
       ];
       const seerrNF = buildSeerrUrl(mediaType, tmdbId);
       if (seerrNF && isValidUrl(seerrNF)) {
-        nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrNF));
+        nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrNF));
       }
       return interaction.editReply({ embeds: [embed], components: [new ActionRowBuilder().addComponents(nfButtons)] });
     }
@@ -438,7 +439,7 @@ async function handleStatusCommand(interaction) {
     if (showSeerr) {
       const seerrLink = buildSeerrUrl(mediaType, tmdbId);
       if (seerrLink && isValidUrl(seerrLink)) {
-        statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrLink));
+        statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrLink));
       }
     }
     if (showWatch && result.status === 5) {
@@ -450,7 +451,7 @@ async function handleStatusCommand(interaction) {
           if (jfId) {
             const watchUrl = buildJellyfinUrl(jfId);
             if (watchUrl && isValidUrl(watchUrl)) {
-              statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("▶ Watch Now!").setURL(watchUrl));
+              statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
             }
           }
         } catch (_) {}
@@ -513,7 +514,7 @@ async function handleRandomCommand(interaction) {
 
     const embed = new EmbedBuilder()
       .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
-      .setAuthor({ name: `🎲 Random ${itemType}` })
+      .setAuthor({ name: itemType === "Movie" ? t("random_movie") : t("random_series") })
       .setTitle(`${emoji} ${item.Name}${year}`)
       .setDescription(description || "No description available.")
       .setTimestamp();
@@ -535,7 +536,7 @@ async function handleRandomCommand(interaction) {
     if (showWatchRandom && watchUrl && isValidUrl(watchUrl)) {
       components.push(
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("▶ Watch Now!").setURL(watchUrl)
+          new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl)
         )
       );
     }
@@ -1277,9 +1278,9 @@ export function registerInteractions(client) {
 
           if (uniqueSeasons.length <= 24) {
             const seasonOptions = [
-              { label: "All Seasons", value: "all" },
+              { label: t("all_seasons"), value: "all" },
               ...uniqueSeasons.map((s) => ({
-                label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+                label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
                 value: String(s.season_number),
               })),
             ];
@@ -1298,9 +1299,9 @@ export function registerInteractions(client) {
 
             const firstBatchSeasons = uniqueSeasons.slice(0, SEASONS_PER_MENU);
             const firstMenuOptions = [
-              { label: "All Seasons", value: "all" },
+              { label: t("all_seasons"), value: "all" },
               ...firstBatchSeasons.map((s) => ({
-                label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+                label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
                 value: String(s.season_number),
               })),
             ];
@@ -1332,7 +1333,7 @@ export function registerInteractions(client) {
 
               if (batchSeasons.length > 0) {
                 const batchOptions = batchSeasons.map((s) => ({
-                  label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+                  label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
                   value: String(s.season_number),
                 }));
 

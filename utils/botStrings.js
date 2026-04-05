@@ -1,0 +1,155 @@
+/**
+ * Bot-side translation helper.
+ * Reads BOT_LANGUAGE (or falls back to LANGUAGE) from environment.
+ * Supported: "en" (default) and "de".
+ */
+
+const strings = {
+  en: {
+    // ─── Seerr Webhook event labels ───────────────────────────────────────────
+    event_pending:        "New Request \u2013 Pending Approval",
+    event_approved:       "Request Approved",
+    event_auto_approved:  "Request Auto-Approved",
+    event_available:      "Now Available!",
+    event_declined:       "Request Declined",
+    event_failed:         "Download Failed",
+    event_issue_created:  "Issue Reported",
+    event_issue_comment:  "Issue Comment",
+    event_issue_resolved: "Issue Resolved",
+    event_issue_reopened: "Issue Reopened",
+    event_test:           "Test Notification",
+
+    // ─── Seerr Webhook field names ────────────────────────────────────────────
+    field_requested_by:   "Requested by",
+    field_type:           "Type",
+    field_type_movie:     "\uD83C\uDFAC Movie",
+    field_type_tv:        "\uD83D\uDCFA TV Show",
+    field_status:         "Request Status",
+    field_seasons:        "Requested Seasons",
+    field_reason:         "Reason",
+    field_rating:         "Rating",
+
+    // ─── Buttons ──────────────────────────────────────────────────────────────
+    btn_view_seerr:       "View on Seerr",
+    btn_watch_now:        "\u25B6 Watch Now!",
+    btn_imdb:             "IMDb",
+    btn_letterboxd:       "Letterboxd",
+    btn_request:          "\uD83D\uDCE5 Request",
+    btn_watch_now_short:  "\u25B6 Watch Now",
+
+    // ─── Daily picks ──────────────────────────────────────────────────────────
+    daily_random_pick:    "Today\u2019s Random Pick",
+    daily_recommendation: "\uD83C\uDFAC Today\u2019s Recommendation from your Library",
+
+    // ─── /status labels ───────────────────────────────────────────────────────
+    status_unknown:        "Unknown",
+    status_pending:        "Pending Approval",
+    status_processing:     "Processing / Downloading",
+    status_partial:        "Partially Available",
+    status_available:      "Available",
+    status_deleted:        "Deleted",
+    status_pending_short:  "Pending",
+    status_not_requested:  "This title has not been requested yet.",
+
+    // ─── /request / search ────────────────────────────────────────────────────
+    successfully_requested:  "\u2705 Successfully requested!",
+    requested_label:         "Requested",
+    requested_all_seasons:   "Requested all seasons",
+    requested_season:        "Requested season",
+    requested_seasons:       "Requested seasons",
+    request_all_seasons:     "Request all seasons",
+    request_season:          "Request season",
+    request_seasons:         "Request seasons",
+    all_seasons:             "All Seasons",
+    season_label:            "Season",
+    episodes_label:          "episodes",
+    with_label:              "with",
+    tag_label:               "tag",
+    tags_label:              "tags",
+    stay_tuned:              "stay tuned!",
+
+    // ─── /random ──────────────────────────────────────────────────────────────
+    random_movie:  "Random Movie",
+    random_series: "Random Series",
+  },
+
+  de: {
+    // ─── Seerr Webhook event labels ───────────────────────────────────────────
+    event_pending:        "Neue Anfrage \u2013 Ausstehend",
+    event_approved:       "Anfrage genehmigt",
+    event_auto_approved:  "Anfrage automatisch genehmigt",
+    event_available:      "Jetzt verf\u00FCgbar!",
+    event_declined:       "Anfrage abgelehnt",
+    event_failed:         "Download fehlgeschlagen",
+    event_issue_created:  "Problem gemeldet",
+    event_issue_comment:  "Problem-Kommentar",
+    event_issue_resolved: "Problem gel\u00F6st",
+    event_issue_reopened: "Problem wieder ge\u00F6ffnet",
+    event_test:           "Test-Benachrichtigung",
+
+    // ─── Seerr Webhook field names ────────────────────────────────────────────
+    field_requested_by:   "Angefragt von",
+    field_type:           "Typ",
+    field_type_movie:     "\uD83C\uDFAC Film",
+    field_type_tv:        "\uD83D\uDCFA Serie",
+    field_status:         "Anfragestatus",
+    field_seasons:        "Angeforderte Staffeln",
+    field_reason:         "Grund",
+    field_rating:         "Bewertung",
+
+    // ─── Buttons ──────────────────────────────────────────────────────────────
+    btn_view_seerr:       "In Seerr ansehen",
+    btn_watch_now:        "\u25B6 Jetzt ansehen!",
+    btn_imdb:             "IMDb",
+    btn_letterboxd:       "Letterboxd",
+    btn_request:          "\uD83D\uDCE5 Anfragen",
+    btn_watch_now_short:  "\u25B6 Jetzt ansehen",
+
+    // ─── Daily picks ──────────────────────────────────────────────────────────
+    daily_random_pick:    "Heutiger Zufallstitel",
+    daily_recommendation: "\uD83C\uDFAC Heutige Empfehlung aus deiner Library",
+
+    // ─── /status labels ───────────────────────────────────────────────────────
+    status_unknown:        "Unbekannt",
+    status_pending:        "Ausstehend",
+    status_processing:     "Wird verarbeitet / heruntergeladen",
+    status_partial:        "Teilweise verf\u00FCgbar",
+    status_available:      "Verf\u00FCgbar",
+    status_deleted:        "Gel\u00F6scht",
+    status_pending_short:  "Ausstehend",
+    status_not_requested:  "Dieser Titel wurde noch nicht angefragt.",
+
+    // ─── /request / search ────────────────────────────────────────────────────
+    successfully_requested:  "\u2705 Erfolgreich angefragt!",
+    requested_label:         "Angefragt",
+    requested_all_seasons:   "Alle Staffeln angefragt",
+    requested_season:        "Staffel angefragt",
+    requested_seasons:       "Staffeln angefragt",
+    request_all_seasons:     "Alle Staffeln anfragen",
+    request_season:          "Staffel anfragen",
+    request_seasons:         "Staffeln anfragen",
+    all_seasons:             "Alle Staffeln",
+    season_label:            "Staffel",
+    episodes_label:          "Episoden",
+    with_label:              "mit",
+    tag_label:               "Tag",
+    tags_label:              "Tags",
+    stay_tuned:              "bleibt gespannt!",
+
+    // ─── /random ──────────────────────────────────────────────────────────────
+    random_movie:  "Zuf\u00E4lliger Film",
+    random_series: "Zuf\u00E4llige Serie",
+  },
+};
+
+/**
+ * Returns the translation for the given key in the configured bot language.
+ * Falls back to English if the key or language is not found.
+ */
+export function t(key) {
+  const lang = (process.env.BOT_LANGUAGE || process.env.LANGUAGE || "en").toLowerCase();
+  const dict = strings[lang] || strings["en"];
+  return dict[key] ?? strings["en"][key] ?? key;
+}
+
+export default { t };
