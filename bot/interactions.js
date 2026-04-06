@@ -537,12 +537,13 @@ async function handleRandomCommand(interaction) {
       .setTimestamp();
 
         const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    let tmdbDataR = null;
     if (tmdbIdFromJf && getTmdbApiKey()) {
       try {
         const tmdbType = itemType === "Movie" ? "movie" : "tv";
-        const tmdbData = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
-        if (tmdbData?.poster_path) {
-          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbData.poster_path);
+        tmdbDataR = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        if (tmdbDataR?.poster_path) {
+          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
         }
       } catch (_) {}
     }
@@ -571,15 +572,21 @@ async function handleRandomCommand(interaction) {
       const seerrUrlR = seerrBaseR + "/" + seerrTypeR + "/" + tmdbIdForSeerr;
       if (isValidUrl(seerrUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrUrlR));
     }
+    // Normalize IMDb ID — Jellyfin uses different capitalizations
+    const _pids = item.ProviderIds || {};
+    const imdbIdR = _pids.Imdb || _pids.imdb || _pids.IMDb ||
+                    Object.entries(_pids).find(([k]) => k.toLowerCase() === "imdb")?.[1] || null;
+    // Try TMDB data as fallback for IMDb ID
+    const imdbIdRFinal = imdbIdR || (tmdbDataR?.external_ids?.imdb_id) || null;
+
     // Letterboxd (movies only)
-    const imdbIdR = item.ProviderIds?.Imdb || item.ProviderIds?.imdb;
-    if (_showRandom("letterboxd") && imdbIdR && item.Type !== "Series") {
-      const lboxdUrlR = "https://letterboxd.com/imdb/" + imdbIdR + "/";
+    if (_showRandom("letterboxd") && imdbIdRFinal && item.Type !== "Series") {
+      const lboxdUrlR = "https://letterboxd.com/imdb/" + imdbIdRFinal + "/";
       if (isValidUrl(lboxdUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_letterboxd")).setURL(lboxdUrlR));
     }
     // IMDb
-    if (_showRandom("imdb") && imdbIdR) {
-      const imdbUrlR = "https://www.imdb.com/title/" + imdbIdR + "/";
+    if (_showRandom("imdb") && imdbIdRFinal) {
+      const imdbUrlR = "https://www.imdb.com/title/" + imdbIdRFinal + "/";
       if (isValidUrl(imdbUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbUrlR));
     }
     const replyOptsR = { embeds: [embed] };
