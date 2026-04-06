@@ -1060,10 +1060,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(".dashboard-layout").style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
-        // Remove setup section padding so no gap above about-page
-        const _setupEl = document.getElementById("setup");
-        if (_setupEl) _setupEl.style.padding = "0";
-        // Show about page
+        // Hide <main> so it doesn't push about-page down
+        document.getElementById("dashboard-content").style.display = "none";
+        // Show about page outside main
         document.getElementById("about-page").style.display = "block";
         window.scrollTo(0, 0);
         // Update dashboard title to "Back to Configuration"
@@ -1108,10 +1107,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (dashboardTitle.classList.contains("back-link")) {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
-      // Hide about page, restore setup padding
+      document.getElementById("dashboard-content").style.display = "flex";
+      // Hide about page
       document.getElementById("about-page").style.display = "none";
-      const _setupRestore = document.getElementById("setup");
-      if (_setupRestore) _setupRestore.style.padding = "";
       // Reset dashboard title
       dashboardTitle.innerHTML = "Configuration";
       dashboardTitle.style.cursor = "default";
@@ -3655,6 +3653,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Logs page button click handler
   logsPageBtn?.addEventListener("click", async () => {
     setupSection.style.display = "none";
+    document.getElementById("dashboard-content").style.display = "none";
     logsSection.style.display = "flex";
     window.scrollTo(0, 0);
 
@@ -3920,6 +3919,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     logsSection.style.display = "none";
     setupSection.style.display = "block";
+    document.getElementById("dashboard-content").style.display = "flex";
 
     // Show hero and footer again
     document.querySelector(".hero").style.display = "block";
