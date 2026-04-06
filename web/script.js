@@ -197,31 +197,21 @@ async function initializeI18n() {
   setupLanguageChangeHandler();
 }
 
-// Global collapsible toggle (called from onclick in HTML)
+// ─── Global collapsible toggle ───────────────────────────────────────────────
 function toggleCollapsible(bodyId, headerEl) {
   const body = document.getElementById(bodyId);
   if (!body) return;
-  const icon = headerEl.querySelector('span[id$="-icon"]');
-  const isOpen = body.style.maxHeight && body.style.maxHeight !== "0px";
+  const icon = headerEl ? headerEl.querySelector(".collapsible-icon") : null;
+  const isOpen = body.classList.contains("collapsible-open");
   if (isOpen) {
-    body.style.maxHeight = "0px";
-    body.style.opacity = "0";
-    if (icon) icon.style.transform = "rotate(180deg)";
+    body.classList.remove("collapsible-open");
+    body.classList.add("collapsible-closed");
+    if (icon) icon.textContent = "▶";
   } else {
-    body.style.maxHeight = body.scrollHeight + "px";
-    body.style.opacity = "1";
-    if (icon) icon.style.transform = "rotate(0deg)";
+    body.classList.remove("collapsible-closed");
+    body.classList.add("collapsible-open");
+    if (icon) icon.textContent = "▼";
   }
-}
-
-function initCollapsibles() {
-  ["notif-titles-body", "notif-buttons-body"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.maxHeight = el.scrollHeight + "px";
-      el.style.opacity = "1";
-    }
-  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -443,8 +433,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-
-
   async function fetchConfig() {
     try {
       const response = await fetch("/api/config");
@@ -486,8 +474,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Build per-event buttons table (reads from configData, not DOM)
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
-
-      initCollapsibles();
 
       // Sync app-language selector with LANGUAGE config value
       if (config.LANGUAGE) {
@@ -1070,10 +1056,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Handle About page separately
       if (targetId === "about") {
-        // Hide dashboard layout, ensure logs is also hidden
+        // Hide dashboard layout and logs if open
         document.querySelector(".dashboard-layout").style.display = "none";
-        const logsEl = document.getElementById("logs-section");
-        if (logsEl) logsEl.style.display = "none";
+        const _logsEl = document.getElementById("logs-section");
+        if (_logsEl) _logsEl.style.display = "none";
         // Show about page
         document.getElementById("about-page").style.display = "block";
         // Update dashboard title to "Back to Configuration"
@@ -1083,19 +1069,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         dashboardTitle.style.cursor = "pointer";
         dashboardTitle.classList.add("back-link");
         return;
-      }
-
-      // When navigating to any other pane, close about-page
-      const aboutPageEl = document.getElementById("about-page");
-      if (aboutPageEl && aboutPageEl.style.display !== "none") {
-        aboutPageEl.style.display = "none";
-        document.querySelector(".dashboard-layout").style.display = "";
-        const dt = document.getElementById("dashboard-title");
-        if (dt) {
-          dt.innerHTML = dt.dataset.originalTitle || "Konfiguration";
-          dt.style.cursor = "";
-          dt.classList.remove("back-link");
-        }
       }
 
       // Update active nav item
@@ -3678,11 +3651,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupSection.style.display = "none";
     logsSection.style.display = "flex";
 
-    // Also hide about-page and restore dashboard-layout if about was open
-    const aboutPage = document.getElementById("about-page");
-    if (aboutPage) aboutPage.style.display = "none";
-    const dashLayout = document.querySelector(".dashboard-layout");
-    if (dashLayout) dashLayout.style.display = "";
+    // Hide about-page if open
+    const _aboutEl = document.getElementById("about-page");
+    if (_aboutEl) _aboutEl.style.display = "none";
+    const _dashLayout = document.querySelector(".dashboard-layout");
+    if (_dashLayout) _dashLayout.style.display = "";
 
     // Hide only hero and footer, keep navbar
     document.querySelector(".hero").style.display = "none";
