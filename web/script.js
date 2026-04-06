@@ -1060,8 +1060,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(".dashboard-layout").style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
+        // Remove setup padding so about-page sits at top
+        const _setupEl = document.getElementById("setup");
+        if (_setupEl) _setupEl.style.padding = "0";
         // Show about page
         document.getElementById("about-page").style.display = "block";
+        window.scrollTo(0, 0);
         // Update dashboard title to "Back to Configuration"
         const dashboardTitle = document.getElementById("dashboard-title");
         dashboardTitle.innerHTML =
@@ -1104,8 +1108,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (dashboardTitle.classList.contains("back-link")) {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
-      // Hide about page
+      // Hide about page and restore setup padding
       document.getElementById("about-page").style.display = "none";
+      const _setupRestore = document.getElementById("setup");
+      if (_setupRestore) _setupRestore.style.padding = "";
       // Reset dashboard title
       dashboardTitle.innerHTML = "Configuration";
       dashboardTitle.style.cursor = "default";
@@ -3650,6 +3656,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   logsPageBtn?.addEventListener("click", async () => {
     setupSection.style.display = "none";
     logsSection.style.display = "flex";
+    window.scrollTo(0, 0);
 
     // Hide about-page if open
     const _aboutEl = document.getElementById("about-page");
