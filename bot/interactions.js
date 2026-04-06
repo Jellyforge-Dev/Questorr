@@ -419,6 +419,15 @@ async function handleStatusCommand(interaction) {
       if (_showStatus("seerr") && seerrNF && isValidUrl(seerrNF)) {
         nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrNF));
       }
+      const imdbIdNF = tmdbDetails?.external_ids?.imdb_id || null;
+      if (_showStatus("letterboxd") && imdbIdNF && mediaType === "movie") {
+        const lboxdNF = "https://letterboxd.com/imdb/" + imdbIdNF + "/";
+        if (isValidUrl(lboxdNF)) nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_letterboxd")).setURL(lboxdNF));
+      }
+      if (_showStatus("imdb") && imdbIdNF) {
+        const imdbNF = "https://www.imdb.com/title/" + imdbIdNF + "/";
+        if (isValidUrl(imdbNF)) nfButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbNF));
+      }
       return interaction.editReply({ embeds: [embed], components: [new ActionRowBuilder().addComponents(nfButtons)] });
     }
 
@@ -473,6 +482,17 @@ async function handleStatusCommand(interaction) {
           }
         } catch (_) {}
       }
+    }
+    // Letterboxd (movies only)
+    const imdbIdSt = tmdbDetails?.external_ids?.imdb_id || null;
+    if (_showSt("letterboxd") && imdbIdSt && mediaType === "movie") {
+      const lboxdSt = "https://letterboxd.com/imdb/" + imdbIdSt + "/";
+      if (isValidUrl(lboxdSt)) statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_letterboxd")).setURL(lboxdSt));
+    }
+    // IMDb
+    if (_showSt("imdb") && imdbIdSt) {
+      const imdbSt = "https://www.imdb.com/title/" + imdbIdSt + "/";
+      if (isValidUrl(imdbSt)) statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbSt));
     }
     const replyOpts = { embeds: [embed] };
     if (statusButtons.length > 0) replyOpts.components = [new ActionRowBuilder().addComponents(statusButtons)];
