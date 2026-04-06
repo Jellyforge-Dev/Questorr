@@ -210,20 +210,22 @@ async function initializeI18n() {
 function toggleCollapsible(bodyId, btnEl) {
   const body = document.getElementById(bodyId);
   if (!body) return;
-  const isOpen = body.classList.contains("collapsible-open");
-  if (isOpen) {
-    body.classList.remove("collapsible-open");
-    body.classList.add("collapsible-closed");
-    if (btnEl) {
-      btnEl.dataset.open = "false";
-      btnEl.textContent = btnEl.dataset.i18nClosed || "Mehr anzeigen";
-    }
-  } else {
-    body.classList.remove("collapsible-closed");
-    body.classList.add("collapsible-open");
+  const isHidden = body.style.display === "none";
+  if (isHidden) {
+    body.style.display = "";
     if (btnEl) {
       btnEl.dataset.open = "true";
-      btnEl.textContent = btnEl.dataset.i18nOpen || "Weniger anzeigen";
+      const key = btnEl.dataset.i18nOpen || "config.show_less";
+      const t = getNestedTranslation ? getNestedTranslation(key) : null;
+      btnEl.textContent = t || "Weniger anzeigen";
+    }
+  } else {
+    body.style.display = "none";
+    if (btnEl) {
+      btnEl.dataset.open = "false";
+      const key = btnEl.dataset.i18nClosed || "config.show_more";
+      const t = getNestedTranslation ? getNestedTranslation(key) : null;
+      btnEl.textContent = t || "Mehr anzeigen";
     }
   }
 }
@@ -1074,9 +1076,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(".dashboard-layout").style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
-        // Hide <main> so it doesn't push about-page down
-        document.getElementById("dashboard-content").style.display = "none";
-        // Show about page outside main
+        // Show about page (now outside main, no need to hide main)
         document.getElementById("about-page").style.display = "block";
         window.scrollTo(0, 0);
         // Update dashboard title to "Back to Configuration"
@@ -1121,7 +1121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (dashboardTitle.classList.contains("back-link")) {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
-      document.getElementById("dashboard-content").style.display = "flex";
       // Hide about page
       document.getElementById("about-page").style.display = "none";
       // Reset dashboard title
@@ -3667,7 +3666,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Logs page button click handler
   logsPageBtn?.addEventListener("click", async () => {
     setupSection.style.display = "none";
-    document.getElementById("dashboard-content").style.display = "none";
     logsSection.style.display = "flex";
     window.scrollTo(0, 0);
 
@@ -3933,7 +3931,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     logsSection.style.display = "none";
     setupSection.style.display = "block";
-    document.getElementById("dashboard-content").style.display = "flex";
 
     // Show hero and footer again
     document.querySelector(".hero").style.display = "block";

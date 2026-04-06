@@ -4032,7 +4032,7 @@ body::after { display: none !important; }
 
   /* Remove double padding - container already provides side padding */
   .about-page {
-    padding: 0 0 1.5rem 0 !important;
+    padding: 74px 0 1.5rem 0 !important;
   }
 
   /* Title: match other section legends sizing */
