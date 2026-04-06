@@ -4125,3 +4125,14 @@ body::after { display: none !important; }
     margin-top: 0.75rem !important;
   }
 }
+/* ── Collapsible sections ─────────────────────────────── */
+[id$="-body"] {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+[id$="-toggle"] {
+  margin-bottom: 0.5rem;
+}
+[id$="-toggle"]:hover > div {
+  color: var(--text) !important;
+}

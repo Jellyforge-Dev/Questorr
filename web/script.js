@@ -197,6 +197,33 @@ async function initializeI18n() {
   setupLanguageChangeHandler();
 }
 
+// Global collapsible toggle (called from onclick in HTML)
+function toggleCollapsible(bodyId, headerEl) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  const icon = headerEl.querySelector('span[id$="-icon"]');
+  const isOpen = body.style.maxHeight && body.style.maxHeight !== "0px";
+  if (isOpen) {
+    body.style.maxHeight = "0px";
+    body.style.opacity = "0";
+    if (icon) icon.style.transform = "rotate(180deg)";
+  } else {
+    body.style.maxHeight = body.scrollHeight + "px";
+    body.style.opacity = "1";
+    if (icon) icon.style.transform = "rotate(0deg)";
+  }
+}
+
+function initCollapsibles() {
+  ["notif-titles-body", "notif-buttons-body"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.maxHeight = el.scrollHeight + "px";
+      el.style.opacity = "1";
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize i18n first
   await initializeI18n();
@@ -416,6 +443,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
+
   async function fetchConfig() {
     try {
       const response = await fetch("/api/config");
@@ -457,6 +486,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Build per-event buttons table (reads from configData, not DOM)
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
+
+      initCollapsibles();
 
       // Sync app-language selector with LANGUAGE config value
       if (config.LANGUAGE) {
@@ -1039,8 +1070,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Handle About page separately
       if (targetId === "about") {
-        // Hide dashboard layout
+        // Hide dashboard layout, ensure logs is also hidden
         document.querySelector(".dashboard-layout").style.display = "none";
+        const logsEl = document.getElementById("logs-section");
+        if (logsEl) logsEl.style.display = "none";
         // Show about page
         document.getElementById("about-page").style.display = "block";
         // Update dashboard title to "Back to Configuration"
@@ -1050,6 +1083,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         dashboardTitle.style.cursor = "pointer";
         dashboardTitle.classList.add("back-link");
         return;
+      }
+
+      // When navigating to any other pane, close about-page
+      const aboutPageEl = document.getElementById("about-page");
+      if (aboutPageEl && aboutPageEl.style.display !== "none") {
+        aboutPageEl.style.display = "none";
+        document.querySelector(".dashboard-layout").style.display = "";
+        const dt = document.getElementById("dashboard-title");
+        if (dt) {
+          dt.innerHTML = dt.dataset.originalTitle || "Konfiguration";
+          dt.style.cursor = "";
+          dt.classList.remove("back-link");
+        }
       }
 
       // Update active nav item
@@ -3631,6 +3677,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   logsPageBtn?.addEventListener("click", async () => {
     setupSection.style.display = "none";
     logsSection.style.display = "flex";
+
+    // Also hide about-page and restore dashboard-layout if about was open
+    const aboutPage = document.getElementById("about-page");
+    if (aboutPage) aboutPage.style.display = "none";
+    const dashLayout = document.querySelector(".dashboard-layout");
+    if (dashLayout) dashLayout.style.display = "";
 
     // Hide only hero and footer, keep navbar
     document.querySelector(".hero").style.display = "none";

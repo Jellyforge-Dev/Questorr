@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+<div id="notif-buttons-body" style="overflow:hidden;transition:max-height 0.3s ease;">
+                        
+                        </div><!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -816,7 +818,11 @@
                       
                       <!-- Notification Title Customization -->
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_titles_title">Notification Titles</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleCollapsible('notif-titles-body',this)" id="notif-titles-toggle">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_titles_title">Notification Titles</div>
+                          <span style="font-size:0.9rem;color:var(--subtext0);transition:transform 0.2s;" id="notif-titles-icon">▲</span>
+                        </div>
+                        <div id="notif-titles-body" style="overflow:hidden;transition:max-height 0.3s ease;">
                         <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1.25rem;" data-i18n="config.notif_titles_desc">Customize the title line of each Discord notification. Leave empty to use the default for the selected Bot Language.</div>
 
                         <div style="display: grid; gap: 0.6rem;">
@@ -865,8 +871,13 @@
 
                       
                       <!-- Per-Event Notification Buttons -->
+                      
+                        </div>
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_buttons_per_event_title">Buttons per Notification</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleCollapsible('notif-buttons-body',this)" id="notif-buttons-toggle">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_buttons_per_event_title">Buttons per Notification</div>
+                          <span style="font-size:0.9rem;color:var(--subtext0);transition:transform 0.2s;" id="notif-buttons-icon">▲</span>
+                        </div>
                         <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
                         <div style="overflow-x: auto;">
                           <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace;">
