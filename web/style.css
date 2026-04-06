@@ -1533,7 +1533,7 @@ input:checked + .slider:before {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: 0 2rem 2rem 2rem;
+  padding: 74px 2rem 2rem 2rem;
 }
 
 .about-content h2 {
@@ -2452,10 +2452,9 @@ input:checked + .slider:before {
 /* Logs Section Background */
 #logs-section {
   background: var(--surface0);
-  padding: 1.5rem 0;
-  margin-top: 58px;
+  padding: 58px 0 1.5rem 0;
   box-sizing: border-box;
-  min-height: calc(100vh - 58px);
+  min-height: 100vh;
   overflow: hidden;
 }
 

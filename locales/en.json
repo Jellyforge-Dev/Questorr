@@ -274,7 +274,9 @@
     "notif_btn_col_hint": "— = use global setting | ✅ = always show | ☐ = always hide",
     "notif_buttons_reset": "↺ Reset to defaults",
     "notif_buttons_reset_hint": "Resets all rows to the Standard-Buttons above.",
-    "notif_btn_col_test": "Test"
+    "notif_btn_col_test": "Test",
+    "show_more": "Show more",
+    "show_less": "Show less"
   },
   "ui": {
     "hide_header": "Hide header",

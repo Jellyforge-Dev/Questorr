@@ -58,6 +58,15 @@ function sanitizeTranslationHtml(str) {
 }
 
 function updateUITranslations() {
+  // Update collapsible button text based on current language
+  document.querySelectorAll('.collapsible-btn').forEach(btn => {
+    const isOpen = btn.dataset.open !== "false";
+    const openKey = btn.dataset.i18nOpen || "config.show_less";
+    const closedKey = btn.dataset.i18nClosed || "config.show_more";
+    const key = isOpen ? openKey : closedKey;
+    const translation = getNestedTranslation(key);
+    if (translation) btn.textContent = translation;
+  });
   // Update all elements with data-i18n attributes
   document.querySelectorAll('[data-i18n]').forEach(element => {
     const key = element.getAttribute('data-i18n');
@@ -198,19 +207,24 @@ async function initializeI18n() {
 }
 
 // ─── Global collapsible toggle ───────────────────────────────────────────────
-function toggleCollapsible(bodyId, headerEl) {
+function toggleCollapsible(bodyId, btnEl) {
   const body = document.getElementById(bodyId);
   if (!body) return;
-  const icon = headerEl ? headerEl.querySelector(".collapsible-icon") : null;
   const isOpen = body.classList.contains("collapsible-open");
   if (isOpen) {
     body.classList.remove("collapsible-open");
     body.classList.add("collapsible-closed");
-    if (icon) icon.textContent = "▶";
+    if (btnEl) {
+      btnEl.dataset.open = "false";
+      btnEl.textContent = btnEl.dataset.i18nClosed || "Mehr anzeigen";
+    }
   } else {
     body.classList.remove("collapsible-closed");
     body.classList.add("collapsible-open");
-    if (icon) icon.textContent = "▼";
+    if (btnEl) {
+      btnEl.dataset.open = "true";
+      btnEl.textContent = btnEl.dataset.i18nOpen || "Weniger anzeigen";
+    }
   }
 }
 
