@@ -559,14 +559,32 @@ async function handleRandomCommand(interaction) {
       if (_offRandom.includes(btn)) return false;
       return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
     }
+    // Watch Now
     if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
-      components.push(
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl)
-        )
-      );
+      components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
     }
-    return interaction.editReply({ embeds: [embed], components });
+    // Seerr
+    const seerrBaseR = (process.env.SEERR_URL || "").replace(/\/$/, "");
+    const tmdbIdForSeerr = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
+    if (_showRandom("seerr") && seerrBaseR && tmdbIdForSeerr) {
+      const seerrTypeR = item.Type === "Series" ? "tv" : "movie";
+      const seerrUrlR = seerrBaseR + "/" + seerrTypeR + "/" + tmdbIdForSeerr;
+      if (isValidUrl(seerrUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrUrlR));
+    }
+    // Letterboxd (movies only)
+    const imdbIdR = item.ProviderIds?.Imdb || item.ProviderIds?.imdb;
+    if (_showRandom("letterboxd") && imdbIdR && item.Type !== "Series") {
+      const lboxdUrlR = "https://letterboxd.com/imdb/" + imdbIdR + "/";
+      if (isValidUrl(lboxdUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_letterboxd")).setURL(lboxdUrlR));
+    }
+    // IMDb
+    if (_showRandom("imdb") && imdbIdR) {
+      const imdbUrlR = "https://www.imdb.com/title/" + imdbIdR + "/";
+      if (isValidUrl(imdbUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbUrlR));
+    }
+    const replyOptsR = { embeds: [embed] };
+    if (components.length > 0) replyOptsR.components = [new ActionRowBuilder().addComponents(components)];
+    return interaction.editReply(replyOptsR);
   } catch (err) {
     logger.error("Random command error:", err);
     return interaction.editReply({ content: "❌ Could not fetch a random title. Please try again." });
