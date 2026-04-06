@@ -1060,7 +1060,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(".dashboard-layout").style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
-        // Remove setup padding so about-page sits at top
+        // Remove setup section padding so no gap above about-page
         const _setupEl = document.getElementById("setup");
         if (_setupEl) _setupEl.style.padding = "0";
         // Show about page
@@ -1108,7 +1108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (dashboardTitle.classList.contains("back-link")) {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
-      // Hide about page and restore setup padding
+      // Hide about page, restore setup padding
       document.getElementById("about-page").style.display = "none";
       const _setupRestore = document.getElementById("setup");
       if (_setupRestore) _setupRestore.style.padding = "";

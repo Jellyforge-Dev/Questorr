@@ -4126,32 +4126,22 @@ body::after { display: none !important; }
   }
 }
 /* ── Collapsible sections ─────────────────────────────────────────────────── */
-.collapsible-body {
-  overflow: hidden;
-}
-.collapsible-open {
+.collapsible-body.collapsible-open {
   display: block;
-  opacity: 1;
 }
-.collapsible-closed {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none;
+.collapsible-body.collapsible-closed {
+  display: none;
 }
 .collapsible-icon {
   font-size: 0.75rem;
   color: var(--subtext0);
   flex-shrink: 0;
 }
-/* ── Mobile overflow fix ────────────────────────────────── */
+/* ── Mobile: prevent horizontal overflow ─────────────────── */
 @media (max-width: 768px) {
   html, body {
     overflow-x: hidden !important;
     max-width: 100vw !important;
-  }
-  .setup-section {
-    padding: 0 !important;
-    overflow-x: hidden !important;
   }
   #setup .container {
     padding: 0 0.75rem !important;
@@ -4160,19 +4150,20 @@ body::after { display: none !important; }
   }
   .config-pane {
     overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+  .config-pane .form-group {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
   .config-pane table {
     display: block !important;
     overflow-x: auto !important;
-    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch;
     font-size: 0.72rem !important;
   }
   .config-pane table th,
   .config-pane table td {
     padding: 0.3rem 0.2rem !important;
-  }
-  .form-group {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
   }
 }
