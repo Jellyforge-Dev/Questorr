@@ -2452,7 +2452,7 @@ input:checked + .slider:before {
 /* Logs Section Background */
 #logs-section {
   background: var(--surface0);
-  padding: 58px 0 1.5rem 0;
+  padding: 74px 0 1.5rem 0;
   box-sizing: border-box;
   min-height: 100vh;
   overflow: hidden;

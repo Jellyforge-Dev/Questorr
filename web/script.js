@@ -226,6 +226,14 @@ function toggleCollapsible(bodyId, btnEl) {
   }
 }
 
+// ─── Event delegation for collapsible buttons ────────────────────────────────
+document.addEventListener("click", function(e) {
+  const btn = e.target.closest("[data-collapse-target]");
+  if (!btn) return;
+  e.preventDefault();
+  toggleCollapsible(btn.dataset.collapseTarget, btn);
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize i18n first
   await initializeI18n();

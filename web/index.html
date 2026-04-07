@@ -818,7 +818,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
                           <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_titles_title">Notification Titles</div>
-                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" onclick="toggleCollapsible('notif-titles-body',this)" data-open="true" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Weniger anzeigen</button>
+                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" data-collapse-target="notif-titles-body" data-open="true" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Weniger anzeigen</button>
                         </div>
                         <div id="notif-titles-body" class="collapsible-body collapsible-open">
                         <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1.25rem;" data-i18n="config.notif_titles_desc">Customize the title line of each Discord notification. Leave empty to use the default for the selected Bot Language.</div>
@@ -872,7 +872,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
                           <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_buttons_per_event_title">Buttons per Notification</div>
-                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" onclick="toggleCollapsible('notif-buttons-body',this)" data-open="true" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Weniger anzeigen</button>
+                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" data-collapse-target="notif-buttons-body" data-open="true" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Weniger anzeigen</button>
                         </div>
                         <div id="notif-buttons-body" class="collapsible-body collapsible-open">
                         <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
