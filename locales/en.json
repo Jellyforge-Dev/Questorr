@@ -273,6 +273,8 @@
     "notif_btn_col_event": "Event",
     "notif_btn_col_hint": "— = use global setting | ✅ = always show | ☐ = always hide",
     "notif_buttons_reset": "↺ Reset to defaults",
+    "seerr_webhook_disabled": "Webhook notifications are disabled in Seerr.",
+    "seerr_notif_type_disabled": "This notification type is not enabled in Seerr.",
     "notif_buttons_reset_hint": "Resets all rows to the Standard-Buttons above.",
     "notif_btn_col_test": "Test",
     "show_more": "Show more",

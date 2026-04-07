@@ -343,6 +343,8 @@
     "notif_btn_col_event": "Ereignis",
     "notif_btn_col_hint": "— = globale Einstellung | ✅ = immer anzeigen | ☐ = immer ausblenden",
     "notif_buttons_reset": "↺ Auf Standard zurücksetzen",
+    "seerr_webhook_disabled": "Webhook-Benachrichtigungen sind in Seerr deaktiviert.",
+    "seerr_notif_type_disabled": "Dieser Benachrichtigungstyp ist in Seerr nicht aktiviert.",
     "notif_buttons_reset_hint": "Setzt alle Zeilen auf die Standard-Buttons oben zurück.",
     "notif_btn_col_test": "Test",
     "show_more": "Mehr anzeigen",

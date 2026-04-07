@@ -525,9 +525,80 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       await fetchWebhookSecret(); // ensures secret is loaded before updateWebhookUrl
       updateWebhookUrl();
+
+      // Grey out notification types not enabled in Seerr
+      await applySeerrNotifTypes();
     } catch (error) {
       console.error("[fetchConfig] Error:", error);
       showToast("Config error: " + (error.message || "Unknown error"));
+    }
+  }
+
+  // ─── Map Seerr notification type keys to title input IDs ───────────────────
+  const SEERR_KEY_TO_TITLE_ID = {
+    MEDIA_PENDING:       "NOTIF_TITLE_MEDIA_PENDING",
+    MEDIA_APPROVED:      "NOTIF_TITLE_MEDIA_APPROVED",
+    MEDIA_AUTO_APPROVED: "NOTIF_TITLE_MEDIA_AUTO_APPROVED",
+    MEDIA_AVAILABLE:     "NOTIF_TITLE_MEDIA_AVAILABLE",
+    MEDIA_DECLINED:      "NOTIF_TITLE_MEDIA_DECLINED",
+    MEDIA_FAILED:        "NOTIF_TITLE_MEDIA_FAILED",
+    ISSUE_CREATED:       "NOTIF_TITLE_ISSUE_CREATED",
+    ISSUE_COMMENT:       "NOTIF_TITLE_ISSUE_COMMENT",
+    ISSUE_RESOLVED:      "NOTIF_TITLE_ISSUE_RESOLVED",
+    ISSUE_REOPENED:      "NOTIF_TITLE_ISSUE_REOPENED",
+    TEST_NOTIFICATION:   "NOTIF_TITLE_TEST",
+  };
+
+  async function applySeerrNotifTypes() {
+    try {
+      const res = await fetch("/api/seerr-notification-types", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success) return;
+
+      const { enabledTypes, webhookEnabled } = data;
+
+      // ── Notification title inputs ──
+      for (const [seerrKey, inputId] of Object.entries(SEERR_KEY_TO_TITLE_ID)) {
+        const input = document.getElementById(inputId);
+        if (!input) continue;
+        const label = input.previousElementSibling;
+        const isEnabled = enabledTypes[seerrKey] === true;
+
+        input.classList.toggle("notif-disabled", !isEnabled);
+        input.disabled = !isEnabled;
+        if (label) label.classList.toggle("notif-disabled", !isEnabled);
+      }
+
+      // ── Buttons-per-notification table rows ──
+      const tbody = document.getElementById("notif-buttons-table-body");
+      if (tbody) {
+        tbody.querySelectorAll("tr").forEach(tr => {
+          const cb = tr.querySelector("input[data-event]");
+          if (!cb) return;
+          const evtKey = cb.dataset.event;
+          // RANDOM, STATUS are Questorr-only → always enabled
+          if (evtKey === "RANDOM" || evtKey === "STATUS") return;
+          const seerrKey = evtKey === "TEST" ? "TEST_NOTIFICATION" : evtKey;
+          const isEnabled = enabledTypes[seerrKey] === true;
+
+          tr.classList.toggle("notif-disabled", !isEnabled);
+          tr.querySelectorAll("input[type=checkbox]").forEach(c => { c.disabled = !isEnabled; });
+          tr.querySelectorAll("button").forEach(b => { b.disabled = !isEnabled; });
+        });
+      }
+
+      // ── Show a hint if webhook is disabled entirely ──
+      if (!webhookEnabled) {
+        const hintText = (typeof getNestedTranslation === "function" && getNestedTranslation("config.seerr_webhook_disabled")) || "Webhook notifications are disabled in Seerr.";
+        const titlesBody = document.getElementById("notif-titles-body");
+        const buttonsBody = document.getElementById("notif-buttons-body");
+        const hint = '<div class="seerr-webhook-hint" style="font-size:0.82rem;color:var(--peach, #fab387);margin-bottom:0.75rem;"><i class="bi bi-exclamation-triangle-fill"></i> ' + hintText + '</div>';
+        if (titlesBody && !titlesBody.querySelector(".seerr-webhook-hint")) titlesBody.insertAdjacentHTML("afterbegin", hint);
+        if (buttonsBody && !buttonsBody.querySelector(".seerr-webhook-hint")) buttonsBody.insertAdjacentHTML("afterbegin", hint);
+      }
+    } catch (e) {
+      // Silently ignore — Seerr may not be configured yet
     }
   }
 

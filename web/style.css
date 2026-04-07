@@ -4166,3 +4166,14 @@ body::after { display: none !important; }
     padding: 0.3rem 0.2rem !important;
   }
 }
+
+/* ── Disabled notification types (not enabled in Seerr) ───────────────────── */
+.notif-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+tr.notif-disabled td {
+  opacity: 0.35;
+  pointer-events: none;
+}
