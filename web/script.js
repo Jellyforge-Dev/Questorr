@@ -210,26 +210,15 @@ async function initializeI18n() {
 function toggleCollapsible(bodyId, btnEl) {
   const body = document.getElementById(bodyId);
   if (!body) return;
-  // Use btn data-open as authoritative state; fall back to inline style check
-  const isOpen = btnEl ? btnEl.dataset.open !== "false" : body.style.display !== "none";
-  if (isOpen) {
-    // Collapse
-    body.style.display = "none";
-    if (btnEl) {
-      btnEl.dataset.open = "false";
-      const key = btnEl.dataset.i18nClosed || "config.show_more";
-      const t = (typeof getNestedTranslation === "function") ? getNestedTranslation(key) : null;
-      btnEl.textContent = t || "Mehr anzeigen";
-    }
+  const collapsed = body.getAttribute("data-collapsed") === "true";
+  if (collapsed) {
+    body.removeAttribute("style");
+    body.setAttribute("data-collapsed", "false");
+    if (btnEl) btnEl.textContent = (typeof getNestedTranslation === "function" && getNestedTranslation("config.show_less") !== "config.show_less") ? getNestedTranslation("config.show_less") : "Weniger anzeigen";
   } else {
-    // Expand
-    body.style.display = "";
-    if (btnEl) {
-      btnEl.dataset.open = "true";
-      const key = btnEl.dataset.i18nOpen || "config.show_less";
-      const t = (typeof getNestedTranslation === "function") ? getNestedTranslation(key) : null;
-      btnEl.textContent = t || "Weniger anzeigen";
-    }
+    body.style.display = "none";
+    body.setAttribute("data-collapsed", "true");
+    if (btnEl) btnEl.textContent = (typeof getNestedTranslation === "function" && getNestedTranslation("config.show_more") !== "config.show_more") ? getNestedTranslation("config.show_more") : "Mehr anzeigen";
   }
 }
 
@@ -1075,11 +1064,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Handle About page separately
       if (targetId === "about") {
-        // Hide main content and logs
+        // Hide main content, hero, logs
         document.getElementById("dashboard-content").style.display = "none";
+        document.querySelector(".hero").style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
-        // Show about page (outside main — can show independently)
+        // Show about page (outside main — independent)
         document.getElementById("about-page").style.display = "block";
         window.scrollTo(0, 0);
         // Update dashboard title to "Back to Configuration"
@@ -1125,6 +1115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
       document.getElementById("dashboard-content").style.display = "";
+      document.querySelector(".hero").style.display = "";
       // Hide about page
       document.getElementById("about-page").style.display = "none";
       // Reset dashboard title
