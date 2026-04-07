@@ -231,18 +231,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeI18n();
 
 
-  // ─── Wire up collapsible buttons via addEventListener (belt-and-suspenders) ─
-  document.querySelectorAll(".collapsible-btn").forEach(btn => {
-    btn.addEventListener("click", function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const bodyId = this.getAttribute("onclick")?.match(/toggleCollapsible\('([^']+)'/)?.[1]
-                  || (this.id === "notif-titles-btn" ? "notif-titles-body" : null)
-                  || (this.id === "notif-buttons-btn" ? "notif-buttons-body" : null);
-      if (!bodyId) return;
-      toggleCollapsible(bodyId, this);
-    });
-  });
 
   // Fetch and display app version
   fetch("/api/health")
@@ -1086,6 +1074,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("dashboard-content").style.display = "none";
         document.querySelector(".hero").style.display = "none";
         document.querySelector(".footer").style.display = "none";
+        const _showBtn = document.getElementById("show-header-btn");
+        if (_showBtn) _showBtn.style.display = "none";
         const _logsEl = document.getElementById("logs-section");
         if (_logsEl) _logsEl.style.display = "none";
         // Show about page (outside main — independent)
@@ -1136,6 +1126,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("dashboard-content").style.display = "";
       document.querySelector(".hero").style.display = "";
       document.querySelector(".footer").style.display = "";
+      // Restore show-header-btn if hero is collapsed
+      const _heroEl = document.getElementById("main-hero");
+      const _showBtn = document.getElementById("show-header-btn");
+      if (_showBtn && _heroEl && _heroEl.classList.contains("collapsed")) {
+        _showBtn.style.display = "";
+      }
       // Hide about page
       document.getElementById("about-page").style.display = "none";
       // Reset dashboard title
@@ -3684,6 +3680,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("dashboard-content").style.display = "none";
     document.querySelector(".hero").style.display = "none";
     document.querySelector(".footer").style.display = "none";
+    const _showBtn = document.getElementById("show-header-btn");
+    if (_showBtn) _showBtn.style.display = "none";
     const _aboutEl = document.getElementById("about-page");
     if (_aboutEl) _aboutEl.style.display = "none";
     logsSection.style.display = "flex";
@@ -3947,6 +3945,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Show hero and footer again
     document.querySelector(".hero").style.display = "block";
     document.querySelector(".footer").style.display = "block";
+    // Restore show-header-btn if hero is collapsed
+    const _heroEl2 = document.getElementById("main-hero");
+    const _showBtn2 = document.getElementById("show-header-btn");
+    if (_showBtn2 && _heroEl2 && _heroEl2.classList.contains("collapsed")) {
+      _showBtn2.style.display = "";
+    }
 
     logsPageActive = false;
 
