@@ -319,7 +319,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     { key: "ISSUE_COMMENT",       label: "Issue Comment" },
     { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
     { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
-    { key: "TEST_NOTIFICATION",   label: "Test Notification" },
     { key: "RANDOM",               label: "/random" },
     { key: "STATUS",               label: "/status" },
   ];
@@ -546,7 +545,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     ISSUE_COMMENT:       "NOTIF_TITLE_ISSUE_COMMENT",
     ISSUE_RESOLVED:      "NOTIF_TITLE_ISSUE_RESOLVED",
     ISSUE_REOPENED:      "NOTIF_TITLE_ISSUE_REOPENED",
-    TEST_NOTIFICATION:   "NOTIF_TITLE_TEST",
   };
 
   async function applySeerrNotifTypes() {
