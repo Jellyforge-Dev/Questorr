@@ -210,15 +210,19 @@ async function initializeI18n() {
 function toggleCollapsible(bodyId, btnEl) {
   const body = document.getElementById(bodyId);
   if (!body) return;
-  const hidden = body.style.display === "none";
+  const hidden = body.style.display === "none" || body.classList.contains("collapsible-closed");
   if (hidden) {
     body.style.removeProperty("display");
+    body.classList.remove("collapsible-closed");
+    body.classList.add("collapsible-open");
     if (btnEl) {
       btnEl.dataset.open = "true";
       btnEl.textContent = (typeof getNestedTranslation === "function") ? (getNestedTranslation("config.show_less") || "Weniger anzeigen") : "Weniger anzeigen";
     }
   } else {
     body.style.setProperty("display", "none", "important");
+    body.classList.remove("collapsible-open");
+    body.classList.add("collapsible-closed");
     if (btnEl) {
       btnEl.dataset.open = "false";
       btnEl.textContent = (typeof getNestedTranslation === "function") ? (getNestedTranslation("config.show_more") || "Mehr anzeigen") : "Mehr anzeigen";
