@@ -12,8 +12,9 @@
  *   1. Root-folder → channel mapping  (SEERR_ROOT_FOLDER_CHANNELS)
  *   2. Jellyfin library → channel mapping (JELLYFIN_NOTIFICATION_LIBRARIES)
  *      matched via TMDB ID lookup against Jellyfin library
- *   3. SEERR_CHANNEL_ID
- *   4. JELLYFIN_CHANNEL_ID
+ *   3. Media-type → channel mapping (CHANNEL_MOVIES / CHANNEL_SERIES)
+ *   4. SEERR_CHANNEL_ID
+ *   5. JELLYFIN_CHANNEL_ID
  */
 
 import { t, tNotif } from "./utils/botStrings.js";
@@ -167,6 +168,20 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
   return null;
 }
 
+/**
+ * Media-type channel routing.
+ * Returns the channel ID for movie or tv, or null if not configured.
+ */
+export function resolveMediaTypeChannel(mediaType) {
+  if (mediaType === "movie" && process.env.CHANNEL_MOVIES) {
+    return process.env.CHANNEL_MOVIES;
+  }
+  if (mediaType === "tv" && process.env.CHANNEL_SERIES) {
+    return process.env.CHANNEL_SERIES;
+  }
+  return null;
+}
+
 async function resolveChannel(rootFolder, tmdbId, mediaType) {
   // 1. Root-folder mapping
   if (rootFolder) {
@@ -200,7 +215,16 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
     }
   }
 
-  // 3 & 4. Fallbacks
+  // 3. Media-type routing (movie → CHANNEL_MOVIES, tv → CHANNEL_SERIES)
+  if (mediaType) {
+    const mediaTypeChannel = resolveMediaTypeChannel(mediaType);
+    if (mediaTypeChannel) {
+      logger.info(`[SEERR WEBHOOK] ✅ Media type "${mediaType}" → channel ${mediaTypeChannel}`);
+      return mediaTypeChannel;
+    }
+  }
+
+  // 4 & 5. Fallbacks
   const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID;
   if (fallback) logger.debug(`[SEERR WEBHOOK] Using fallback channel: ${fallback}`);
   return fallback || null;

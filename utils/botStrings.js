@@ -94,6 +94,7 @@ const strings = {
     and_connector:        "and",
     with_tag:             "with {{tags}} tag",
     with_tags:            "with {{tags}} tags",
+    rate_limited:         "\u26A0\uFE0F You're using commands too fast. Please wait a moment.",
   },
   de: {
     event_pending:        "Neue Anfrage \u2013 Ausstehend",
@@ -185,6 +186,7 @@ const strings = {
     and_connector:        "und",
     with_tag:             "mit Tag {{tags}}",
     with_tags:            "mit Tags {{tags}}",
+    rate_limited:         "\u26A0\uFE0F Du verwendest Befehle zu schnell. Bitte warte einen Moment.",
   },
 };
 

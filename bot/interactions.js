@@ -10,6 +10,7 @@ import { handleTagSelect } from "./handlers/tagSelect.js";
 import { handleRequestedButton } from "./handlers/requestedButton.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
+import { checkCommandRateLimit } from "./commandRateLimit.js";
 import { t } from "../utils/botStrings.js";
 import logger from "../utils/logger.js";
 
@@ -29,6 +30,17 @@ export function registerInteractions(client) {
             content: t("no_permission"),
             flags: 64,
           });
+        }
+      }
+
+      // ─── Per-user command rate limiting (skip autocomplete) ────────
+      if (interaction.isCommand() || interaction.isButton() || interaction.isStringSelectMenu()) {
+        const limit = parseInt(process.env.COMMAND_RATE_LIMIT || "10", 10);
+        if (!checkCommandRateLimit(interaction.user.id, limit)) {
+          if (interaction.isCommand()) {
+            return interaction.reply({ content: t("rate_limited"), flags: 64 });
+          }
+          return; // Silently drop rate-limited button/menu interactions
         }
       }
 
