@@ -67,6 +67,7 @@ export async function startBot() {
     client.once("clientReady", async () => {
       logger.info(`✅ Bot logged in as ${client.user.tag}`);
       botState.isBotRunning = true;
+      botState.botStartedAt = Date.now();
 
       logger.info("ℹ️ Jellyfin notifications will be received via webhooks.");
 

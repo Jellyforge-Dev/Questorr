@@ -269,6 +269,12 @@
     "misc_ephemeral_desc": "Wenn aktiviert, sind Bot-Antworten nur für den Benutzer sichtbar. Wenn deaktiviert, sind Ergebnisse für alle sichtbar.",
     "misc_autoapprove": "Seerr Anfragen automatisch genehmigen",
     "misc_autoapprove_desc": "Wenn aktiviert, werden Anfragen automatisch in Seerr genehmigt. Wenn deaktiviert, bleiben Anfragen 'Ausstehend'.",
+    "rate_limit_label": "Command Rate-Limit",
+    "rate_limit_desc": "Maximale Discord-Befehle pro Nutzer pro Minute. Auf 0 setzen um Rate-Limiting zu deaktivieren.",
+    "media_type_channels_title": "Medientyp-Kanal-Routing",
+    "media_type_channels_desc": "Leite Seerr-Benachrichtigungen basierend auf dem Medientyp in verschiedene Kanäle. Hat Vorrang vor dem Standard-Seerr-Kanal, wird aber von Root-Folder-Zuordnungen überschrieben.",
+    "channel_movies_label": "Film-Kanal",
+    "channel_series_label": "Serien-Kanal",
     "request_ui_warning": "⚠️ Nach dem Speichern werden die Discord Commands automatisch aktualisiert. Drücke danach in Discord <strong>Strg+R</strong> (Desktop) bzw. lade die Seite neu (Browser) um die Änderungen zu sehen.",
     "daily_random_title": "Tägliche Zufallsauswahl aktivieren",
     "daily_random_desc": "Täglich eine zufällige Medienempfehlung in einen Discord-Kanal senden.",
@@ -469,7 +475,11 @@
     "footer_feedback": "bei Fragen oder Feedback.",
     "feature_status": "<code>/status &lt;Titel&gt;</code> Aktuellen <strong style=\"color: var(--blue);\">Seerr-Anfragestatus</strong> direkt in Discord abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt.",
     "feature_random": "<code>/random movie</code> oder <code>/random series</code> — Zufälligen <strong style=\"color: var(--blue);\">Vorschlag aus Jellyfin</strong> anzeigen mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Watch Now Button.",
-    "feature_button_toggles": "Konfiguriere welche Benachrichtigungs-Buttons (In Seerr ansehen, Jetzt ansehen, Letterboxd, IMDb) in Discord-Embeds erscheinen — individuell im Dashboard ein- und ausschaltbar."
+    "feature_button_toggles": "Konfiguriere welche Benachrichtigungs-Buttons (In Seerr ansehen, Jetzt ansehen, Letterboxd, IMDb) in Discord-Embeds erscheinen — individuell im Dashboard ein- und ausschaltbar.",
+    "feature_media_type_routing": "Leite Benachrichtigungen basierend auf dem <strong style=\"color: var(--blue);\">Medientyp</strong> (Filme vs. Serien) in verschiedene Discord-Kanäle. Konfigurierbar neben Root-Folder- und Bibliotheks-Routing.",
+    "feature_health_check": "Integrierter <strong style=\"color: var(--blue);\">Health-Check-Endpunkt</strong> unter <code>/api/health</code> für Docker HEALTHCHECK und Monitoring-Tools wie Uptime Kuma. Zeigt Bot-Status, Service-Erreichbarkeit und Cache-Statistiken.",
+    "feature_widget": "Einbettbares <strong style=\"color: var(--blue);\">HTML-Widget</strong> für Homarr, Homepage oder Organizr. Zeigt Bot-Status, Uptime, Command-Statistiken mit Nutzer-Aufschlüsselung und Start/Stop-Steuerung — gesichert per API-Key.",
+    "feature_rate_limiting": "Nutzerbasiertes <strong style=\"color: var(--blue);\">Command Rate-Limiting</strong> verhindert Discord-API-Missbrauch. Konfigurierbarer Commands-pro-Minute-Schwellwert pro Nutzer."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

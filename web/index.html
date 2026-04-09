@@ -724,7 +724,37 @@
                       </div>
 
                       <!-- Bot Command Options -->
-                      
+
+                      <!-- Command Rate Limiting -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="COMMAND_RATE_LIMIT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.rate_limit_label">Command Rate Limit</label>
+                        <input type="number" id="COMMAND_RATE_LIMIT" name="COMMAND_RATE_LIMIT" placeholder="10" min="0" max="100"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.rate_limit_desc">Maximum Discord commands per user per minute. Set to 0 to disable rate limiting.</span>
+                        </div>
+                      </div>
+
+                      <!-- Media-Type Channel Routing -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <label style="font-size: 1.1rem; font-weight: 700; color: var(--mauve); margin-bottom: 0.5rem; display: block;" data-i18n="config.media_type_channels_title">Media-Type Channel Routing</label>
+                        <div class="form-text" style="margin-bottom: 1.25rem;" data-i18n="config.media_type_channels_desc">Route Seerr notifications to different channels based on media type. Takes priority over the default Seerr channel but is overridden by root folder mappings.</div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                          <div class="form-group">
+                            <label for="CHANNEL_MOVIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_movies_label">Movies Channel</label>
+                            <select id="CHANNEL_MOVIES" name="CHANNEL_MOVIES" class="form-select channel-select" data-channel-select="true">
+                              <option value="">— Default (no override) —</option>
+                            </select>
+                          </div>
+                          <div class="form-group">
+                            <label for="CHANNEL_SERIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_series_label">Series Channel</label>
+                            <select id="CHANNEL_SERIES" name="CHANNEL_SERIES" class="form-select channel-select" data-channel-select="true">
+                              <option value="">— Default (no override) —</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
 
                       <!-- Daily Random Pick Section -->
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
@@ -959,6 +989,10 @@
                   <li><i class="bi bi-chat-left-dots"></i><div data-i18n="about.feature_direct_messages">Users receive a <strong style="color: var(--blue);">private DM</strong> when their requested content becomes available on Jellyfin — so nobody misses the moment their request is ready.</div></li>
                   <li><i class="bi bi-calendar-heart"></i><div data-i18n="about.feature_daily">Post a <strong style="color: var(--blue);">Daily Random Pick</strong> from TMDB or a <strong style="color: var(--blue);">Daily Recommendation</strong> from your existing Jellyfin library into a Discord channel — great for community engagement.</div></li>
                   <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
+                  <li><i class="bi bi-signpost-split-fill"></i><div data-i18n="about.feature_media_type_routing">Route notifications to different Discord channels based on <strong style="color: var(--blue);">media type</strong> (movies vs series). Configurable alongside root folder and library-based routing.</div></li>
+                  <li><i class="bi bi-heart-pulse-fill"></i><div data-i18n="about.feature_health_check">Built-in <strong style="color: var(--blue);">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.</div></li>
+                  <li><i class="bi bi-window-sidebar"></i><div data-i18n="about.feature_widget">Embeddable <strong style="color: var(--blue);">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.</div></li>
+                  <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                 </ul>
               </div>
 

@@ -19,13 +19,16 @@ const botControlLimiter = rateLimit({
   message: { success: false, error: "Too many requests, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
 });
 
 // Widget API key validation middleware
 function authenticateWidget(req, res, next) {
   const configuredKey = process.env.WIDGET_API_KEY;
-  // If no key configured, widget endpoints are public (backward compat)
-  if (!configuredKey) return next();
+  // API key must be configured — reject if not set
+  if (!configuredKey) {
+    return res.status(503).json({ error: "Widget API key not configured. Set WIDGET_API_KEY in the dashboard." });
+  }
 
   const providedKey = req.query.key || req.headers["x-widget-key"];
   if (providedKey === configuredKey) return next();
@@ -33,9 +36,20 @@ function authenticateWidget(req, res, next) {
   return res.status(403).json({ error: "Invalid or missing widget API key" });
 }
 
+/** Format seconds into "Xh XXm XXs" */
+function formatUptime(seconds) {
+  return `${Math.floor(seconds / 3600)}h ${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}m ${String(Math.floor(seconds % 60)).padStart(2, "0")}s`;
+}
+
+/** Get bot uptime in seconds (0 when stopped) */
+function getBotUptime() {
+  if (!botState.isBotRunning || !botState.botStartedAt) return 0;
+  return (Date.now() - botState.botStartedAt) / 1000;
+}
+
 // ─── Health Check (public, no auth) ──────────────────────────────────────────
 router.get("/health", async (req, res) => {
-  const uptime = process.uptime();
+  const botUptime = getBotUptime();
   const cacheStats = cache.getStats();
   const totalHits = cacheStats.tmdb.hits + cacheStats.seerr.hits;
   const totalMisses = cacheStats.tmdb.misses + cacheStats.seerr.misses;
@@ -89,8 +103,8 @@ router.get("/health", async (req, res) => {
   res.json({
     status: allReachable ? "healthy" : "degraded",
     version: APP_VERSION,
-    uptime: Math.floor(uptime),
-    uptimeFormatted: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`,
+    uptime: Math.floor(botUptime),
+    uptimeFormatted: formatUptime(botUptime),
     bot: {
       running: botState.isBotRunning,
       username: botState.isBotRunning && botState.discordClient?.user ? botState.discordClient.user.tag : null,
@@ -115,17 +129,17 @@ router.get("/health", async (req, res) => {
   });
 });
 
-// ─── Widget Stats (JSON, protected by optional API key) ──────────────────────
+// ─── Widget Stats (JSON, protected by API key) ─────────────────────────────
 router.get("/widget/stats", authenticateWidget, (req, res) => {
-  const uptime = process.uptime();
+  const botUptime = getBotUptime();
   const cacheStats = cache.getStats();
   const cmdStats = getCommandStats();
 
   res.json({
     status: botState.isBotRunning ? "online" : "offline",
     botUsername: botState.isBotRunning && botState.discordClient?.user ? botState.discordClient.user.tag : null,
-    uptime: Math.floor(uptime),
-    uptimeFormatted: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`,
+    uptime: Math.floor(botUptime),
+    uptimeFormatted: formatUptime(botUptime),
     pendingRequests: pendingRequests.size,
     cacheKeys: cacheStats.tmdb.keys + cacheStats.seerr.keys,
     memoryMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
@@ -136,10 +150,11 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
 });
 
 // ─── Embeddable HTML Widget (Questorr theme) ─────────────────────────────────
-router.get("/widget/embed", (req, res) => {
+router.get("/widget/embed", authenticateWidget, (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
   const apiKey = req.query.key || "";
   const keyParam = apiKey ? `?key=${encodeURIComponent(apiKey)}` : "";
+  const logoUrl = `${baseUrl}/assets/logo-transparent.png`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -153,7 +168,7 @@ router.get("/widget/embed", (req, res) => {
 body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;padding:16px;min-height:100vh}
 .widget{background:linear-gradient(135deg,#111827 0%,#0d1321 100%);border-radius:16px;padding:20px;border:1px solid rgba(30,200,160,0.15);max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,0.4)}
 .header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#1ec8a0,#17b8c4);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0b0f19}
+.logo{width:28px;height:28px;border-radius:6px;object-fit:contain}
 .header h2{font-size:17px;font-weight:700;color:#e6edf3;flex:1}
 .dot{width:10px;height:10px;border-radius:50%}
 .dot.online{background:#1ec8a0;box-shadow:0 0 8px rgba(30,200,160,0.6)}
@@ -164,7 +179,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 .stat .v{font-size:20px;font-weight:700;color:#1ec8a0}
 .stat .l{font-size:10px;color:#8b949e;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}
 .section{margin-bottom:14px}
-.section-title{font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
 .cmd-list{display:flex;flex-direction:column;gap:4px}
 .cmd-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
 .cmd-name{color:#c9d1d9;font-weight:500;flex:1}
@@ -178,10 +192,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 .toggle-btn.stop{background:linear-gradient(135deg,#f38ba8,#e74c3c);color:#fff}
 .err{color:#f38ba8;font-size:11px;margin-top:8px;text-align:center;min-height:14px}
 .ver{font-size:10px;color:#484f58;margin-top:10px;text-align:right}
-.user-row{display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
+.user-row{display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
 .user-rank{color:#484f58;font-weight:700;width:16px;text-align:right}
-.user-name{color:#c9d1d9;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.user-count{color:#1ec8a0;font-weight:700}
+.user-name{color:#c9d1d9;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-cmds{color:#8b949e;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-count{color:#1ec8a0;font-weight:700;flex-shrink:0}
 .tabs{display:flex;gap:4px;margin-bottom:10px}
 .tab{padding:5px 10px;border:1px solid rgba(30,200,160,0.15);border-radius:6px;background:transparent;color:#8b949e;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s}
 .tab.active{background:rgba(30,200,160,0.12);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
@@ -192,7 +207,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 <body>
 <div class="widget">
 <div class="header">
-<div class="logo">Q</div>
+<img class="logo" src="${logoUrl}" alt="Questorr" onerror="this.style.display='none'">
 <h2>Questorr</h2>
 <span class="dot offline" id="dot"></span>
 </div>
@@ -208,8 +223,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 
 <div class="section">
 <div class="tabs">
-<button class="tab active" onclick="switchTab('commands')">Commands</button>
-<button class="tab" onclick="switchTab('users')">Top Users</button>
+<button class="tab active" onclick="switchTab('commands',this)">Commands</button>
+<button class="tab" onclick="switchTab('users',this)">Top Users</button>
 </div>
 <div class="tab-content active" id="tab-commands">
 <div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:12px;text-align:center;padding:8px">No data yet</div></div>
@@ -230,20 +245,23 @@ const A="${baseUrl}/api";
 const K="${keyParam}";
 let isOnline=false;
 
-function switchTab(name){
+function switchTab(name,el){
 document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
 document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-event.target.classList.add('active');
+el.classList.add('active');
 document.getElementById('tab-'+name).classList.add('active');
 }
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
 async function r(){
 try{
 const d=await(await fetch(A+"/widget/stats"+K)).json();
+if(d.error){document.getElementById("err").textContent=d.error;return;}
 isOnline=d.status==="online";
 document.getElementById("dot").className="dot "+d.status;
 document.getElementById("bn").textContent=d.botUsername||"Bot offline";
-document.getElementById("up").textContent=d.uptimeFormatted;
+document.getElementById("up").textContent=d.uptimeFormatted||"0h 00m 00s";
 document.getElementById("cmds").textContent=d.commandStats?.totalCommands||0;
 document.getElementById("mem").textContent=d.memoryMB;
 document.getElementById("ver").textContent="v"+d.version;
@@ -261,16 +279,17 @@ const max=Math.max(...Object.values(cs.commands));
 let h="";
 Object.entries(cs.commands).sort((a,b)=>b[1]-a[1]).forEach(([cmd,count])=>{
 const pct=max>0?Math.round(count/max*100):0;
-h+='<div class="cmd-row"><span class="cmd-name">/'+cmd+'</span><div class="cmd-bar"><div class="cmd-bar-fill" style="width:'+pct+'%"></div></div><span class="cmd-count">'+count+'</span></div>';
+h+='<div class="cmd-row"><span class="cmd-name">/'+esc(cmd)+'</span><div class="cmd-bar"><div class="cmd-bar-fill" style="width:'+pct+'%"></div></div><span class="cmd-count">'+count+'</span></div>';
 });
 document.getElementById("cmdList").innerHTML=h;
 }
 
-// Top users
+// Top users with per-command breakdown
 if(cs&&cs.topUsers&&cs.topUsers.length>0){
 let h="";
 cs.topUsers.forEach((u,i)=>{
-h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span><span class="user-name">'+u.username+'</span><span class="user-count">'+u.total+'</span></div>';
+const cmds=u.commands?Object.entries(u.commands).sort((a,b)=>b[1]-a[1]).map(([c,n])=>'/'+c+' '+n+'x').join(', '):'';
+h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span><span class="user-name">'+esc(u.username)+'</span><span class="user-cmds">'+esc(cmds)+'</span><span class="user-count">'+u.total+'</span></div>';
 });
 document.getElementById("userList").innerHTML=h;
 }
@@ -327,6 +346,7 @@ export function createBotRoutes({ startBot }) {
       await botState.discordClient.destroy();
       botState.isBotRunning = false;
       botState.discordClient = null;
+      botState.botStartedAt = null;
       logger.info("Bot has been stopped.");
       res.status(200).json({ message: "Bot stopped successfully." });
     } catch (error) {
