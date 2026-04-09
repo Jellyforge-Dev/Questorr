@@ -1,3 +1,4 @@
+import { t } from "../../utils/botStrings.js";
 import { ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
@@ -43,12 +44,12 @@ export async function handleSearchOrRequest(
   if (!tmdbId || !mediaType) {
     if (isPrivateMode) {
       return interaction.editReply({
-        content: "⚠️ The title seems to be invalid.",
+        content: t("title_invalid"),
       });
     } else {
       await interaction.deleteReply();
       return interaction.followUp({
-        content: "⚠️ The title seems to be invalid.",
+        content: t("title_invalid"),
         flags: 64,
       });
     }
@@ -73,14 +74,14 @@ export async function handleSearchOrRequest(
       if (status.exists && status.available) {
         if (isPrivateMode) {
           await interaction.editReply({
-            content: "✅ This content is already available in your library!",
+            content: t("content_already_available"),
             components: [],
             embeds: [],
           });
         } else {
           await interaction.deleteReply();
           await interaction.followUp({
-            content: "✅ This content is already available in your library!",
+            content: t("content_already_available"),
             flags: 64,
           });
         }
@@ -218,7 +219,7 @@ export async function handleSearchOrRequest(
 
           const tagMenu = new StringSelectMenuBuilder()
             .setCustomId(`select_tags|${tmdbId}|`)
-            .setPlaceholder("Select tags (optional)")
+            .setPlaceholder(t("select_tags_placeholder"))
             .addOptions(tagOptions)
             .setMinValues(0)
             .setMaxValues(Math.min(5, tagOptions.length));
@@ -238,15 +239,14 @@ export async function handleSearchOrRequest(
   } catch (err) {
     logger.error("Error in handleSearchOrRequest:", err);
 
-    let errorMessage = "⚠️ An error occurred.";
+    let errorMessage = t("error_occurred");
     if (err.response && err.response.data && err.response.data.message) {
-      errorMessage = `⚠️ Seerr error: ${err.response.data.message}`;
+      errorMessage = t("error_seerr").replace("{{message}}", err.response.data.message);
     } else if (err.message) {
       if (err.message.includes("403")) {
-        errorMessage =
-          "⚠️ Request failed: You might have exceeded your quota or don't have permission.";
+        errorMessage = t("error_quota");
       } else {
-        errorMessage = `⚠️ Error: ${err.message}`;
+        errorMessage = t("error_generic").replace("{{message}}", err.message);
       }
     }
 

@@ -1,3 +1,4 @@
+import { t } from "../../utils/botStrings.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { buildButtons } from "../embeds.js";
@@ -15,7 +16,7 @@ export async function handleTagSelect(interaction) {
 
   if (!tmdbId) {
     return interaction.reply({
-      content: "⚠️ Invalid request data.",
+      content: t("invalid_request_data"),
       flags: 64,
     });
   }
@@ -81,7 +82,7 @@ export async function handleTagSelect(interaction) {
     logger.error("Tag selection error:", err);
     try {
       await interaction.followUp({
-        content: "⚠️ Error updating selection.",
+        content: t("error_tag_select"),
         flags: 64,
       });
     } catch (followUpErr) {

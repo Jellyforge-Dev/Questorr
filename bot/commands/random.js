@@ -8,7 +8,7 @@ import logger from "../../utils/logger.js";
 
 export async function handleRandomCommand(interaction) {
   if (process.env.SHOW_RANDOM_COMMAND === "false") {
-    return interaction.reply({ content: "⚠️ The /random command is currently disabled.", flags: 64 });
+    return interaction.reply({ content: t("random_disabled"), flags: 64 });
   }
   await interaction.deferReply({ flags: 64 });
 
@@ -19,13 +19,13 @@ export async function handleRandomCommand(interaction) {
   const baseUrl = process.env.JELLYFIN_BASE_URL;
 
   if (!apiKey || !baseUrl) {
-    return interaction.editReply({ content: "❌ Jellyfin is not configured." });
+    return interaction.editReply({ content: t("random_jf_missing") });
   }
 
   try {
     const item = await fetchRandomJellyfinItem(apiKey, baseUrl, itemType);
     if (!item) {
-      return interaction.editReply({ content: `❌ No ${type} found in your Jellyfin library.` });
+      return interaction.editReply({ content: t("random_not_found").replace("{{type}}", type) });
     }
 
     const year = item.ProductionYear ? ` (${item.ProductionYear})` : "";
@@ -105,6 +105,6 @@ export async function handleRandomCommand(interaction) {
     return interaction.editReply(replyOptsR);
   } catch (err) {
     logger.error("Random command error:", err);
-    return interaction.editReply({ content: "❌ Could not fetch a random title. Please try again." });
+    return interaction.editReply({ content: t("random_fetch_error") });
   }
 }

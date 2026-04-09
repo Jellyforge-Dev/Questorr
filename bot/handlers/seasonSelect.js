@@ -15,7 +15,7 @@ export async function handleSeasonSelect(interaction) {
 
   if (!tmdbId) {
     return interaction.reply({
-      content: "⚠️ Invalid selection.",
+      content: t("invalid_selection"),
       flags: 64,
     });
   }
@@ -115,7 +115,7 @@ export async function handleSeasonSelect(interaction) {
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`select_seasons|${tmdbId}|${tagsParam}`)
-        .setPlaceholder("Select seasons to request...")
+        .setPlaceholder(t("select_seasons_placeholder"))
         .setMinValues(1)
         .setMaxValues(Math.min(25, seasonOptions.length))
         .addOptions(seasonOptions);
@@ -214,7 +214,7 @@ export async function handleSeasonSelect(interaction) {
             .setCustomId(
               `select_tags|${tmdbId}|${allSelectedSeasons.join(",")}`
             )
-            .setPlaceholder("Select tags (optional)")
+            .setPlaceholder(t("select_tags_placeholder"))
             .addOptions(tagOptions)
             .setMinValues(0)
             .setMaxValues(Math.min(5, tagOptions.length));
@@ -235,7 +235,7 @@ export async function handleSeasonSelect(interaction) {
     logger.error("Season selection error:", err);
     try {
       await interaction.followUp({
-        content: "⚠️ Error processing season selection.",
+        content: t("error_season_select"),
         flags: 64,
       });
     } catch (followUpErr) {

@@ -1,3 +1,4 @@
+import { t } from "../../utils/botStrings.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
@@ -13,7 +14,7 @@ export async function handleRandomRequestButton(interaction) {
 
   if (!tmdbId) {
     return interaction.reply({
-      content: "⚠️ Invalid media ID.",
+      content: t("invalid_media_id"),
       flags: 64,
     });
   }
@@ -55,13 +56,13 @@ export async function handleRandomRequestButton(interaction) {
     }
 
     await interaction.followUp({
-      content: `✅ **${details.title || details.name}** has been requested!`,
+      content: t("request_success").replace("{{title}}", details.title || details.name),
       flags: 64,
     });
   } catch (err) {
     logger.error("Daily random pick request error:", err);
     await interaction.followUp({
-      content: "⚠️ Error processing request.",
+      content: t("error_processing"),
       flags: 64,
     });
   }

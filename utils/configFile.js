@@ -66,6 +66,7 @@ function encodeConfig(config) {
 
 function decodeConfig(config) {
   const out = { ...config };
+  let hadLegacyValues = false;
   for (const field of SENSITIVE_FIELDS) {
     if (!out[field] || typeof out[field] !== "string") continue;
 
@@ -81,9 +82,11 @@ function decodeConfig(config) {
     // Auto-migrate legacy Base64 values
     else if (out[field].startsWith(B64_PREFIX)) {
       out[field] = Buffer.from(out[field].slice(B64_PREFIX.length), "base64").toString("utf8");
-      logger.info(`🔄 Migrated ${field} from Base64 to AES-256-GCM (will encrypt on next save)`);
+      hadLegacyValues = true;
+      logger.info(`🔄 Migrated ${field} from Base64 to AES-256-GCM`);
     }
   }
+  out._hadLegacyEncoding = hadLegacyValues;
   return out;
 }
 
@@ -206,6 +209,16 @@ export function readConfig() {
   try {
     const rawData = fs.readFileSync(configPath, "utf-8");
     const config = decodeConfig(JSON.parse(rawData));
+
+    // If legacy b64: values were found, re-save immediately so they get encrypted with enc:
+    if (config._hadLegacyEncoding) {
+      delete config._hadLegacyEncoding;
+      logger.info("🔒 Re-saving config with AES-256-GCM encryption...");
+      writeConfig(config);
+    } else {
+      delete config._hadLegacyEncoding;
+    }
+
     logger.debug(`Config loaded successfully from ${configPath}`);
     return config;
   } catch (error) {

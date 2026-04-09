@@ -10,6 +10,7 @@ import { handleTagSelect } from "./handlers/tagSelect.js";
 import { handleRequestedButton } from "./handlers/requestedButton.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
+import { t } from "../utils/botStrings.js";
 import logger from "../utils/logger.js";
 
 // ----------------- REGISTER INTERACTIONS -----------------
@@ -25,7 +26,7 @@ export function registerInteractions(client) {
       ) {
         if (!checkRolePermission(interaction.member)) {
           return interaction.reply({
-            content: "❌ You don't have permission to use this command.",
+            content: t("no_permission"),
             flags: 64,
           });
         }
@@ -66,8 +67,7 @@ export function registerInteractions(client) {
       if (interaction.isCommand()) {
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
           return interaction.reply({
-            content:
-              "⚠️ This command is disabled because Seerr or TMDB configuration is missing.",
+            content: t("command_config_missing"),
             flags: 64,
           });
         }

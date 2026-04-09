@@ -51,7 +51,7 @@ function parseButtonConfig(envKey) {
 
 export async function handleStatusCommand(interaction) {
   if (process.env.SHOW_STATUS_COMMAND === "false") {
-    return interaction.reply({ content: "⚠️ The /status command is currently disabled.", flags: 64 });
+    return interaction.reply({ content: t("status_disabled"), flags: 64 });
   }
   await interaction.deferReply({ flags: 64 });
 
@@ -59,7 +59,7 @@ export async function handleStatusCommand(interaction) {
   const parts = raw.split("|");
   if (parts.length < 2) {
     return interaction.editReply({
-      content: "❌ Please select a title from the dropdown suggestions.",
+      content: t("status_select_title"),
     });
   }
 
@@ -76,7 +76,7 @@ export async function handleStatusCommand(interaction) {
   } catch (_) {}
 
   if (!seerrUrl || !seerrApiKey) {
-    return interaction.editReply({ content: "❌ Seerr is not configured." });
+    return interaction.editReply({ content: t("status_seerr_missing") });
   }
 
   try {
@@ -189,7 +189,7 @@ export async function handleStatusCommand(interaction) {
   } catch (err) {
     logger.error("Status command error:", err);
     return interaction.editReply({
-      content: "❌ Could not fetch status from Seerr. Please try again.",
+      content: t("status_fetch_error"),
     });
   }
 }

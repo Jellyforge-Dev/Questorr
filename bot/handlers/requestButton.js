@@ -1,3 +1,4 @@
+import { t } from "../../utils/botStrings.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
@@ -16,7 +17,7 @@ export async function handleRequestButton(interaction) {
   const tagsParam = parts[4] || "";
 
   if (!tmdbId) {
-    return interaction.reply({ content: "⚠️ ID invalid.", flags: 64 });
+    return interaction.reply({ content: t("id_invalid"), flags: 64 });
   }
 
   await interaction.deferUpdate();
@@ -76,8 +77,7 @@ export async function handleRequestButton(interaction) {
 
     if (status.exists && status.available) {
       await interaction.followUp({
-        content:
-          "✅ This content is already available in your library!",
+        content: t("content_already_available"),
         flags: 64,
       });
       return;
@@ -171,7 +171,7 @@ export async function handleRequestButton(interaction) {
     logger.error("Button request error:", err);
     try {
       await interaction.followUp({
-        content: "⚠️ I could not send the request.",
+        content: t("error_request_failed"),
         flags: 64,
       });
     } catch (followUpErr) {
