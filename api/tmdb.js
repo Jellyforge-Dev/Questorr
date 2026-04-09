@@ -11,7 +11,7 @@ import { withRetry } from "../utils/axiosRetry.js";
 
 /** Map BOT_LANGUAGE to TMDB locale code */
 function getTmdbLanguage() {
-  const lang = (process.env.BOT_LANGUAGE || process.env.LANGUAGE || "en").toLowerCase();
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
   const map = { en: "en-US", de: "de-DE", sv: "sv-SE", fr: "fr-FR", es: "es-ES", it: "it-IT", nl: "nl-NL", pt: "pt-PT", ja: "ja-JP", ko: "ko-KR", zh: "zh-CN", ru: "ru-RU", pl: "pl-PL", da: "da-DK", no: "no-NO", fi: "fi-FI", cs: "cs-CZ", hu: "hu-HU", ro: "ro-RO", tr: "tr-TR" };
   return map[lang] || "en-US";
 }

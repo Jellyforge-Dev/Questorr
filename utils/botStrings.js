@@ -189,7 +189,7 @@ const strings = {
 };
 
 export function t(key) {
-  const lang = (process.env.BOT_LANGUAGE || process.env.LANGUAGE || "en").toLowerCase();
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
   const dict = strings[lang] || strings["en"];
   return dict[key] ?? strings["en"][key] ?? key;
 }
