@@ -11,6 +11,7 @@ import { handleRequestedButton } from "./handlers/requestedButton.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
 import { checkCommandRateLimit } from "./commandRateLimit.js";
+import { trackCommand } from "./commandStats.js";
 import { t } from "../utils/botStrings.js";
 import logger from "../utils/logger.js";
 
@@ -77,6 +78,9 @@ export function registerInteractions(client) {
 
       // ─── Slash Commands ───────────────────────────────────────────
       if (interaction.isCommand()) {
+        // Track command usage
+        trackCommand(interaction.commandName, interaction.user.id, interaction.user.username);
+
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
           return interaction.reply({
             content: t("command_config_missing"),

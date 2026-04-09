@@ -89,6 +89,7 @@ export const configSchema = Joi.object({
   ROLE_BLOCKLIST: Joi.array().items(Joi.string()).optional(),
   CHANNEL_MOVIES: Joi.string().allow("").optional(),
   CHANNEL_SERIES: Joi.string().allow("").optional(),
+  WIDGET_API_KEY: Joi.string().allow("").optional(),
   COMMAND_RATE_LIMIT: Joi.alternatives().try(
     Joi.number().integer().min(0).max(100),
     Joi.string().pattern(/^\d*$/).allow("")

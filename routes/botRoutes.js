@@ -4,6 +4,7 @@ import { createRequire } from "module";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { botState, pendingRequests } from "../bot/botState.js";
+import { getCommandStats } from "../bot/commandStats.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
 
@@ -20,6 +21,18 @@ const botControlLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Widget API key validation middleware
+function authenticateWidget(req, res, next) {
+  const configuredKey = process.env.WIDGET_API_KEY;
+  // If no key configured, widget endpoints are public (backward compat)
+  if (!configuredKey) return next();
+
+  const providedKey = req.query.key || req.headers["x-widget-key"];
+  if (providedKey === configuredKey) return next();
+
+  return res.status(403).json({ error: "Invalid or missing widget API key" });
+}
+
 // ─── Health Check (public, no auth) ──────────────────────────────────────────
 router.get("/health", async (req, res) => {
   const uptime = process.uptime();
@@ -28,7 +41,6 @@ router.get("/health", async (req, res) => {
   const totalMisses = cacheStats.tmdb.misses + cacheStats.seerr.misses;
   const totalKeys = cacheStats.tmdb.keys + cacheStats.seerr.keys;
 
-  // Service connectivity checks (parallel, 3s timeout)
   const services = {};
   const checks = [];
 
@@ -86,6 +98,7 @@ router.get("/health", async (req, res) => {
     },
     services,
     pendingRequests: pendingRequests.size,
+    commandStats: getCommandStats(),
     cache: {
       hits: totalHits,
       misses: totalMisses,
@@ -102,10 +115,11 @@ router.get("/health", async (req, res) => {
   });
 });
 
-// ─── Widget Stats (public JSON, lightweight) ─────────────────────────────────
-router.get("/widget/stats", (req, res) => {
+// ─── Widget Stats (JSON, protected by optional API key) ──────────────────────
+router.get("/widget/stats", authenticateWidget, (req, res) => {
   const uptime = process.uptime();
   const cacheStats = cache.getStats();
+  const cmdStats = getCommandStats();
 
   res.json({
     status: botState.isBotRunning ? "online" : "offline",
@@ -116,20 +130,16 @@ router.get("/widget/stats", (req, res) => {
     cacheKeys: cacheStats.tmdb.keys + cacheStats.seerr.keys,
     memoryMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
     version: APP_VERSION,
+    commandStats: cmdStats,
     timestamp: new Date().toISOString(),
   });
 });
 
-// ─── Embeddable HTML Widget ──────────────────────────────────────────────────
+// ─── Embeddable HTML Widget (Questorr theme) ─────────────────────────────────
 router.get("/widget/embed", (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const theme = req.query.theme === "light" ? "light" : "dark";
-  const bg = theme === "dark" ? "#1a1a2e" : "#f5f5f5";
-  const card = theme === "dark" ? "#16213e" : "#fff";
-  const border = theme === "dark" ? "#0f3460" : "#ddd";
-  const text = theme === "dark" ? "#e0e0e0" : "#333";
-  const accent = theme === "dark" ? "#1ec8a0" : "#0d7a5f";
-  const statBg = theme === "dark" ? "#1a1a2e" : "#f0f0f0";
+  const apiKey = req.query.key || "";
+  const keyParam = apiKey ? `?key=${encodeURIComponent(apiKey)}` : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -138,68 +148,148 @@ router.get("/widget/embed", (req, res) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Questorr Widget</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${bg};color:${text};padding:12px}
-.widget{background:${card};border-radius:12px;padding:16px;border:1px solid ${border};max-width:320px}
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.header h2{font-size:16px;font-weight:600;color:${accent}}
-.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-.dot.online{background:#2ecc71;box-shadow:0 0 6px #2ecc71}
-.dot.offline{background:#e74c3c;box-shadow:0 0 6px #e74c3c}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.stat{background:${statBg};border-radius:8px;padding:8px 10px;text-align:center}
-.stat .v{font-size:18px;font-weight:700;color:${accent}}
-.stat .l{font-size:11px;opacity:.7;margin-top:2px}
-.ctrls{display:flex;gap:8px}
-.ctrls button{flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
-.ctrls button:hover{opacity:.85}
-.ctrls button:disabled{opacity:.4;cursor:not-allowed}
-.start{background:#2ecc71;color:#fff}
-.stop{background:#e74c3c;color:#fff}
-.name{font-size:12px;opacity:.6;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.err{color:#e74c3c;font-size:12px;margin-top:8px}
-.ver{font-size:10px;opacity:.4;margin-top:8px;text-align:right}
+body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;padding:16px;min-height:100vh}
+.widget{background:linear-gradient(135deg,#111827 0%,#0d1321 100%);border-radius:16px;padding:20px;border:1px solid rgba(30,200,160,0.15);max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,0.4)}
+.header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#1ec8a0,#17b8c4);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0b0f19}
+.header h2{font-size:17px;font-weight:700;color:#e6edf3;flex:1}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot.online{background:#1ec8a0;box-shadow:0 0 8px rgba(30,200,160,0.6)}
+.dot.offline{background:#f38ba8;box-shadow:0 0 8px rgba(243,139,168,0.5)}
+.bot-info{font-size:12px;color:#8b949e;margin-bottom:14px;display:flex;justify-content:space-between}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.stat{background:rgba(30,200,160,0.06);border:1px solid rgba(30,200,160,0.1);border-radius:10px;padding:10px 8px;text-align:center}
+.stat .v{font-size:20px;font-weight:700;color:#1ec8a0}
+.stat .l{font-size:10px;color:#8b949e;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}
+.section{margin-bottom:14px}
+.section-title{font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+.cmd-list{display:flex;flex-direction:column;gap:4px}
+.cmd-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
+.cmd-name{color:#c9d1d9;font-weight:500;flex:1}
+.cmd-count{color:#1ec8a0;font-weight:700;font-size:13px}
+.cmd-bar{height:3px;border-radius:2px;background:rgba(30,200,160,0.15);flex:0 0 60px;overflow:hidden;position:relative}
+.cmd-bar-fill{height:100%;background:linear-gradient(90deg,#1ec8a0,#17b8c4);border-radius:2px}
+.toggle-btn{width:100%;padding:10px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.toggle-btn:hover{opacity:0.9;transform:translateY(-1px)}
+.toggle-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.toggle-btn.start{background:linear-gradient(135deg,#1ec8a0,#17b8c4);color:#0b0f19}
+.toggle-btn.stop{background:linear-gradient(135deg,#f38ba8,#e74c3c);color:#fff}
+.err{color:#f38ba8;font-size:11px;margin-top:8px;text-align:center;min-height:14px}
+.ver{font-size:10px;color:#484f58;margin-top:10px;text-align:right}
+.user-row{display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
+.user-rank{color:#484f58;font-weight:700;width:16px;text-align:right}
+.user-name{color:#c9d1d9;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-count{color:#1ec8a0;font-weight:700}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tab{padding:5px 10px;border:1px solid rgba(30,200,160,0.15);border-radius:6px;background:transparent;color:#8b949e;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.tab.active{background:rgba(30,200,160,0.12);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
+.tab-content{display:none}
+.tab-content.active{display:block}
 </style>
 </head>
 <body>
 <div class="widget">
-<div class="header"><h2>Questorr</h2><span class="dot offline" id="dot"></span></div>
-<div class="name" id="bn">Loading...</div>
+<div class="header">
+<div class="logo">Q</div>
+<h2>Questorr</h2>
+<span class="dot offline" id="dot"></span>
+</div>
+<div class="bot-info">
+<span id="bn">Loading...</span>
+<span id="ver"></span>
+</div>
 <div class="stats">
 <div class="stat"><div class="v" id="up">--</div><div class="l">Uptime</div></div>
-<div class="stat"><div class="v" id="pn">--</div><div class="l">Pending</div></div>
-<div class="stat"><div class="v" id="mem">--</div><div class="l">RAM (MB)</div></div>
-<div class="stat"><div class="v" id="ck">--</div><div class="l">Cache</div></div>
+<div class="stat"><div class="v" id="cmds">--</div><div class="l">Commands</div></div>
+<div class="stat"><div class="v" id="mem">--</div><div class="l">RAM MB</div></div>
 </div>
-<div class="ctrls">
-<button class="start" id="sb" onclick="ctrl('start')" disabled>Start</button>
-<button class="stop" id="xb" onclick="ctrl('stop')" disabled>Stop</button>
+
+<div class="section">
+<div class="tabs">
+<button class="tab active" onclick="switchTab('commands')">Commands</button>
+<button class="tab" onclick="switchTab('users')">Top Users</button>
 </div>
+<div class="tab-content active" id="tab-commands">
+<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:12px;text-align:center;padding:8px">No data yet</div></div>
+</div>
+<div class="tab-content" id="tab-users">
+<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:12px;text-align:center;padding:8px">No data yet</div></div>
+</div>
+</div>
+
+<button class="toggle-btn start" id="tb" onclick="toggle()" disabled>
+<span id="tbIcon">&#9654;</span> <span id="tbText">Start Bot</span>
+</button>
 <div class="err" id="err"></div>
-<div class="ver" id="ver"></div>
+<div class="ver" id="verFull"></div>
 </div>
 <script>
 const A="${baseUrl}/api";
+const K="${keyParam}";
+let isOnline=false;
+
+function switchTab(name){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+event.target.classList.add('active');
+document.getElementById('tab-'+name).classList.add('active');
+}
+
 async function r(){
 try{
-const d=await(await fetch(A+"/widget/stats")).json();
+const d=await(await fetch(A+"/widget/stats"+K)).json();
+isOnline=d.status==="online";
 document.getElementById("dot").className="dot "+d.status;
 document.getElementById("bn").textContent=d.botUsername||"Bot offline";
 document.getElementById("up").textContent=d.uptimeFormatted;
-document.getElementById("pn").textContent=d.pendingRequests;
+document.getElementById("cmds").textContent=d.commandStats?.totalCommands||0;
 document.getElementById("mem").textContent=d.memoryMB;
-document.getElementById("ck").textContent=d.cacheKeys;
-document.getElementById("sb").disabled=d.status==="online";
-document.getElementById("xb").disabled=d.status==="offline";
 document.getElementById("ver").textContent="v"+d.version;
+document.getElementById("verFull").textContent="Questorr v"+d.version;
+document.getElementById("tb").disabled=false;
+document.getElementById("tb").className="toggle-btn "+(isOnline?"stop":"start");
+document.getElementById("tbIcon").innerHTML=isOnline?"&#9632;":"&#9654;";
+document.getElementById("tbText").textContent=isOnline?"Stop Bot":"Start Bot";
 document.getElementById("err").textContent="";
+
+// Command stats
+const cs=d.commandStats;
+if(cs&&cs.commands&&Object.keys(cs.commands).length>0){
+const max=Math.max(...Object.values(cs.commands));
+let h="";
+Object.entries(cs.commands).sort((a,b)=>b[1]-a[1]).forEach(([cmd,count])=>{
+const pct=max>0?Math.round(count/max*100):0;
+h+='<div class="cmd-row"><span class="cmd-name">/'+cmd+'</span><div class="cmd-bar"><div class="cmd-bar-fill" style="width:'+pct+'%"></div></div><span class="cmd-count">'+count+'</span></div>';
+});
+document.getElementById("cmdList").innerHTML=h;
+}
+
+// Top users
+if(cs&&cs.topUsers&&cs.topUsers.length>0){
+let h="";
+cs.topUsers.forEach((u,i)=>{
+h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span><span class="user-name">'+u.username+'</span><span class="user-count">'+u.total+'</span></div>';
+});
+document.getElementById("userList").innerHTML=h;
+}
 }catch(e){document.getElementById("err").textContent="Connection failed"}}
-async function ctrl(a){
-try{document.getElementById("err").textContent="";
-const res=await fetch(A+"/"+a+"-bot",{method:"POST",credentials:"include"});
+
+async function toggle(){
+const action=isOnline?"stop":"start";
+try{
+document.getElementById("err").textContent="";
+document.getElementById("tb").disabled=true;
+const res=await fetch(A+"/"+action+"-bot",{method:"POST",credentials:"include"});
 const d=await res.json();
 if(!res.ok)document.getElementById("err").textContent=d.message||d.error;
-setTimeout(r,1000)}catch(e){document.getElementById("err").textContent="Action failed"}}
+setTimeout(r,1500);
+}catch(e){
+document.getElementById("err").textContent="Action failed";
+document.getElementById("tb").disabled=false;
+}}
+
 r();setInterval(r,15000);
 </script>
 </body>

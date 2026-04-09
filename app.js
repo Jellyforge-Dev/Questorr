@@ -195,7 +195,10 @@ if (trustProxy) {
 function configureWebServer() {
   // Security headers via Helmet (CSP, etc.)
   // Must be registered at the top level, not inside a request handler.
-  app.use(helmet({
+  // Skip Helmet for widget embed route (needs its own CSP for iFrame embedding)
+  app.use((req, res, next) => {
+    if (req.path === "/api/widget/embed") return next();
+    return helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -226,11 +229,18 @@ function configureWebServer() {
       },
     },
     crossOriginEmbedderPolicy: false,
-  }));
+  })(req, res, next);
+  });
 
   // Additional manual security headers
   app.use((_req, res, next) => {
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    // Allow iFrame embedding for widget route only
+    if (_req.path === "/api/widget/embed") {
+      res.setHeader("X-Frame-Options", "ALLOWALL");
+      res.setHeader("Content-Security-Policy", "frame-ancestors *");
+    } else {
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    }
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-XSS-Protection", "1; mode=block");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
