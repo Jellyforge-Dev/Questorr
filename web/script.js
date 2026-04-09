@@ -526,11 +526,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         seasonsNotifyInput.value = config.JELLYFIN_NOTIFY_SEASONS === "true" ? "true" : "";
       }
       
-      // Widget toggle: check if WIDGET_API_KEY is set
+      // Widget toggle: fetch real key and check if enabled
       if (widgetToggle) {
-        const widgetKey = config.WIDGET_API_KEY || "";
-        // A masked key (••••••••...) or a real key means widget is enabled
-        widgetToggle.checked = widgetKey.length > 0;
+        const realKey = await fetchWidgetApiKey();
+        widgetToggle.checked = realKey.length > 0;
         updateWidgetUI();
       }
 
@@ -1455,38 +1454,66 @@ document.addEventListener("DOMContentLoaded", async () => {
   const widgetUrlSection = document.getElementById("widget-url-section");
   const widgetApiKeyInput = document.getElementById("WIDGET_API_KEY");
   const widgetEmbedUrlEl = document.getElementById("widget-embed-url");
+  let _realWidgetKey = ""; // Stores the unmasked key fetched from the API
+
+  /** Generate a random 32-char hex key in the browser */
+  function generateWidgetKey() {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /** Fetch the real (unmasked) widget API key from the server */
+  async function fetchWidgetApiKey() {
+    try {
+      const resp = await fetch("/api/widget-api-key", { credentials: "include" });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.key) {
+          _realWidgetKey = data.key;
+          return data.key;
+        }
+      }
+    } catch (_) {}
+    return "";
+  }
 
   function updateWidgetUI() {
     if (!widgetToggle || !widgetSettings) return;
     const enabled = widgetToggle.checked;
     widgetSettings.style.display = enabled ? "block" : "none";
 
-    // Show URL section only when API key is set
-    const key = widgetApiKeyInput?.value?.trim();
+    // Show URL section when widget is enabled and we have a real key
     if (widgetUrlSection) {
-      widgetUrlSection.style.display = (enabled && key) ? "block" : "none";
+      widgetUrlSection.style.display = (enabled && _realWidgetKey) ? "block" : "none";
     }
-    if (widgetEmbedUrlEl && key) {
+    if (widgetEmbedUrlEl && _realWidgetKey) {
       const origin = window.location.origin;
-      const fullUrl = `${origin}/api/widget/embed?key=${encodeURIComponent(key)}`;
-      // Display URL with masked key
+      const fullUrl = `${origin}/api/widget/embed?key=${encodeURIComponent(_realWidgetKey)}`;
       widgetEmbedUrlEl.textContent = `${origin}/api/widget/embed?key=••••••••`;
       widgetEmbedUrlEl.dataset.realUrl = fullUrl;
+    }
+    // Sync hidden input with real key for form submission
+    if (widgetApiKeyInput) {
+      widgetApiKeyInput.value = _realWidgetKey;
     }
   }
 
   if (widgetToggle) {
     widgetToggle.addEventListener("change", () => {
-      // If disabling widget, clear the API key
-      if (!widgetToggle.checked && widgetApiKeyInput) {
-        widgetApiKeyInput.value = "";
+      if (widgetToggle.checked) {
+        // Auto-generate a key if none exists yet
+        if (!_realWidgetKey) {
+          _realWidgetKey = generateWidgetKey();
+        }
+      } else {
+        // Disabling widget — clear the API key
+        _realWidgetKey = "";
       }
       updateWidgetUI();
     });
   }
-  if (widgetApiKeyInput) {
-    widgetApiKeyInput.addEventListener("input", updateWidgetUI);
-  }
+  // widgetApiKeyInput is a hidden field — no manual input listener needed
 
   // Copy widget URL
   const copyWidgetUrlBtn = document.getElementById("copy-widget-url-btn");

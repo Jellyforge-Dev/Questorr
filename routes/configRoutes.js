@@ -30,6 +30,11 @@ router.get("/webhook-secret", authenticateToken, (req, res) => {
   res.json({ secret: freshSecret });
 });
 
+router.get("/widget-api-key", authenticateToken, (req, res) => {
+  Object.entries(NO_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+  res.json({ key: process.env.WIDGET_API_KEY || null });
+});
+
 router.get("/languages", async (req, res) => {
   try {
     const localesDir = path.join(process.cwd(), "locales");

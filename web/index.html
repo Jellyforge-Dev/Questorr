@@ -767,22 +767,17 @@
                         </div>
 
                         <div id="widget-settings" style="display: none;">
-                          <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="WIDGET_API_KEY" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.widget_api_key_label">Widget API Key</label>
-                            <input type="text" id="WIDGET_API_KEY" name="WIDGET_API_KEY" placeholder="Enter a secure API key..." style="width: 100%;" />
-                            <div class="form-text" style="margin-top: 0.4rem;">
-                              <span data-i18n="config.widget_api_key_desc">Required. This key protects the widget endpoints from unauthorized access.</span>
-                            </div>
-                          </div>
+                          <!-- Hidden input for form submission — key is auto-generated -->
+                          <input type="hidden" id="WIDGET_API_KEY" name="WIDGET_API_KEY" />
 
-                          <div id="widget-url-section" style="margin-top: 1.25rem; border: 1px solid var(--teal); border-radius: 8px; padding: 1rem; display: none;">
+                          <div id="widget-url-section" style="margin-top: 0.75rem; border: 1px solid var(--teal); border-radius: 8px; padding: 1rem; display: none;">
                             <h4 style="margin: 0 0 0.5rem 0; color: var(--teal); font-size: 0.95rem; font-weight: 700;" data-i18n="config.widget_url_title">📊 Widget Embed URL</h4>
                             <p style="margin: 0 0 0.75rem 0; font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.widget_url_desc">Use this URL as an iFrame source in Homarr, Homepage or Organizr:</p>
                             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                               <code id="widget-embed-url" style="flex: 1; padding: 0.5rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.85rem; min-width: 200px; word-break: break-all;"></code>
                               <button type="button" id="copy-widget-url-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.widget_url_copy">Copy URL</button>
                             </div>
-                            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.widget_url_note">The API key is included in the URL but hidden from the display above. Save your config first to apply changes.</p>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.widget_url_note">The API key is embedded in the URL but hidden from the display. Save after enabling to activate the widget.</p>
                           </div>
                         </div>
                       </div>
