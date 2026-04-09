@@ -265,18 +265,14 @@ export async function sendDailyRecommendation(client) {
     let backdropUrl = null;
     let posterUrl = null;
 
+    let tmdbOverview = null;
     if (tmdbId && tmdbApiKey) {
       try {
-        const tmdbRes = await axios.get(
-          `https://api.themoviedb.org/3/${isMovie ? "movie" : "tv"}/${tmdbId}`,
-          {
-            params: { api_key: tmdbApiKey, append_to_response: "images" },
-            timeout: 6000,
-          }
-        );
-        const tmdb = tmdbRes.data;
+        const tmdbType = isMovie ? "movie" : "tv";
+        const tmdb = await tmdbApi.tmdbGetDetails(tmdbId, tmdbType, tmdbApiKey);
         if (tmdb.backdrop_path) backdropUrl = `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}`;
         if (tmdb.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`;
+        if (tmdb.overview) tmdbOverview = tmdb.overview;
       } catch (e) {
         logger.debug("[Daily Recommendation] TMDB fetch failed:", e.message);
       }
@@ -287,7 +283,8 @@ export async function sendDailyRecommendation(client) {
       backdropUrl = `${base}/Items/${item.Id}/Images/Backdrop`;
     }
 
-    let overview = item.Overview || t("no_description");
+    // Prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text
+    let overview = tmdbOverview || item.Overview || t("no_description");
     if (overview.length > 300) overview = overview.substring(0, 297) + "...";
 
     const genres = Array.isArray(item.Genres) ? item.Genres.join(", ") : "";

@@ -34,9 +34,19 @@ export async function handleRandomCommand(interaction) {
     const communityRating = item.CommunityRating ? `${item.CommunityRating.toFixed(1)}/10` : null;
     const runtimeMin = item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null;
     const runtime = runtimeMin ? `${Math.floor(runtimeMin / 60)}h ${runtimeMin % 60}m` : null;
-    const overview = item.Overview
-      ? (item.Overview.length > 300 ? item.Overview.substring(0, 297) + "..." : item.Overview)
-      : "";
+
+    // Fetch TMDB details first — prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text
+    const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    let tmdbDataR = null;
+    if (tmdbIdFromJf && getTmdbApiKey()) {
+      try {
+        const tmdbType = itemType === "Movie" ? "movie" : "tv";
+        tmdbDataR = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+      } catch (_) {}
+    }
+
+    const rawOverview = (tmdbDataR?.overview || item.Overview || "");
+    const overview = rawOverview.length > 300 ? rawOverview.substring(0, 297) + "..." : rawOverview;
 
     const meta = [];
     if (genres) meta.push(`**${t("label_genre")}:** ${genres}`);
@@ -54,16 +64,8 @@ export async function handleRandomCommand(interaction) {
       .setDescription(description || t("no_description"))
       .setTimestamp();
 
-    const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
-    let tmdbDataR = null;
-    if (tmdbIdFromJf && getTmdbApiKey()) {
-      try {
-        const tmdbType = itemType === "Movie" ? "movie" : "tv";
-        tmdbDataR = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
-        if (tmdbDataR?.poster_path) {
-          embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
-        }
-      } catch (_) {}
+    if (tmdbDataR?.poster_path) {
+      embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
     }
 
     const watchUrl = buildJellyfinUrl(item.Id);
