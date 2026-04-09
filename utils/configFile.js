@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
+import os from "os";
 import logger from "./logger.js";
 import { configSchema } from "./validation.js";
 
-// Fields that contain sensitive credentials and should be base64-encoded at rest
+// Fields that contain sensitive credentials and should be encrypted at rest
 const SENSITIVE_FIELDS = new Set([
   "DISCORD_TOKEN",
   "SEERR_API_KEY",
@@ -14,13 +16,49 @@ const SENSITIVE_FIELDS = new Set([
   "OMDB_API_KEY",
 ]);
 
-const B64_PREFIX = "b64:";
+// ─── AES-256-GCM Encryption ──────────────────────────────────────────────────
+// Derives a stable 256-bit key from the machine's hostname + config path.
+// This is NOT a master-password scheme — it ties config to THIS machine,
+// which is the right trade-off for a self-hosted Docker app.
+const ENC_PREFIX = "enc:";
+const B64_PREFIX = "b64:"; // legacy prefix — still recognized for migration
+
+function deriveKey() {
+  const material = `questorr:${os.hostname()}:${process.cwd()}`;
+  return crypto.createHash("sha256").update(material).digest();
+}
+
+let _derivedKey = null;
+function getKey() {
+  if (!_derivedKey) _derivedKey = deriveKey();
+  return _derivedKey;
+}
+
+function encrypt(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", getKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  // Format: base64(iv + tag + ciphertext)
+  return ENC_PREFIX + Buffer.concat([iv, tag, encrypted]).toString("base64");
+}
+
+function decrypt(blob) {
+  const raw = Buffer.from(blob.slice(ENC_PREFIX.length), "base64");
+  const iv = raw.subarray(0, 12);
+  const tag = raw.subarray(12, 28);
+  const ciphertext = raw.subarray(28);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", getKey(), iv);
+  decipher.setAuthTag(tag);
+  return decipher.update(ciphertext, undefined, "utf8") + decipher.final("utf8");
+}
 
 function encodeConfig(config) {
   const out = { ...config };
   for (const field of SENSITIVE_FIELDS) {
-    if (out[field] && typeof out[field] === "string" && out[field] !== "" && !out[field].startsWith(B64_PREFIX)) {
-      out[field] = B64_PREFIX + Buffer.from(out[field], "utf8").toString("base64");
+    if (out[field] && typeof out[field] === "string" && out[field] !== ""
+        && !out[field].startsWith(ENC_PREFIX)) {
+      out[field] = encrypt(out[field]);
     }
   }
   return out;
@@ -29,8 +67,21 @@ function encodeConfig(config) {
 function decodeConfig(config) {
   const out = { ...config };
   for (const field of SENSITIVE_FIELDS) {
-    if (out[field] && typeof out[field] === "string" && out[field].startsWith(B64_PREFIX)) {
+    if (!out[field] || typeof out[field] !== "string") continue;
+
+    // Decrypt AES-256-GCM values
+    if (out[field].startsWith(ENC_PREFIX)) {
+      try {
+        out[field] = decrypt(out[field]);
+      } catch (err) {
+        logger.error(`Failed to decrypt ${field} — config may have been moved between machines: ${err.message}`);
+        out[field] = "";
+      }
+    }
+    // Auto-migrate legacy Base64 values
+    else if (out[field].startsWith(B64_PREFIX)) {
       out[field] = Buffer.from(out[field].slice(B64_PREFIX.length), "base64").toString("utf8");
+      logger.info(`🔄 Migrated ${field} from Base64 to AES-256-GCM (will encrypt on next save)`);
     }
   }
   return out;
@@ -177,7 +228,7 @@ export function writeConfig(config) {
       fs.mkdirSync(configDir, { recursive: true, mode: 0o777 });
     }
 
-    // Write with explicit permissions (sensitive fields are base64-encoded)
+    // Write with explicit permissions (sensitive fields are AES-256-GCM encrypted)
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(encodeConfig(config), null, 2), {
       mode: 0o600,
       encoding: "utf-8",

@@ -7,6 +7,7 @@ import axios from "axios";
 import logger from "../utils/logger.js";
 import { TIMEOUTS, CACHE_TTL } from "../lib/constants.js";
 import { getSeerrApiUrl } from "../utils/seerrUrl.js";
+import { withRetry } from "../utils/axiosRetry.js";
 
 // Cache for tags, quality profiles, and servers
 let tagsCache = null;
@@ -46,12 +47,12 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
 
   // Fetch from Radarr servers
   try {
-    const radarrListResponse = await axios.get(
-      buildUrl("/service/radarr"),
-      {
+    const radarrListResponse = await withRetry(
+      () => axios.get(buildUrl("/service/radarr"), {
         headers: { "X-Api-Key": apiKey },
         timeout: TIMEOUTS.SEERR_API,
-      }
+      }),
+      { label: "Seerr Radarr servers" }
     );
 
     for (const server of radarrListResponse.data) {
@@ -84,12 +85,12 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
 
   // Fetch from Sonarr servers
   try {
-    const sonarrListResponse = await axios.get(
-      buildUrl("/service/sonarr"),
-      {
+    const sonarrListResponse = await withRetry(
+      () => axios.get(buildUrl("/service/sonarr"), {
         headers: { "X-Api-Key": apiKey },
         timeout: TIMEOUTS.SEERR_API,
-      }
+      }),
+      { label: "Seerr Sonarr servers" }
     );
 
     for (const server of sonarrListResponse.data) {
@@ -146,10 +147,13 @@ export async function checkMediaStatus(
         ? `${apiUrl}/movie/${tmdbId}`
         : `${apiUrl}/tv/${tmdbId}`;
 
-    const response = await axios.get(url, {
-      headers: { "X-Api-Key": apiKey },
-      timeout: TIMEOUTS.SEERR_API,
-    });
+    const response = await withRetry(
+      () => axios.get(url, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr status ${mediaType}/${tmdbId}` }
+    );
 
     // For movies, simple check
     if (mediaType === "movie") {
@@ -545,10 +549,13 @@ export async function sendRequest({
       logger.info(`[SEERR] 🔓 NOT setting x-api-user header (request will use API key owner's permissions - auto-approve enabled)`);
     }
 
-    const response = await axios.post(finalUrl, payload, {
-      headers,
-      timeout: TIMEOUTS.SEERR_POST,
-    });
+    const response = await withRetry(
+      () => axios.post(finalUrl, payload, {
+        headers,
+        timeout: TIMEOUTS.SEERR_POST,
+      }),
+      { label: `Seerr request ${mediaType}/${tmdbId}` }
+    );
 
     logger.info("[SEERR] ✨ Request successful!");
     logger.debug(`[SEERR] Response: ${JSON.stringify(response.data)}`);
