@@ -11,6 +11,7 @@ import { minutesToHhMm } from "../utils/time.js";
 import { COLORS } from "../lib/constants.js";
 import { getSeerrApiUrl, normalizeSeerrUrl } from "../utils/seerrUrl.js";
 import { isValidUrl } from "../utils/url.js";
+import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
 
 export function buildNotificationEmbed(
@@ -30,8 +31,8 @@ export function buildNotificationEmbed(
     status === "success"
       ? t("successfully_requested")
       : mediaType === "movie"
-        ? "🎬 Movie found:"
-        : "📺 TV show found:";
+        ? t("movie_found")
+        : t("tv_found");
 
   let seerrMediaUrl;
   const currentSeerrUrl = normalizeSeerrUrl(process.env.SEERR_URL || "");
@@ -137,14 +138,13 @@ export function buildButtons(
   const rows = [];
   const buttons = [];
 
-  const showLetterboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-  const showImdb = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+  const _show = parseButtonConfig(requested ? "NOTIF_BUTTONS_MEDIA_PENDING" : "NOTIF_BUTTONS_MEDIA_PENDING");
 
   if (imdbId) {
     const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
 
-    if (showLetterboxd && isValidUrl(letterboxdUrl)) {
+    if (_show("letterboxd") && mediaType === "movie" && isValidUrl(letterboxdUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
@@ -153,7 +153,7 @@ export function buildButtons(
       );
     }
 
-    if (showImdb && isValidUrl(imdbUrl)) {
+    if (_show("imdb") && isValidUrl(imdbUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
@@ -174,7 +174,7 @@ export function buildButtons(
       } else {
         const seasons = [...requestedSeasons];
         const lastSeason = seasons.pop();
-        successLabel = t("requested_seasons") + " " + seasons.join(", ") + " and " + lastSeason;
+        successLabel = t("requested_seasons") + " " + seasons.join(", ") + " " + t("and_connector") + " " + lastSeason;
       }
     }
     if (requestedTags.length > 0) {
@@ -182,7 +182,8 @@ export function buildButtons(
         requestedTags.length === 1
           ? requestedTags[0]
           : requestedTags.join(", ");
-      successLabel += ` with ${tagLabel} tag${requestedTags.length > 1 ? "s" : ""}`;
+      const tagKey = requestedTags.length === 1 ? "with_tag" : "with_tags";
+      successLabel += " " + t(tagKey).replace("{{tags}}", tagLabel);
     }
 
     successLabel += ", " + t("stay_tuned");
@@ -205,14 +206,15 @@ export function buildButtons(
       } else {
         const seasons = [...selectedSeasons];
         const lastSeason = seasons.pop();
-        requestLabel = t("request_seasons") + " " + seasons.join(", ") + " and " + lastSeason;
+        requestLabel = t("request_seasons") + " " + seasons.join(", ") + " " + t("and_connector") + " " + lastSeason;
       }
     }
 
     if (selectedTags.length > 0) {
       const tagLabel =
         selectedTags.length === 1 ? selectedTags[0] : selectedTags.join(", ");
-      requestLabel += ` with ${tagLabel} tag${selectedTags.length > 1 ? "s" : ""}`;
+      const tagKey = selectedTags.length === 1 ? "with_tag" : "with_tags";
+      requestLabel += " " + t(tagKey).replace("{{tags}}", tagLabel);
     }
 
     const seasonsParam =
@@ -261,7 +263,7 @@ export function buildButtons(
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`select_seasons|${tmdbId}|${tagsParam}`)
-        .setPlaceholder("Select seasons to request...")
+        .setPlaceholder(t("select_seasons_placeholder"))
         .setMinValues(1)
         .setMaxValues(Math.min(25, seasonOptions.length))
         .addOptions(seasonOptions);

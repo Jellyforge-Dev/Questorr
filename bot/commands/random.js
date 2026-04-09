@@ -2,7 +2,7 @@ import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import { fetchRandomJellyfinItem } from "../../api/jellyfin.js";
-import { buildJellyfinUrl, getTmdbApiKey } from "../helpers.js";
+import { buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
@@ -68,15 +68,7 @@ export async function handleRandomCommand(interaction) {
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];
-    const _rawRandom = process.env.NOTIF_BUTTONS_RANDOM || "";
-    const _onRandom = _rawRandom ? _rawRandom.toLowerCase().split(",").map(s => s.trim()).filter(p => !p.startsWith("-")) : null;
-    const _offRandom = _rawRandom ? _rawRandom.toLowerCase().split(",").map(s => s.trim()).filter(p => p.startsWith("-")).map(p => p.slice(1)) : null;
-    function _showRandom(btn) {
-      if (!_rawRandom) return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
-      if (_onRandom.includes(btn)) return true;
-      if (_offRandom.includes(btn)) return false;
-      return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
-    }
+    const _showRandom = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
     if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
       components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
     }

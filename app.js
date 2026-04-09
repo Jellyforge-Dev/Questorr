@@ -10,6 +10,7 @@ import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
+import apiCache from "./utils/cache.js";
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -712,6 +713,7 @@ function configureWebServer() {
       const oldShowQuality = process.env.SHOW_QUALITY_SELECTION;
       const oldShowStatus = process.env.SHOW_STATUS_COMMAND;
       const oldShowRandom = process.env.SHOW_RANDOM_COMMAND;
+      const oldBotLanguage = process.env.BOT_LANGUAGE;
 
       // Normalize SEERR_URL to remove /api/v1 suffix if present
       if (
@@ -772,6 +774,12 @@ function configureWebServer() {
       }
 
       loadConfig(); // Reload config into process.env
+
+      // Clear TMDB cache when language changes (cached results are language-specific)
+      if (oldBotLanguage !== process.env.BOT_LANGUAGE) {
+        apiCache.clearTMDB();
+        logger.info(`🌐 Language changed (${oldBotLanguage} → ${process.env.BOT_LANGUAGE}), TMDB cache cleared`);
+      }
 
       // Check if Discord credentials are complete and changed
       const hasDiscordCreds = process.env.DISCORD_TOKEN && process.env.BOT_ID;

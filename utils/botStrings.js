@@ -89,6 +89,11 @@ const strings = {
     label_summary:        "Summary",
     label_directed_by:    "Directed by {{name}}",
     label_created_by:     "Created by {{name}}",
+    movie_found:          "\uD83C\uDFAC Movie found:",
+    tv_found:             "\uD83D\uDCFA TV show found:",
+    and_connector:        "and",
+    with_tag:             "with {{tags}} tag",
+    with_tags:            "with {{tags}} tags",
   },
   de: {
     event_pending:        "Neue Anfrage \u2013 Ausstehend",
@@ -175,6 +180,11 @@ const strings = {
     label_summary:        "Zusammenfassung",
     label_directed_by:    "Regie: {{name}}",
     label_created_by:     "Erstellt von {{name}}",
+    movie_found:          "\uD83C\uDFAC Film gefunden:",
+    tv_found:             "\uD83D\uDCFA Serie gefunden:",
+    and_connector:        "und",
+    with_tag:             "mit Tag {{tags}}",
+    with_tags:            "mit Tags {{tags}}",
   },
 };
 

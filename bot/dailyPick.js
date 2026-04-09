@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
 import { isValidUrl } from "../utils/url.js";
+import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
 
 let dailyRandomPickTimer = null;
@@ -100,7 +101,7 @@ export async function sendDailyRandomPick(client) {
     if (details.genres && Array.isArray(details.genres)) {
       const genreNames = details.genres.map((g) => g.name).join(", ");
       if (genreNames) {
-        embed.addFields({ name: "Genres", value: genreNames, inline: true });
+        embed.addFields({ name: t("label_genre"), value: genreNames, inline: true });
       }
     }
 
@@ -109,9 +110,15 @@ export async function sendDailyRandomPick(client) {
     }
 
     const buttonComponents = [];
+    const _showDR = parseButtonConfig("NOTIF_BUTTONS_DAILY_RANDOM");
 
-    if (isMovie) {
-      const letterboxdUrl = `https://letterboxd.com/search/${encodeURIComponent(title)}/`;
+    let imdbId = null;
+    if (details.external_ids?.imdb_id) {
+      imdbId = details.external_ids.imdb_id;
+    }
+
+    if (_showDR("letterboxd") && isMovie && imdbId) {
+      const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}/`;
       if (isValidUrl(letterboxdUrl)) {
         buttonComponents.push(
           new ButtonBuilder()
@@ -122,11 +129,7 @@ export async function sendDailyRandomPick(client) {
       }
     }
 
-    let imdbId = null;
-    if (details.external_ids?.imdb_id) {
-      imdbId = details.external_ids.imdb_id;
-    }
-    if (imdbId) {
+    if (_showDR("imdb") && imdbId) {
       const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
       if (isValidUrl(imdbUrl)) {
         buttonComponents.push(
@@ -284,7 +287,7 @@ export async function sendDailyRecommendation(client) {
       backdropUrl = `${base}/Items/${item.Id}/Images/Backdrop`;
     }
 
-    let overview = item.Overview || "Keine Beschreibung verfügbar.";
+    let overview = item.Overview || t("no_description");
     if (overview.length > 300) overview = overview.substring(0, 297) + "...";
 
     const genres = Array.isArray(item.Genres) ? item.Genres.join(", ") : "";
@@ -312,8 +315,9 @@ export async function sendDailyRecommendation(client) {
 
     // Buttons
     const buttonComponents = [];
+    const _showRec = parseButtonConfig("NOTIF_BUTTONS_DAILY_RECOMMENDATION");
 
-    if (watchUrl && isValidUrl(watchUrl)) {
+    if (_showRec("watch") && watchUrl && isValidUrl(watchUrl)) {
       buttonComponents.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
@@ -322,7 +326,7 @@ export async function sendDailyRecommendation(client) {
       );
     }
 
-    if (imdbId) {
+    if (_showRec("imdb") && imdbId) {
       const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
       if (isValidUrl(imdbUrl)) {
         buttonComponents.push(
@@ -334,7 +338,7 @@ export async function sendDailyRecommendation(client) {
       }
     }
 
-    if (isMovie && imdbId) {
+    if (_showRec("letterboxd") && isMovie && imdbId) {
       const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
       if (isValidUrl(letterboxdUrl)) {
         buttonComponents.push(

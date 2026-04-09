@@ -3,7 +3,7 @@ import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "disc
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
-import { buildSeerrUrl, buildJellyfinUrl, getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
+import { buildSeerrUrl, buildJellyfinUrl, getSeerrUrl, getSeerrApiKey, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
@@ -35,18 +35,6 @@ function buildStatusDescription(tmdbDetails, statusLine) {
     }
   }
   return parts.join("\n");
-}
-
-function parseButtonConfig(envKey) {
-  const raw = process.env[envKey] || "";
-  const on = raw ? raw.toLowerCase().split(",").map(s => s.trim()).filter(p => !p.startsWith("-")) : null;
-  const off = raw ? raw.toLowerCase().split(",").map(s => s.trim()).filter(p => p.startsWith("-")).map(p => p.slice(1)) : null;
-  return function show(btn) {
-    if (!raw) return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
-    if (on && on.includes(btn)) return true;
-    if (off && off.includes(btn)) return false;
-    return process.env["EMBED_SHOW_BUTTON_" + btn.toUpperCase()] !== "false";
-  };
 }
 
 export async function handleStatusCommand(interaction) {
