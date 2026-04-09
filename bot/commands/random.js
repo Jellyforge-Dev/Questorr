@@ -39,10 +39,10 @@ export async function handleRandomCommand(interaction) {
       : "";
 
     const meta = [];
-    if (genres) meta.push(`**Genre:** ${genres}`);
-    if (runtime) meta.push(`**Runtime:** ${runtime}`);
-    if (communityRating) meta.push(`**Rating:** ⭐ ${communityRating}`);
-    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+    if (genres) meta.push(`**${t("label_genre")}:** ${genres}`);
+    if (runtime) meta.push(`**${t("label_runtime")}:** ${runtime}`);
+    if (communityRating) meta.push(`**${t("label_rating")}:** ⭐ ${communityRating}`);
+    if (ageRating) meta.push(`**${t("label_age_rating")}:** ${ageRating}`);
 
     let description = meta.join(" · ");
     if (overview) description += `\n\n${overview}`;
@@ -51,7 +51,7 @@ export async function handleRandomCommand(interaction) {
       .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
       .setAuthor({ name: itemType === "Movie" ? t("random_movie") : t("random_series") })
       .setTitle(`${emoji} ${item.Name}${year}`)
-      .setDescription(description || "No description available.")
+      .setDescription(description || t("no_description"))
       .setTimestamp();
 
     const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;

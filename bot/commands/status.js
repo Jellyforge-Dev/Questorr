@@ -24,10 +24,10 @@ function buildStatusDescription(tmdbDetails, statusLine) {
       || null;
 
     const meta = [];
-    if (genres) meta.push(`**Genre:** ${genres}`);
-    if (runtime) meta.push(`**Runtime:** ${runtime}`);
-    if (rating) meta.push(`**Rating:** ⭐ ${rating}`);
-    if (ageRating) meta.push(`**Age Rating:** ${ageRating}`);
+    if (genres) meta.push(`**${t("label_genre")}:** ${genres}`);
+    if (runtime) meta.push(`**${t("label_runtime")}:** ${runtime}`);
+    if (rating) meta.push(`**${t("label_rating")}:** ⭐ ${rating}`);
+    if (ageRating) meta.push(`**${t("label_age_rating")}:** ${ageRating}`);
     if (meta.length > 0) parts.push(meta.join(" · "));
     if (overview) {
       const trimmed = overview.length > 300 ? overview.substring(0, 297) + "..." : overview;

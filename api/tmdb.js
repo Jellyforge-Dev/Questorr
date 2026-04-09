@@ -9,6 +9,13 @@ import logger from "../utils/logger.js";
 import { TIMEOUTS } from "../lib/constants.js";
 import { withRetry } from "../utils/axiosRetry.js";
 
+/** Map BOT_LANGUAGE to TMDB locale code */
+function getTmdbLanguage() {
+  const lang = (process.env.BOT_LANGUAGE || process.env.LANGUAGE || "en").toLowerCase();
+  const map = { en: "en-US", de: "de-DE", sv: "sv-SE", fr: "fr-FR", es: "es-ES", it: "it-IT", nl: "nl-NL", pt: "pt-PT", ja: "ja-JP", ko: "ko-KR", zh: "zh-CN", ru: "ru-RU", pl: "pl-PL", da: "da-DK", no: "no-NO", fi: "fi-FI", cs: "cs-CZ", hu: "hu-HU", ro: "ro-RO", tr: "tr-TR" };
+  return map[lang] || "en-US";
+}
+
 /**
  * Search for movies and TV shows
  * @param {string} query - Search query
@@ -27,7 +34,7 @@ export async function tmdbSearch(query, apiKey) {
   try {
     const res = await withRetry(
       () => axios.get(url, {
-        params: { api_key: apiKey, query, include_adult: false, page: 1 },
+        params: { api_key: apiKey, query, include_adult: false, page: 1, language: getTmdbLanguage() },
         timeout: TIMEOUTS.TMDB_API,
       }),
       { label: `TMDB search "${query}"` }
@@ -58,7 +65,7 @@ export async function tmdbGetTrending(apiKey) {
   try {
     const res = await withRetry(
       () => axios.get(url, {
-        params: { api_key: apiKey },
+        params: { api_key: apiKey, language: getTmdbLanguage() },
         timeout: TIMEOUTS.TMDB_API,
       }),
       { label: "TMDB trending" }
@@ -96,7 +103,7 @@ export async function tmdbGetDetails(id, mediaType, apiKey) {
       () => axios.get(url, {
         params: {
           api_key: apiKey,
-          language: "en-US",
+          language: getTmdbLanguage(),
           append_to_response: "images,credits,external_ids",
         },
         timeout: TIMEOUTS.TMDB_API,
@@ -260,7 +267,7 @@ async function getUpcomingMedia(apiKey) {
     const res = await axios.get(url, {
       params: {
         api_key: apiKey,
-        language: "en-US",
+        language: getTmdbLanguage(),
         page: Math.floor(Math.random() * 3) + 1,
       },
       timeout: TIMEOUTS.TMDB_API,
@@ -291,7 +298,7 @@ async function getDiscoverVarietyMedia(apiKey) {
         with_genres: randomGenre,
         sort_by: "popularity.desc",
         "vote_count.gte": 100, // HQ filter
-        language: "en-US",
+        language: getTmdbLanguage(),
         page: Math.floor(Math.random() * 5) + 1,
       },
       timeout: TIMEOUTS.TMDB_API,
@@ -320,7 +327,7 @@ async function getDiscoverNicheMedia(apiKey) {
         "vote_count.gte": 200, // Ensure quality
         "vote_count.lte": 5000, // Avoid huge blockbusters
         "vote_average.gte": 7.0, // Only good ratings
-        language: "en-US",
+        language: getTmdbLanguage(),
         page: Math.floor(Math.random() * 10) + 1, // Pages 1-10 for variety
       },
       timeout: TIMEOUTS.TMDB_API,

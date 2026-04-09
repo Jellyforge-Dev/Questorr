@@ -69,15 +69,15 @@ export function buildNotificationEmbed(
       : null) ||
     (omdb?.Plot && omdb.Plot !== "N/A"
       ? omdb.Plot
-      : "No description available.");
+      : t("no_description"));
 
-  let headerLine = "Summary";
+  let headerLine = t("label_summary");
   if (omdb) {
     if (mediaType === "movie" && omdb.Director && omdb.Director !== "N/A") {
-      headerLine = `Directed by ${omdb.Director}`;
+      headerLine = t("label_directed_by").replace("{{name}}", omdb.Director);
     } else if (mediaType === "tv" && omdb.Writer && omdb.Writer !== "N/A") {
       const creator = omdb.Writer.split(",")[0].trim();
-      headerLine = `Created by ${creator}`;
+      headerLine = t("label_created_by").replace("{{name}}", creator);
     }
   }
 
@@ -113,11 +113,11 @@ export function buildNotificationEmbed(
   embed.addFields(
     {
       name: headerLine,
-      value: overview.length ? overview : "No description available.",
+      value: overview.length ? overview : t("no_description"),
     },
-    { name: "Genre", value: genres, inline: true },
-    { name: "Runtime", value: runtime, inline: true },
-    { name: "Rating", value: rating, inline: true }
+    { name: t("label_genre"), value: genres, inline: true },
+    { name: t("label_runtime"), value: runtime, inline: true },
+    { name: t("label_rating"), value: rating, inline: true }
   );
 
   return embed;

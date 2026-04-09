@@ -79,7 +79,7 @@ export async function sendDailyRandomPick(client) {
       ? `https://image.tmdb.org/t/p/w1280${randomMedia.backdrop_path}`
       : null;
 
-    let overview = randomMedia.overview || "No description available.";
+    let overview = randomMedia.overview || t("no_description");
     if (overview.length > 300) {
       overview = overview.substring(0, 297) + "...";
     }
@@ -306,8 +306,8 @@ export async function sendDailyRecommendation(client) {
     if (backdropUrl && isValidUrl(backdropUrl)) embed.setImage(backdropUrl);
 
     const fields = [];
-    if (genres) fields.push({ name: "Genre", value: genres, inline: true });
-    fields.push({ name: "Bewertung", value: rating, inline: true });
+    if (genres) fields.push({ name: t("label_genre"), value: genres, inline: true });
+    fields.push({ name: t("label_rating"), value: rating, inline: true });
     if (fields.length > 0) embed.addFields(...fields);
 
     // Buttons
