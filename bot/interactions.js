@@ -79,7 +79,7 @@ export function registerInteractions(client) {
       // ─── Slash Commands ───────────────────────────────────────────
       if (interaction.isCommand()) {
         // Track command usage
-        trackCommand(interaction.commandName, interaction.user.id, interaction.user.username);
+        trackCommand(interaction.commandName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
 
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
           return interaction.reply({

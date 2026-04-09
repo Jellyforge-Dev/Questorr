@@ -526,6 +526,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         seasonsNotifyInput.value = config.JELLYFIN_NOTIFY_SEASONS === "true" ? "true" : "";
       }
       
+      // Widget toggle: check if WIDGET_API_KEY is set
+      if (widgetToggle) {
+        const widgetKey = config.WIDGET_API_KEY || "";
+        // A masked key (••••••••...) or a real key means widget is enabled
+        widgetToggle.checked = widgetKey.length > 0;
+        updateWidgetUI();
+      }
+
       await fetchWebhookSecret(); // ensures secret is loaded before updateWebhookUrl
       updateWebhookUrl();
 
@@ -1434,6 +1442,61 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy)
           .then(() => showToast(t("ui.copied") || "Kopiert!"))
+          .catch(() => fallbackCopyTextToClipboard(textToCopy));
+      } else {
+        fallbackCopyTextToClipboard(textToCopy);
+      }
+    });
+  }
+
+  // ── Widget Enable/Disable & Copy URL ────────────────────────────────────
+  const widgetToggle = document.getElementById("widget-enabled-toggle");
+  const widgetSettings = document.getElementById("widget-settings");
+  const widgetUrlSection = document.getElementById("widget-url-section");
+  const widgetApiKeyInput = document.getElementById("WIDGET_API_KEY");
+  const widgetEmbedUrlEl = document.getElementById("widget-embed-url");
+
+  function updateWidgetUI() {
+    if (!widgetToggle || !widgetSettings) return;
+    const enabled = widgetToggle.checked;
+    widgetSettings.style.display = enabled ? "block" : "none";
+
+    // Show URL section only when API key is set
+    const key = widgetApiKeyInput?.value?.trim();
+    if (widgetUrlSection) {
+      widgetUrlSection.style.display = (enabled && key) ? "block" : "none";
+    }
+    if (widgetEmbedUrlEl && key) {
+      const origin = window.location.origin;
+      const fullUrl = `${origin}/api/widget/embed?key=${encodeURIComponent(key)}`;
+      // Display URL with masked key
+      widgetEmbedUrlEl.textContent = `${origin}/api/widget/embed?key=••••••••`;
+      widgetEmbedUrlEl.dataset.realUrl = fullUrl;
+    }
+  }
+
+  if (widgetToggle) {
+    widgetToggle.addEventListener("change", () => {
+      // If disabling widget, clear the API key
+      if (!widgetToggle.checked && widgetApiKeyInput) {
+        widgetApiKeyInput.value = "";
+      }
+      updateWidgetUI();
+    });
+  }
+  if (widgetApiKeyInput) {
+    widgetApiKeyInput.addEventListener("input", updateWidgetUI);
+  }
+
+  // Copy widget URL
+  const copyWidgetUrlBtn = document.getElementById("copy-widget-url-btn");
+  if (copyWidgetUrlBtn) {
+    copyWidgetUrlBtn.addEventListener("click", () => {
+      const textToCopy = widgetEmbedUrlEl?.dataset.realUrl || "";
+      if (!textToCopy) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => showToast(t("ui.copied") || "Copied!"))
           .catch(() => fallbackCopyTextToClipboard(textToCopy));
       } else {
         fallbackCopyTextToClipboard(textToCopy);

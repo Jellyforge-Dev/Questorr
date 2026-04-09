@@ -193,7 +193,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 .err{color:#f38ba8;font-size:11px;margin-top:8px;text-align:center;min-height:14px}
 .ver{font-size:10px;color:#484f58;margin-top:10px;text-align:right}
 .user-row{display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
-.user-rank{color:#484f58;font-weight:700;width:16px;text-align:right}
+.user-rank{color:#484f58;font-weight:700;width:16px;text-align:right;flex-shrink:0}
+.user-avatar{width:22px;height:22px;border-radius:50%;flex-shrink:0;object-fit:cover}
+.user-avatar-placeholder{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:rgba(30,200,160,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;color:#8b949e;font-weight:600}
 .user-name{color:#c9d1d9;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .user-cmds{color:#8b949e;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .user-count{color:#1ec8a0;font-weight:700;flex-shrink:0}
@@ -284,12 +286,16 @@ h+='<div class="cmd-row"><span class="cmd-name">/'+esc(cmd)+'</span><div class="
 document.getElementById("cmdList").innerHTML=h;
 }
 
-// Top users with per-command breakdown
+// Top users with per-command breakdown and avatars
 if(cs&&cs.topUsers&&cs.topUsers.length>0){
 let h="";
 cs.topUsers.forEach((u,i)=>{
 const cmds=u.commands?Object.entries(u.commands).sort((a,b)=>b[1]-a[1]).map(([c,n])=>'/'+c+' '+n+'x').join(', '):'';
-h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span><span class="user-name">'+esc(u.username)+'</span><span class="user-cmds">'+esc(cmds)+'</span><span class="user-count">'+u.total+'</span></div>';
+const initial=esc(u.username).charAt(0).toUpperCase();
+const av=u.avatarUrl
+?'<img class="user-avatar" src="'+esc(u.avatarUrl)+'" alt="" onerror="this.style.display=&quot;none&quot;;this.nextElementSibling.style.display=&quot;flex&quot;"><div class="user-avatar-placeholder" style="display:none">'+initial+'</div>'
+:'<div class="user-avatar-placeholder">'+initial+'</div>';
+h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span>'+av+'<span class="user-name">'+esc(u.username)+'</span><span class="user-cmds">'+esc(cmds)+'</span><span class="user-count">'+u.total+'</span></div>';
 });
 document.getElementById("userList").innerHTML=h;
 }

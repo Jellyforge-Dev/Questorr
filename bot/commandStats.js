@@ -54,8 +54,9 @@ function debouncedSave() {
  * @param {string} commandName - e.g. "search", "request", "status", "random", "trending"
  * @param {string} userId - Discord user ID
  * @param {string} username - Discord username (for display)
+ * @param {string} [avatarUrl] - Discord avatar URL
  */
-export function trackCommand(commandName, userId, username) {
+export function trackCommand(commandName, userId, username, avatarUrl) {
   // Per-command totals
   stats.commands[commandName] = (stats.commands[commandName] || 0) + 1;
 
@@ -65,6 +66,7 @@ export function trackCommand(commandName, userId, username) {
   }
   const user = stats.users[userId];
   user.username = username; // Update in case they changed it
+  if (avatarUrl) user.avatarUrl = avatarUrl; // Keep avatar current
   user.total++;
   user.commands[commandName] = (user.commands[commandName] || 0) + 1;
 
@@ -83,6 +85,7 @@ export function getCommandStats() {
     .map(([id, data]) => ({
       userId: id,
       username: data.username,
+      avatarUrl: data.avatarUrl || null,
       total: data.total,
       commands: data.commands,
     }))
