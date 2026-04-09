@@ -56,11 +56,11 @@ export const configSchema = Joi.object({
   JELLYFIN_NOTIFY_EPISODES: Joi.string().valid("true", "false").allow("").optional(),
   JELLYFIN_EPISODE_CHANNEL_ID: Joi.string().allow("").optional(),
   JELLYFIN_SEASON_CHANNEL_ID: Joi.string().allow("").optional(),
-  WEBHOOK_PORT: Joi.alternatives(Joi.string(), Joi.number().port()).optional(),
+  WEBHOOK_PORT: Joi.alternatives(Joi.string().allow(""), Joi.number().port()).optional(),
   BIND_HOST: Joi.string().ip({ version: ["ipv4", "ipv6"] }).optional(),
   WEBHOOK_SECRET: Joi.string().allow("").optional(),
   WEBHOOK_DEBOUNCE_MS: Joi.alternatives(
-    Joi.string(),
+    Joi.string().allow(""),
     Joi.number().integer().min(1000).max(600000)
   ).optional(), // Allow up to 10 minutes
   AUTO_START_BOT: Joi.string().valid("true", "false").optional(),
@@ -82,7 +82,7 @@ export const configSchema = Joi.object({
   LOG_LEVEL: Joi.string().valid("error", "warn", "info", "verbose", "debug").allow("").optional(),
   DAILY_RECOMMENDATION_ENABLED: Joi.string().valid("true", "false").optional(),
   DAILY_RECOMMENDATION_CHANNEL_ID: Joi.string().allow("").optional(),
-  DAILY_RECOMMENDATION_INTERVAL: Joi.alternatives(Joi.string(), Joi.number().integer().min(1)).optional(),
+  DAILY_RECOMMENDATION_INTERVAL: Joi.alternatives(Joi.string().allow(""), Joi.number().integer().min(1)).optional(),
   USER_MAPPINGS: Joi.array().items(Joi.object()).optional(),
   USER_MAPPING_METADATA: Joi.object().optional(),
   ROLE_ALLOWLIST: Joi.array().items(Joi.string()).optional(),
@@ -98,7 +98,7 @@ export const configSchema = Joi.object({
   NOTIF_BUTTONS_DAILY_RECOMMENDATION: Joi.string().allow("").optional(),
   DAILY_RANDOM_PICK_ENABLED: Joi.string().valid("true", "false").optional(),
   DAILY_RANDOM_PICK_CHANNEL_ID: Joi.string().allow("").optional(),
-  DAILY_RANDOM_PICK_INTERVAL: Joi.alternatives(Joi.string(), Joi.number().integer().min(1)).optional(),
+  DAILY_RANDOM_PICK_INTERVAL: Joi.alternatives(Joi.string().allow(""), Joi.number().integer().min(1)).optional(),
   DEFAULT_QUALITY_PROFILE_MOVIE: Joi.string().allow("").optional(),
   DEFAULT_QUALITY_PROFILE_TV: Joi.string().allow("").optional(),
   DEFAULT_SERVER_MOVIE: Joi.string().allow("").optional(),
