@@ -31,7 +31,8 @@ function authenticateWidget(req, res, next) {
     return res.status(503).json({ error: "Widget API key not configured. Set WIDGET_API_KEY in the dashboard." });
   }
 
-  const providedKey = req.query.key || req.headers["x-widget-key"] || "";
+  // Accept key from header (preferred) or query param (for embed page load only)
+  const providedKey = req.headers["x-widget-key"] || req.query.key || "";
   // Timing-safe comparison to prevent side-channel attacks
   try {
     const a = Buffer.from(String(providedKey));
@@ -180,8 +181,7 @@ router.post("/widget/reset-stats", authenticateWidget, (req, res) => {
 // ─── Embeddable HTML Widget (Questorr theme, fully responsive) ──────────────
 router.get("/widget/embed", authenticateWidget, (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const apiKey = req.query.key || "";
-  const keyParam = apiKey ? `?key=${encodeURIComponent(apiKey)}` : "";
+  const apiKey = req.query.key || req.headers["x-widget-key"] || "";
   const logoUrl = `${baseUrl}/assets/logo-transparent.png`;
 
   const html = `<!DOCTYPE html>
@@ -282,7 +282,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 </div>
 <script>
 const A="${baseUrl}/api";
-const K="${keyParam}";
+const WK="${apiKey}";
+const H=WK?{"x-widget-key":WK}:{};
 let isOnline=false;
 
 function switchTab(name,el){
@@ -296,7 +297,7 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 
 async function r(){
 try{
-const d=await(await fetch(A+"/widget/stats"+K)).json();
+const d=await(await fetch(A+"/widget/stats",{headers:H})).json();
 if(d.error){document.getElementById("err").textContent=d.error;return;}
 isOnline=d.status==="online";
 document.getElementById("dot").className="dot "+d.status;
@@ -362,7 +363,7 @@ if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; Confirm?";rb.style.co
 resetPending=false;
 try{
 rb.disabled=true;rb.innerHTML="...";
-const res=await fetch(A+"/widget/reset-stats"+K,{method:"POST"});
+const res=await fetch(A+"/widget/reset-stats",{method:"POST",headers:H});
 const d=await res.json();
 if(d.success){rb.innerHTML="&#x2705; Done";rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.disabled=false;r();},1500);}
 else{document.getElementById("err").textContent=d.message||"Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
