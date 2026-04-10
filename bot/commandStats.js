@@ -99,6 +99,13 @@ export function getCommandStats() {
   };
 }
 
+/** Reset all command stats and persist to disk */
+export function resetCommandStats() {
+  stats = { commands: {}, users: {} };
+  saveStats();
+  logger.info("[Command Stats] 🗑️ Stats reset");
+}
+
 /** Reset stats (for testing) */
 export function _resetStatsForTest() {
   stats = { commands: {}, users: {} };
