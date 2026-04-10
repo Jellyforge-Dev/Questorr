@@ -354,16 +354,18 @@ document.getElementById("err").textContent="Action failed";
 document.getElementById("tb").disabled=false;
 }}
 
+let resetPending=false;
 async function resetStats(){
 const rb=document.getElementById("rb");
-if(!confirm("Reset all command statistics?"))return;
+if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; Confirm?";rb.style.color="#f38ba8";rb.style.borderColor="rgba(243,139,168,0.4)";setTimeout(()=>{if(resetPending){resetPending=false;rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";}},3000);return;}
+resetPending=false;
 try{
-rb.disabled=true;
+rb.disabled=true;rb.innerHTML="...";
 const res=await fetch(A+"/widget/reset-stats"+K,{method:"POST"});
 const d=await res.json();
-if(d.success){rb.textContent="\\u2705 Done";setTimeout(()=>{rb.innerHTML="\\u21BA Reset";rb.disabled=false;r();},1500);}
-else{document.getElementById("err").textContent=d.message||"Reset failed";rb.disabled=false;}
-}catch(e){document.getElementById("err").textContent="Reset failed";rb.disabled=false;}}
+if(d.success){rb.innerHTML="&#x2705; Done";rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.disabled=false;r();},1500);}
+else{document.getElementById("err").textContent=d.message||"Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
+}catch(e){document.getElementById("err").textContent="Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}}
 
 r();setInterval(r,15000);
 </script>
