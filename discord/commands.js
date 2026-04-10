@@ -90,6 +90,49 @@ export function getCommands() {
           opt.setName("title").setDescription("Title to check").setRequired(true).setAutocomplete(true)
         ),
     ] : []),
+    new SlashCommandBuilder()
+      .setName("history")
+      .setDescription("View recently added movies and series on Jellyfin")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Filter by type")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All", value: "all" },
+            { name: "🎬 Movies", value: "movie" },
+            { name: "📺 Series", value: "series" }
+          )
+      ),
+    new SlashCommandBuilder()
+      .setName("upcoming")
+      .setDescription("Browse upcoming movie releases and new TV shows from TMDB")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Filter by type")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All", value: "all" },
+            { name: "🎬 Movies", value: "movie" },
+            { name: "📺 TV Shows", value: "tv" }
+          )
+      ),
+    new SlashCommandBuilder()
+      .setName("watchlist")
+      .setDescription("View recent media requests from Seerr")
+      .addStringOption((opt) =>
+        opt
+          .setName("filter")
+          .setDescription("Filter requests")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All Requests", value: "all" },
+            { name: "👤 My Requests", value: "mine" },
+            { name: "⏳ Pending", value: "pending" },
+            { name: "✅ Available", value: "available" }
+          )
+      ),
     ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
       new SlashCommandBuilder()
         .setName("random")

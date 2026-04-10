@@ -122,6 +122,7 @@ export const configSchema = Joi.object({
   EMBED_COLOR_SUCCESS: Joi.string().allow("").optional(),
   SHOW_STATUS_COMMAND: Joi.string().valid("true", "false").optional(),
   SHOW_RANDOM_COMMAND: Joi.string().valid("true", "false").optional(),
+  EMBED_FOOTER_TEXT: Joi.string().allow("").max(200).optional(),
 });
 
 // --- USER MAPPING VALIDATION ---

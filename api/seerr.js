@@ -383,6 +383,64 @@ export async function fetchQualityProfiles(seerrUrl, apiKey) {
 }
 
 /**
+ * Approve a pending Seerr request
+ * @param {number} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Response data
+ */
+export async function approveRequest(requestId, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/request/${requestId}/approve`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr approve request ${requestId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Decline a pending Seerr request
+ * @param {number} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Response data
+ */
+export async function declineRequest(requestId, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/request/${requestId}/decline`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr decline request ${requestId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Fetch pending requests from Seerr
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} take - Number of requests to fetch
+ * @returns {Promise<Object>} Response with results array and pageInfo
+ */
+export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all") {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.get(`${apiUrl}/request`, {
+      headers: { "X-Api-Key": apiKey },
+      params: { take, sort: "modified", filter },
+      timeout: TIMEOUTS.SEERR_API,
+    }),
+    { label: "Seerr fetch requests" }
+  );
+  return response.data;
+}
+
+/**
  * Send a media request to Seerr
  * @param {Object} params - Request parameters
  * @returns {Promise<Object>} Response data

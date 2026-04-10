@@ -109,6 +109,9 @@ export async function sendDailyRandomPick(client) {
       embed.setImage(backdrop);
     }
 
+    const footerText = process.env.EMBED_FOOTER_TEXT;
+    if (footerText) embed.setFooter({ text: footerText });
+
     const buttonComponents = [];
     const _showDR = parseButtonConfig("NOTIF_BUTTONS_DAILY_RANDOM");
 
@@ -304,6 +307,8 @@ export async function sendDailyRecommendation(client) {
 
     if (posterUrl) embed.setThumbnail(posterUrl);
     if (backdropUrl && isValidUrl(backdropUrl)) embed.setImage(backdropUrl);
+    const recFooter = process.env.EMBED_FOOTER_TEXT;
+    if (recFooter) embed.setFooter({ text: recFooter });
 
     const fields = [];
     if (genres) fields.push({ name: t("label_genre"), value: genres, inline: true });

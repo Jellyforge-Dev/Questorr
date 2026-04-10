@@ -2,6 +2,18 @@
 let currentTranslations = {};
 let currentLanguage = 'en';
 
+// Global: clear webhook event log
+async function clearWebhookLog() {
+  try {
+    await fetch("/api/webhook-log", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    // Reload the webhook tab
+    document.querySelector('.logs-tab-btn[data-target="webhook"]')?.click();
+  } catch (_) {}
+}
+
 function isSafeAvatarUrl(url) {
   if (typeof url !== "string") return false;
   try {
@@ -3919,7 +3931,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      // Filter entries for webhook tab
+      // Webhook tab: use structured webhook event log API for better display
+      if (type === "webhook") {
+        try {
+          const whRes = await fetch("/api/webhook-log", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          });
+          if (whRes.ok) {
+            const whData = await whRes.json();
+            if (whData.events && whData.events.length > 0) {
+              const whHtml = whData.events.map(e => {
+                const statusClass = e.status === "unauthorized" ? "error" : (e.status === "received" ? "info" : "warn");
+                return `<div class="log-entry">
+                  <span class="log-timestamp">${e.ts || ""}</span>
+                  <span class="log-level ${statusClass}">${(e.event || "?").toUpperCase()}</span>
+                  <span class="log-message">${escapeHtml(e.subject || "—")} <span style="color:var(--subtext0);font-size:0.85em">· ${e.status || ""} · ${e.ip || ""}</span></span>
+                </div>`;
+              }).join("");
+              const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button onclick="clearWebhookLog()" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
+              logsContainer.innerHTML = clearBtn + whHtml;
+              return;
+            }
+          }
+        } catch (_) {}
+        // Fallback: filter general logs
+      }
+
       let entries = data.entries;
       if (type === "webhook") {
         entries = entries.filter(e => e.message && e.message.includes("[SEERR WEBHOOK]"));
@@ -4396,5 +4433,72 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Also update immediately if there's already a value
     updateSecondsFromMs();
+  }
+
+  // ─── Config Import Handler ──────────────────────────────────────────────────
+  const importInput = document.getElementById("import-config-input");
+  const importStatus = document.getElementById("import-config-status");
+  if (importInput) {
+    importInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      importInput.value = ""; // reset for re-upload
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        if (importStatus) importStatus.textContent = "Importing...";
+        const res = await fetch("/api/config/import", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(json),
+        });
+        if (res.ok) {
+          if (importStatus) {
+            importStatus.textContent = "✅ Imported!";
+            importStatus.style.color = "var(--green)";
+          }
+          // Reload config into the form
+          setTimeout(() => fetchConfig(), 500);
+          setTimeout(() => { if (importStatus) importStatus.textContent = ""; }, 3000);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          if (importStatus) {
+            importStatus.textContent = "❌ " + (err.message || "Import failed");
+            importStatus.style.color = "var(--red)";
+          }
+        }
+      } catch (err) {
+        if (importStatus) {
+          importStatus.textContent = "❌ Invalid JSON file";
+          importStatus.style.color = "var(--red)";
+        }
+      }
+    });
+  }
+
+  // Fix export button to include auth token
+  const exportBtn = document.getElementById("export-config-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch("/api/config/export", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        if (!res.ok) throw new Error("Export failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `questorr-config-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("Export failed: " + err.message);
+      }
+    });
   }
 });

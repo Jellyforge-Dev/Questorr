@@ -488,9 +488,48 @@ async function processEvent(data, eventType, cfg, client) {
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
   const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
 
-  // MEDIA_PENDING and MEDIA_DECLINED go only to the requester via DM (not channel)
-  const dmOnlyEvents = ["MEDIA_PENDING", "MEDIA_DECLINED"];
-  if (dmOnlyEvents.includes(eventType)) {
+  // MEDIA_PENDING: send to admin channel with approve/decline buttons, THEN DM requester
+  // MEDIA_DECLINED: DM only
+  if (eventType === "MEDIA_PENDING") {
+    const adminChannelId = resolveAdminChannel();
+    if (adminChannelId) {
+      try {
+        const adminChannel = await client.channels.fetch(adminChannelId);
+        const adminOptions = { embeds: [embed] };
+        // Build admin action row with approve/decline + link buttons
+        const adminButtons = [];
+        const requestId = request?.request_id || null;
+        if (requestId) {
+          adminButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`seerr_approve|${requestId}`)
+              .setLabel(t("btn_approve"))
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setCustomId(`seerr_decline|${requestId}`)
+              .setLabel(t("btn_decline"))
+              .setStyle(ButtonStyle.Danger)
+          );
+        }
+        if (buttons) {
+          // Add any link buttons (Seerr, IMDb etc.) from the standard button builder
+          const linkBtns = buttons.components.filter(c => c.data.style === ButtonStyle.Link);
+          adminButtons.push(...linkBtns);
+        }
+        if (adminButtons.length > 0) {
+          adminOptions.components = [new ActionRowBuilder().addComponents(adminButtons)];
+        }
+        await adminChannel.send(adminOptions);
+        logger.info(`[SEERR WEBHOOK] ✅ Sent MEDIA_PENDING with approve/decline to admin channel ${adminChannelId}`);
+      } catch (err) {
+        logger.error(`[SEERR WEBHOOK] ❌ Failed to send to admin channel: ${err.message}`);
+      }
+    }
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    return;
+  }
+
+  if (eventType === "MEDIA_DECLINED") {
     await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
     return;
   }
@@ -532,6 +571,9 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     .setAuthor({ name: `${cfg.emoji} ${cfg.label}` })
     .setTitle(subject || "Questorr Notification")
     .setTimestamp();
+
+  const footerText = process.env.EMBED_FOOTER_TEXT;
+  if (footerText) embed.setFooter({ text: footerText });
 
   // Poster thumbnail
   if (tmdbDetails?.poster_path) {
@@ -734,6 +776,9 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
       .setTitle(data.subject || "Questorr Notification")
       .setDescription(dmDescription)
       .setTimestamp();
+
+    const dmFooter = process.env.EMBED_FOOTER_TEXT;
+    if (dmFooter) dmEmbed.setFooter({ text: dmFooter });
 
     if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
     if (embed.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);

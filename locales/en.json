@@ -207,6 +207,8 @@
     "widget_url_note": "The API key is included in the URL but hidden from the display above. Save your config first to apply changes.",
     "rate_limit_label": "Command Rate Limit",
     "rate_limit_desc": "Maximum Discord commands per user per minute. Set to 0 to disable rate limiting.",
+    "embed_footer_label": "Embed Footer Text",
+    "embed_footer_desc": "Custom footer text shown on all Discord embeds. Leave empty for no footer.",
     "media_type_channels_title": "Media-Type Channel Routing",
     "media_type_channels_desc": "Route Seerr notifications to different channels based on media type. Takes priority over the default Seerr channel but is overridden by root folder mappings.",
     "channel_movies_label": "Movies Channel",
@@ -414,7 +416,13 @@
     "feature_media_type_routing": "Route notifications to different Discord channels based on <strong style=\"color: var(--blue);\">media type</strong> (movies vs series). Configurable alongside root folder and library-based routing.",
     "feature_health_check": "Built-in <strong style=\"color: var(--blue);\">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.",
     "feature_widget": "Embeddable <strong style=\"color: var(--blue);\">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.",
-    "feature_rate_limiting": "Per-user <strong style=\"color: var(--blue);\">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user."
+    "feature_rate_limiting": "Per-user <strong style=\"color: var(--blue);\">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.",
+    "feature_watchlist": "<code>/watchlist</code> View recent <strong style=\"color: var(--blue);\">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.",
+    "feature_upcoming": "<code>/upcoming</code> Browse <strong style=\"color: var(--blue);\">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.",
+    "feature_history": "<code>/history</code> See what was <strong style=\"color: var(--blue);\">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.",
+    "feature_approve_decline": "Admins can <strong style=\"color: var(--blue);\">approve or decline</strong> pending Seerr requests directly from the Discord notification — no need to open the Seerr dashboard.",
+    "feature_embed_footer": "Add a <strong style=\"color: var(--blue);\">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.",
+    "feature_config_backup": "<strong style=\"color: var(--blue);\">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",

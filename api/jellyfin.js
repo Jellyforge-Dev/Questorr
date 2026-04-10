@@ -468,6 +468,38 @@ export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
 }
 
 /**
+ * Fetch recently added items (latest additions to the library)
+ * Uses DateCreated sort — no userId required.
+ * @param {string} apiKey - Jellyfin API key
+ * @param {string} baseUrl - Jellyfin base URL
+ * @param {number} limit - Max items to return
+ * @param {string} type - 'movie', 'series', or 'all'
+ * @returns {Promise<Array>} Recently added items
+ */
+export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "all") {
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const includeTypes = type === "movie" ? "Movie" : type === "series" ? "Series" : "Movie,Series";
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        SortBy: "DateCreated",
+        SortOrder: "Descending",
+        Limit: limit,
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated",
+        IncludeItemTypes: includeTypes,
+        Recursive: true,
+      },
+      timeout: 8000,
+    });
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.error("Failed to fetch latest additions from Jellyfin:", err?.message);
+    return [];
+  }
+}
+
+/**
  * Fetch detailed information about a specific item
  * @param {string} itemId - Jellyfin item ID
  * @param {string} apiKey - Jellyfin API key
