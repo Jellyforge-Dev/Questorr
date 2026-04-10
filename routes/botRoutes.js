@@ -339,7 +339,6 @@ h+='<div class="user-card"><div class="user-header"><span class="user-rank">'+(i
 });
 document.getElementById("userList").innerHTML=h;
 }else{document.getElementById("userList").innerHTML=emptyMsg;}
-}
 }catch(e){document.getElementById("err").textContent="Connection failed"}}
 
 async function toggle(){
