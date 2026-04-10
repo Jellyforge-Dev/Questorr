@@ -1102,7 +1102,7 @@ function configureWebServer() {
       }
       if (Array.isArray(exportable.USERS)) exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
       exportable._exportedAt = new Date().toISOString();
-      exportable._questorrVersion = "2.2.0";
+      exportable._questorrVersion = "2.3.0";
       const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
       res.setHeader("Content-Disposition", "attachment; filename=" + filename);
       res.setHeader("Content-Type", "application/json");

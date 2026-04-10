@@ -246,6 +246,8 @@
     "jellyfin_note": "ℹ️ Hinweis:",
     "jellyfin_note_text": "Questorr nutzt die Jellyfin-API intern um den richtigen Discord-Kanal zu ermitteln.",
     "jellyfin_note_text2": "Das Library-Channel-Mapping wird über Tab 2. Seerr → Seerr Benachrichtigungskanäle konfiguriert.",
+    "jellyfin_retry_label": "Retry-Verzögerung (Sekunden)",
+    "jellyfin_retry_help": "Wenn ein neues Medium verfügbar ist, hat Jellyfin es möglicherweise noch nicht gescannt. Questorr wiederholt die Bibliotheks-Zuordnung nach dieser Verzögerung (bis zu 3 Mal). Auf 0 setzen zum Deaktivieren. Max: 600s (10 Min).",
     "jellyfin_autofill": "Wird automatisch ausgefüllt wenn du den Test-Button klickst.",
     "mappings_section": "Benutzer-Zuordnung",
     "mappings_desc": "Verknüpfe Discord-User mit ihren Seerr-Konten. Anfragen werden dem zugehörigen Seerr-Konto zugeordnet.",

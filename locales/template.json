@@ -97,6 +97,8 @@
     "test_endpoint_help": "",
     "jellyfin_server_id": "",
     "jellyfin_server_id_help": "",
+    "jellyfin_retry_label": "",
+    "jellyfin_retry_help": "",
     "notification_testing_title": "",
     "notification_testing_help": "",
     "test_movie_notification": "",

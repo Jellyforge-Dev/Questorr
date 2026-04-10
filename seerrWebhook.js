@@ -475,7 +475,24 @@ async function processEvent(data, eventType, cfg, client) {
     findJellyfinItemId(tmdbId, mediaType),
   ]);
 
-  const channelId = channelIdResolved;
+  let channelId = channelIdResolved;
+
+  // Step 2b: Retry Jellyfin library lookup for MEDIA_AVAILABLE if item wasn't found
+  // (Race condition: Seerr fires MEDIA_AVAILABLE before Jellyfin has scanned the file)
+  const retryDelay = parseInt(process.env.JELLYFIN_RETRY_DELAY_SECONDS || "30", 10);
+  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
+  const usedFallback = channelId === fallback;
+
+  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
+    // Channel resolved to fallback — Jellyfin library lookup likely failed due to race condition
+    // Schedule a background retry
+    logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
+    scheduleJellyfinRetry({
+      data, eventType, cfg, client, tmdbDetails, imdbId,
+      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+      retryDelay, fallbackChannelId: channelId,
+    });
+  }
 
   if (!channelId) {
     logger.error(`[SEERR WEBHOOK] ❌ No Discord channel configured for ${eventType} – set SEERR_CHANNEL_ID`);
@@ -826,6 +843,75 @@ async function findDiscordIdForSeerrUser(data) {
   }
 
   return null;
+}
+
+// ─── Jellyfin Retry (Background) ─────────────────────────────────────────────
+
+/**
+ * Schedule a background retry for Jellyfin library lookup.
+ * When MEDIA_AVAILABLE fires before Jellyfin has scanned the file,
+ * the initial lookup returns nothing and routing falls back to SEERR_CHANNEL_ID.
+ * This retry waits, then re-runs the lookup and — if a better channel is found —
+ * sends a corrected notification to the right channel.
+ */
+function scheduleJellyfinRetry(ctx) {
+  const {
+    data, eventType, cfg, client, tmdbDetails, imdbId,
+    rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+    retryDelay, fallbackChannelId,
+  } = ctx;
+
+  const maxRetries = 3;
+  let attempt = 0;
+
+  const tryRetry = async () => {
+    attempt++;
+    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
+
+    try {
+      // Clear TMDB cache entry so findVerifiedJellyfinItem gets fresh title data
+      // (cache is still valid, just re-use it)
+      const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
+      const jellyfinItemId = await findVerifiedJellyfinItem(tmdbId, mediaType);
+
+      if (channelId && channelId !== fallbackChannelId) {
+        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
+
+        if (!client || !client.isReady()) {
+          logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping corrected notification`);
+          return;
+        }
+
+        // Build and send the corrected notification
+        const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
+        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+
+        const channel = await client.channels.fetch(channelId);
+        const messageOptions = { embeds: [embed] };
+        if (buttons) messageOptions.components = [buttons];
+        await channel.send(messageOptions);
+        logger.info(`[SEERR WEBHOOK] ✅ Sent corrected ${eventType} notification for "${subject}" to channel ${channelId}`);
+
+        // Delete the original fallback message if possible
+        // (not implemented — would need to store message ID from initial send)
+        return;
+      }
+
+      if (attempt < maxRetries) {
+        logger.info(`[SEERR WEBHOOK] Retry ${attempt} – still no Jellyfin match, next retry in ${retryDelay}s`);
+        setTimeout(tryRetry, retryDelay * 1000);
+      } else {
+        logger.info(`[SEERR WEBHOOK] ⚠️ All ${maxRetries} retries exhausted for "${subject}" – notification stays in fallback channel`);
+      }
+    } catch (err) {
+      logger.error(`[SEERR WEBHOOK] Retry ${attempt} error for "${subject}": ${err.message}`);
+      if (attempt < maxRetries) {
+        setTimeout(tryRetry, retryDelay * 1000);
+      }
+    }
+  };
+
+  setTimeout(tryRetry, retryDelay * 1000);
 }
 
 // ─── Cleanup ──────────────────────────────────────────────────────────────────
