@@ -7,7 +7,7 @@ async function clearWebhookLog() {
   try {
     await fetch("/api/webhook-log", {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      credentials: "include",
     });
     // Reload the webhook tab
     document.querySelector('.logs-tab-btn[data-target="webhook"]')?.click();
@@ -1121,6 +1121,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // Push Commands to Discord
+  const pushCommandsBtn = document.getElementById("push-commands-btn");
+  const pushCommandsStatus = document.getElementById("push-commands-status");
+  if (pushCommandsBtn) {
+    pushCommandsBtn.addEventListener("click", async () => {
+      pushCommandsBtn.disabled = true;
+      if (pushCommandsStatus) pushCommandsStatus.textContent = "";
+      try {
+        const response = await fetch("/api/push-commands", {
+          method: "POST",
+          credentials: "include",
+        });
+        const result = await response.json();
+        if (result.success) {
+          if (pushCommandsStatus) {
+            pushCommandsStatus.textContent = t("config.push_commands_success") || "✅ Commands pushed!";
+            pushCommandsStatus.style.color = "var(--green)";
+          }
+        } else {
+          throw new Error(result.message || "Failed");
+        }
+      } catch (error) {
+        if (pushCommandsStatus) {
+          pushCommandsStatus.textContent = (t("config.push_commands_error") || "❌ Failed") + ": " + error.message;
+          pushCommandsStatus.style.color = "var(--red, #f38ba8)";
+        }
+      } finally {
+        pushCommandsBtn.disabled = false;
+        setTimeout(() => { if (pushCommandsStatus) pushCommandsStatus.textContent = ""; }, 4000);
+      }
+    });
+  }
+
   botControlBtn?.addEventListener("click", async () => {
     const action = botControlBtn.dataset.action;
     if (!action) return;
@@ -2051,62 +2084,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         testJellyfinBtn.disabled = false;
       }
     });
-  }
-
-  // Test Notification Buttons
-  const testNotificationStatus = document.getElementById("test-notification-status");
-  const testMovieBtn = document.getElementById("test-movie-notification-btn");
-  const testSeriesBtn = document.getElementById("test-series-notification-btn");
-  const testSeasonBtn = document.getElementById("test-season-notification-btn");
-  const testBatchSeasonsBtn = document.getElementById("test-batch-seasons-notification-btn");
-  const testEpisodesBtn = document.getElementById("test-episodes-notification-btn");
-  const testBatchEpisodesBtn = document.getElementById("test-batch-episodes-notification-btn");
-
-  async function sendTestNotification(type) {
-    const statusEl = testNotificationStatus;
-    if (!statusEl) return;
-
-    statusEl.textContent = `Sending test ${type} notification...`;
-    statusEl.style.color = "var(--text)";
-
-    try {
-      const response = await fetch("/api/test-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        statusEl.textContent = result.message || `Test ${type} notification sent successfully!`;
-        statusEl.style.color = "var(--green)";
-      } else {
-        throw new Error(result.message || "Failed to send test notification");
-      }
-    } catch (error) {
-      statusEl.textContent = error.message || `Failed to send test ${type} notification`;
-      statusEl.style.color = "#f38ba8"; // Red
-    }
-  }
-
-  if (testMovieBtn) {
-    testMovieBtn?.addEventListener("click", () => sendTestNotification("movie"));
-  }
-  if (testSeriesBtn) {
-    testSeriesBtn?.addEventListener("click", () => sendTestNotification("series"));
-  }
-  if (testSeasonBtn) {
-    testSeasonBtn?.addEventListener("click", () => sendTestNotification("season"));
-  }
-  if (testBatchSeasonsBtn) {
-    testBatchSeasonsBtn?.addEventListener("click", () => sendTestNotification("batch-seasons"));
-  }
-  if (testEpisodesBtn) {
-    testEpisodesBtn?.addEventListener("click", () => sendTestNotification("episodes"));
-  }
-  if (testBatchEpisodesBtn) {
-    testBatchEpisodesBtn?.addEventListener("click", () => sendTestNotification("batch-episodes"));
   }
 
   // Test Random Pick Button
@@ -3341,18 +3318,23 @@ document.addEventListener("DOMContentLoaded", async () => {
               )}</div>
             </div>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteMapping('${
+          <button class="btn btn-danger btn-sm mapping-delete-btn" data-discord-id="${
             escapeHtml(mapping.discordUserId)
-          }')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+          }" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
             <i class="bi bi-trash"></i> Remove
           </button>
         </div>
       `;
       })
       .join("");
+
+    // Bind delete buttons via event listeners (CSP blocks inline onclick)
+    container.querySelectorAll(".mapping-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => deleteMapping(btn.dataset.discordId));
+    });
   }
 
-  window.deleteMapping = async function (discordUserId) {
+  async function deleteMapping(discordUserId) {
     if (!confirm(`Remove mapping for Discord user ${discordUserId}?`)) return;
 
     try {
@@ -3935,7 +3917,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (type === "webhook") {
         try {
           const whRes = await fetch("/api/webhook-log", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            credentials: "include",
           });
           if (whRes.ok) {
             const whData = await whRes.json();
@@ -3948,8 +3930,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                   <span class="log-message">${escapeHtml(e.subject || "—")} <span style="color:var(--subtext0);font-size:0.85em">· ${e.status || ""} · ${e.ip || ""}</span></span>
                 </div>`;
               }).join("");
-              const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button onclick="clearWebhookLog()" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
+              const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button id="clear-webhook-log-btn" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
               logsContainer.innerHTML = clearBtn + whHtml;
+              document.getElementById("clear-webhook-log-btn")?.addEventListener("click", clearWebhookLog);
               return;
             }
           }
@@ -4449,10 +4432,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (importStatus) importStatus.textContent = "Importing...";
         const res = await fetch("/api/config/import", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(json),
         });
         if (res.ok) {
@@ -4486,7 +4467,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       try {
         const res = await fetch("/api/config/export", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          credentials: "include",
         });
         if (!res.ok) throw new Error("Export failed");
         const blob = await res.blob();
