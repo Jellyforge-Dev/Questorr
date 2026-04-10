@@ -234,10 +234,12 @@ function configureWebServer() {
 
   // Additional manual security headers
   app.use((_req, res, next) => {
-    // Allow iFrame embedding for widget route only
+    // Allow iFrame embedding for widget route only (restricted to same origin by default)
     if (_req.path === "/api/widget/embed") {
-      res.setHeader("X-Frame-Options", "ALLOWALL");
-      res.setHeader("Content-Security-Policy", "frame-ancestors *");
+      const widgetOrigins = readConfig()?.WIDGET_ALLOWED_ORIGINS || "";
+      const frameAncestors = widgetOrigins.trim() ? widgetOrigins.trim() : "'self'";
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Content-Security-Policy", `frame-ancestors ${frameAncestors}`);
     } else {
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
     }
@@ -250,6 +252,28 @@ function configureWebServer() {
   // Middleware for parsing JSON bodies - MUST be before routes that use req.body
   app.use(express.json());
   app.use(cookieParser());
+
+  // CSRF protection: verify Origin header on state-changing requests.
+  // SameSite=Strict cookies already block most CSRF, but this adds defense-in-depth
+  // for older browsers that don't support SameSite.
+  app.use((req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+    // Skip for webhook endpoint (authenticated via secret, not cookies)
+    if (req.path === "/seerr-webhook") return next();
+    // Skip for widget endpoints (authenticated via API key, not cookies)
+    if (req.path.startsWith("/api/widget/")) return next();
+    const origin = req.headers["origin"];
+    // If no Origin header (e.g. server-to-server), allow — cookie auth still applies
+    if (!origin) return next();
+    // Verify origin matches the host
+    const expectedHost = req.headers["host"];
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost === expectedHost) return next();
+    } catch (_) { /* invalid origin URL */ }
+    logger.warn(`[CSRF] Blocked request from origin ${origin} (expected host: ${expectedHost}) to ${req.path}`);
+    return res.status(403).json({ success: false, error: "Forbidden: origin mismatch" });
+  });
 
   // Rate limiting middleware - DoS protection
   const apiLimiter = rateLimit({
@@ -672,21 +696,32 @@ function configureWebServer() {
       // Seerr sends this via the "Authorization Header" field in webhook settings.
       // Using a header prevents the secret from appearing in reverse proxy logs.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
-      if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.headers["authorization"] || "";
-        const a = Buffer.from(incomingSecret);
-        const b = Buffer.from(configuredSecret.trim());
-        if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-          logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
-          appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
-          return res.status(401).send("Unauthorized");
-        }
+      if (!configuredSecret || configuredSecret.trim() === "") {
+        logger.warn(`[SEERR WEBHOOK] ⛔ Rejected – no webhook secret configured. Set one in the dashboard first. (IP: ${req.ip})`);
+        appendWebhookLog({ event: "NO_SECRET", subject: "—", status: "rejected", ip: req.ip });
+        return res.status(503).send("Webhook secret not configured");
+      }
+      const incomingSecret = req.headers["authorization"] || "";
+      const a = Buffer.from(incomingSecret);
+      const b = Buffer.from(configuredSecret.trim());
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
+        appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
+        return res.status(401).send("Unauthorized");
       }
 
-      logger.info(`[SEERR WEBHOOK] 📥 Received webhook | event: ${req.body?.notification_type || "UNKNOWN"} | subject: "${req.body?.subject || "–"}"`);
+      // Sanitize webhook fields before logging (prevent log injection)
+      const sanitize = (val, maxLen = 200) => {
+        if (typeof val !== "string") return "—";
+        return val.replace(/[\x00-\x1f\x7f]/g, "").substring(0, maxLen);
+      };
+      const eventType = sanitize(req.body?.notification_type || "UNKNOWN", 50);
+      const subject = sanitize(req.body?.subject || "—", 200);
+
+      logger.info(`[SEERR WEBHOOK] 📥 Received webhook | event: ${eventType} | subject: "${subject}"`);
       appendWebhookLog({
-        event: req.body?.notification_type || "UNKNOWN",
-        subject: req.body?.subject || "—",
+        event: eventType,
+        subject: subject,
         status: "received",
         ip: req.ip,
       });
