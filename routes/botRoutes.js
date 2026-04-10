@@ -312,6 +312,7 @@ document.getElementById("tbIcon").innerHTML=isOnline?"&#9632;":"&#9654;";
 document.getElementById("tbText").textContent=isOnline?"Stop Bot":"Start Bot";
 document.getElementById("err").textContent="";
 const cs=d.commandStats;
+const emptyMsg='<div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div>';
 if(cs&&cs.commands&&Object.keys(cs.commands).length>0){
 const max=Math.max(...Object.values(cs.commands));
 let h="";
@@ -320,7 +321,7 @@ const pct=max>0?Math.round(count/max*100):0;
 h+='<div class="cmd-row"><span class="cmd-name">/'+esc(cmd)+'</span><div class="cmd-bar"><div class="cmd-bar-fill" style="width:'+pct+'%"></div></div><span class="cmd-count">'+count+'</span></div>';
 });
 document.getElementById("cmdList").innerHTML=h;
-}
+}else{document.getElementById("cmdList").innerHTML=emptyMsg;}
 if(cs&&cs.topUsers&&cs.topUsers.length>0){
 let h="";
 cs.topUsers.forEach((u,i)=>{
@@ -337,6 +338,7 @@ tags+='<span class="user-cmd-tag">/'+esc(c)+' <b>'+n+'x</b></span>';
 h+='<div class="user-card"><div class="user-header"><span class="user-rank">'+(i+1)+'.</span>'+av+'<span class="user-name">'+esc(u.username)+'</span><span class="user-total">'+u.total+'</span></div>'+(tags?'<div class="user-cmd-tags">'+tags+'</div>':'')+'</div>';
 });
 document.getElementById("userList").innerHTML=h;
+}else{document.getElementById("userList").innerHTML=emptyMsg;}
 }
 }catch(e){document.getElementById("err").textContent="Connection failed"}}
 
