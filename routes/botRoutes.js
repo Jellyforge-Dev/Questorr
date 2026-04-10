@@ -5,7 +5,7 @@ import { createRequire } from "module";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { botState, pendingRequests } from "../bot/botState.js";
-import { getCommandStats } from "../bot/commandStats.js";
+import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
 
@@ -171,6 +171,12 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
   });
 });
 
+// ─── Reset Command Stats (widget) ───────────────────────────────────────────
+router.post("/widget/reset-stats", authenticateWidget, (req, res) => {
+  resetCommandStats();
+  res.json({ success: true, message: "Command stats reset" });
+});
+
 // ─── Embeddable HTML Widget (Questorr theme, fully responsive) ──────────────
 router.get("/widget/embed", authenticateWidget, (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
@@ -213,6 +219,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 .toggle-btn:disabled{opacity:0.4;cursor:not-allowed}
 .toggle-btn.start{background:linear-gradient(135deg,#1ec8a0,#17b8c4);color:#0b0f19}
 .toggle-btn.stop{background:linear-gradient(135deg,#f38ba8,#e74c3c);color:#fff}
+.btn-row{display:flex;gap:6px;flex-shrink:0}
+.btn-row .toggle-btn{flex:1}
+.reset-btn{padding:clamp(7px,2vw,10px);border:1px solid rgba(30,200,160,0.2);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px;flex-shrink:0;background:transparent;color:#8b949e}
+.reset-btn:hover{background:rgba(30,200,160,0.08);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
+.reset-btn:disabled{opacity:0.4;cursor:not-allowed}
 .err{color:#f38ba8;font-size:10px;margin-top:5px;text-align:center;min-height:12px;flex-shrink:0}
 .ver{font-size:9px;color:#484f58;text-align:right;flex-shrink:0;margin-top:auto;padding-top:4px}
 .user-card{padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;flex-shrink:0}
@@ -260,9 +271,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 <div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
 </div>
 </div>
+<div class="btn-row">
 <button class="toggle-btn start" id="tb" onclick="toggle()" disabled>
 <span id="tbIcon">&#9654;</span> <span id="tbText">Start Bot</span>
 </button>
+<button class="reset-btn" id="rb" onclick="resetStats()" title="Reset command statistics">&#x21BA; Reset</button>
+</div>
 <div class="err" id="err"></div>
 <div class="ver" id="verFull"></div>
 </div>
@@ -339,6 +353,17 @@ setTimeout(r,1500);
 document.getElementById("err").textContent="Action failed";
 document.getElementById("tb").disabled=false;
 }}
+
+async function resetStats(){
+const rb=document.getElementById("rb");
+if(!confirm("Reset all command statistics?"))return;
+try{
+rb.disabled=true;
+const res=await fetch(A+"/widget/reset-stats"+K,{method:"POST"});
+const d=await res.json();
+if(d.success){rb.textContent="\\u2705 Done";setTimeout(()=>{rb.innerHTML="\\u21BA Reset";rb.disabled=false;r();},1500);}
+else{document.getElementById("err").textContent=d.message||"Reset failed";rb.disabled=false;}
+}catch(e){document.getElementById("err").textContent="Reset failed";rb.disabled=false;}}
 
 r();setInterval(r,15000);
 </script>
