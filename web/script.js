@@ -1121,39 +1121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Push Commands to Discord
-  const pushCommandsBtn = document.getElementById("push-commands-btn");
-  const pushCommandsStatus = document.getElementById("push-commands-status");
-  if (pushCommandsBtn) {
-    pushCommandsBtn.addEventListener("click", async () => {
-      pushCommandsBtn.disabled = true;
-      if (pushCommandsStatus) pushCommandsStatus.textContent = "";
-      try {
-        const response = await fetch("/api/push-commands", {
-          method: "POST",
-          credentials: "include",
-        });
-        const result = await response.json();
-        if (result.success) {
-          if (pushCommandsStatus) {
-            pushCommandsStatus.textContent = t("config.push_commands_success") || "✅ Commands pushed!";
-            pushCommandsStatus.style.color = "var(--green)";
-          }
-        } else {
-          throw new Error(result.message || "Failed");
-        }
-      } catch (error) {
-        if (pushCommandsStatus) {
-          pushCommandsStatus.textContent = (t("config.push_commands_error") || "❌ Failed") + ": " + error.message;
-          pushCommandsStatus.style.color = "var(--red, #f38ba8)";
-        }
-      } finally {
-        pushCommandsBtn.disabled = false;
-        setTimeout(() => { if (pushCommandsStatus) pushCommandsStatus.textContent = ""; }, 4000);
-      }
-    });
-  }
-
   botControlBtn?.addEventListener("click", async () => {
     const action = botControlBtn.dataset.action;
     if (!action) return;

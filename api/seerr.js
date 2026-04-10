@@ -513,24 +513,14 @@ export async function sendRequest({
     // Note: userId will be added later after user mapping check
   } else {
     // isAutoApproved is false OR null - create as PENDING request
-    // IMPORTANT: We still need to send serverId and profileId for TV shows
-    // to work properly, but we set isAutoApproved to false to force manual approval
+    // CRITICAL: Do NOT include serverId, profileId, or rootFolder here.
+    // Seerr auto-approves requests when these fields are present and the
+    // requesting user (API key owner) has auto-approve permissions — even
+    // if isAutoApproved is explicitly false. Omitting them forces Seerr to
+    // use its default server/profile while keeping the request PENDING.
     payload.isAutoApproved = false;
     logger.info("[SEERR] ✋ Auto-Approve is OFF - request will be PENDING (admin must approve manually)");
-
-    // Include serverId and profileId if provided (needed for TV show requests to work)
-    if (serverId !== null && serverId !== undefined) {
-      payload.serverId = parseInt(serverId, 10);
-      logger.debug(`[SEERR] Including serverId ${serverId} in PENDING request (required for TV shows)`);
-    }
-    if (profileId !== null && profileId !== undefined) {
-      payload.profileId = parseInt(profileId, 10);
-      logger.debug(`[SEERR] Including profileId ${profileId} in PENDING request (required for TV shows)`);
-    }
-    if (rootFolder) {
-      payload.rootFolder = rootFolder;
-      logger.debug(`[SEERR] Including rootFolder in PENDING request`);
-    }
+    logger.debug("[SEERR] Omitting serverId/profileId/rootFolder to prevent Seerr-side auto-approve");
   }
 
   // Check if we have a user mapping for this Discord user
@@ -603,6 +593,10 @@ export async function sendRequest({
     if (isAutoApproved === false && seerrUserId !== null && seerrUserId !== undefined) {
       headers["x-api-user"] = String(seerrUserId);
       logger.info(`[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request will use this user's permissions - no auto-approve)`);
+    } else if (isAutoApproved === false) {
+      // No user mapping — request goes as API key owner but with isAutoApproved: false
+      // and without serverId/profileId, so Seerr should keep it PENDING
+      logger.info("[SEERR] ✋ No user mapping found — requesting as API key owner with isAutoApproved: false");
     } else if (isAutoApproved === true) {
       logger.info(`[SEERR] 🔓 NOT setting x-api-user header (request will use API key owner's permissions - auto-approve enabled)`);
     }
