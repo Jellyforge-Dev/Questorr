@@ -586,6 +586,24 @@
                         <p style="margin: 0; font-size: 0.9rem; color: var(--subtext0);"><strong style="color: var(--text);" data-i18n="config.jellyfin_fallback_channel">📢 Default Notification Channel</strong><br><span data-i18n="config.jellyfin_fallback_desc">The fallback channel is configured in tab 1. Discord → Default Notification Channel.</span></p>
                       </div>
 
+                      <!-- Jellyfin Retry Delay -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="JELLYFIN_RETRY_DELAY_SECONDS" data-i18n="config.jellyfin_retry_label">Retry Delay (seconds)</label>
+                        <input
+                          type="number"
+                          id="JELLYFIN_RETRY_DELAY_SECONDS"
+                          name="JELLYFIN_RETRY_DELAY_SECONDS"
+                          min="0"
+                          max="600"
+                          step="5"
+                          value="30"
+                          style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid var(--surface1); background:var(--surface0); color:var(--text); font-size:1rem;"
+                        />
+                        <div class="form-text" data-i18n="config.jellyfin_retry_help">
+                          When a new item is available, Jellyfin may not have scanned it yet. Questorr will retry the library lookup after this delay (up to 3 times). Set to 0 to disable. Max: 600s (10 min).
+                        </div>
+                      </div>
+
                       <!-- Info Box -->
                       <div style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--mauve);">
                         <p style="margin: 0; font-size: 0.95rem; color: var(--subtext0);">
@@ -754,27 +772,6 @@
                           style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                         <div class="form-text" style="margin-top: 0.4rem;">
                           <span data-i18n="config.embed_footer_desc">Custom footer text shown on all Discord embeds. Leave empty for no footer.</span>
-                        </div>
-                      </div>
-
-                      <!-- Media-Type Channel Routing -->
-                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
-                        <label style="font-size: 1.1rem; font-weight: 700; color: var(--mauve); margin-bottom: 0.5rem; display: block;" data-i18n="config.media_type_channels_title">Media-Type Channel Routing</label>
-                        <div class="form-text" style="margin-bottom: 1.25rem;" data-i18n="config.media_type_channels_desc">Route Seerr notifications to different channels based on media type. Takes priority over the default Seerr channel but is overridden by root folder mappings.</div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-                          <div class="form-group">
-                            <label for="CHANNEL_MOVIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_movies_label">Movies Channel</label>
-                            <select id="CHANNEL_MOVIES" name="CHANNEL_MOVIES" class="form-select channel-select" data-channel-select="true">
-                              <option value="" data-i18n="config.media_type_default">— Standard (kein Override) —</option>
-                            </select>
-                          </div>
-                          <div class="form-group">
-                            <label for="CHANNEL_SERIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_series_label">Series Channel</label>
-                            <select id="CHANNEL_SERIES" name="CHANNEL_SERIES" class="form-select channel-select" data-channel-select="true">
-                              <option value="" data-i18n="config.media_type_default">— Standard (kein Override) —</option>
-                            </select>
-                          </div>
                         </div>
                       </div>
 
