@@ -29,7 +29,7 @@
             <li>
               <a href="#" class="about-link" data-target="about">
                 <i class="bi bi-info-circle-fill nav-icon" aria-hidden="true"></i>
-                <span>About</span>
+                <span data-i18n="navigation.about">About</span>
               </a>
             </li>
             <li>
@@ -60,7 +60,7 @@
             <li>
               <a href="#" id="logout-btn" class="hidden">
                 <i class="bi bi-box-arrow-right nav-icon" aria-hidden="true"></i>
-                <span>Logout</span>
+                <span data-i18n="navigation.logout">Logout</span>
               </a>
             </li>
           </ul>
@@ -415,21 +415,21 @@
                         <div class="seerr-channels-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
                           <div class="form-group">
                             <label for="SEERR_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;">
-                              Default Seerr Channel
+                              <span data-i18n="config.seerr_default_channel">Standard Seerr-Kanal</span>
                               <div style="font-size: 0.82rem; color: var(--subtext0); font-weight: 400; margin-top: 0.15rem;" data-i18n="config.seerr_default_channel_desc">Receives: Approved, Available, Declined, Failed, Issues</div>
                             </label>
                             <select id="SEERR_CHANNEL_ID" name="SEERR_CHANNEL_ID" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Select a channel —</option>
+                              <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
                             </select>
                           </div>
 
                           <div class="form-group">
                             <label for="SEERR_ADMIN_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;">
-                              Admin Channel
+                              <span data-i18n="config.seerr_admin_channel">Admin-Kanal</span>
                               <div style="font-size: 0.82rem; color: var(--subtext0); font-weight: 400; margin-top: 0.15rem;" data-i18n="config.seerr_admin_channel_desc">Receives: Pending approval, Download failed</div>
                             </label>
                             <select id="SEERR_ADMIN_CHANNEL_ID" name="SEERR_ADMIN_CHANNEL_ID" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Same as default Seerr channel —</option>
+                              <option value="" data-i18n="config.seerr_admin_channel_same">— Wie Standard Seerr-Kanal —</option>
                             </select>
                           </div>
                         </div>
@@ -440,6 +440,7 @@
                           <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.75rem;">
                             <span data-i18n="config.seerr_root_folder_desc">Route notifications to the correct Discord channel based on Radarr/Sonarr root folder.</span>
                             <br><small style="color: var(--subtext0);" data-i18n="config.seerr_root_folder_hint">⚠️ Click "Load Root Folders" first before adding a mapping.</small>
+                            <br><small style="color: var(--teal);" data-i18n="config.seerr_root_folder_optional">💡 Optional: If you only have one root folder per media type, you can skip this and use the Jellyfin Library → Channel mapping in Step 4 instead.</small>
                           </div>
 
                           <!-- Load Root Folders Button -->
@@ -571,9 +572,9 @@
 
                       <!-- Jellyfin Libraries -->
                       <div class="form-group" style="margin-top: 1.5rem;">
-                        <label style="font-weight: 600;">Jellyfin Libraries</label>
+                        <label style="font-weight: 600;" data-i18n="config.jellyfin_libraries_label">Jellyfin-Bibliotheken</label>
                         <button type="button" id="fetch-libraries-btn" class="btn btn-secondary" style="margin-top: 0.5rem;">
-                          <i class="bi bi-collection"></i> Load Libraries
+                          <i class="bi bi-collection"></i> <span data-i18n="config.jellyfin_load_libraries">Bibliotheken laden</span>
                         </button>
                         <div id="fetch-libraries-status" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
                         <div id="libraries-list" style="margin-top: 0.75rem;"></div>
@@ -613,15 +614,15 @@
                           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                             <h4 style="font-size: 1.1rem; margin: 0; color: var(--mauve); line-height: 1.4;" data-i18n="config.mappings_add">New Mapping</h4>
                             <button type="button" id="refresh-all-users-btn" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; height: fit-content;">
-                              <i class="bi bi-arrow-clockwise"></i> Refresh Users
+                              <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.mappings_refresh">Refresh Users</span>
                             </button>
                           </div>
                           <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                              <label for="discord-user-select" style="margin-bottom: 0;">Discord User</label>
+                              <label for="discord-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_discord_label">Discord User</label>
                             </div>
                             <div class="custom-select" id="discord-user-select">
-                              <input type="text" class="custom-select-trigger" placeholder="Search Discord users..." readonly />
+                              <input type="text" class="custom-select-trigger" placeholder="Discord-User suchen..." data-i18n="config.mappings_discord_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
                               <div class="custom-select-dropdown">
                                 <div class="custom-select-options">
@@ -635,10 +636,10 @@
                           </div>
                           <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                              <label for="seerr-user-select" style="margin-bottom: 0;">Seerr User</label>
+                              <label for="seerr-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_seerr_label">Seerr User</label>
                             </div>
                             <div class="custom-select" id="seerr-user-select">
-                              <input type="text" class="custom-select-trigger" placeholder="Search Seerr users..." readonly />
+                              <input type="text" class="custom-select-trigger" placeholder="Seerr-User suchen..." data-i18n="config.mappings_seerr_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
                               <div class="custom-select-dropdown">
                                 <div class="custom-select-options">
@@ -661,7 +662,7 @@
                     <fieldset>
                       <legend data-i18n="config.roles_section">Role Permissions</legend>
                       <p class="form-text" style="margin-bottom: 1.5rem;">
-                        <span data-i18n="config.roles_desc">Control who can use bot commands. If no roles are selected in the allowlist, all members can use commands.</span> If any role is added to the blocklist, members with that role will be blocked regardless of allowlist settings.
+                        <span data-i18n="config.roles_desc">Control who can use bot commands. If no roles are selected in the allowlist, all members can use commands.</span> <span data-i18n="config.roles_blocklist_info">If any role is added to the blocklist, members with that role will be blocked regardless of allowlist settings.</span>
                       </p>
                       
                       <div class="form-group">
@@ -765,13 +766,13 @@
                           <div class="form-group">
                             <label for="CHANNEL_MOVIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_movies_label">Movies Channel</label>
                             <select id="CHANNEL_MOVIES" name="CHANNEL_MOVIES" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Default (no override) —</option>
+                              <option value="" data-i18n="config.media_type_default">— Standard (kein Override) —</option>
                             </select>
                           </div>
                           <div class="form-group">
                             <label for="CHANNEL_SERIES" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.channel_series_label">Series Channel</label>
                             <select id="CHANNEL_SERIES" name="CHANNEL_SERIES" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Default (no override) —</option>
+                              <option value="" data-i18n="config.media_type_default">— Standard (kein Override) —</option>
                             </select>
                           </div>
                         </div>
@@ -807,7 +808,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
                           <input type="checkbox" id="DAILY_RANDOM_PICK_ENABLED" name="DAILY_RANDOM_PICK_ENABLED" />
-                          Enable Daily Random Pick
+                          <strong data-i18n="config.daily_random_title">Tägliche Zufallsauswahl aktivieren</strong>
                         </label>
 
                         <div class="form-text" style="margin-bottom: 1rem;">
@@ -820,10 +821,10 @@
                             id="DAILY_RANDOM_PICK_CHANNEL_ID"
                             name="DAILY_RANDOM_PICK_CHANNEL_ID"
                             style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                            <option value="" style="color: var(--subtext0);">Select a channel...</option>
+                            <option value="" style="color: var(--subtext0);" data-i18n="config.daily_random_channel_placeholder">Kanal auswählen...</option>
                           </select>
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            Discord channel for daily random picks
+                            <span data-i18n="config.daily_random_channel_help">Discord-Kanal für tägliche Zufallsvorschläge</span>
                           </div>
                         </div>
 
@@ -837,7 +838,7 @@
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-random-pick-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; margin: 0; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <i class="bi bi-shuffle"></i> Test Random Pick
+                            <i class="bi bi-shuffle"></i> <span data-i18n="config.daily_random_test">Zufallsauswahl testen</span>
                           </button>
                         </div>
                       </div>
@@ -860,10 +861,10 @@
                             class="form-select channel-select"
                             data-channel-select="true"
                             style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                            <option value="">— Select a channel —</option>
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
                           </select>
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            Discord channel for daily recommendations from your Jellyfin library
+                            <span data-i18n="config.daily_rec_channel_help">Discord-Kanal für tägliche Empfehlungen aus deiner Jellyfin-Bibliothek</span>
                           </div>
                         </div>
 
@@ -871,7 +872,7 @@
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-daily-recommendation-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <i class="bi bi-stars"></i> Test Recommendation
+                            <i class="bi bi-stars"></i> <span data-i18n="config.daily_rec_test">Empfehlung testen</span>
                           </button>
                           <span id="test-daily-recommendation-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
                         </div>

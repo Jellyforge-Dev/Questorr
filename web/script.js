@@ -641,13 +641,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       botControlBtn.classList.remove("btn-success");
       botControlBtn.classList.add("btn-danger");
       botControlIcon.className = "bi bi-pause-fill";
-      botControlText.textContent = "Stop Bot";
+      botControlText.textContent = t("bot.stop") || "Bot stoppen";
       botControlBtn.dataset.action = "stop";
     } else {
       botControlBtn.classList.remove("btn-danger");
       botControlBtn.classList.add("btn-success");
       botControlIcon.className = "bi bi-play-fill";
-      botControlText.textContent = "Start Bot";
+      botControlText.textContent = t("bot.start") || "Bot starten";
       botControlBtn.dataset.action = "start";
     }
   }
@@ -895,7 +895,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           authError.textContent = data.message;
         }
       } catch (error) {
-        authError.textContent = "Login failed. Please try again.";
+        authError.textContent = t("auth.login_failed") || "Anmeldung fehlgeschlagen. Bitte erneut versuchen.";
       }
     });
   }
@@ -930,7 +930,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           authError.textContent = data.message;
         }
       } catch (error) {
-        authError.textContent = "Registration failed. Please try again.";
+        authError.textContent = t("auth.register_failed") || "Registrierung fehlgeschlagen. Bitte erneut versuchen.";
       }
     });
   }
@@ -1127,7 +1127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     botControlBtn.disabled = true;
     const originalText = botControlText.textContent;
-    botControlText.textContent = "Processing...";
+    botControlText.textContent = t("config.processing") || "Verarbeite...";
 
     try {
       const response = await fetch(`/api/${action}-bot`, {
@@ -1136,7 +1136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        showToast(`Error: ${result.message || result.error || response.status}`);
+        showToast(`${t("common.error") || "Fehler"}: ${result.message || result.error || response.status}`);
         botControlText.textContent = originalText; // Restore text on failure
         botControlBtn.disabled = false;
       } else {
@@ -1155,7 +1155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 1000); // Fetch status after a short delay to get the new state
       }
     } catch (error) {
-      showToast(`Failed to ${action} bot.`);
+      showToast(t("errors.bot_control_failed") || "Bot-Steuerung fehlgeschlagen.");
       botControlText.textContent = originalText; // Restore text on failure
       botControlBtn.disabled = false;
     }
@@ -1335,7 +1335,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testDailyRecBtn) {
     testDailyRecBtn?.addEventListener("click", async () => {
       testDailyRecBtn.disabled = true;
-      if (testDailyRecStatus) testDailyRecStatus.textContent = "Sending...";
+      if (testDailyRecStatus) testDailyRecStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-daily-recommendation", {
           method: "POST",
@@ -1346,10 +1346,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         const data = await response.json();
         if (data.success || response.ok) {
-          if (testDailyRecStatus) testDailyRecStatus.textContent = "✅ Sent!";
+          if (testDailyRecStatus) testDailyRecStatus.textContent = "✅ " + (t("config.test_sent") || "Gesendet!");
           showToast(t("config.test_sent") || "Gesendet!");
         } else {
-          if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ Failed";
+          if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ " + (t("common.error") || "Fehler");
           showToast(data.message || "Fehler beim Senden.");
         }
       } catch (err) {
@@ -1369,7 +1369,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testSeerrWebhookBtn) {
     testSeerrWebhookBtn?.addEventListener("click", async () => {
       testSeerrWebhookBtn.disabled = true;
-      if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "Sending...";
+      if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-seerr-webhook", {
           method: "POST",
@@ -1401,7 +1401,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testNotifBtnsBtn) {
     testNotifBtnsBtn.addEventListener("click", async () => {
       testNotifBtnsBtn.disabled = true;
-      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "Sending...";
+      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-notification-buttons", {
           method: "POST",
@@ -1411,14 +1411,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await response.json();
         if (data.success || response.ok) {
           if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + (data.message || t("config.test_sent") || "Sent!");
-          showToast(data.message || "Test notification sent!");
+          showToast(data.message || t("config.test_sent") || "Gesendet!");
         } else {
           if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (data.message || "Failed");
           showToast(data.message || "Test failed.");
         }
       } catch (err) {
         if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ Error";
-        showToast("Error sending test notification.");
+        showToast(t("errors.test_notification_failed") || "Fehler beim Senden der Test-Benachrichtigung.");
       } finally {
         testNotifBtnsBtn.disabled = false;
         setTimeout(() => { if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = ""; }, 4000);
@@ -1841,7 +1841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const apiKey = document.getElementById("SEERR_API_KEY").value;
 
       testSeerrBtn.disabled = true;
-      testSeerrStatus.textContent = "Testing...";
+      testSeerrStatus.textContent = t("config.testing") || "Teste...";
       testSeerrStatus.style.color = "var(--text)";
 
       try {
@@ -1878,7 +1878,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!silent) {
         if (loadSeerrOptionsBtn) loadSeerrOptionsBtn.disabled = true;
         if (loadSeerrOptionsStatus) {
-          loadSeerrOptionsStatus.textContent = "Loading...";
+          loadSeerrOptionsStatus.textContent = t("common.loading") || "Wird geladen...";
           loadSeerrOptionsStatus.style.color = "var(--text)";
         }
       }
@@ -1980,7 +1980,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (error) {
       if (!silent && loadSeerrOptionsStatus) {
-        loadSeerrOptionsStatus.textContent = error.message || "Failed to load options";
+        loadSeerrOptionsStatus.textContent = error.message || t("errors.seerr_load_options") || "Fehler beim Laden der Optionen";
         loadSeerrOptionsStatus.style.color = "#f38ba8";
       }
     } finally {
@@ -1994,7 +1994,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const apiKey = document.getElementById("SEERR_API_KEY").value;
       if (!url || !apiKey) {
         if (loadSeerrOptionsStatus) {
-          loadSeerrOptionsStatus.textContent = "Enter URL and API Key first";
+          loadSeerrOptionsStatus.textContent = t("errors.seerr_enter_url_key") || "Bitte zuerst URL und API-Key eingeben";
           loadSeerrOptionsStatus.style.color = "#f38ba8";
         }
         return;
@@ -2010,7 +2010,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const apiKey = document.getElementById("JELLYFIN_API_KEY").value;
 
       testJellyfinBtn.disabled = true;
-      testJellyfinStatus.textContent = "Testing...";
+      testJellyfinStatus.textContent = t("config.testing") || "Teste...";
       testJellyfinStatus.style.color = "var(--text)";
 
       try {
@@ -2104,22 +2104,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (fetchLibrariesBtn) {
     fetchLibrariesBtn?.addEventListener("click", async () => {
-      const url = document.getElementById("JELLYFIN_BASE_URL").value;
-      const apiKey = document.getElementById("JELLYFIN_API_KEY").value;
+      const urlEl = document.getElementById("JELLYFIN_BASE_URL");
+      const apiKeyEl = document.getElementById("JELLYFIN_API_KEY");
+      const url = urlEl ? urlEl.value : "";
+      const apiKey = apiKeyEl ? apiKeyEl.value : "";
 
       if (!url || !url.trim()) {
-        showToast("Please enter Jellyfin URL first.");
+        showToast(t("config.jellyfin_load_url_missing") || "Bitte zuerst die Jellyfin-URL eingeben.");
         return;
       }
 
       if (!apiKey || !apiKey.trim()) {
-        showToast("Please enter Jellyfin API Key first.");
+        showToast(t("config.jellyfin_load_key_missing") || "Bitte zuerst den Jellyfin API-Key eingeben.");
         return;
       }
 
       fetchLibrariesBtn.disabled = true;
       librariesList.innerHTML =
-        '<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>Loading libraries...</div>';
+        `<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>${t("config.jellyfin_loading_libraries") || "Lade Bibliotheken..."}</div>`;
 
       try {
         const response = await fetch("/api/jellyfin-libraries", {
@@ -2130,7 +2132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!response.ok) {
           const result = await response.json();
-          throw new Error(result.message || "Failed to fetch libraries");
+          throw new Error(result.message || t("errors.jellyfin_fetch_libraries") || "Fehler beim Laden der Bibliotheken");
         }
 
         const result = await response.json();
@@ -2140,7 +2142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           if (libraries.length === 0) {
             librariesList.innerHTML =
-              '<div class="libraries-empty">No libraries found.</div>';
+              `<div class="libraries-empty">${t("config.jellyfin_no_libraries") || "Keine Bibliotheken gefunden."}</div>`;
           } else {
             // Get currently enabled libraries (object format: { libraryId: channelId })
             let libraryChannels = {};
@@ -2324,7 +2326,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         librariesList.innerHTML = `<div style="padding: 1rem; color: var(--red); background: var(--surface0); border-radius: 6px;">
           <i class="bi bi-exclamation-triangle" style="margin-right: 0.5rem;"></i>${escapeHtml(
             error.message ||
-            "Failed to load libraries. Please check your Jellyfin URL and API Key."
+            t("errors.jellyfin_load_libraries") || "Fehler beim Laden der Bibliotheken. Bitte Jellyfin-URL und API-Key prüfen."
           )}
         </div>`;
       } finally {
@@ -2467,7 +2469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    guildSelect.innerHTML = '<option value="">Loading servers...</option>';
+    guildSelect.innerHTML = `<option value="">${t('config.loading_servers') || 'Lade Server...'}</option>`;
 
     try {
       const response = await fetch("/api/discord/guilds");
@@ -2521,28 +2523,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          '<option value="">Select a channel...</option>';
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
       return;
     }
 
     // Set loading state for all selects
     if (channelSelect) {
-      channelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      channelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (episodeChannelSelect) {
-      episodeChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      episodeChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (seasonChannelSelect) {
-      seasonChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      seasonChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (dailyRandomPickChannelSelect) {
-      dailyRandomPickChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      dailyRandomPickChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     const seerrChannelSelect = document.getElementById("SEERR_CHANNEL_ID");
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
-    if (seerrChannelSelect) seerrChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
-    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+    if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
       const response = await fetch(`/api/discord/channels/${guildId}`);
@@ -2552,7 +2554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate main channel select
         if (channelSelect) {
           channelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -2615,7 +2617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate daily random pick channel select
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -2685,7 +2687,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     } catch (error) {
@@ -2703,7 +2705,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          '<option value="">Select a channel...</option>';
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
     }
   }
@@ -2734,7 +2736,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     });
@@ -3311,13 +3313,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const result = await response.json();
 
       if (result.success) {
-        showToast("Mapping removed successfully!");
+        showToast(t("config.mapping_removed") || "Zuordnung erfolgreich entfernt!");
         await loadMappings();
       } else {
         showToast(`Error: ${result.message}`);
       }
     } catch (error) {
-      showToast("Failed to remove mapping.");
+      showToast(t("errors.mapping_remove_failed") || "Fehler beim Entfernen der Zuordnung.");
     }
   };
 
@@ -3332,7 +3334,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const seerrUserId = seerrSelect.dataset.value;
 
       if (!discordUserId || !seerrUserId) {
-        showToast("Please select both a Discord user and a Seerr user.");
+        showToast(t("errors.mapping_select_both") || "Bitte wähle sowohl einen Discord-User als auch einen Seerr-User aus.");
         return;
       }
 
@@ -3361,7 +3363,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const result = await response.json();
 
         if (result.success) {
-          showToast("Mapping added successfully!");
+          showToast(t("config.mapping_added") || "Zuordnung erfolgreich hinzugefügt!");
 
           // Reset Discord custom select
           delete discordSelect.dataset.value;
@@ -3398,7 +3400,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           showToast(`Error: ${result.message}`);
         }
       } catch (error) {
-        showToast("Failed to add mapping.");
+        showToast(t("errors.mapping_add_failed") || "Fehler beim Hinzufügen der Zuordnung.");
       }
     });
   }
@@ -3473,7 +3475,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } catch (error) {
         console.error("Refresh users error:", error);
-        showToast("Failed to refresh users. Check connections.");
+        showToast(t("errors.refresh_users_failed") || "Fehler beim Aktualisieren der Benutzer. Verbindungen prüfen.");
       } finally {
         refreshAllUsersBtn.disabled = false;
         refreshAllUsersBtn.innerHTML = originalHtml;
@@ -4046,12 +4048,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         botControlBtnLogs.classList.remove("btn-success");
         botControlBtnLogs.classList.add("btn-danger");
         botControlBtnLogs.querySelector("i").className = "bi bi-pause-fill";
-        botControlTextLogs.textContent = "Stop Bot";
+        botControlTextLogs.textContent = t("bot.stop") || "Bot stoppen";
       } else {
         botControlBtnLogs.classList.remove("btn-danger");
         botControlBtnLogs.classList.add("btn-success");
         botControlBtnLogs.querySelector("i").className = "bi bi-play-fill";
-        botControlTextLogs.textContent = "Start Bot";
+        botControlTextLogs.textContent = t("bot.start") || "Bot starten";
       }
     } catch (error) {}
   }
@@ -4068,13 +4070,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       botControlBtnLogs.disabled = true;
       const originalText = botControlTextLogs.textContent;
-      botControlTextLogs.textContent = "Processing...";
+      botControlTextLogs.textContent = t("config.processing") || "Verarbeite...";
 
       const response = await fetch(endpoint, { method: "POST" });
 
       if (!response.ok) {
         const data = await response.json();
-        showToast(`Error: ${data.message}`);
+        showToast(`${t("common.error") || "Fehler"}: ${data.message}`);
         botControlTextLogs.textContent = originalText;
         botControlBtnLogs.disabled = false;
       } else {
@@ -4087,7 +4089,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 1000);
       }
     } catch (error) {
-      showToast(`Failed to control bot.`);
+      showToast(t("errors.bot_control_failed") || "Bot-Steuerung fehlgeschlagen.");
       botControlBtnLogs.disabled = false;
     }
   });
@@ -4396,7 +4398,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const text = await file.text();
         const json = JSON.parse(text);
-        if (importStatus) importStatus.textContent = "Importing...";
+        if (importStatus) importStatus.textContent = t("config.importing") || "Importiere...";
         const res = await fetch("/api/config/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -4405,7 +4407,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if (res.ok) {
           if (importStatus) {
-            importStatus.textContent = "✅ Imported!";
+            importStatus.textContent = "✅ " + (t("config.imported") || "Importiert!");
             importStatus.style.color = "var(--green)";
           }
           // Reload config into the form
@@ -4414,7 +4416,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           const err = await res.json().catch(() => ({}));
           if (importStatus) {
-            importStatus.textContent = "❌ " + (err.message || "Import failed");
+            importStatus.textContent = "❌ " + (err.message || t("errors.import_failed") || "Import fehlgeschlagen");
             importStatus.style.color = "var(--red)";
           }
         }
