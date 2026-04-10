@@ -620,7 +620,7 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
       if (mediaType) {
         fields.push({ name: "Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       }
-      if (request?.requestedBy_username) {
+      if (request?.requestedBy_username && ["MEDIA_PENDING", "MEDIA_DECLINED", "MEDIA_FAILED"].includes(eventType)) {
         fields.push({ name: t("field_requested_by"), value: request.requestedBy_username, inline: true });
       }
       if ((eventType === "MEDIA_DECLINED" || eventType === "MEDIA_FAILED") && request?.comment) {
