@@ -283,6 +283,8 @@
     "widget_url_desc": "Verwende diese URL als iFrame-Quelle in Homarr, Homepage oder Organizr:",
     "widget_url_copy": "URL kopieren",
     "widget_url_note": "Der API-Key ist in der URL enthalten, wird aber in der Anzeige oben ausgeblendet. Speichere zuerst deine Konfiguration um Änderungen zu übernehmen.",
+    "widget_allowed_origins_label": "Erlaubte Origins",
+    "widget_allowed_origins_help": "Leerzeichen-getrennte Liste von Origins, die das Widget als iFrame einbetten dürfen. Leer lassen für nur Same-Origin. * erlaubt alle Origins.",
     "rate_limit_label": "Command Rate-Limit",
     "rate_limit_desc": "Maximale Discord-Befehle pro Nutzer pro Minute. Auf 0 setzen um Rate-Limiting zu deaktivieren.",
     "embed_footer_label": "Embed-Fußzeile",

@@ -798,6 +798,20 @@
                             </div>
                             <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.widget_url_note">The API key is embedded in the URL but hidden from the display. Save after enabling to activate the widget.</p>
                           </div>
+
+                          <div class="form-group" style="margin-top: 1rem;">
+                            <label for="WIDGET_ALLOWED_ORIGINS" data-i18n="config.widget_allowed_origins_label">Allowed Origins</label>
+                            <input
+                              type="text"
+                              id="WIDGET_ALLOWED_ORIGINS"
+                              name="WIDGET_ALLOWED_ORIGINS"
+                              placeholder="https://homarr.example.com https://dashboard.local"
+                              style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid var(--surface1); background:var(--surface0); color:var(--text); font-size:1rem;"
+                            />
+                            <div class="form-text" data-i18n="config.widget_allowed_origins_help">
+                              Space-separated list of origins allowed to embed the widget in an iFrame. Leave empty for same-origin only. Use * to allow all origins.
+                            </div>
+                          </div>
                         </div>
                       </div>
 
