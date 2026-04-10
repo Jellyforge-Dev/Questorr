@@ -2337,7 +2337,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Populate channel dropdowns with available Discord channels
   async function populateLibraryChannelDropdowns(libraryChannels) {
-    const guildId = document.getElementById("GUILD_ID").value;
+    const guildId = (document.getElementById("GUILD_ID") || {}).value || "";
     if (!guildId) {
       return; // Can't fetch channels without guild ID
     }
