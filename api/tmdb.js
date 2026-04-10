@@ -316,13 +316,19 @@ export async function tmdbGetUpcoming(apiKey, type = "all") {
     logger.error(`TMDB upcoming fetch failed: ${err.message}`);
     throw err;
   }
+  // Filter out titles with release dates in the past
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = results.filter(r => {
+    const date = r.release_date || r.first_air_date || "";
+    return date >= today;
+  });
   // Sort by release/air date ascending
-  results.sort((a, b) => {
+  upcoming.sort((a, b) => {
     const dateA = a.release_date || a.first_air_date || "";
     const dateB = b.release_date || b.first_air_date || "";
     return dateA.localeCompare(dateB);
   });
-  return results;
+  return upcoming;
 }
 
 async function getDiscoverVarietyMedia(apiKey) {
