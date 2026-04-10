@@ -121,6 +121,9 @@ export function buildNotificationEmbed(
     { name: t("label_rating"), value: rating, inline: true }
   );
 
+  const footerText = process.env.EMBED_FOOTER_TEXT;
+  if (footerText) embed.setFooter({ text: footerText });
+
   return embed;
 }
 

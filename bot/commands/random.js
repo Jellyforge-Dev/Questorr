@@ -67,6 +67,8 @@ export async function handleRandomCommand(interaction) {
     if (tmdbDataR?.poster_path) {
       embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
     }
+    const footerText = process.env.EMBED_FOOTER_TEXT;
+    if (footerText) embed.setFooter({ text: footerText });
 
     const watchUrl = buildJellyfinUrl(item.Id);
     const components = [];

@@ -283,6 +283,48 @@ async function getUpcomingMedia(apiKey) {
   }
 }
 
+/**
+ * Get upcoming movies and on-the-air TV shows from TMDB
+ * @param {string} apiKey - TMDB API key
+ * @param {string} type - 'movie', 'tv', or 'all'
+ * @returns {Promise<Array>} Upcoming releases
+ */
+export async function tmdbGetUpcoming(apiKey, type = "all") {
+  const results = [];
+  try {
+    if (type === "all" || type === "movie") {
+      const movieRes = await withRetry(
+        () => axios.get("https://api.themoviedb.org/3/movie/upcoming", {
+          params: { api_key: apiKey, language: getTmdbLanguage(), region: "US" },
+          timeout: TIMEOUTS.TMDB_API,
+        }),
+        { label: "TMDB upcoming movies" }
+      );
+      results.push(...(movieRes.data.results || []).map(r => ({ ...r, media_type: "movie" })));
+    }
+    if (type === "all" || type === "tv") {
+      const tvRes = await withRetry(
+        () => axios.get("https://api.themoviedb.org/3/tv/on_the_air", {
+          params: { api_key: apiKey, language: getTmdbLanguage() },
+          timeout: TIMEOUTS.TMDB_API,
+        }),
+        { label: "TMDB on-the-air TV" }
+      );
+      results.push(...(tvRes.data.results || []).map(r => ({ ...r, media_type: "tv" })));
+    }
+  } catch (err) {
+    logger.error(`TMDB upcoming fetch failed: ${err.message}`);
+    throw err;
+  }
+  // Sort by release/air date ascending
+  results.sort((a, b) => {
+    const dateA = a.release_date || a.first_air_date || "";
+    const dateB = b.release_date || b.first_air_date || "";
+    return dateA.localeCompare(dateB);
+  });
+  return results;
+}
+
 async function getDiscoverVarietyMedia(apiKey) {
   try {
     // Get a good mix of genres and popularity ranges

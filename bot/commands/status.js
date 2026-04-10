@@ -97,6 +97,8 @@ export async function handleStatusCommand(interaction) {
       if (tmdbDetails?.poster_path) {
         embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
       }
+      const _footer = process.env.EMBED_FOOTER_TEXT;
+      if (_footer) embed.setFooter({ text: _footer });
       const nfButtons = [
         new ButtonBuilder()
           .setCustomId(`status_request_btn|${tmdbId}|${mediaType}|${titleFromOption}`)
@@ -138,6 +140,8 @@ export async function handleStatusCommand(interaction) {
     if (posterPath) {
       embed.setThumbnail(`https://image.tmdb.org/t/p/w500${posterPath}`);
     }
+    const _footer2 = process.env.EMBED_FOOTER_TEXT;
+    if (_footer2) embed.setFooter({ text: _footer2 });
 
     const statusButtons = [];
     if (_show("seerr")) {

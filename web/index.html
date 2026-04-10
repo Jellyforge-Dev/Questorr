@@ -735,6 +735,16 @@
                         </div>
                       </div>
 
+                      <!-- Embed Footer Text -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="EMBED_FOOTER_TEXT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.embed_footer_label">Embed Footer Text</label>
+                        <input type="text" id="EMBED_FOOTER_TEXT" name="EMBED_FOOTER_TEXT" placeholder="Powered by Questorr" maxlength="200"
+                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.embed_footer_desc">Custom footer text shown on all Discord embeds. Leave empty for no footer.</span>
+                        </div>
+                      </div>
+
                       <!-- Media-Type Channel Routing -->
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <label style="font-size: 1.1rem; font-weight: 700; color: var(--mauve); margin-bottom: 0.5rem; display: block;" data-i18n="config.media_type_channels_title">Media-Type Channel Routing</label>
@@ -1019,6 +1029,12 @@
                   <li><i class="bi bi-heart-pulse-fill"></i><div data-i18n="about.feature_health_check">Built-in <strong style="color: var(--blue);">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.</div></li>
                   <li><i class="bi bi-window-sidebar"></i><div data-i18n="about.feature_widget">Embeddable <strong style="color: var(--blue);">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
+                  <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
+                  <li><i class="bi bi-calendar-event"></i><div data-i18n="about.feature_upcoming"><code>/upcoming</code> Browse <strong style="color: var(--blue);">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.</div></li>
+                  <li><i class="bi bi-clock-history"></i><div data-i18n="about.feature_history"><code>/history</code> See what was <strong style="color: var(--blue);">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.</div></li>
+                  <li><i class="bi bi-check2-circle"></i><div data-i18n="about.feature_approve_decline">Admins can <strong style="color: var(--blue);">approve or decline</strong> pending Seerr requests directly from the Discord notification — no need to open the Seerr dashboard.</div></li>
+                  <li><i class="bi bi-textarea-t"></i><div data-i18n="about.feature_embed_footer">Add a <strong style="color: var(--blue);">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.</div></li>
+                  <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
                 </ul>
               </div>
 

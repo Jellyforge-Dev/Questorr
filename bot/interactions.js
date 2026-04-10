@@ -1,6 +1,9 @@
 import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
 import { handleRandomCommand } from "./commands/random.js";
+import { handleWatchlistCommand } from "./commands/watchlist.js";
+import { handleUpcomingCommand } from "./commands/upcoming.js";
+import { handleHistoryCommand } from "./commands/history.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -8,6 +11,7 @@ import { handleRandomRequestButton } from "./handlers/randomRequestButton.js";
 import { handleSeasonSelect } from "./handlers/seasonSelect.js";
 import { handleTagSelect } from "./handlers/tagSelect.js";
 import { handleRequestedButton } from "./handlers/requestedButton.js";
+import { handleSeerrApproveDecline } from "./handlers/seerrApproveDecline.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
 import { checkCommandRateLimit } from "./commandRateLimit.js";
@@ -64,6 +68,9 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("requested|")) {
           return handleRequestedButton(interaction);
         }
+        if (interaction.customId.startsWith("seerr_approve|") || interaction.customId.startsWith("seerr_decline|")) {
+          return handleSeerrApproveDecline(interaction);
+        }
       }
 
       // ─── Select Menus ─────────────────────────────────────────────
@@ -113,6 +120,15 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "random") {
           return handleRandomCommand(interaction);
+        }
+        if (interaction.commandName === "watchlist") {
+          return handleWatchlistCommand(interaction);
+        }
+        if (interaction.commandName === "upcoming") {
+          return handleUpcomingCommand(interaction);
+        }
+        if (interaction.commandName === "history") {
+          return handleHistoryCommand(interaction);
         }
       }
     } catch (outerErr) {
