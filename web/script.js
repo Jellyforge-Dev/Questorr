@@ -2006,8 +2006,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Test Jellyfin Endpoint
   if (testJellyfinBtn) {
     testJellyfinBtn?.addEventListener("click", async () => {
-      const url = document.getElementById("JELLYFIN_BASE_URL").value;
-      const apiKey = document.getElementById("JELLYFIN_API_KEY").value;
+      const url = (document.getElementById("JELLYFIN_BASE_URL") || {}).value || "";
+      const apiKey = (document.getElementById("JELLYFIN_API_KEY") || {}).value || "";
 
       testJellyfinBtn.disabled = true;
       testJellyfinStatus.textContent = t("config.testing") || "Teste...";
@@ -2155,7 +2155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (Array.isArray(parsed)) {
                   // Convert array to object with default channel
                   const defaultChannel =
-                    document.getElementById("JELLYFIN_CHANNEL_ID").value || "";
+                    (document.getElementById("JELLYFIN_CHANNEL_ID") || {}).value || "";
                   parsed.forEach((libId) => {
                     libraryChannels[libId] = defaultChannel;
                   });
@@ -2170,7 +2170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // If no libraries selected yet, enable all by default with default channel
             const allEnabled = Object.keys(libraryChannels).length === 0;
             const defaultChannel =
-              document.getElementById("JELLYFIN_CHANNEL_ID").value || "";
+              (document.getElementById("JELLYFIN_CHANNEL_ID") || {}).value || "";
 
             librariesList.innerHTML = libraries
               .map((lib) => {
@@ -2201,7 +2201,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   data-library-id="${lib.id}"
                   ${!isChecked ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -2209,10 +2209,10 @@ document.addEventListener("DOMContentLoaded", async () => {
               .join("");
 
             // Add TV Seasons and Episodes section
-            const episodesEnabled = document.getElementById("JELLYFIN_NOTIFY_EPISODES").value === "true";
-            const seasonsEnabled = document.getElementById("JELLYFIN_NOTIFY_SEASONS").value === "true";
-            const episodeChannel = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID").value || "";
-            const seasonChannel = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID").value || "";
+            const episodesEnabled = (document.getElementById("JELLYFIN_NOTIFY_EPISODES") || {}).value === "true";
+            const seasonsEnabled = (document.getElementById("JELLYFIN_NOTIFY_SEASONS") || {}).value === "true";
+            const episodeChannel = (document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID") || {}).value || "";
+            const seasonChannel = (document.getElementById("JELLYFIN_SEASON_CHANNEL_ID") || {}).value || "";
 
             librariesList.innerHTML += `
               <div style="padding: 1rem 0.75rem 0.5rem; margin-top: 1rem; border-top: 1px solid var(--surface1);">
@@ -2237,7 +2237,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!episodesEnabled ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
 
@@ -2259,7 +2259,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!seasonsEnabled ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -2358,7 +2358,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Clear and populate options
         select.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -2379,12 +2379,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Populate Episodes and Seasons channel selects
       const episodesSelect = document.getElementById("episodes-channel-select");
       const seasonsSelect = document.getElementById("seasons-channel-select");
-      const episodeChannel = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID").value || "";
-      const seasonChannel = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID").value || "";
+      const episodeChannel = (document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID") || {}).value || "";
+      const seasonChannel = (document.getElementById("JELLYFIN_SEASON_CHANNEL_ID") || {}).value || "";
 
       if (episodesSelect) {
         episodesSelect.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -2402,7 +2402,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (seasonsSelect) {
         seasonsSelect.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
