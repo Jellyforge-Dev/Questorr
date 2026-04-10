@@ -172,6 +172,8 @@
                   <a href="#" class="nav-item" data-target="roles" data-i18n="config.nav_roles">6. Rollen-Berechtigungen</a>
                   <a href="#" class="nav-item" data-target="misc" data-i18n="config.nav_misc">7. Verschiedenes</a>
                   <button type="submit" form="config-form" class="btn btn-primary" data-i18n="config.save_button">Einstellungen speichern</button>
+                  <button type="button" id="push-commands-btn" class="btn btn-secondary" style="margin-top: 0.5rem; width: 100%; font-size: 0.85rem;" data-i18n="config.push_commands">Push Commands to Discord</button>
+                  <div id="push-commands-status" style="font-size: 0.8rem; margin-top: 0.25rem; text-align: center;"></div>
                 </nav>
               </div>
 
@@ -567,6 +569,17 @@
                         <div class="form-text">
                           <span data-i18n="config.jellyfin_autofill">Automatically filled in when you click the Test button.</span>
                         </div>
+                      </div>
+
+                      <!-- Jellyfin Libraries -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="font-weight: 600;">Jellyfin Libraries</label>
+                        <button type="button" id="fetch-libraries-btn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+                          <i class="bi bi-collection"></i> Load Libraries
+                        </button>
+                        <div id="fetch-libraries-status" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
+                        <div id="libraries-list" style="margin-top: 0.75rem;"></div>
+                        <input type="hidden" id="JELLYFIN_NOTIFICATION_LIBRARIES" name="JELLYFIN_NOTIFICATION_LIBRARIES" />
                       </div>
 
                       <!-- Default Notification Channel (configured in Discord tab) -->
