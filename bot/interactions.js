@@ -1,7 +1,7 @@
 import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
 import { handleRandomCommand } from "./commands/random.js";
-import { handleWatchlistCommand } from "./commands/watchlist.js";
+import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
 import { handleUpcomingCommand } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
@@ -70,6 +70,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("seerr_approve|") || interaction.customId.startsWith("seerr_decline|")) {
           return handleSeerrApproveDecline(interaction);
+        }
+        if (interaction.customId.startsWith("watchlist_prev|") || interaction.customId.startsWith("watchlist_next|")) {
+          return handleWatchlistPagination(interaction);
         }
       }
 
