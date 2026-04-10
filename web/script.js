@@ -721,6 +721,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           const seerrUrl = document.getElementById("SEERR_URL")?.value;
           const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
           if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+          // Auto-load Jellyfin libraries if configured
+          loadJellyfinLibraries(true);
         });
         startStatusPolling();
       } else {
@@ -889,6 +891,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const seerrUrl = document.getElementById("SEERR_URL")?.value;
             const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
             if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+            loadJellyfinLibraries(true);
           });
           startStatusPolling();
         } else {
@@ -924,6 +927,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const seerrUrl = document.getElementById("SEERR_URL")?.value;
             const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
             if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+            loadJellyfinLibraries(true);
           });
           startStatusPolling();
         } else {
@@ -1206,6 +1210,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (targetId === "mappings") {
         // Only load mappings (with saved metadata), not members/users yet
         loadMappings();
+      }
+
+      // Auto-load Jellyfin libraries if not yet loaded
+      if (targetId === "jellyfin") {
+        if (librariesList && !librariesList.innerHTML.trim()) {
+          loadJellyfinLibraries(true);
+        }
       }
 
       // Load roles when role mapping tab is opened
@@ -2102,26 +2113,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     "JELLYFIN_NOTIFICATION_LIBRARIES"
   );
 
-  if (fetchLibrariesBtn) {
-    fetchLibrariesBtn?.addEventListener("click", async () => {
-      const urlEl = document.getElementById("JELLYFIN_BASE_URL");
-      const apiKeyEl = document.getElementById("JELLYFIN_API_KEY");
-      const url = urlEl ? urlEl.value : "";
-      const apiKey = apiKeyEl ? apiKeyEl.value : "";
+  // Reusable function to load and display Jellyfin libraries
+  // silent=true suppresses toast messages (used for auto-load)
+  async function loadJellyfinLibraries(silent = false) {
+    const urlEl = document.getElementById("JELLYFIN_BASE_URL");
+    const apiKeyEl = document.getElementById("JELLYFIN_API_KEY");
+    const url = urlEl ? urlEl.value : "";
+    const apiKey = apiKeyEl ? apiKeyEl.value : "";
 
-      if (!url || !url.trim()) {
-        showToast(t("config.jellyfin_load_url_missing") || "Bitte zuerst die Jellyfin-URL eingeben.");
-        return;
-      }
+    if (!url || !url.trim()) {
+      if (!silent) showToast(t("config.jellyfin_load_url_missing") || "Bitte zuerst die Jellyfin-URL eingeben.");
+      return;
+    }
 
-      if (!apiKey || !apiKey.trim()) {
-        showToast(t("config.jellyfin_load_key_missing") || "Bitte zuerst den Jellyfin API-Key eingeben.");
-        return;
-      }
+    if (!apiKey || !apiKey.trim()) {
+      if (!silent) showToast(t("config.jellyfin_load_key_missing") || "Bitte zuerst den Jellyfin API-Key eingeben.");
+      return;
+    }
 
-      fetchLibrariesBtn.disabled = true;
-      librariesList.innerHTML =
-        `<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>${t("config.jellyfin_loading_libraries") || "Lade Bibliotheken..."}</div>`;
+    if (fetchLibrariesBtn) fetchLibrariesBtn.disabled = true;
+    librariesList.innerHTML =
+      `<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>${t("config.jellyfin_loading_libraries") || "Lade Bibliotheken..."}</div>`;
 
       try {
         const response = await fetch("/api/jellyfin-libraries", {
@@ -2330,9 +2342,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           )}
         </div>`;
       } finally {
-        fetchLibrariesBtn.disabled = false;
+        if (fetchLibrariesBtn) fetchLibrariesBtn.disabled = false;
       }
-    });
+  }
+
+  if (fetchLibrariesBtn) {
+    fetchLibrariesBtn?.addEventListener("click", () => loadJellyfinLibraries(false));
   }
 
   // Populate channel dropdowns with available Discord channels
