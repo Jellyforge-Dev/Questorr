@@ -674,7 +674,9 @@ function configureWebServer() {
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
       if (configuredSecret && configuredSecret.trim() !== "") {
         const incomingSecret = req.headers["authorization"] || "";
-        if (incomingSecret !== configuredSecret.trim()) {
+        const a = Buffer.from(incomingSecret);
+        const b = Buffer.from(configuredSecret.trim());
+        if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
           logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
           appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
           return res.status(401).send("Unauthorized");
@@ -688,7 +690,11 @@ function configureWebServer() {
         status: "received",
         ip: req.ip,
       });
-      logger.debug(`[SEERR WEBHOOK] Headers: ${JSON.stringify(req.headers)}`);
+      // Redact sensitive headers before logging
+      const safeHeaders = { ...req.headers };
+      if (safeHeaders.authorization) safeHeaders.authorization = "[REDACTED]";
+      if (safeHeaders["x-webhook-secret"]) safeHeaders["x-webhook-secret"] = "[REDACTED]";
+      logger.debug(`[SEERR WEBHOOK] Headers: ${JSON.stringify(safeHeaders)}`);
 
       if (!req.body || Object.keys(req.body).length === 0) {
         logger.warn("[SEERR WEBHOOK] ⚠️ Empty body – check Seerr webhook configuration");

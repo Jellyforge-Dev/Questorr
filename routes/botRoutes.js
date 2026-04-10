@@ -1,5 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import crypto from "crypto";
 import { createRequire } from "module";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
@@ -30,8 +31,13 @@ function authenticateWidget(req, res, next) {
     return res.status(503).json({ error: "Widget API key not configured. Set WIDGET_API_KEY in the dashboard." });
   }
 
-  const providedKey = req.query.key || req.headers["x-widget-key"];
-  if (providedKey === configuredKey) return next();
+  const providedKey = req.query.key || req.headers["x-widget-key"] || "";
+  // Timing-safe comparison to prevent side-channel attacks
+  try {
+    const a = Buffer.from(String(providedKey));
+    const b = Buffer.from(String(configuredKey));
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) return next();
+  } catch (_) { /* length mismatch or invalid input */ }
 
   return res.status(403).json({ error: "Invalid or missing widget API key" });
 }
@@ -47,8 +53,8 @@ function getBotUptime() {
   return (Date.now() - botState.botStartedAt) / 1000;
 }
 
-// ─── Health Check (public, no auth) ──────────────────────────────────────────
-router.get("/health", async (req, res) => {
+// ─── Health Check (public: minimal, authenticated: full details) ─────────────
+async function collectHealthData() {
   const botUptime = getBotUptime();
   const cacheStats = cache.getStats();
   const totalHits = cacheStats.tmdb.hits + cacheStats.seerr.hits;
@@ -100,7 +106,7 @@ router.get("/health", async (req, res) => {
 
   const allReachable = Object.values(services).every(s => s !== "unreachable");
 
-  res.json({
+  return {
     status: allReachable ? "healthy" : "degraded",
     version: APP_VERSION,
     uptime: Math.floor(botUptime),
@@ -126,7 +132,23 @@ router.get("/health", async (req, res) => {
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + " MB",
     },
     timestamp: new Date().toISOString(),
+  };
+}
+
+// Public health check — Docker HEALTHCHECK / Uptime Kuma (minimal info)
+router.get("/health", async (_req, res) => {
+  const data = await collectHealthData();
+  res.json({
+    status: data.status,
+    version: data.version,
+    bot: { running: data.bot.running },
+    timestamp: data.timestamp,
   });
+});
+
+// Authenticated health check — full details for dashboard/admins
+router.get("/health/details", authenticateToken, async (_req, res) => {
+  res.json(await collectHealthData());
 });
 
 // ─── Widget Stats (JSON, protected by API key) ─────────────────────────────
@@ -149,7 +171,7 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
   });
 });
 
-// ─── Embeddable HTML Widget (Questorr theme) ─────────────────────────────────
+// ─── Embeddable HTML Widget (Questorr theme, fully responsive) ──────────────
 router.get("/widget/embed", authenticateWidget, (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
   const apiKey = req.query.key || "";
@@ -165,45 +187,49 @@ router.get("/widget/embed", authenticateWidget, (req, res) => {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;padding:16px;min-height:100vh}
-.widget{background:linear-gradient(135deg,#111827 0%,#0d1321 100%);border-radius:16px;padding:20px;border:1px solid rgba(30,200,160,0.15);max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,0.4)}
-.header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.logo{width:28px;height:28px;border-radius:6px;object-fit:contain}
-.header h2{font-size:17px;font-weight:700;color:#e6edf3;flex:1}
-.dot{width:10px;height:10px;border-radius:50%}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1d9;display:flex;align-items:stretch;justify-content:stretch}
+.widget{background:linear-gradient(135deg,#111827 0%,#0d1321 100%);border-radius:12px;padding:clamp(12px,3vw,20px);border:1px solid rgba(30,200,160,0.15);width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.header{display:flex;align-items:center;gap:8px;margin-bottom:clamp(8px,2vw,14px);flex-shrink:0}
+.logo{width:24px;height:24px;border-radius:5px;object-fit:contain}
+.header h2{font-size:clamp(14px,3.5vw,17px);font-weight:700;color:#e6edf3;flex:1}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .dot.online{background:#1ec8a0;box-shadow:0 0 8px rgba(30,200,160,0.6)}
 .dot.offline{background:#f38ba8;box-shadow:0 0 8px rgba(243,139,168,0.5)}
-.bot-info{font-size:12px;color:#8b949e;margin-bottom:14px;display:flex;justify-content:space-between}
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
-.stat{background:rgba(30,200,160,0.06);border:1px solid rgba(30,200,160,0.1);border-radius:10px;padding:10px 8px;text-align:center}
-.stat .v{font-size:20px;font-weight:700;color:#1ec8a0}
-.stat .l{font-size:10px;color:#8b949e;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}
-.section{margin-bottom:14px}
-.cmd-list{display:flex;flex-direction:column;gap:4px}
-.cmd-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
+.bot-info{font-size:11px;color:#8b949e;margin-bottom:clamp(8px,2vw,12px);display:flex;justify-content:space-between;flex-shrink:0}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:clamp(8px,2vw,12px);flex-shrink:0}
+.stat{background:rgba(30,200,160,0.06);border:1px solid rgba(30,200,160,0.1);border-radius:8px;padding:clamp(6px,1.5vw,10px) 6px;text-align:center}
+.stat .v{font-size:clamp(15px,4vw,20px);font-weight:700;color:#1ec8a0}
+.stat .l{font-size:clamp(8px,2vw,10px);color:#8b949e;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.section{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;margin-bottom:clamp(6px,1.5vw,12px)}
+.cmd-list{display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(30,200,160,0.2) transparent}
+.cmd-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,0.03);border-radius:6px;font-size:11px;flex-shrink:0}
 .cmd-name{color:#c9d1d9;font-weight:500;flex:1}
-.cmd-count{color:#1ec8a0;font-weight:700;font-size:13px}
-.cmd-bar{height:3px;border-radius:2px;background:rgba(30,200,160,0.15);flex:0 0 60px;overflow:hidden;position:relative}
+.cmd-count{color:#1ec8a0;font-weight:700;font-size:12px}
+.cmd-bar{height:3px;border-radius:2px;background:rgba(30,200,160,0.15);flex:0 0 50px;overflow:hidden}
 .cmd-bar-fill{height:100%;background:linear-gradient(90deg,#1ec8a0,#17b8c4);border-radius:2px}
-.toggle-btn{width:100%;padding:10px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
-.toggle-btn:hover{opacity:0.9;transform:translateY(-1px)}
-.toggle-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.toggle-btn{width:100%;padding:clamp(7px,2vw,10px);border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;flex-shrink:0}
+.toggle-btn:hover{opacity:0.9}
+.toggle-btn:disabled{opacity:0.4;cursor:not-allowed}
 .toggle-btn.start{background:linear-gradient(135deg,#1ec8a0,#17b8c4);color:#0b0f19}
 .toggle-btn.stop{background:linear-gradient(135deg,#f38ba8,#e74c3c);color:#fff}
-.err{color:#f38ba8;font-size:11px;margin-top:8px;text-align:center;min-height:14px}
-.ver{font-size:10px;color:#484f58;margin-top:10px;text-align:right}
-.user-row{display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px}
-.user-rank{color:#484f58;font-weight:700;width:16px;text-align:right;flex-shrink:0}
-.user-avatar{width:22px;height:22px;border-radius:50%;flex-shrink:0;object-fit:cover}
-.user-avatar-placeholder{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:rgba(30,200,160,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;color:#8b949e;font-weight:600}
-.user-name{color:#c9d1d9;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.user-cmds{color:#8b949e;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.user-count{color:#1ec8a0;font-weight:700;flex-shrink:0}
-.tabs{display:flex;gap:4px;margin-bottom:10px}
-.tab{padding:5px 10px;border:1px solid rgba(30,200,160,0.15);border-radius:6px;background:transparent;color:#8b949e;font-size:11px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.err{color:#f38ba8;font-size:10px;margin-top:5px;text-align:center;min-height:12px;flex-shrink:0}
+.ver{font-size:9px;color:#484f58;text-align:right;flex-shrink:0;margin-top:auto;padding-top:4px}
+.user-card{padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;flex-shrink:0}
+.user-header{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.user-avatar{width:20px;height:20px;border-radius:50%;flex-shrink:0;object-fit:cover}
+.user-avatar-placeholder{width:20px;height:20px;border-radius:50%;flex-shrink:0;background:rgba(30,200,160,0.15);display:flex;align-items:center;justify-content:center;font-size:9px;color:#8b949e;font-weight:600}
+.user-rank{color:#484f58;font-weight:700;font-size:11px;flex-shrink:0}
+.user-name{color:#c9d1d9;font-weight:500;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-total{color:#1ec8a0;font-weight:700;font-size:12px;flex-shrink:0}
+.user-cmd-tags{display:flex;flex-wrap:wrap;gap:3px;margin-left:26px}
+.user-cmd-tag{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(30,200,160,0.08);color:#8b949e;white-space:nowrap}
+.user-cmd-tag b{color:#1ec8a0;font-weight:600}
+.tabs{display:flex;gap:3px;margin-bottom:8px;flex-shrink:0}
+.tab{padding:4px 8px;border:1px solid rgba(30,200,160,0.15);border-radius:5px;background:transparent;color:#8b949e;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s}
 .tab.active{background:rgba(30,200,160,0.12);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
-.tab-content{display:none}
-.tab-content.active{display:block}
+.tab-content{display:none;flex:1;min-height:0;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column}
 </style>
 </head>
 <body>
@@ -222,20 +248,18 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0b0f19;color:#c9d1d9;p
 <div class="stat"><div class="v" id="cmds">--</div><div class="l">Commands</div></div>
 <div class="stat"><div class="v" id="mem">--</div><div class="l">RAM MB</div></div>
 </div>
-
 <div class="section">
 <div class="tabs">
 <button class="tab active" onclick="switchTab('commands',this)">Commands</button>
 <button class="tab" onclick="switchTab('users',this)">Top Users</button>
 </div>
 <div class="tab-content active" id="tab-commands">
-<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:12px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
 </div>
 <div class="tab-content" id="tab-users">
-<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:12px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
 </div>
 </div>
-
 <button class="toggle-btn start" id="tb" onclick="toggle()" disabled>
 <span id="tbIcon">&#9654;</span> <span id="tbText">Start Bot</span>
 </button>
@@ -273,8 +297,6 @@ document.getElementById("tb").className="toggle-btn "+(isOnline?"stop":"start");
 document.getElementById("tbIcon").innerHTML=isOnline?"&#9632;":"&#9654;";
 document.getElementById("tbText").textContent=isOnline?"Stop Bot":"Start Bot";
 document.getElementById("err").textContent="";
-
-// Command stats
 const cs=d.commandStats;
 if(cs&&cs.commands&&Object.keys(cs.commands).length>0){
 const max=Math.max(...Object.values(cs.commands));
@@ -285,17 +307,20 @@ h+='<div class="cmd-row"><span class="cmd-name">/'+esc(cmd)+'</span><div class="
 });
 document.getElementById("cmdList").innerHTML=h;
 }
-
-// Top users with per-command breakdown and avatars
 if(cs&&cs.topUsers&&cs.topUsers.length>0){
 let h="";
 cs.topUsers.forEach((u,i)=>{
-const cmds=u.commands?Object.entries(u.commands).sort((a,b)=>b[1]-a[1]).map(([c,n])=>'/'+c+' '+n+'x').join(', '):'';
 const initial=esc(u.username).charAt(0).toUpperCase();
 const av=u.avatarUrl
-?'<img class="user-avatar" src="'+esc(u.avatarUrl)+'" alt="" onerror="this.style.display=&quot;none&quot;;this.nextElementSibling.style.display=&quot;flex&quot;"><div class="user-avatar-placeholder" style="display:none">'+initial+'</div>'
+?'<img class="user-avatar" src="'+esc(u.avatarUrl)+'" alt="" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\'"><div class="user-avatar-placeholder" style="display:none">'+initial+'</div>'
 :'<div class="user-avatar-placeholder">'+initial+'</div>';
-h+='<div class="user-row"><span class="user-rank">'+(i+1)+'.</span>'+av+'<span class="user-name">'+esc(u.username)+'</span><span class="user-cmds">'+esc(cmds)+'</span><span class="user-count">'+u.total+'</span></div>';
+let tags="";
+if(u.commands){
+Object.entries(u.commands).sort((a,b)=>b[1]-a[1]).forEach(([c,n])=>{
+tags+='<span class="user-cmd-tag">/'+esc(c)+' <b>'+n+'x</b></span>';
+});
+}
+h+='<div class="user-card"><div class="user-header"><span class="user-rank">'+(i+1)+'.</span>'+av+'<span class="user-name">'+esc(u.username)+'</span><span class="user-total">'+u.total+'</span></div>'+(tags?'<div class="user-cmd-tags">'+tags+'</div>':'')+'</div>';
 });
 document.getElementById("userList").innerHTML=h;
 }
