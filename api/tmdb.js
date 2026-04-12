@@ -120,6 +120,36 @@ export async function tmdbGetDetails(id, mediaType, apiKey) {
 }
 
 /**
+ * Get similar movies or TV shows
+ * @param {number} id - TMDB ID
+ * @param {string} mediaType - 'movie' or 'tv'
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<Array>} Similar titles
+ */
+export async function tmdbGetSimilar(id, mediaType, apiKey) {
+  const endpoint = mediaType === "movie"
+    ? `https://api.themoviedb.org/3/movie/${id}/recommendations`
+    : `https://api.themoviedb.org/3/tv/${id}/recommendations`;
+  try {
+    const res = await withRetry(
+      () => axios.get(endpoint, {
+        params: {
+          api_key: apiKey,
+          language: getTmdbLanguage(),
+          page: 1,
+        },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB recommendations ${mediaType}/${id}` }
+    );
+    return res.data?.results || [];
+  } catch (err) {
+    logger.error(`TMDB recommendations fetch failed for ${mediaType} ${id}: ${err.message}`);
+    return [];
+  }
+}
+
+/**
  * Get external IDs (IMDb) for a movie or TV show
  * @param {number} id - TMDB ID
  * @param {string} mediaType - 'movie' or 'tv'

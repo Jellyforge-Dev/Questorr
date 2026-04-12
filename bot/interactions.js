@@ -4,6 +4,7 @@ import { handleRandomCommand } from "./commands/random.js";
 import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
 import { handleUpcomingCommand } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
+import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -132,6 +133,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "history") {
           return handleHistoryCommand(interaction);
+        }
+        if (interaction.commandName === "recommend") {
+          return handleRecommendCommand(interaction);
         }
       }
     } catch (outerErr) {

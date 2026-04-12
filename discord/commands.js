@@ -133,6 +133,16 @@ export function getCommands() {
             { name: "✅ Available", value: "available" }
           )
       ),
+    new SlashCommandBuilder()
+      .setName("recommend")
+      .setDescription("Get recommendations based on a movie or TV show")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Title to base recommendations on")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
     ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
       new SlashCommandBuilder()
         .setName("random")

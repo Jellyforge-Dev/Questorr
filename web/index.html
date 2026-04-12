@@ -161,6 +161,18 @@
               </button>
             </div>
 
+            <!-- Health Check Status Bar -->
+            <div id="health-check-bar" class="health-check-bar" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--surface0); border-radius: 8px; border: 1px solid var(--surface1);">
+              <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: var(--text);" data-i18n="config.health_title">System Status</span>
+                <span id="health-discord" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Discord</span>
+                <span id="health-seerr" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Seerr</span>
+                <span id="health-jellyfin" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Jellyfin</span>
+                <span id="health-tmdb" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> TMDB</span>
+                <span id="health-uptime" style="color: var(--subtext0); margin-left: auto;"></span>
+              </div>
+            </div>
+
             <div class="dashboard-layout">
               <div class="dashboard-sidebar">
                 <nav class="dashboard-nav">
@@ -171,6 +183,7 @@
                   <a href="#" class="nav-item" data-target="mappings" data-i18n="config.nav_mappings">5. Benutzer-Zuordnung</a>
                   <a href="#" class="nav-item" data-target="roles" data-i18n="config.nav_roles">6. Rollen-Berechtigungen</a>
                   <a href="#" class="nav-item" data-target="misc" data-i18n="config.nav_misc">7. Verschiedenes</a>
+                  <a href="#" class="nav-item" data-target="stats" data-i18n="config.nav_stats">8. Statistics</a>
                   <button type="submit" form="config-form" class="btn btn-primary" data-i18n="config.save_button">Einstellungen speichern</button>
                 </nav>
               </div>
@@ -1018,6 +1031,53 @@
                   </div>
 
                 </form>
+
+                <!-- Statistics Pane (outside form — read-only) -->
+                <div id="config-pane-stats" class="config-pane">
+                  <fieldset>
+                    <legend data-i18n="config.stats_section">Statistics</legend>
+
+                    <!-- Summary Cards -->
+                    <div id="stats-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--teal);" id="stats-total-commands">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_total_commands">Total Commands</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--blue);" id="stats-total-users">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_total_users">Active Users</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--peach);" id="stats-pending">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_pending">Pending Requests</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--green);" id="stats-cache-rate">0%</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_cache_hit">Cache Hit Rate</div>
+                      </div>
+                    </div>
+
+                    <!-- Command Breakdown -->
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_commands_title">Command Usage</h4>
+                      <div id="stats-command-bars" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                    </div>
+
+                    <!-- Top Users -->
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_users_title">Top Users</h4>
+                      <div id="stats-top-users" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface1);">
+                      <button type="button" id="stats-reset-btn" class="btn btn-danger" style="font-size: 0.85rem;">
+                        <i class="bi bi-trash"></i> <span data-i18n="config.stats_reset">Reset Statistics</span>
+                      </button>
+                    </div>
+                  </fieldset>
+                </div>
+
               </div>
           </div>
 
@@ -1045,6 +1105,7 @@
                   <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
                   <li><i class="bi bi-calendar-event"></i><div data-i18n="about.feature_upcoming"><code>/upcoming</code> Browse <strong style="color: var(--blue);">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.</div></li>
                   <li><i class="bi bi-clock-history"></i><div data-i18n="about.feature_history"><code>/history</code> See what was <strong style="color: var(--blue);">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.</div></li>
+                  <li><i class="bi bi-stars"></i><div data-i18n="about.feature_recommend"><code>/recommend &lt;title&gt;</code> Get <strong style="color: var(--blue);">personalized recommendations</strong> based on any movie or TV show. Shows 5 similar titles with TMDB ratings and Jellyfin availability status — with Watch Now buttons for content already in your library.</div></li>
                   <!-- Notifications & Routing -->
                   <li><i class="bi bi-bell-fill"></i><div data-i18n="about.feature_notifications">Receive rich Discord notifications for every Seerr event: pending approval, approved, available, declined, failed and issues — each routed to the right channel automatically.</div></li>
                   <li><i class="bi bi-check2-circle"></i><div data-i18n="about.feature_approve_decline">Admins can <strong style="color: var(--blue);">approve or decline</strong> pending Seerr requests directly from the Discord notification — no need to open the Seerr dashboard.</div></li>

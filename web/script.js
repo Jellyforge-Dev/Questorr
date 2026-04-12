@@ -300,11 +300,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Only start if not already running
     if (statusPollingInterval !== null) return;
 
-    // Immediately fetch status
+    // Immediately fetch status + health
     fetchStatus();
+    loadHealthCheck();
 
     // Then set up polling every 30 seconds (increased from 10s to reduce load)
-    statusPollingInterval = setInterval(fetchStatus, 30000);
+    statusPollingInterval = setInterval(() => { fetchStatus(); loadHealthCheck(); }, 30000);
   }
 
   function stopStatusPolling() {
@@ -312,6 +313,115 @@ document.addEventListener("DOMContentLoaded", async () => {
       clearInterval(statusPollingInterval);
       statusPollingInterval = null;
     }
+  }
+
+  // ─── Health Check Bar ──────────────────────────────────────────────────────
+  async function loadHealthCheck() {
+    try {
+      const res = await fetch("/api/health/details", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const bar = document.getElementById("health-check-bar");
+      if (!bar) return;
+      bar.style.display = "block";
+
+      const statusColors = {
+        reachable: "var(--green)",
+        unreachable: "var(--red)",
+        not_configured: "var(--subtext0)",
+      };
+
+      // Discord status from bot state
+      const discordEl = document.getElementById("health-discord");
+      if (discordEl) {
+        const discordStatus = data.bot?.running && data.bot?.connected ? "reachable" : data.bot?.running ? "unreachable" : "not_configured";
+        const icon = discordEl.querySelector("i");
+        if (icon) icon.style.color = statusColors[discordStatus];
+      }
+
+      // Service statuses
+      for (const svc of ["seerr", "jellyfin", "tmdb"]) {
+        const el = document.getElementById(`health-${svc}`);
+        if (el) {
+          const icon = el.querySelector("i");
+          if (icon) icon.style.color = statusColors[data.services?.[svc]] || "var(--subtext0)";
+        }
+      }
+
+      // Uptime
+      const uptimeEl = document.getElementById("health-uptime");
+      if (uptimeEl) {
+        uptimeEl.textContent = data.bot?.running ? `⏱ ${data.uptimeFormatted}` : "";
+      }
+    } catch (_) {}
+  }
+
+  // ─── Statistics Page ───────────────────────────────────────────────────────
+  async function loadStatistics() {
+    try {
+      const res = await fetch("/api/health/details", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Summary cards
+      const cmdStats = data.commandStats || {};
+      document.getElementById("stats-total-commands").textContent = cmdStats.totalCommands || 0;
+      document.getElementById("stats-total-users").textContent = (cmdStats.topUsers || []).length;
+      document.getElementById("stats-pending").textContent = data.pendingRequests || 0;
+      document.getElementById("stats-cache-rate").textContent = data.cache?.hitRate || "0%";
+
+      // Command bars
+      const barsEl = document.getElementById("stats-command-bars");
+      if (barsEl && cmdStats.commands) {
+        const commands = Object.entries(cmdStats.commands).sort((a, b) => b[1] - a[1]);
+        const max = commands.length > 0 ? commands[0][1] : 1;
+        barsEl.innerHTML = commands.map(([name, count]) => {
+          const pct = Math.max((count / max) * 100, 2);
+          return `<div style="display:flex;align-items:center;gap:0.5rem;">
+            <code style="min-width:80px;color:var(--mauve);font-size:0.85rem;">/${name}</code>
+            <div style="flex:1;background:var(--surface0);border-radius:4px;height:22px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--teal);border-radius:4px;transition:width 0.3s;"></div>
+            </div>
+            <span style="min-width:40px;text-align:right;font-size:0.85rem;color:var(--subtext0);">${count}</span>
+          </div>`;
+        }).join("");
+      }
+
+      // Top users
+      const usersEl = document.getElementById("stats-top-users");
+      if (usersEl && cmdStats.topUsers) {
+        usersEl.innerHTML = cmdStats.topUsers.map((u, i) => {
+          const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+          const avatar = u.avatarUrl
+            ? `<img src="${u.avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" />`
+            : `<div style="width:24px;height:24px;border-radius:50%;background:var(--surface1);"></div>`;
+          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1]).slice(0, 3)
+            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);">/${c} ${n}</span>`).join(" ");
+          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
+            <span style="min-width:24px;text-align:center;">${medal}</span>
+            ${avatar}
+            <span style="font-weight:600;color:var(--text);flex:1;">${u.username}</span>
+            <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">${cmdTags}</div>
+          </div>`;
+        }).join("");
+      }
+    } catch (_) {}
+  }
+
+  // Stats tab: auto-load when navigating
+  const statsResetBtn = document.getElementById("stats-reset-btn");
+  if (statsResetBtn) {
+    statsResetBtn.addEventListener("click", async () => {
+      if (!confirm(t("config.stats_reset_confirm") || "Reset all statistics? This cannot be undone.")) return;
+      try {
+        await fetch("/api/stats/reset", { method: "POST", credentials: "include" });
+        loadStatistics();
+        showToast(t("config.stats_reset_success") || "Statistics reset.");
+      } catch (_) {
+        showToast(t("errors.generic") || "Error");
+      }
+    });
   }
 
   function showToast(message, duration = 3000) {
@@ -1222,6 +1332,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Load roles when role mapping tab is opened
       if (targetId === "roles") {
         loadRoles();
+      }
+
+      // Load statistics when stats tab is opened
+      if (targetId === "stats") {
+        loadStatistics();
       }
     });
   });

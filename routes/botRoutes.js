@@ -178,6 +178,12 @@ router.post("/widget/reset-stats", authenticateWidget, (req, res) => {
   res.json({ success: true, message: "Command stats reset" });
 });
 
+// ─── Reset Command Stats (dashboard, cookie auth) ───────────────────────────
+router.post("/stats/reset", authenticateToken, (req, res) => {
+  resetCommandStats();
+  res.json({ success: true, message: "Command stats reset" });
+});
+
 // ─── Embeddable HTML Widget (Questorr theme, fully responsive) ──────────────
 router.get("/widget/embed", authenticateWidget, (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;

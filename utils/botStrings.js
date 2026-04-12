@@ -111,6 +111,12 @@ const strings = {
     history_empty:         "No recently added content found on Jellyfin.",
     history_jf_missing:    "\u274C Jellyfin is not configured.",
     history_error:         "\u274C Could not fetch recently added content from Jellyfin.",
+    recommend_title:       "\uD83C\uDFAF Recommendations",
+    recommend_based_on:    "Based on \"{{title}}\"",
+    recommend_not_found:   "\u274C Could not find this title on TMDB.",
+    recommend_no_similar:  "\u274C No recommendations found for \"{{title}}\".",
+    recommend_error:       "\u274C Could not fetch recommendations. Please try again.",
+    recommend_legend:      "\u2705 = Available on Jellyfin \u00B7 \u274C = Not available",
   },
   de: {
     event_pending:        "Neue Anfrage \u2013 Ausstehend",
@@ -219,6 +225,12 @@ const strings = {
     history_empty:         "Keine kürzlich hinzugefügten Inhalte auf Jellyfin gefunden.",
     history_jf_missing:    "\u274C Jellyfin ist nicht konfiguriert.",
     history_error:         "\u274C Kürzlich hinzugefügte Inhalte konnten nicht von Jellyfin abgerufen werden.",
+    recommend_title:       "\uD83C\uDFAF Empfehlungen",
+    recommend_based_on:    "Basierend auf \"{{title}}\"",
+    recommend_not_found:   "\u274C Dieser Titel konnte nicht auf TMDB gefunden werden.",
+    recommend_no_similar:  "\u274C Keine Empfehlungen f\u00FCr \"{{title}}\" gefunden.",
+    recommend_error:       "\u274C Empfehlungen konnten nicht abgerufen werden. Bitte versuche es erneut.",
+    recommend_legend:      "\u2705 = Auf Jellyfin verf\u00FCgbar \u00B7 \u274C = Nicht verf\u00FCgbar",
   },
 };
 
