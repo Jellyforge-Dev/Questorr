@@ -340,7 +340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // Service statuses
-      for (const svc of ["seerr", "jellyfin", "tmdb"]) {
+      for (const svc of ["seerr", "jellyfin"]) {
         const el = document.getElementById(`health-${svc}`);
         if (el) {
           const icon = el.querySelector("i");

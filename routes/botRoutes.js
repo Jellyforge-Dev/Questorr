@@ -91,17 +91,6 @@ async function collectHealthData() {
     services.jellyfin = "not_configured";
   }
 
-  if (process.env.TMDB_API_KEY) {
-    checks.push(
-      axios.get("https://api.themoviedb.org/3/configuration", {
-        params: { api_key: process.env.TMDB_API_KEY },
-        timeout: 3000,
-      }).then(() => { services.tmdb = "reachable"; })
-        .catch(() => { services.tmdb = "unreachable"; })
-    );
-  } else {
-    services.tmdb = "not_configured";
-  }
 
   await Promise.allSettled(checks);
 
