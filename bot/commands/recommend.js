@@ -20,12 +20,12 @@ export async function handleRecommendCommand(interaction) {
   }
 
   try {
-    // Parse TMDB ID from autocomplete (format: "Title|tmdbId|mediaType")
+    // Parse TMDB ID from autocomplete (format: "tmdbId|mediaType")
     let tmdbId, mediaType;
     if (raw.includes("|")) {
       const parts = raw.split("|");
-      tmdbId = parts[1];
-      mediaType = parts[2] || "movie";
+      tmdbId = parts[0];
+      mediaType = parts[1] || "movie";
     } else {
       // Plain text search — find best match
       const results = await tmdbApi.tmdbSearch(raw, apiKey);
