@@ -150,7 +150,7 @@ export async function handleStatusCommand(interaction) {
         statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrLink));
       }
     }
-    if (_show("watch") && result.status === 5) {
+    if (_show("watch") && (result.status === 5 || result.status === 4)) {
       const jfKey = process.env.JELLYFIN_API_KEY;
       const jfBase = process.env.JELLYFIN_BASE_URL;
       if (jfKey && jfBase) {

@@ -7,7 +7,7 @@ import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
-import { handleCastCommand } from "./commands/cast.js";
+import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -77,6 +77,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("watchlist_prev|") || interaction.customId.startsWith("watchlist_next|")) {
           return handleWatchlistPagination(interaction);
+        }
+        if (interaction.customId.startsWith("cast_prev|") || interaction.customId.startsWith("cast_next|")) {
+          return handleCastPagination(interaction);
         }
       }
 
