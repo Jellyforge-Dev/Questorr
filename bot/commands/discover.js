@@ -3,7 +3,7 @@ import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "disc
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
-import { buildSeerrUrl, buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
+import { buildSeerrUrl, buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
@@ -66,7 +66,7 @@ export async function handleDiscoverCommand(interaction) {
         // Seerr request status
         let seerrStatus = null;
         try {
-          const sr = await seerrApi.getSeerrStatus(id, mediaType);
+          const sr = await seerrApi.checkMediaStatus(id, mediaType, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
         } catch (_) {}
 

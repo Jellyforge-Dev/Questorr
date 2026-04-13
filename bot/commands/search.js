@@ -167,7 +167,7 @@ export async function handleSearchOrRequest(
     const [imdbId, trailerUrl, seerrResult] = await Promise.all([
       tmdbApi.tmdbGetExternalImdb(tmdbId, mediaType, getTmdbApiKey()),
       tmdbApi.tmdbGetTrailer(tmdbId, mediaType, getTmdbApiKey()),
-      seerrApi.getSeerrStatus(tmdbId, mediaType).catch(() => null),
+      seerrApi.checkMediaStatus(tmdbId, mediaType, [], getSeerrUrl(), getSeerrApiKey()).catch(() => null),
     ]);
     const seerrStatusCode = seerrResult?.status ?? null;
 

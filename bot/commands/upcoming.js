@@ -2,7 +2,7 @@ import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder } from "discord.js";
 import { tmdbGetUpcoming } from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
-import { getTmdbApiKey } from "../helpers.js";
+import { getTmdbApiKey, getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
 
 export async function handleUpcomingCommand(interaction) {
@@ -28,7 +28,7 @@ export async function handleUpcomingCommand(interaction) {
       shown.map(async (r) => {
         let seerrStatus = null;
         try {
-          const sr = await seerrApi.getSeerrStatus(r.id, r.media_type);
+          const sr = await seerrApi.checkMediaStatus(r.id, r.media_type, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
         } catch (_) {}
         return { ...r, seerrStatus };
