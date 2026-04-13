@@ -25,13 +25,14 @@ router.get("/config", authenticateToken, (req, res) => {
 
 router.get("/webhook-secret", authenticateToken, (req, res) => {
   Object.entries(NO_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
-  // Always read fresh from config/env to reflect latest saved value
+  logger.info(`[Security] Webhook secret accessed from ${req.ip}`);
   const freshSecret = process.env.WEBHOOK_SECRET || WEBHOOK_SECRET || null;
   res.json({ secret: freshSecret });
 });
 
 router.get("/widget-api-key", authenticateToken, (req, res) => {
   Object.entries(NO_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+  logger.info(`[Security] Widget API key accessed from ${req.ip}`);
   res.json({ key: process.env.WIDGET_API_KEY || null });
 });
 

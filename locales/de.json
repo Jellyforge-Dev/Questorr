@@ -297,6 +297,8 @@
     "widget_url_note": "Der API-Key ist in der URL enthalten, wird aber in der Anzeige oben ausgeblendet. Speichere zuerst deine Konfiguration um Änderungen zu übernehmen.",
     "widget_allowed_origins_label": "Erlaubte Origins",
     "widget_allowed_origins_help": "Leerzeichen-getrennte Liste von Origins, die das Widget als iFrame einbetten dürfen. Leer lassen für nur Same-Origin. * erlaubt alle Origins.",
+    "widget_anonymize_label": "Benutzer-Statistiken anonymisieren",
+    "widget_anonymize_help": "Wenn aktiviert, werden Benutzernamen und Avatare in den Widget-Statistiken durch \"User 1\", \"User 2\" usw. ersetzt, um die Privatsphäre zu schützen.",
     "rate_limit_label": "Command Rate-Limit",
     "rate_limit_desc": "Maximale Discord-Befehle pro Nutzer pro Minute. Auf 0 setzen um Rate-Limiting zu deaktivieren.",
     "embed_footer_label": "Embed-Fußzeile",

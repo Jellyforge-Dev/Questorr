@@ -225,6 +225,8 @@
     "widget_url_note": "The API key is included in the URL but hidden from the display above. Save your config first to apply changes.",
     "widget_allowed_origins_label": "Allowed Origins",
     "widget_allowed_origins_help": "Space-separated list of origins allowed to embed the widget in an iFrame. Leave empty for same-origin only. Use * to allow all origins.",
+    "widget_anonymize_label": "Anonymize User Stats",
+    "widget_anonymize_help": "When enabled, usernames and avatars in widget stats are replaced with \"User 1\", \"User 2\", etc. to protect privacy.",
     "rate_limit_label": "Command Rate Limit",
     "rate_limit_desc": "Maximum Discord commands per user per minute. Set to 0 to disable rate limiting.",
     "embed_footer_label": "Embed Footer Text",

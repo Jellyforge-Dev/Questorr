@@ -147,6 +147,16 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
   const cacheStats = cache.getStats();
   const cmdStats = getCommandStats();
 
+  // Anonymize user data in widget stats if configured
+  if (process.env.WIDGET_ANONYMIZE_STATS === "true" && cmdStats && cmdStats.topUsers) {
+    cmdStats.topUsers = cmdStats.topUsers.map((u, i) => ({
+      ...u,
+      userId: null,
+      username: `User ${i + 1}`,
+      avatarUrl: null,
+    }));
+  }
+
   res.json({
     status: botState.isBotRunning ? "online" : "offline",
     botUsername: botState.isBotRunning && botState.discordClient?.user ? botState.discordClient.user.tag : null,

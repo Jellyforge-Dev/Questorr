@@ -171,7 +171,7 @@ function migrateConfigIfNeeded() {
     // Ensure new directory exists
     const configDir = path.dirname(CONFIG_PATH);
     if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true, mode: 0o777 });
+      fs.mkdirSync(configDir, { recursive: true, mode: 0o755 });
     }
 
     // Write to new location
@@ -238,7 +238,7 @@ export function writeConfig(config) {
     // Ensure /config directory exists
     if (!fs.existsSync(configDir)) {
       logger.info(`Creating config directory: ${configDir}`);
-      fs.mkdirSync(configDir, { recursive: true, mode: 0o777 });
+      fs.mkdirSync(configDir, { recursive: true, mode: 0o755 });
     }
 
     // Write with explicit permissions (sensitive fields are AES-256-GCM encrypted)

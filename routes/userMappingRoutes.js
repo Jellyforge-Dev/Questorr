@@ -11,6 +11,12 @@ import logger from "../utils/logger.js";
 
 const router = Router();
 
+/**
+ * Returns all user mappings (Discord ↔ Seerr).
+ * SECURITY NOTE: Admin-only endpoint. Currently enforced by the single-user
+ * registration model (only one account can exist). If multi-user support is
+ * added in the future, this endpoint MUST be restricted to an admin role.
+ */
 router.get("/user-mappings", authenticateToken, (req, res) => {
   const mappings = getUserMappings();
   res.json(mappings);

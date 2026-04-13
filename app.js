@@ -145,7 +145,7 @@ function verifyVolumeConfiguration() {
   // Ensure config directory exists
   if (!fs.existsSync(configDir)) {
     try {
-      fs.mkdirSync(configDir, { recursive: true, mode: 0o777 });
+      fs.mkdirSync(configDir, { recursive: true, mode: 0o755 });
       logger.info(`✅ Created config directory at ${configDir}`);
     } catch (error) {
       logger.error(
