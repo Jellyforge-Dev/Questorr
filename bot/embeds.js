@@ -7,6 +7,7 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
+import { extractContentRating, extractWatchProviders } from "../api/tmdb.js";
 import { minutesToHhMm } from "../utils/time.js";
 import { COLORS } from "../lib/constants.js";
 import { getSeerrApiUrl, normalizeSeerrUrl } from "../utils/seerrUrl.js";
@@ -14,13 +15,23 @@ import { isValidUrl } from "../utils/url.js";
 import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
 
+/** Resolve country code from config, with language-based fallback */
+function resolveCountry(configKey) {
+  const explicit = process.env[configKey];
+  if (explicit) return explicit.toUpperCase();
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
+  const map = { en: "US", de: "DE", sv: "SE", fr: "FR", es: "ES", it: "IT", nl: "NL", pt: "PT", ja: "JP", ko: "KR" };
+  return map[lang] || "US";
+}
+
 export function buildNotificationEmbed(
   details,
   mediaType,
   imdbId,
   status = "search",
   omdb = null,
-  tmdbId = null
+  tmdbId = null,
+  seerrStatus = null
 ) {
   const titleName = details.title || details.name || "Unknown";
   const releaseDate = details.release_date || details.first_air_date || "";
@@ -120,6 +131,35 @@ export function buildNotificationEmbed(
     { name: t("label_runtime"), value: runtime, inline: true },
     { name: t("label_rating"), value: rating, inline: true }
   );
+
+  // Seerr availability status
+  if (seerrStatus !== null) {
+    let statusText = null;
+    if (seerrStatus === 5) statusText = `\u2705 ${t("status_available")}`;
+    else if (seerrStatus === 4) statusText = `\uD83D\uDCE5 ${t("status_partial")}`;
+    else if (seerrStatus === 2 || seerrStatus === 3) statusText = `\u23F3 ${t("status_requested")}`;
+    if (statusText) {
+      embed.addFields({ name: "Status", value: statusText, inline: true });
+    }
+  }
+
+  // Content rating (FSK/MPAA)
+  if (process.env.EMBED_SHOW_CONTENT_RATING !== "false") {
+    const ratingCountry = resolveCountry("CONTENT_RATING_COUNTRY");
+    const contentRating = extractContentRating(details, mediaType, ratingCountry);
+    if (contentRating) {
+      embed.addFields({ name: t("label_content_rating"), value: contentRating, inline: true });
+    }
+  }
+
+  // Streaming providers
+  if (process.env.EMBED_SHOW_PROVIDERS !== "false") {
+    const providerCountry = resolveCountry("PROVIDER_COUNTRY");
+    const providers = extractWatchProviders(details, providerCountry);
+    if (providers.length > 0) {
+      embed.addFields({ name: t("label_providers"), value: `📺 ${providers.join(", ")}`, inline: false });
+    }
+  }
 
   const footerText = process.env.EMBED_FOOTER_TEXT;
   if (footerText) embed.setFooter({ text: footerText });

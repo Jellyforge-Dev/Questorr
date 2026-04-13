@@ -164,10 +164,12 @@ export async function handleSearchOrRequest(
       }
     }
 
-    const [imdbId, trailerUrl] = await Promise.all([
+    const [imdbId, trailerUrl, seerrResult] = await Promise.all([
       tmdbApi.tmdbGetExternalImdb(tmdbId, mediaType, getTmdbApiKey()),
       tmdbApi.tmdbGetTrailer(tmdbId, mediaType, getTmdbApiKey()),
+      seerrApi.getSeerrStatus(tmdbId, mediaType).catch(() => null),
     ]);
+    const seerrStatusCode = seerrResult?.status ?? null;
 
     const omdb = imdbId ? await fetchOMDbData(imdbId) : null;
 
@@ -177,7 +179,8 @@ export async function handleSearchOrRequest(
       imdbId,
       mode === "request" ? "success" : "search",
       omdb,
-      tmdbId
+      tmdbId,
+      mode === "search" ? seerrStatusCode : null
     );
 
     const components = buildButtons(

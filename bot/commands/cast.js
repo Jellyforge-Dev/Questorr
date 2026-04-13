@@ -56,7 +56,9 @@ async function enrichWithJellyfin(credits) {
             String(credit.id), mediaType, title, jellyfinApiKey, jellyfinBaseUrl
           );
           available = !!jellyfinItemId;
-        } catch (_) {}
+        } catch (err) {
+          logger.error("[cast] Jellyfin availability check failed:", err.message);
+        }
       }
 
       return { id: credit.id, title, year, rating, character, mediaType, available, jellyfinItemId };

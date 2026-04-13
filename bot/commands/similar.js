@@ -3,11 +3,11 @@ import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "disc
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
-import { buildSeerrUrl, buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
+import { buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
-export async function handleRecommendCommand(interaction) {
+export async function handleSimilarCommand(interaction) {
   await interaction.deferReply({ flags: 64 });
 
   const apiKey = getTmdbApiKey();
@@ -28,38 +28,34 @@ export async function handleRecommendCommand(interaction) {
       tmdbId = parts[0];
       mediaType = parts[1] || "movie";
     } else {
-      // Plain text search — find best match
       const results = await tmdbApi.tmdbSearch(raw, apiKey);
       if (!results || results.length === 0) {
-        return interaction.editReply({ content: t("recommend_not_found") });
+        return interaction.editReply({ content: t("similar_not_found") });
       }
       const best = results[0];
       tmdbId = best.id;
       mediaType = best.media_type || (best.title ? "movie" : "tv");
     }
 
-    // Fetch source title details
     const sourceDetails = await tmdbApi.tmdbGetDetails(tmdbId, mediaType, apiKey);
     if (!sourceDetails) {
-      return interaction.editReply({ content: t("recommend_not_found") });
+      return interaction.editReply({ content: t("similar_not_found") });
     }
     const sourceTitle = sourceDetails.title || sourceDetails.name || "Unknown";
 
-    // Fetch similar titles from TMDB
+    // Fetch similar titles (keyword/genre-based, different from /recommend)
     const similar = await tmdbApi.tmdbGetSimilar(tmdbId, mediaType, apiKey);
     if (!similar || similar.length === 0) {
-      return interaction.editReply({ content: t("recommend_no_similar").replace("{{title}}", sourceTitle) });
+      return interaction.editReply({ content: t("similar_no_results").replace("{{title}}", sourceTitle) });
     }
 
-    // Take top 5, fetch details + check Jellyfin availability
     const top = similar.slice(0, 5);
     const jellyfinApiKey = process.env.JELLYFIN_API_KEY;
     const jellyfinBaseUrl = process.env.JELLYFIN_BASE_URL;
 
-    const recommendations = await Promise.all(
+    const items = await Promise.all(
       top.map(async (item) => {
         const id = item.id;
-        const type = mediaType; // similar endpoint returns same type
         const title = item.title || item.name || "Unknown";
         const year = (item.release_date || item.first_air_date || "").substring(0, 4);
         const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
@@ -69,37 +65,34 @@ export async function handleRecommendCommand(interaction) {
             : item.overview
           : "";
 
-        // Check Jellyfin availability
         let jellyfinItemId = null;
         let available = false;
         if (jellyfinApiKey && jellyfinBaseUrl) {
           try {
             jellyfinItemId = await findJellyfinItemByTmdbId(
-              String(id), type, title, jellyfinApiKey, jellyfinBaseUrl
+              String(id), mediaType, title, jellyfinApiKey, jellyfinBaseUrl
             );
             available = !!jellyfinItemId;
           } catch (err) {
-            logger.error("[recommend] Jellyfin availability check failed:", err.message);
+            logger.error("[similar] Jellyfin availability check failed:", err.message);
           }
         }
 
-        // Seerr request status
         let seerrStatus = null;
         try {
-          const sr = await seerrApi.getSeerrStatus(id, type);
+          const sr = await seerrApi.getSeerrStatus(id, mediaType);
           seerrStatus = sr?.status ?? null;
         } catch (_) {}
 
-        return { id, type, title, year, rating, overview, available, jellyfinItemId, seerrStatus };
+        return { id, title, year, rating, overview, available, jellyfinItemId, seerrStatus };
       })
     );
 
-    // Build embed
-    const emoji = mediaType === "movie" ? "🎬" : "📺";
+    const emoji = mediaType === "movie" ? "\uD83C\uDFAC" : "\uD83D\uDCFA";
     const embed = new EmbedBuilder()
       .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
-      .setAuthor({ name: t("recommend_title") })
-      .setTitle(`${emoji} ${t("recommend_based_on").replace("{{title}}", sourceTitle)}`)
+      .setAuthor({ name: t("similar_title") })
+      .setTitle(`${emoji} ${t("similar_based_on").replace("{{title}}", sourceTitle)}`)
       .setTimestamp();
 
     if (sourceDetails.poster_path) {
@@ -109,44 +102,37 @@ export async function handleRecommendCommand(interaction) {
     const footerText = process.env.EMBED_FOOTER_TEXT;
     if (footerText) embed.setFooter({ text: footerText });
 
-    // Build description with recommendations
-    const lines = recommendations.map((rec, i) => {
+    const lines = items.map((item, i) => {
       let status = "";
-      if (rec.seerrStatus === 5 || rec.available) status = "✅";
-      else if (rec.seerrStatus === 4) status = "📥";
-      else if (rec.seerrStatus === 2 || rec.seerrStatus === 3) status = "⏳";
-      else status = "";
-      const ratingStr = rec.rating ? ` ⭐ ${rec.rating}` : "";
-      const yearStr = rec.year ? ` (${rec.year})` : "";
-      let line = `**${i + 1}. ${rec.title}${yearStr}**${ratingStr} ${status}`;
-      if (rec.overview) line += `\n> ${rec.overview}`;
+      if (item.seerrStatus === 5 || item.available) status = "\u2705";
+      else if (item.seerrStatus === 4) status = "\uD83D\uDCE5";
+      else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "\u23F3";
+      const ratingStr = item.rating ? ` \u2B50 ${item.rating}` : "";
+      const yearStr = item.year ? ` (${item.year})` : "";
+      let line = `**${i + 1}. ${item.title}${yearStr}**${ratingStr} ${status}`;
+      if (item.overview) line += `\n> ${item.overview}`;
       return line;
     });
 
-    embed.setDescription(
-      `${t("recommend_legend")}\n\n${lines.join("\n\n")}`
-    );
+    embed.setDescription(lines.join("\n\n"));
 
-    // Build buttons for available items (Watch Now links)
+    // Watch Now buttons for available items
     const components = [];
-    const _showRec = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
-
-    for (const rec of recommendations) {
-      if (rec.available && rec.jellyfinItemId && _showRec("watch")) {
-        const watchUrl = buildJellyfinUrl(rec.jellyfinItemId);
+    const _show = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
+    for (const item of items) {
+      if (item.available && item.jellyfinItemId && _show("watch")) {
+        const watchUrl = buildJellyfinUrl(item.jellyfinItemId);
         if (watchUrl && isValidUrl(watchUrl)) {
-          const label = `▶ ${rec.title.substring(0, 70)}`;
           components.push(
             new ButtonBuilder()
               .setStyle(ButtonStyle.Link)
-              .setLabel(label)
+              .setLabel(`\u25B6 ${item.title.substring(0, 70)}`)
               .setURL(watchUrl)
           );
         }
       }
     }
 
-    // Limit to 5 buttons (Discord max per row)
     const replyOpts = { embeds: [embed] };
     if (components.length > 0) {
       replyOpts.components = [new ActionRowBuilder().addComponents(components.slice(0, 5))];
@@ -154,7 +140,7 @@ export async function handleRecommendCommand(interaction) {
 
     return interaction.editReply(replyOpts);
   } catch (err) {
-    logger.error("Recommend command error:", err);
-    return interaction.editReply({ content: t("recommend_error") });
+    logger.error("Similar command error:", err);
+    return interaction.editReply({ content: t("similar_error") });
   }
 }

@@ -61,7 +61,9 @@ export async function handleStatusCommand(interaction) {
   let tmdbDetails = null;
   try {
     tmdbDetails = await tmdbApi.tmdbGetDetails(tmdbId, mediaType, getTmdbApiKey());
-  } catch (_) {}
+  } catch (err) {
+    logger.error("[status] Failed to fetch TMDB details:", err.message);
+  }
 
   if (!seerrUrl || !seerrApiKey) {
     return interaction.editReply({ content: t("status_seerr_missing") });
@@ -162,7 +164,9 @@ export async function handleStatusCommand(interaction) {
               statusButtons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
             }
           }
-        } catch (_) {}
+        } catch (err) {
+          logger.error("[status] Jellyfin availability check failed:", err.message);
+        }
       }
     }
     const imdbIdSt = tmdbDetails?.external_ids?.imdb_id || null;

@@ -1,6 +1,7 @@
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
+import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
 import { buildSeerrUrl, buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
@@ -57,10 +58,19 @@ export async function handleDiscoverCommand(interaction) {
               String(id), mediaType, title, jellyfinApiKey, jellyfinBaseUrl
             );
             available = !!jellyfinItemId;
-          } catch (_) {}
+          } catch (err) {
+            logger.error("[discover] Jellyfin availability check failed:", err.message);
+          }
         }
 
-        return { id, title, yearStr, rating, overview, available, jellyfinItemId };
+        // Seerr request status
+        let seerrStatus = null;
+        try {
+          const sr = await seerrApi.getSeerrStatus(id, mediaType);
+          seerrStatus = sr?.status ?? null;
+        } catch (_) {}
+
+        return { id, title, yearStr, rating, overview, available, jellyfinItemId, seerrStatus };
       })
     );
 
@@ -89,7 +99,11 @@ export async function handleDiscoverCommand(interaction) {
     if (footerText) embed.setFooter({ text: footerText });
 
     const lines = items.map((item, i) => {
-      const status = item.available ? "\u2705" : "\u274C";
+      let status = "";
+      if (item.seerrStatus === 5 || item.available) status = "\u2705";
+      else if (item.seerrStatus === 4) status = "\uD83D\uDCE5";
+      else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "\u23F3";
+      else status = "";
       const ratingStr = item.rating ? ` \u2B50 ${item.rating}` : "";
       const yearPart = item.yearStr ? ` (${item.yearStr})` : "";
       let line = `**${i + 1}. ${item.title}${yearPart}**${ratingStr} ${status}`;

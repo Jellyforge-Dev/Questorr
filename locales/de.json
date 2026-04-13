@@ -303,6 +303,12 @@
     "rate_limit_desc": "Maximale Discord-Befehle pro Nutzer pro Minute. Auf 0 setzen um Rate-Limiting zu deaktivieren.",
     "embed_footer_label": "Embed-Fußzeile",
     "embed_footer_desc": "Benutzerdefinierter Fußzeilentext für alle Discord-Embeds. Leer lassen für keine Fußzeile.",
+    "embed_extra_title": "Zusätzliche Embed-Informationen",
+    "embed_content_rating_label": "Altersfreigabe (FSK/MPAA)",
+    "embed_providers_label": "Streaming-Anbieter",
+    "content_rating_country_label": "Land für Altersfreigabe",
+    "provider_country_label": "Land für Anbieter",
+    "embed_extra_help": "Länderfelder leer lassen für automatische Erkennung aus der Bot-Sprache (z.B. DE für Deutsch, US für Englisch).",
     "media_type_channels_title": "Medientyp-Kanal-Routing",
     "media_type_channels_desc": "Leite Seerr-Benachrichtigungen basierend auf dem Medientyp in verschiedene Kanäle. Hat Vorrang vor dem Standard-Seerr-Kanal, wird aber von Root-Folder-Zuordnungen überschrieben.",
     "channel_movies_label": "Film-Kanal",
@@ -553,6 +559,9 @@
     "feature_discover": "<code>/discover</code> Entdecke Filme und Serien nach <strong style=\"color: var(--blue);\">Genre, Jahr und Mindestbewertung</strong>. Ergebnisse zeigen die Jellyfin-Verfügbarkeit — perfekt für \"Ich will was gucken aber weiß nicht was\"-Momente.<br><strong style=\"color: var(--blue);\">Optionen:</strong> <code>type</code> (Pflicht), <code>genre</code> (optional, Auto-Complete), <code>year</code> (optional), <code>rating</code> (optional).",
     "feature_collection": "<code>/collection &lt;Titel&gt;</code> Alle Filme einer <strong style=\"color: var(--blue);\">Franchise oder Sammlung</strong> anzeigen (z.B. Herr der Ringe, Marvel). Zeigt welche Teile auf Jellyfin verfügbar sind mit Jetzt-Ansehen-Buttons.",
     "feature_cast": "<code>/cast &lt;Name&gt;</code> Die <strong style=\"color: var(--blue);\">Filmografie</strong> eines Schauspielers durchstöbern mit Rollennamen, Bewertungen und Jellyfin-Verfügbarkeit. Nach Beliebtheit sortiert — Auto-Complete schlägt Schauspieler mit bekannten Rollen vor.",
+    "feature_similar": "<code>/similar &lt;Titel&gt;</code> Finde <strong style=\"color: var(--blue);\">ähnliche Titel</strong> basierend auf Genre und Keywords — ein anderer Algorithmus als <code>/recommend</code>. Zeigt Verfügbarkeitsstatus und Watch-Now-Buttons.",
+    "feature_content_rating": "<strong style=\"color: var(--blue);\">Altersfreigaben</strong> (FSK, MPAA) werden in Such-Embeds angezeigt — konfigurierbar nach Land. Erfahre vor dem Anfordern ob ein Titel altersgerecht ist.",
+    "feature_providers": "<strong style=\"color: var(--blue);\">Streaming-Anbieter</strong> zeigen wo ein Titel zum Streamen verfügbar ist (Netflix, Disney+, etc.) — basierend auf TMDB- und JustWatch-Daten.",
     "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer-Buttons</strong> werden automatisch zu <code>/search</code>- und <code>/request</code>-Embeds hinzugefügt wenn ein YouTube-Trailer auf TMDB verfügbar ist — Trailer ansehen bevor du anforderst."
   },
   "jellyfin_webhook": {

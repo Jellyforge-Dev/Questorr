@@ -199,6 +199,16 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
+    new SlashCommandBuilder()
+      .setName("similar")
+      .setDescription("Find similar titles based on genre and keywords")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Movie or TV show to find similar titles for")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
     ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
       new SlashCommandBuilder()
         .setName("random")

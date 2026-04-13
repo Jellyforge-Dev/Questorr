@@ -78,7 +78,9 @@ export async function handleCollectionCommand(interaction) {
               String(part.id), "movie", title, jellyfinApiKey, jellyfinBaseUrl
             );
             available = !!jellyfinItemId;
-          } catch (_) {}
+          } catch (err) {
+            logger.error("[collection] Jellyfin availability check failed:", err.message);
+          }
         }
 
         return { id: part.id, title, year, rating, available, jellyfinItemId };

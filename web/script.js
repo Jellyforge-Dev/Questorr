@@ -1062,6 +1062,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // --- Unsaved Changes Warning ---
+  let formDirty = false;
+  form?.addEventListener("input", () => { formDirty = true; });
+  form?.addEventListener("change", () => { formDirty = true; });
+  window.addEventListener("beforeunload", (e) => {
+    if (formDirty) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
   // --- Event Listeners ---
 
   form?.addEventListener("submit", async (e) => {
@@ -1221,6 +1232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast((t("errors.save_config") || "Save error") + ": " + errorMsg);
       } else {
         const result = await response.json();
+        formDirty = false;
         // Check if commands were updated
         const msg = result.message || "";
         if (msg.toLowerCase().includes("command") || msg.toLowerCase().includes("updated")) {

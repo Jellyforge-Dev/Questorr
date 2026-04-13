@@ -1,6 +1,7 @@
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder } from "discord.js";
 import { tmdbGetUpcoming } from "../../api/tmdb.js";
+import * as seerrApi from "../../api/seerr.js";
 import { getTmdbApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
 
@@ -21,14 +22,28 @@ export async function handleUpcomingCommand(interaction) {
       return interaction.editReply({ content: t("upcoming_empty") });
     }
 
-    // Show up to 10 upcoming releases
+    // Show up to 10 upcoming releases with Seerr status
     const shown = results.slice(0, 10);
-    const lines = shown.map((r, i) => {
+    const itemsWithStatus = await Promise.all(
+      shown.map(async (r) => {
+        let seerrStatus = null;
+        try {
+          const sr = await seerrApi.getSeerrStatus(r.id, r.media_type);
+          seerrStatus = sr?.status ?? null;
+        } catch (_) {}
+        return { ...r, seerrStatus };
+      })
+    );
+    const lines = itemsWithStatus.map((r, i) => {
       const title = r.title || r.name || "Unknown";
       const date = r.release_date || r.first_air_date || "TBA";
-      const emoji = r.media_type === "movie" ? "🎬" : "📺";
-      const rating = r.vote_average ? `⭐ ${r.vote_average.toFixed(1)}` : "";
-      return `${i + 1}. ${emoji} **${title}** — ${date}${rating ? ` · ${rating}` : ""}`;
+      const emoji = r.media_type === "movie" ? "\uD83C\uDFAC" : "\uD83D\uDCFA";
+      const rating = r.vote_average ? `\u2B50 ${r.vote_average.toFixed(1)}` : "";
+      let statusIcon = "";
+      if (r.seerrStatus === 5) statusIcon = " \u2705";
+      else if (r.seerrStatus === 4) statusIcon = " \uD83D\uDCE5";
+      else if (r.seerrStatus === 2 || r.seerrStatus === 3) statusIcon = " \u23F3";
+      return `${i + 1}. ${emoji} **${title}** \u2014 ${date}${rating ? ` \u00B7 ${rating}` : ""}${statusIcon}`;
     });
 
     const embed = new EmbedBuilder()

@@ -104,7 +104,9 @@ export async function tmdbGetDetails(id, mediaType, apiKey) {
         params: {
           api_key: apiKey,
           language: getTmdbLanguage(),
-          append_to_response: "images,credits,external_ids",
+          append_to_response: mediaType === "movie"
+            ? "images,credits,external_ids,release_dates,watch/providers"
+            : "images,credits,external_ids,content_ratings,watch/providers",
         },
         timeout: TIMEOUTS.TMDB_API,
       }),
@@ -580,3 +582,49 @@ async function getDiscoverNicheMedia(apiKey) {
     return [];
   }
 }
+
+/**
+ * Extract content rating from TMDB details (already fetched via append_to_response).
+ * @param {Object} tmdbDetails - Details object from tmdbGetDetails
+ * @param {string} mediaType - 'movie' or 'tv'
+ * @param {string} [country] - ISO 3166-1 country code (e.g. "US", "DE")
+ * @returns {string|null} Content rating string or null
+ */
+export function extractContentRating(tmdbDetails, mediaType, country) {
+  if (!tmdbDetails || !country) return null;
+  const cc = country.toUpperCase();
+
+  if (mediaType === "movie") {
+    const releases = tmdbDetails.release_dates?.results;
+    if (!Array.isArray(releases)) return null;
+    const entry = releases.find(r => r.iso_3166_1 === cc);
+    if (!entry) return null;
+    // Pick the first non-empty certification
+    for (const rd of entry.release_dates) {
+      if (rd.certification) return rd.certification;
+    }
+    return null;
+  }
+
+  // TV
+  const ratings = tmdbDetails.content_ratings?.results;
+  if (!Array.isArray(ratings)) return null;
+  const entry = ratings.find(r => r.iso_3166_1 === cc);
+  return entry?.rating || null;
+}
+
+/**
+ * Extract streaming providers from TMDB details (already fetched via append_to_response).
+ * Returns only flatrate (subscription) providers for the given country.
+ * @param {Object} tmdbDetails - Details object from tmdbGetDetails
+ * @param {string} [country] - ISO 3166-1 country code (e.g. "US", "DE")
+ * @returns {string[]} Array of provider names, empty if none
+ */
+export function extractWatchProviders(tmdbDetails, country) {
+  if (!tmdbDetails || !country) return [];
+  const cc = country.toUpperCase();
+  const providers = tmdbDetails["watch/providers"]?.results?.[cc]?.flatrate;
+  if (!Array.isArray(providers)) return [];
+  return providers.map(p => p.provider_name);
+}
+

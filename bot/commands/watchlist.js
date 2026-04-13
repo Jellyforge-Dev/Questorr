@@ -47,7 +47,9 @@ function getSeerrUserIdFromDiscord(discordId) {
       const match = mappings.find(m => String(m.discordUserId) === String(discordId));
       if (match) return String(match.seerrUserId);
     }
-  } catch (_) {}
+  } catch (err) {
+    logger.error("[watchlist] Failed to parse USER_MAPPINGS:", err.message);
+  }
   return null;
 }
 

@@ -788,6 +788,36 @@
                         </div>
                       </div>
 
+                      <!-- Embed Extra Info Toggles -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 0.6rem;" data-i18n="config.embed_extra_title">Additional Embed Information</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="EMBED_SHOW_CONTENT_RATING" name="EMBED_SHOW_CONTENT_RATING" />
+                            <span data-i18n="config.embed_content_rating_label">Content Rating (FSK/MPAA)</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="EMBED_SHOW_PROVIDERS" name="EMBED_SHOW_PROVIDERS" />
+                            <span data-i18n="config.embed_providers_label">Streaming Providers</span>
+                          </label>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem;">
+                          <div style="flex: 1; min-width: 200px;">
+                            <label for="CONTENT_RATING_COUNTRY" style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.content_rating_country_label">Rating Country</label>
+                            <input type="text" id="CONTENT_RATING_COUNTRY" name="CONTENT_RATING_COUNTRY" placeholder="US, DE, GB..."
+                              style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface1); background: var(--surface0); color: var(--text); font-size: 0.9rem; margin-top: 0.25rem;" />
+                          </div>
+                          <div style="flex: 1; min-width: 200px;">
+                            <label for="PROVIDER_COUNTRY" style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.provider_country_label">Provider Country</label>
+                            <input type="text" id="PROVIDER_COUNTRY" name="PROVIDER_COUNTRY" placeholder="US, DE, GB..."
+                              style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface1); background: var(--surface0); color: var(--text); font-size: 0.9rem; margin-top: 0.25rem;" />
+                          </div>
+                        </div>
+                        <div class="form-text" style="margin-top: 0.4rem;" data-i18n="config.embed_extra_help">
+                          Leave country fields empty to auto-detect from bot language (e.g. DE for German, US for English).
+                        </div>
+                      </div>
+
                       <!-- Widget Section -->
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--teal);">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
@@ -1119,6 +1149,9 @@
                   <li><i class="bi bi-compass-fill"></i><div data-i18n="about.feature_discover"><code>/discover</code> Explore movies and TV shows by <strong style="color: var(--blue);">genre, year and minimum rating</strong>. Results show Jellyfin availability — perfect for "I want to watch something but don't know what" moments.<br><strong style="color: var(--blue);">Options:</strong> <code>type</code> (required), <code>genre</code> (optional, autocomplete), <code>year</code> (optional), <code>rating</code> (optional).</div></li>
                   <li><i class="bi bi-collection-fill"></i><div data-i18n="about.feature_collection"><code>/collection &lt;title&gt;</code> View all movies in a <strong style="color: var(--blue);">franchise or collection</strong> (e.g. Lord of the Rings, Marvel). Shows which parts are available on Jellyfin with Watch Now buttons.</div></li>
                   <li><i class="bi bi-person-badge-fill"></i><div data-i18n="about.feature_cast"><code>/cast &lt;name&gt;</code> Browse an actor's <strong style="color: var(--blue);">filmography</strong> with character names, ratings and Jellyfin availability. Sorted by popularity — autocomplete suggests actors with their known roles.</div></li>
+                  <li><i class="bi bi-diagram-2-fill"></i><div data-i18n="about.feature_similar"><code>/similar &lt;title&gt;</code> Find <strong style="color: var(--blue);">similar titles</strong> based on genre and keywords — a different algorithm than <code>/recommend</code>. Shows availability status and Watch Now buttons.</div></li>
+                  <li><i class="bi bi-shield-fill-check"></i><div data-i18n="about.feature_content_rating"><strong style="color: var(--blue);">Content ratings</strong> (FSK, MPAA) are shown in search embeds — configurable by country. Know if a title is age-appropriate before requesting.</div></li>
+                  <li><i class="bi bi-tv-fill"></i><div data-i18n="about.feature_providers"><strong style="color: var(--blue);">Streaming providers</strong> show where a title is available for streaming (Netflix, Disney+, etc.) — powered by TMDB and JustWatch data.</div></li>
                   <li><i class="bi bi-play-btn-fill"></i><div data-i18n="about.feature_trailer"><strong style="color: var(--blue);">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.</div></li>
                   <!-- Notifications & Routing -->
                   <li><i class="bi bi-bell-fill"></i><div data-i18n="about.feature_notifications">Receive rich Discord notifications for every Seerr event: pending approval, approved, available, declined, failed and issues — each routed to the right channel automatically.</div></li>

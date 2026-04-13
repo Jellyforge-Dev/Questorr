@@ -8,6 +8,7 @@ import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
+import { handleSimilarCommand } from "./commands/similar.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -151,6 +152,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "cast") {
           return handleCastCommand(interaction);
+        }
+        if (interaction.commandName === "similar") {
+          return handleSimilarCommand(interaction);
         }
       }
     } catch (outerErr) {

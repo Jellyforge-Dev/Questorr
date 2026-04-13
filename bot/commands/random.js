@@ -42,7 +42,9 @@ export async function handleRandomCommand(interaction) {
       try {
         const tmdbType = itemType === "Movie" ? "movie" : "tv";
         tmdbDataR = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
-      } catch (_) {}
+      } catch (err) {
+        logger.error("[random] Failed to fetch TMDB details:", err.message);
+      }
     }
 
     const rawOverview = (tmdbDataR?.overview || item.Overview || "");

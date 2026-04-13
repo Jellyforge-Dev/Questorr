@@ -590,7 +590,23 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     .setTimestamp();
 
   const footerText = process.env.EMBED_FOOTER_TEXT;
-  if (footerText) embed.setFooter({ text: footerText });
+  const requesterName = request?.requestedBy_username;
+
+  if (requesterName && eventType === "MEDIA_PENDING") {
+    const requesterFooter = t("requested_by").replace("{{user}}", requesterName);
+    const combinedFooter = footerText ? `${requesterFooter} \u2022 ${footerText}` : requesterFooter;
+
+    let avatarUrl = null;
+    const seerrUrl = process.env.SEERR_URL;
+    if (request?.requestedBy_avatar && seerrUrl) {
+      avatarUrl = request.requestedBy_avatar.startsWith("http")
+        ? request.requestedBy_avatar
+        : `${seerrUrl.replace(/\/+$/, "")}${request.requestedBy_avatar}`;
+    }
+    embed.setFooter(avatarUrl ? { text: combinedFooter, iconURL: avatarUrl } : { text: combinedFooter });
+  } else if (footerText) {
+    embed.setFooter({ text: footerText });
+  }
 
   // Poster thumbnail
   if (tmdbDetails?.poster_path) {
