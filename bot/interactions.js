@@ -5,6 +5,9 @@ import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/wa
 import { handleUpcomingCommand } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
+import { handleDiscoverCommand } from "./commands/discover.js";
+import { handleCollectionCommand } from "./commands/collection.js";
+import { handleCastCommand } from "./commands/cast.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -136,6 +139,15 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "recommend") {
           return handleRecommendCommand(interaction);
+        }
+        if (interaction.commandName === "discover") {
+          return handleDiscoverCommand(interaction);
+        }
+        if (interaction.commandName === "collection") {
+          return handleCollectionCommand(interaction);
+        }
+        if (interaction.commandName === "cast") {
+          return handleCastCommand(interaction);
         }
       }
     } catch (outerErr) {

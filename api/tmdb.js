@@ -361,6 +361,166 @@ export async function tmdbGetUpcoming(apiKey, type = "all") {
   return upcoming;
 }
 
+/**
+ * Get genre list from TMDB
+ * @param {string} apiKey - TMDB API key
+ * @param {string} mediaType - 'movie' or 'tv'
+ * @returns {Promise<Array>} Genre list [{id, name}]
+ */
+export async function tmdbGetGenres(apiKey, mediaType = "movie") {
+  const url = `https://api.themoviedb.org/3/genre/${mediaType}/list`;
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: { api_key: apiKey, language: getTmdbLanguage() },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB genres ${mediaType}` }
+    );
+    return res.data.genres || [];
+  } catch (err) {
+    logger.error(`TMDB genre list fetch failed: ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Discover media by genre, year, and rating
+ * @param {string} apiKey - TMDB API key
+ * @param {Object} opts - { mediaType, genreId, year, minRating, page }
+ * @returns {Promise<Array>} Discovery results
+ */
+export async function tmdbDiscover(apiKey, { mediaType = "movie", genreId, year, minRating, page = 1 } = {}) {
+  const url = `https://api.themoviedb.org/3/discover/${mediaType}`;
+  const params = {
+    api_key: apiKey,
+    language: getTmdbLanguage(),
+    sort_by: "popularity.desc",
+    "vote_count.gte": 50,
+    page,
+    include_adult: false,
+  };
+  if (genreId) params.with_genres = genreId;
+  if (year) {
+    if (mediaType === "movie") params.primary_release_year = year;
+    else params.first_air_date_year = year;
+  }
+  if (minRating) params["vote_average.gte"] = minRating;
+
+  try {
+    const res = await withRetry(
+      () => axios.get(url, { params, timeout: TIMEOUTS.TMDB_API }),
+      { label: `TMDB discover ${mediaType}` }
+    );
+    return (res.data.results || []).map(r => ({ ...r, media_type: mediaType }));
+  } catch (err) {
+    logger.error(`TMDB discover failed: ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Get videos (trailers) for a movie or TV show
+ * @param {number} id - TMDB ID
+ * @param {string} mediaType - 'movie' or 'tv'
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<string|null>} YouTube trailer URL or null
+ */
+export async function tmdbGetTrailer(id, mediaType, apiKey) {
+  const url = `https://api.themoviedb.org/3/${mediaType}/${id}/videos`;
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: { api_key: apiKey, language: getTmdbLanguage() },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB videos ${mediaType}/${id}` }
+    );
+    const videos = res.data.results || [];
+    // Prefer official YouTube trailers, then teasers
+    const trailer = videos.find(v => v.site === "YouTube" && v.type === "Trailer")
+      || videos.find(v => v.site === "YouTube" && v.type === "Teaser")
+      || videos.find(v => v.site === "YouTube");
+    return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+  } catch (err) {
+    logger.debug(`TMDB trailer fetch failed for ${mediaType}/${id}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Get collection details (franchise)
+ * @param {number} collectionId - TMDB collection ID
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<Object|null>} Collection with parts
+ */
+export async function tmdbGetCollection(collectionId, apiKey) {
+  const url = `https://api.themoviedb.org/3/collection/${collectionId}`;
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: { api_key: apiKey, language: getTmdbLanguage() },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB collection ${collectionId}` }
+    );
+    return res.data;
+  } catch (err) {
+    logger.error(`TMDB collection fetch failed for ${collectionId}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Search for a person
+ * @param {string} query - Person name
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<Array>} Person results
+ */
+export async function tmdbSearchPerson(query, apiKey) {
+  const url = "https://api.themoviedb.org/3/search/person";
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: { api_key: apiKey, query, language: getTmdbLanguage(), page: 1 },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB person search "${query}"` }
+    );
+    return res.data.results || [];
+  } catch (err) {
+    logger.error(`TMDB person search failed for "${query}": ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Get person details with combined credits
+ * @param {number} personId - TMDB person ID
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<Object|null>} Person details with credits
+ */
+export async function tmdbGetPerson(personId, apiKey) {
+  const url = `https://api.themoviedb.org/3/person/${personId}`;
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: {
+          api_key: apiKey,
+          language: getTmdbLanguage(),
+          append_to_response: "combined_credits",
+        },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB person ${personId}` }
+    );
+    return res.data;
+  } catch (err) {
+    logger.error(`TMDB person fetch failed for ${personId}: ${err.message}`);
+    return null;
+  }
+}
+
 async function getDiscoverVarietyMedia(apiKey) {
   try {
     // Get a good mix of genres and popularity ranges

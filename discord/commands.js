@@ -143,6 +143,62 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
+    new SlashCommandBuilder()
+      .setName("discover")
+      .setDescription("Discover movies or TV shows by genre, year, and rating")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Movie or TV show?")
+          .setRequired(true)
+          .addChoices(
+            { name: "\uD83C\uDFAC Movies", value: "movie" },
+            { name: "\uD83D\uDCFA TV Shows", value: "tv" }
+          )
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("genre")
+          .setDescription("Filter by genre")
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((opt) =>
+        opt
+          .setName("year")
+          .setDescription("Filter by release year (e.g. 2024)")
+          .setRequired(false)
+          .setMinValue(1900)
+          .setMaxValue(2030)
+      )
+      .addNumberOption((opt) =>
+        opt
+          .setName("rating")
+          .setDescription("Minimum rating (e.g. 7.0)")
+          .setRequired(false)
+          .setMinValue(1)
+          .setMaxValue(10)
+      ),
+    new SlashCommandBuilder()
+      .setName("collection")
+      .setDescription("View all movies in a franchise/collection")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Search for a movie to find its collection")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
+    new SlashCommandBuilder()
+      .setName("cast")
+      .setDescription("Browse an actor's filmography with library availability")
+      .addStringOption((opt) =>
+        opt
+          .setName("name")
+          .setDescription("Actor or actress name")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
     ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
       new SlashCommandBuilder()
         .setName("random")

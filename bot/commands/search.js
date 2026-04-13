@@ -164,11 +164,10 @@ export async function handleSearchOrRequest(
       }
     }
 
-    const imdbId = await tmdbApi.tmdbGetExternalImdb(
-      tmdbId,
-      mediaType,
-      getTmdbApiKey()
-    );
+    const [imdbId, trailerUrl] = await Promise.all([
+      tmdbApi.tmdbGetExternalImdb(tmdbId, mediaType, getTmdbApiKey()),
+      tmdbApi.tmdbGetTrailer(tmdbId, mediaType, getTmdbApiKey()),
+    ]);
 
     const omdb = imdbId ? await fetchOMDbData(imdbId) : null;
 
@@ -186,7 +185,12 @@ export async function handleSearchOrRequest(
       imdbId,
       mode === "request",
       mediaType,
-      details
+      details,
+      [],
+      [],
+      [],
+      [],
+      trailerUrl
     );
 
     const showTagSelection = process.env.SHOW_TAG_SELECTION !== "false";

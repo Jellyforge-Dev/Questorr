@@ -136,12 +136,22 @@ export function buildButtons(
   requestedSeasons = [],
   requestedTags = [],
   selectedSeasons = [],
-  selectedTags = []
+  selectedTags = [],
+  trailerUrl = null
 ) {
   const rows = [];
   const buttons = [];
 
   const _show = parseButtonConfig(requested ? "NOTIF_BUTTONS_MEDIA_PENDING" : "NOTIF_BUTTONS_MEDIA_PENDING");
+
+  if (trailerUrl && _show("trailer") && isValidUrl(trailerUrl)) {
+    buttons.push(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel(t("btn_trailer"))
+        .setURL(trailerUrl)
+    );
+  }
 
   if (imdbId) {
     const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;

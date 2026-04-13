@@ -37,9 +37,25 @@ async function resolveTitle(tmdbId, mediaType, seerrUrl, apiKey) {
 }
 
 /**
- * Build the watchlist embed for a given page
+ * Resolve the current user's Seerr ID from Discord ID via user mappings
  */
-function buildWatchlistEmbed(requests, page, totalCount) {
+function getSeerrUserIdFromDiscord(discordId) {
+  try {
+    const raw = process.env.USER_MAPPINGS;
+    const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
+    if (Array.isArray(mappings)) {
+      const match = mappings.find(m => String(m.discordUserId) === String(discordId));
+      if (match) return String(match.seerrUserId);
+    }
+  } catch (_) {}
+  return null;
+}
+
+/**
+ * Build the watchlist embed for a given page
+ * @param {string|null} currentSeerrUserId - The requesting user's Seerr ID (to censor other users' names)
+ */
+function buildWatchlistEmbed(requests, page, totalCount, currentSeerrUserId) {
   const start = page * PAGE_SIZE;
   const shown = requests.slice(start, start + PAGE_SIZE);
   const totalPages = Math.ceil(requests.length / PAGE_SIZE);
@@ -48,7 +64,10 @@ function buildWatchlistEmbed(requests, page, totalCount) {
     const title = r._resolvedTitle || "Unknown";
     const mediaType = r.type === "movie" ? "🎬" : "📺";
     const status = STATUS_MAP[r.media?.status] || STATUS_MAP[1];
-    const user = r.requestedBy?.displayName || r.requestedBy?.username || "?";
+    const isOwnRequest = currentSeerrUserId && String(r.requestedBy?.id) === currentSeerrUserId;
+    const user = isOwnRequest
+      ? (r.requestedBy?.displayName || r.requestedBy?.username || "?")
+      : "A User";
     const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "";
     return `${start + i + 1}. ${mediaType} **${title}** — ${status.emoji} ${status.label}\n   ↳ ${user} · ${date}`;
   });
@@ -102,24 +121,16 @@ export async function handleWatchlistCommand(interaction) {
   const filter = interaction.options.getString("filter") || "all";
 
   try {
+    const discordId = interaction.user.id;
+    const currentSeerrUserId = getSeerrUserIdFromDiscord(discordId);
+
     const data = await fetchRequests(seerrUrl, apiKey, 50, filter === "mine" ? "all" : filter);
     let requests = data?.results || [];
 
-    // If "mine" filter, find user's Seerr ID from mappings and filter
+    // If "mine" filter, show only own requests
     if (filter === "mine") {
-      const discordId = interaction.user.id;
-      let seerrUserId = null;
-      try {
-        const raw = process.env.USER_MAPPINGS;
-        const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
-        if (Array.isArray(mappings)) {
-          const match = mappings.find(m => String(m.discordUserId) === String(discordId));
-          if (match) seerrUserId = String(match.seerrUserId);
-        }
-      } catch (_) {}
-
-      if (seerrUserId) {
-        requests = requests.filter(r => String(r.requestedBy?.id) === seerrUserId);
+      if (currentSeerrUserId) {
+        requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
       } else {
         return interaction.editReply({ content: t("watchlist_no_mapping") });
       }
@@ -143,7 +154,7 @@ export async function handleWatchlistCommand(interaction) {
 
     const totalCount = data?.pageInfo?.results || requests.length;
     const totalPages = Math.ceil(requests.length / PAGE_SIZE);
-    const embed = buildWatchlistEmbed(requests, 0, totalCount);
+    const embed = buildWatchlistEmbed(requests, 0, totalCount, currentSeerrUserId);
 
     const reply = { embeds: [embed] };
     if (totalPages > 1) {
@@ -171,23 +182,14 @@ export async function handleWatchlistPagination(interaction) {
   const apiKey = getSeerrApiKey();
 
   try {
+    const discordId = interaction.user.id;
+    const currentSeerrUserId = getSeerrUserIdFromDiscord(discordId);
+
     const data = await fetchRequests(seerrUrl, apiKey, 50, filter === "mine" ? "all" : filter);
     let requests = data?.results || [];
 
-    if (filter === "mine") {
-      const discordId = interaction.user.id;
-      let seerrUserId = null;
-      try {
-        const raw = process.env.USER_MAPPINGS;
-        const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
-        if (Array.isArray(mappings)) {
-          const match = mappings.find(m => String(m.discordUserId) === String(discordId));
-          if (match) seerrUserId = String(match.seerrUserId);
-        }
-      } catch (_) {}
-      if (seerrUserId) {
-        requests = requests.filter(r => String(r.requestedBy?.id) === seerrUserId);
-      }
+    if (filter === "mine" && currentSeerrUserId) {
+      requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
     }
 
     // Resolve titles
@@ -202,7 +204,7 @@ export async function handleWatchlistPagination(interaction) {
 
     const totalCount = data?.pageInfo?.results || requests.length;
     const totalPages = Math.ceil(requests.length / PAGE_SIZE);
-    const embed = buildWatchlistEmbed(requests, newPage, totalCount);
+    const embed = buildWatchlistEmbed(requests, newPage, totalCount, currentSeerrUserId);
 
     return interaction.editReply({
       embeds: [embed],

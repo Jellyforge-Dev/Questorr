@@ -474,7 +474,11 @@
     "feature_recommend": "<code>/recommend &lt;title&gt;</code> Get <strong style=\"color: var(--blue);\">personalized recommendations</strong> based on any movie or TV show. Shows 5 similar titles with TMDB ratings and Jellyfin availability status — with Watch Now buttons for content already in your library.",
     "feature_approve_decline": "Admins can <strong style=\"color: var(--blue);\">approve or decline</strong> pending Seerr requests directly from the Discord notification — no need to open the Seerr dashboard.",
     "feature_embed_footer": "Add a <strong style=\"color: var(--blue);\">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.",
-    "feature_config_backup": "<strong style=\"color: var(--blue);\">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server."
+    "feature_config_backup": "<strong style=\"color: var(--blue);\">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.",
+    "feature_discover": "<code>/discover</code> Explore movies and TV shows by <strong style=\"color: var(--blue);\">genre, year and minimum rating</strong>. Results show Jellyfin availability — perfect for \"I want to watch something but don't know what\" moments.<br><strong style=\"color: var(--blue);\">Options:</strong> <code>type</code> (required), <code>genre</code> (optional, autocomplete), <code>year</code> (optional), <code>rating</code> (optional).",
+    "feature_collection": "<code>/collection &lt;title&gt;</code> View all movies in a <strong style=\"color: var(--blue);\">franchise or collection</strong> (e.g. Lord of the Rings, Marvel). Shows which parts are available on Jellyfin with Watch Now buttons.",
+    "feature_cast": "<code>/cast &lt;name&gt;</code> Browse an actor's <strong style=\"color: var(--blue);\">filmography</strong> with character names, ratings and Jellyfin availability. Sorted by popularity — autocomplete suggests actors with their known roles.",
+    "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",

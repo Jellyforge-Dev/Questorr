@@ -291,6 +291,46 @@ async function handleSearchAutocomplete(interaction, focusedValue) {
   }
 }
 
+// ─── Genre Autocomplete ──────────────────────────────────────────────────────
+async function handleGenreAutocomplete(interaction, focusedValue) {
+  try {
+    const mediaType = interaction.options.getString("type") || "movie";
+    const genres = await tmdbApi.tmdbGetGenres(getTmdbApiKey(), mediaType);
+
+    const filtered = genres
+      .filter((g) => g.name.toLowerCase().includes(focusedValue.toLowerCase()))
+      .slice(0, 25)
+      .map((g) => ({
+        name: g.name,
+        value: String(g.id),
+      }));
+
+    return await interaction.respond(filtered);
+  } catch (e) {
+    logger.error("Genre autocomplete error:", e);
+    return interaction.respond([]);
+  }
+}
+
+// ─── Person/Cast Autocomplete ────────────────────────────────────────────────
+async function handlePersonAutocomplete(interaction, focusedValue) {
+  if (!focusedValue) return interaction.respond([]);
+  try {
+    const results = await tmdbApi.tmdbSearchPerson(focusedValue, getTmdbApiKey());
+    const choices = results.slice(0, 10).map((p) => {
+      const knownFor = p.known_for?.slice(0, 2).map(k => k.title || k.name).join(", ") || "";
+      let label = p.name;
+      if (knownFor) label += ` — ${knownFor}`;
+      if (label.length > 100) label = label.substring(0, 97) + "...";
+      return { name: label, value: String(p.id) };
+    });
+    return await interaction.respond(choices);
+  } catch (e) {
+    logger.error("Person autocomplete error:", e);
+    return interaction.respond([]);
+  }
+}
+
 // ─── Main autocomplete dispatcher ─────────────────────────────────────────────
 export async function handleAutocomplete(interaction) {
   const focusedOption = interaction.options.getFocused(true);
@@ -300,11 +340,13 @@ export async function handleAutocomplete(interaction) {
   if (focusedOption.name === "tag") return handleTagAutocomplete(interaction, focusedValue);
   if (focusedOption.name === "quality") return handleQualityAutocomplete(interaction, focusedValue);
   if (focusedOption.name === "server") return handleServerAutocomplete(interaction, focusedValue);
+  if (focusedOption.name === "genre") return handleGenreAutocomplete(interaction, focusedValue);
 
   // Route by command name
   if (interaction.commandName === "trending") return handleTrendingAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "status") return handleStatusAutocomplete(interaction, focusedValue);
+  if (interaction.commandName === "cast") return handlePersonAutocomplete(interaction, focusedValue);
 
-  // Default: search autocomplete (used by /search, /request)
+  // Default: search autocomplete (used by /search, /request, /collection)
   return handleSearchAutocomplete(interaction, focusedValue);
 }
