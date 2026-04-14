@@ -7,6 +7,11 @@ import NodeCache from "node-cache";
 import { CACHE_TTL } from "../lib/constants.js";
 import logger from "./logger.js";
 
+/** Returns the current bot language for use in cache keys */
+function getLang() {
+  return (process.env.BOT_LANGUAGE || "en").toLowerCase();
+}
+
 class APICache {
   constructor() {
     // TMDB cache - 5 minutes TTL
@@ -34,7 +39,7 @@ class APICache {
 
   // TMDB Search Cache
   tmdbSearch(query, results) {
-    const key = `search:${query.toLowerCase().trim()}`;
+    const key = `search:${getLang()}:${query.toLowerCase().trim()}`;
 
     if (results === undefined) {
       // GET
@@ -54,7 +59,7 @@ class APICache {
 
   // TMDB Details Cache
   tmdbDetails(id, mediaType, details) {
-    const key = `details:${mediaType}:${id}`;
+    const key = `details:${getLang()}:${mediaType}:${id}`;
 
     if (details === undefined) {
       // GET
@@ -94,7 +99,7 @@ class APICache {
 
   // TMDB Trending Cache
   tmdbTrending(results) {
-    const key = "trending:weekly";
+    const key = `trending:${getLang()}:weekly`;
 
     if (results === undefined) {
       // GET

@@ -5,7 +5,7 @@
 
   **Ein selbst gehosteter Discord-Bot, der Jellyfin und Seerr verbindet — mit smarten Benachrichtigungen, automatischem Channel-Routing und einem vollständigen Web-Dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.2.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.3.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -29,6 +29,11 @@
 | 🔥 `/trending` | Die meistgesehenen Filme und Serien der Woche durchsuchen |
 | 🔎 `/status` | Seerr-Anfragestatus eines Titels abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt |
 | 🎲 `/random` | Zufälligen Film oder Serie aus der Jellyfin-Bibliothek anzeigen — mit Poster, Zusammenfassung, Genre, Laufzeit und Bewertung. Nur für den Ausführenden sichtbar |
+| 💡 `/recommend` | Empfehlungen basierend auf einem Film oder einer Serie via TMDB |
+| 🧭 `/discover` | Medien nach Genre, Jahr und Mindestbewertung entdecken |
+| 📦 `/collection` | Alle Filme einer Filmreihe/Kollektion mit Verfügbarkeit anzeigen |
+| 🎭 `/cast` | Filmografie eines Schauspielers mit Pagination durchsuchen |
+| 🔗 `/similar` | Ähnliche Titel basierend auf Genre und Keywords finden |
 | 🔔 Smarte Benachrichtigungen | Reichhaltige Discord-Embeds für alle Seerr-Events (ausstehend, genehmigt, verfügbar, abgelehnt, fehlgeschlagen, Probleme) |
 | 📺 Channel-Routing | Benachrichtigungen werden automatisch basierend auf dem Radarr/Sonarr Root-Folder in den richtigen Kanal geleitet |
 | 🔕 Private Events | Neue Anfragen und abgelehnte Anfragen werden nur als DM an den Anfrager gesendet — nicht in den öffentlichen Kanal |
@@ -41,6 +46,13 @@
 | 🎨 Benutzerdefinierte Embed-Farben | Embed-Farben für jeden Event-Typ individuell anpassen |
 | ⚙️ Web-Dashboard | Vollständige Konfiguration unter `http://dein-server:8282` — Tetris-Style-Oberfläche |
 | 📱 Mobil-freundlich | Responsives Dashboard, funktioniert auf Smartphones und Tablets |
+| ✅ Verfügbarkeitsstatus | Alle Embed-Listen zeigen Seerr-Status: ✅ verfügbar, ⏳ angefragt, 📥 teilweise |
+| 🎬 Altersfreigabe | FSK/MPAA-Bewertungen in Such-Embeds, konfigurierbar nach Land |
+| 📡 Streaming-Anbieter | Zeigt wo ein Titel zum Streaming verfügbar ist (Netflix, Disney+, etc.) |
+| ▶️ Trailer-Buttons | YouTube-Trailer-Links in /search und /request Embeds |
+| 💚 Health-Check-Leiste | Echtzeit-Servicestatus im Dashboard |
+| 📊 Statistik-Dashboard | Befehlsnutzungsstatistiken mit Aufschlüsselung pro Nutzer |
+| 🧩 Einbettbares Widget | HTML-Widget für Homarr/Homepage/Organizr mit Bot-Status und Steuerung |
 | 🌍 Mehrsprachig | Englische und deutsche Dashboard-Oberfläche |
 
 ---
@@ -107,7 +119,7 @@ Reverse-Proxy-Weiterleitungseinstellungen: Schema: `http` · Host / Forward-Host
 |---|---|
 | `latest` | Neueste stabile Version |
 | `dev` | Entwicklungs-Build (kann instabil sein) |
-| `2.2.0` | Bestimmte Version |
+| `2.3.0` | Bestimmte Version |
 
 ### Manuell (Entwicklung)
 
@@ -199,7 +211,7 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 ## 🔒 Sicherheit
 
-Questorr v2.2.0 enthält folgende Sicherheitshärtung:
+Questorr v2.3.0 enthält folgende Sicherheitshärtung:
 
 | Funktion | Details |
 |---|---|
@@ -209,6 +221,9 @@ Questorr v2.2.0 enthält folgende Sicherheitshärtung:
 | Brute-Force-Schutz | Login-Sperren bleiben auch nach Container-Neustarts erhalten (auf Disk geschrieben) |
 | Rate-Limiting | API-, Konfigurations- und Webhook-Endpunkte sind rate-limitiert |
 | Konfigurierbarer Trust-Proxy | `TRUST_PROXY=false` deaktiviert Proxy-Trust für direkte Deployments |
+| Verzeichnisberechtigungen | Konfigurationsverzeichnisse werden mit `0o755` statt `0o777` erstellt |
+| Audit-Logging | Zugriffe auf Webhook-Secret und Widget-API-Key werden protokolliert |
+| Abhängigkeits-Updates | Alle npm-Abhängigkeiten aktualisiert, 0 bekannte Schwachstellen |
 
 ---
 
@@ -221,9 +236,9 @@ Diese Funktionen sind auf der Roadmap und werden möglicherweise in zukünftigen
 - **Benachrichtigungs-Button-Toggles** ✅ *Hinzugefügt in v2.2.0*
 - **Webhook-Testprotokoll** — die letzten empfangenen Webhook-Events im Dashboard anzeigen für einfacheres Debugging
 - **Konfigurations-Export / Import** — die vollständige Konfiguration als JSON-Backup herunterladen und wiederherstellen
-- **Bot-Status-Widget** — Uptime und aktuelle Aktivität im Dashboard anzeigen
+- **Bot-Status-Widget** ✅ *Hinzugefügt in v2.3.0*
 - **Mehrsprachige Bot-Antworten** — Discord-Bot antwortet in der bevorzugten Sprache des Nutzers
-- **Statistiken** — `/stats`-Befehl mit Bibliotheksgröße, kürzlichen Ergänzungen und Anfragezählern
+- **Statistiken** ✅ *Hinzugefügt in v2.3.0*
 
 ---
 

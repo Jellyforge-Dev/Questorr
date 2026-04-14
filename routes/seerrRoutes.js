@@ -186,4 +186,49 @@ router.post("/seerr-root-folders", authenticateToken, async (req, res) => {
   }
 });
 
+// ─── Seerr notification type bitmask mapping ─────────────────────────────────
+// Values from Overseerr/Jellyseerr source (NotificationType enum)
+const SEERR_TYPE_BITS = {
+  MEDIA_PENDING:       2,
+  MEDIA_APPROVED:      4,
+  MEDIA_AVAILABLE:     8,
+  MEDIA_FAILED:        16,
+  TEST_NOTIFICATION:   32,
+  MEDIA_DECLINED:      64,
+  MEDIA_AUTO_APPROVED: 128,
+  ISSUE_CREATED:       256,
+  ISSUE_COMMENT:       512,
+  ISSUE_RESOLVED:      1024,
+  ISSUE_REOPENED:      2048,
+};
+
+router.get("/seerr-notification-types", authenticateToken, async (req, res) => {
+  try {
+    const seerrUrl = process.env.SEERR_URL;
+    const apiKey = process.env.SEERR_API_KEY;
+
+    if (!seerrUrl || !apiKey) {
+      return res.json({ success: false, message: "Seerr configuration missing" });
+    }
+
+    const baseUrl = getSeerrApiUrl(seerrUrl);
+    const response = await axios.get(`${baseUrl}/settings/notifications/webhook`, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_API,
+    });
+
+    const { enabled, types } = response.data || {};
+    const enabledTypes = {};
+
+    for (const [name, bit] of Object.entries(SEERR_TYPE_BITS)) {
+      enabledTypes[name] = enabled === true && (types & bit) !== 0;
+    }
+
+    res.json({ success: true, webhookEnabled: !!enabled, enabledTypes });
+  } catch (err) {
+    logger.error("[SEERR NOTIF TYPES] Error:", err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;

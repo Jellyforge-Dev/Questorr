@@ -7,6 +7,7 @@ import axios from "axios";
 import logger from "../utils/logger.js";
 import { TIMEOUTS, CACHE_TTL } from "../lib/constants.js";
 import { getSeerrApiUrl } from "../utils/seerrUrl.js";
+import { withRetry } from "../utils/axiosRetry.js";
 
 // Cache for tags, quality profiles, and servers
 let tagsCache = null;
@@ -46,12 +47,12 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
 
   // Fetch from Radarr servers
   try {
-    const radarrListResponse = await axios.get(
-      buildUrl("/service/radarr"),
-      {
+    const radarrListResponse = await withRetry(
+      () => axios.get(buildUrl("/service/radarr"), {
         headers: { "X-Api-Key": apiKey },
         timeout: TIMEOUTS.SEERR_API,
-      }
+      }),
+      { label: "Seerr Radarr servers" }
     );
 
     for (const server of radarrListResponse.data) {
@@ -84,12 +85,12 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
 
   // Fetch from Sonarr servers
   try {
-    const sonarrListResponse = await axios.get(
-      buildUrl("/service/sonarr"),
-      {
+    const sonarrListResponse = await withRetry(
+      () => axios.get(buildUrl("/service/sonarr"), {
         headers: { "X-Api-Key": apiKey },
         timeout: TIMEOUTS.SEERR_API,
-      }
+      }),
+      { label: "Seerr Sonarr servers" }
     );
 
     for (const server of sonarrListResponse.data) {
@@ -146,10 +147,13 @@ export async function checkMediaStatus(
         ? `${apiUrl}/movie/${tmdbId}`
         : `${apiUrl}/tv/${tmdbId}`;
 
-    const response = await axios.get(url, {
-      headers: { "X-Api-Key": apiKey },
-      timeout: TIMEOUTS.SEERR_API,
-    });
+    const response = await withRetry(
+      () => axios.get(url, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr status ${mediaType}/${tmdbId}` }
+    );
 
     // For movies, simple check
     if (mediaType === "movie") {
@@ -379,6 +383,64 @@ export async function fetchQualityProfiles(seerrUrl, apiKey) {
 }
 
 /**
+ * Approve a pending Seerr request
+ * @param {number} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Response data
+ */
+export async function approveRequest(requestId, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/request/${requestId}/approve`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr approve request ${requestId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Decline a pending Seerr request
+ * @param {number} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Response data
+ */
+export async function declineRequest(requestId, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/request/${requestId}/decline`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr decline request ${requestId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Fetch pending requests from Seerr
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} take - Number of requests to fetch
+ * @returns {Promise<Object>} Response with results array and pageInfo
+ */
+export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all") {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.get(`${apiUrl}/request`, {
+      headers: { "X-Api-Key": apiKey },
+      params: { take, sort: "modified", filter },
+      timeout: TIMEOUTS.SEERR_API,
+    }),
+    { label: "Seerr fetch requests" }
+  );
+  return response.data;
+}
+
+/**
  * Send a media request to Seerr
  * @param {Object} params - Request parameters
  * @returns {Promise<Object>} Response data
@@ -451,24 +513,14 @@ export async function sendRequest({
     // Note: userId will be added later after user mapping check
   } else {
     // isAutoApproved is false OR null - create as PENDING request
-    // IMPORTANT: We still need to send serverId and profileId for TV shows
-    // to work properly, but we set isAutoApproved to false to force manual approval
+    // CRITICAL: Do NOT include serverId, profileId, or rootFolder here.
+    // Seerr auto-approves requests when these fields are present and the
+    // requesting user (API key owner) has auto-approve permissions — even
+    // if isAutoApproved is explicitly false. Omitting them forces Seerr to
+    // use its default server/profile while keeping the request PENDING.
     payload.isAutoApproved = false;
     logger.info("[SEERR] ✋ Auto-Approve is OFF - request will be PENDING (admin must approve manually)");
-
-    // Include serverId and profileId if provided (needed for TV show requests to work)
-    if (serverId !== null && serverId !== undefined) {
-      payload.serverId = parseInt(serverId, 10);
-      logger.debug(`[SEERR] Including serverId ${serverId} in PENDING request (required for TV shows)`);
-    }
-    if (profileId !== null && profileId !== undefined) {
-      payload.profileId = parseInt(profileId, 10);
-      logger.debug(`[SEERR] Including profileId ${profileId} in PENDING request (required for TV shows)`);
-    }
-    if (rootFolder) {
-      payload.rootFolder = rootFolder;
-      logger.debug(`[SEERR] Including rootFolder in PENDING request`);
-    }
+    logger.debug("[SEERR] Omitting serverId/profileId/rootFolder to prevent Seerr-side auto-approve");
   }
 
   // Check if we have a user mapping for this Discord user
@@ -541,14 +593,21 @@ export async function sendRequest({
     if (isAutoApproved === false && seerrUserId !== null && seerrUserId !== undefined) {
       headers["x-api-user"] = String(seerrUserId);
       logger.info(`[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request will use this user's permissions - no auto-approve)`);
+    } else if (isAutoApproved === false) {
+      // No user mapping — request goes as API key owner but with isAutoApproved: false
+      // and without serverId/profileId, so Seerr should keep it PENDING
+      logger.info("[SEERR] ✋ No user mapping found — requesting as API key owner with isAutoApproved: false");
     } else if (isAutoApproved === true) {
       logger.info(`[SEERR] 🔓 NOT setting x-api-user header (request will use API key owner's permissions - auto-approve enabled)`);
     }
 
-    const response = await axios.post(finalUrl, payload, {
-      headers,
-      timeout: TIMEOUTS.SEERR_POST,
-    });
+    const response = await withRetry(
+      () => axios.post(finalUrl, payload, {
+        headers,
+        timeout: TIMEOUTS.SEERR_POST,
+      }),
+      { label: `Seerr request ${mediaType}/${tmdbId}` }
+    );
 
     logger.info("[SEERR] ✨ Request successful!");
     logger.debug(`[SEERR] Response: ${JSON.stringify(response.data)}`);

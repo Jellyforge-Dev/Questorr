@@ -1,3 +1,4 @@
+import { t, tNotif } from "../utils/botStrings.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -6,6 +7,7 @@ import {
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
 import { isValidUrl } from "../utils/url.js";
+import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
 
 let dailyRandomPickTimer = null;
@@ -78,18 +80,18 @@ export async function sendDailyRandomPick(client) {
       ? `https://image.tmdb.org/t/p/w1280${randomMedia.backdrop_path}`
       : null;
 
-    let overview = randomMedia.overview || "No description available.";
+    let overview = randomMedia.overview || t("no_description");
     if (overview.length > 300) {
       overview = overview.substring(0, 297) + "...";
     }
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: `${emoji} Today's Random Pick` })
+      .setAuthor({ name: tNotif("daily_random_pick", "NOTIF_TITLE_DAILY_RANDOM") })
       .setTitle(`${title}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#f5a962")
       .addFields({
-        name: "Rating",
+        name: t("field_rating"),
         value: randomMedia.vote_average
           ? `⭐ ${randomMedia.vote_average.toFixed(1)}/10`
           : "N/A",
@@ -99,7 +101,7 @@ export async function sendDailyRandomPick(client) {
     if (details.genres && Array.isArray(details.genres)) {
       const genreNames = details.genres.map((g) => g.name).join(", ");
       if (genreNames) {
-        embed.addFields({ name: "Genres", value: genreNames, inline: true });
+        embed.addFields({ name: t("label_genre"), value: genreNames, inline: true });
       }
     }
 
@@ -107,31 +109,36 @@ export async function sendDailyRandomPick(client) {
       embed.setImage(backdrop);
     }
 
-    const buttonComponents = [];
+    const footerText = process.env.EMBED_FOOTER_TEXT;
+    if (footerText) embed.setFooter({ text: footerText });
 
-    if (isMovie) {
-      const letterboxdUrl = `https://letterboxd.com/search/${encodeURIComponent(title)}/`;
-      if (isValidUrl(letterboxdUrl)) {
-        buttonComponents.push(
-          new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel("Letterboxd")
-            .setURL(letterboxdUrl)
-        );
-      }
-    }
+    const buttonComponents = [];
+    const _showDR = parseButtonConfig("NOTIF_BUTTONS_DAILY_RANDOM");
 
     let imdbId = null;
     if (details.external_ids?.imdb_id) {
       imdbId = details.external_ids.imdb_id;
     }
-    if (imdbId) {
+
+    if (_showDR("letterboxd") && isMovie && imdbId) {
+      const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}/`;
+      if (isValidUrl(letterboxdUrl)) {
+        buttonComponents.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(t("btn_letterboxd"))
+            .setURL(letterboxdUrl)
+        );
+      }
+    }
+
+    if (_showDR("imdb") && imdbId) {
       const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
       if (isValidUrl(imdbUrl)) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("IMDb")
+            .setLabel(t("btn_imdb"))
             .setURL(imdbUrl)
         );
       }
@@ -140,7 +147,7 @@ export async function sendDailyRandomPick(client) {
     buttonComponents.push(
       new ButtonBuilder()
         .setStyle(ButtonStyle.Primary)
-        .setLabel("Request")
+        .setLabel(t("btn_request"))
         .setCustomId(`request_random_${randomMedia.id}_${mediaType}`)
     );
 
@@ -261,18 +268,14 @@ export async function sendDailyRecommendation(client) {
     let backdropUrl = null;
     let posterUrl = null;
 
+    let tmdbOverview = null;
     if (tmdbId && tmdbApiKey) {
       try {
-        const tmdbRes = await axios.get(
-          `https://api.themoviedb.org/3/${isMovie ? "movie" : "tv"}/${tmdbId}`,
-          {
-            params: { api_key: tmdbApiKey, append_to_response: "images" },
-            timeout: 6000,
-          }
-        );
-        const tmdb = tmdbRes.data;
+        const tmdbType = isMovie ? "movie" : "tv";
+        const tmdb = await tmdbApi.tmdbGetDetails(tmdbId, tmdbType, tmdbApiKey);
         if (tmdb.backdrop_path) backdropUrl = `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}`;
         if (tmdb.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`;
+        if (tmdb.overview) tmdbOverview = tmdb.overview;
       } catch (e) {
         logger.debug("[Daily Recommendation] TMDB fetch failed:", e.message);
       }
@@ -283,7 +286,8 @@ export async function sendDailyRecommendation(client) {
       backdropUrl = `${base}/Items/${item.Id}/Images/Backdrop`;
     }
 
-    let overview = item.Overview || "Keine Beschreibung verfügbar.";
+    // Prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text
+    let overview = tmdbOverview || item.Overview || t("no_description");
     if (overview.length > 300) overview = overview.substring(0, 297) + "...";
 
     const genres = Array.isArray(item.Genres) ? item.Genres.join(", ") : "";
@@ -295,7 +299,7 @@ export async function sendDailyRecommendation(client) {
       : null;
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: `${emoji} Heutige Empfehlung aus deiner Library` })
+      .setAuthor({ name: tNotif("daily_recommendation", "NOTIF_TITLE_DAILY_RECOMMENDATION") })
       .setTitle(`${item.Name}${year ? ` (${year})` : ""}`)
       .setDescription(overview)
       .setColor("#1ec8a0")
@@ -303,43 +307,46 @@ export async function sendDailyRecommendation(client) {
 
     if (posterUrl) embed.setThumbnail(posterUrl);
     if (backdropUrl && isValidUrl(backdropUrl)) embed.setImage(backdropUrl);
+    const recFooter = process.env.EMBED_FOOTER_TEXT;
+    if (recFooter) embed.setFooter({ text: recFooter });
 
     const fields = [];
-    if (genres) fields.push({ name: "Genre", value: genres, inline: true });
-    fields.push({ name: "Bewertung", value: rating, inline: true });
+    if (genres) fields.push({ name: t("label_genre"), value: genres, inline: true });
+    fields.push({ name: t("label_rating"), value: rating, inline: true });
     if (fields.length > 0) embed.addFields(...fields);
 
     // Buttons
     const buttonComponents = [];
+    const _showRec = parseButtonConfig("NOTIF_BUTTONS_DAILY_RECOMMENDATION");
 
-    if (watchUrl && isValidUrl(watchUrl)) {
+    if (_showRec("watch") && watchUrl && isValidUrl(watchUrl)) {
       buttonComponents.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("▶ Jetzt ansehen")
+          .setLabel(t("btn_watch_now_short"))
           .setURL(watchUrl)
       );
     }
 
-    if (imdbId) {
+    if (_showRec("imdb") && imdbId) {
       const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
       if (isValidUrl(imdbUrl)) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("IMDb")
+            .setLabel(t("btn_imdb"))
             .setURL(imdbUrl)
         );
       }
     }
 
-    if (isMovie && imdbId) {
+    if (_showRec("letterboxd") && isMovie && imdbId) {
       const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
       if (isValidUrl(letterboxdUrl)) {
         buttonComponents.push(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("Letterboxd")
+            .setLabel(t("btn_letterboxd"))
             .setURL(letterboxdUrl)
         );
       }

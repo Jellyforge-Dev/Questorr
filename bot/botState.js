@@ -9,6 +9,8 @@ export const botState = {
   isBotRunning: false,
   discordClient: null,
   jellyfinWebSocketClient: null,
+  /** Timestamp (ms) when the bot was last started, or null if stopped */
+  botStartedAt: null,
 };
 
 // --- PENDING REQUESTS TRACKING ---

@@ -1,5 +1,6 @@
 import axios from "axios";
 import logger from "../utils/logger.js";
+import { withRetry } from "../utils/axiosRetry.js";
 
 /**
  * Fetch all libraries from Jellyfin
@@ -13,10 +14,13 @@ export async function fetchLibraries(apiKey, baseUrl) {
     const basePathNoSlash = safeBase.pathname.replace(/\/$/, "");
     safeBase.pathname = basePathNoSlash + "/Library/VirtualFolders";
     const url = safeBase.href;
-    const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      timeout: 5000,
-    });
+    const response = await withRetry(
+      () => axios.get(url, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        timeout: 5000,
+      }),
+      { label: "Jellyfin libraries" }
+    );
 
     const virtualFolders = response.data || [];
     logger.debug(
@@ -106,17 +110,20 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
     const url = safeBase.href;
-    const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        AnyProviderIdEquals: `Tmdb.${tmdbId}`,
-        IncludeItemTypes: itemType,
-        Limit: 1,
-        Fields: "ProviderIds",
-      },
-      timeout: 5000,
-    });
+    const response = await withRetry(
+      () => axios.get(url, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          AnyProviderIdEquals: `Tmdb.${tmdbId}`,
+          IncludeItemTypes: itemType,
+          Limit: 1,
+          Fields: "ProviderIds",
+        },
+        timeout: 5000,
+      }),
+      { label: `Jellyfin findByTmdb ${tmdbId}` }
+    );
     const items = response.data?.Items || [];
     return items.length > 0 ? items[0].Id : null;
   } catch (err) {
@@ -461,6 +468,38 @@ export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
 }
 
 /**
+ * Fetch recently added items (latest additions to the library)
+ * Uses DateCreated sort — no userId required.
+ * @param {string} apiKey - Jellyfin API key
+ * @param {string} baseUrl - Jellyfin base URL
+ * @param {number} limit - Max items to return
+ * @param {string} type - 'movie', 'series', or 'all'
+ * @returns {Promise<Array>} Recently added items
+ */
+export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "all") {
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const includeTypes = type === "movie" ? "Movie" : type === "series" ? "Series" : "Movie,Series";
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        SortBy: "DateCreated",
+        SortOrder: "Descending",
+        Limit: limit,
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated",
+        IncludeItemTypes: includeTypes,
+        Recursive: true,
+      },
+      timeout: 8000,
+    });
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.error("Failed to fetch latest additions from Jellyfin:", err?.message);
+    return [];
+  }
+}
+
+/**
  * Fetch detailed information about a specific item
  * @param {string} itemId - Jellyfin item ID
  * @param {string} apiKey - Jellyfin API key
@@ -560,17 +599,20 @@ export function transformToWebhookFormat(item, baseUrl, serverId) {
 export async function fetchRandomJellyfinItem(apiKey, baseUrl, type = "Movie") {
   try {
     const base = baseUrl.replace(/\/$/, "");
-    const response = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        SortBy: "Random",
-        Limit: 1,
-        IncludeItemTypes: type,
-        Fields: "Overview,ProviderIds,ProductionYear,Genres,OfficialRating",
-      },
-      timeout: 8000,
-    });
+    const response = await withRetry(
+      () => axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "Random",
+          Limit: 1,
+          IncludeItemTypes: type,
+          Fields: "Overview,ProviderIds,ProductionYear,Genres,OfficialRating",
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin random ${type}` }
+    );
     const items = response.data?.Items || [];
     return items[0] || null;
   } catch (err) {
@@ -593,17 +635,20 @@ export async function findJellyfinItemByTmdbId(tmdbId, mediaType, title, apiKey,
   try {
     const base = baseUrl.replace(/\/$/, "");
     const itemType = mediaType === "movie" ? "Movie" : "Series";
-    const res = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        searchTerm: title,
-        IncludeItemTypes: itemType,
-        Fields: "ProviderIds,Name,ProductionYear",
-        Limit: 20,
-      },
-      timeout: 8000,
-    });
+    const res = await withRetry(
+      () => axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          searchTerm: title,
+          IncludeItemTypes: itemType,
+          Fields: "ProviderIds,Name,ProductionYear",
+          Limit: 20,
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin search "${title}"` }
+    );
     const items = res.data?.Items || [];
     for (const item of items) {
       const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;

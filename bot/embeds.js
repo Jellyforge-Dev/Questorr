@@ -1,3 +1,4 @@
+import { t } from "../utils/botStrings.js";
 import {
   EmbedBuilder,
   ButtonBuilder,
@@ -6,11 +7,22 @@ import {
   StringSelectMenuBuilder,
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
+import { extractContentRating, extractWatchProviders } from "../api/tmdb.js";
 import { minutesToHhMm } from "../utils/time.js";
 import { COLORS } from "../lib/constants.js";
 import { getSeerrApiUrl, normalizeSeerrUrl } from "../utils/seerrUrl.js";
 import { isValidUrl } from "../utils/url.js";
+import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
+
+/** Resolve country code from config, with language-based fallback */
+function resolveCountry(configKey) {
+  const explicit = process.env[configKey];
+  if (explicit) return explicit.toUpperCase();
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
+  const map = { en: "US", de: "DE", sv: "SE", fr: "FR", es: "ES", it: "IT", nl: "NL", pt: "PT", ja: "JP", ko: "KR" };
+  return map[lang] || "US";
+}
 
 export function buildNotificationEmbed(
   details,
@@ -18,7 +30,8 @@ export function buildNotificationEmbed(
   imdbId,
   status = "search",
   omdb = null,
-  tmdbId = null
+  tmdbId = null,
+  seerrStatus = null
 ) {
   const titleName = details.title || details.name || "Unknown";
   const releaseDate = details.release_date || details.first_air_date || "";
@@ -27,10 +40,10 @@ export function buildNotificationEmbed(
 
   const authorName =
     status === "success"
-      ? "✅ Successfully requested!"
+      ? t("successfully_requested")
       : mediaType === "movie"
-        ? "🎬 Movie found:"
-        : "📺 TV show found:";
+        ? t("movie_found")
+        : t("tv_found");
 
   let seerrMediaUrl;
   const currentSeerrUrl = normalizeSeerrUrl(process.env.SEERR_URL || "");
@@ -68,15 +81,15 @@ export function buildNotificationEmbed(
       : null) ||
     (omdb?.Plot && omdb.Plot !== "N/A"
       ? omdb.Plot
-      : "No description available.");
+      : t("no_description"));
 
-  let headerLine = "Summary";
+  let headerLine = t("label_summary");
   if (omdb) {
     if (mediaType === "movie" && omdb.Director && omdb.Director !== "N/A") {
-      headerLine = `Directed by ${omdb.Director}`;
+      headerLine = t("label_directed_by").replace("{{name}}", omdb.Director);
     } else if (mediaType === "tv" && omdb.Writer && omdb.Writer !== "N/A") {
       const creator = omdb.Writer.split(",")[0].trim();
-      headerLine = `Created by ${creator}`;
+      headerLine = t("label_created_by").replace("{{name}}", creator);
     }
   }
 
@@ -112,12 +125,44 @@ export function buildNotificationEmbed(
   embed.addFields(
     {
       name: headerLine,
-      value: overview.length ? overview : "No description available.",
+      value: overview.length ? overview : t("no_description"),
     },
-    { name: "Genre", value: genres, inline: true },
-    { name: "Runtime", value: runtime, inline: true },
-    { name: "Rating", value: rating, inline: true }
+    { name: t("label_genre"), value: genres, inline: true },
+    { name: t("label_runtime"), value: runtime, inline: true },
+    { name: t("label_rating"), value: rating, inline: true }
   );
+
+  // Seerr availability status
+  if (seerrStatus !== null) {
+    let statusText = null;
+    if (seerrStatus === 5) statusText = `\u2705 ${t("status_available")}`;
+    else if (seerrStatus === 4) statusText = `\uD83D\uDCE5 ${t("status_partial")}`;
+    else if (seerrStatus === 2 || seerrStatus === 3) statusText = `\u23F3 ${t("status_requested")}`;
+    if (statusText) {
+      embed.addFields({ name: "Status", value: statusText, inline: true });
+    }
+  }
+
+  // Content rating (FSK/MPAA)
+  if (process.env.EMBED_SHOW_CONTENT_RATING !== "false") {
+    const ratingCountry = resolveCountry("CONTENT_RATING_COUNTRY");
+    const contentRating = extractContentRating(details, mediaType, ratingCountry);
+    if (contentRating) {
+      embed.addFields({ name: t("label_content_rating"), value: contentRating, inline: true });
+    }
+  }
+
+  // Streaming providers
+  if (process.env.EMBED_SHOW_PROVIDERS !== "false") {
+    const providerCountry = resolveCountry("PROVIDER_COUNTRY");
+    const providers = extractWatchProviders(details, providerCountry);
+    if (providers.length > 0) {
+      embed.addFields({ name: t("label_providers"), value: `📺 ${providers.join(", ")}`, inline: false });
+    }
+  }
+
+  const footerText = process.env.EMBED_FOOTER_TEXT;
+  if (footerText) embed.setFooter({ text: footerText });
 
   return embed;
 }
@@ -131,49 +176,58 @@ export function buildButtons(
   requestedSeasons = [],
   requestedTags = [],
   selectedSeasons = [],
-  selectedTags = []
+  selectedTags = [],
+  trailerUrl = null
 ) {
   const rows = [];
   const buttons = [];
 
-  const showLetterboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false";
-  const showImdb = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+  const _show = parseButtonConfig(requested ? "NOTIF_BUTTONS_MEDIA_PENDING" : "NOTIF_BUTTONS_MEDIA_PENDING");
+
+  if (trailerUrl && _show("trailer") && isValidUrl(trailerUrl)) {
+    buttons.push(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel(t("btn_trailer"))
+        .setURL(trailerUrl)
+    );
+  }
 
   if (imdbId) {
     const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
 
-    if (showLetterboxd && isValidUrl(letterboxdUrl)) {
+    if (_show("letterboxd") && mediaType === "movie" && isValidUrl(letterboxdUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("Letterboxd")
+          .setLabel(t("btn_letterboxd"))
           .setURL(letterboxdUrl)
       );
     }
 
-    if (showImdb && isValidUrl(imdbUrl)) {
+    if (_show("imdb") && isValidUrl(imdbUrl)) {
       buttons.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("IMDb")
+          .setLabel(t("btn_imdb"))
           .setURL(imdbUrl)
       );
     }
   }
 
   if (requested) {
-    let successLabel = "Requested";
+    let successLabel = t("requested_label");
 
     if (mediaType === "tv" && requestedSeasons.length > 0) {
       if (requestedSeasons.includes("all")) {
-        successLabel = "Requested all seasons";
+        successLabel = t("requested_all_seasons");
       } else if (requestedSeasons.length === 1) {
-        successLabel = `Requested season ${requestedSeasons[0]}`;
+        successLabel = t("requested_season") + " " + requestedSeasons[0];
       } else {
         const seasons = [...requestedSeasons];
         const lastSeason = seasons.pop();
-        successLabel = `Requested seasons ${seasons.join(", ")} and ${lastSeason}`;
+        successLabel = t("requested_seasons") + " " + seasons.join(", ") + " " + t("and_connector") + " " + lastSeason;
       }
     }
     if (requestedTags.length > 0) {
@@ -181,10 +235,11 @@ export function buildButtons(
         requestedTags.length === 1
           ? requestedTags[0]
           : requestedTags.join(", ");
-      successLabel += ` with ${tagLabel} tag${requestedTags.length > 1 ? "s" : ""}`;
+      const tagKey = requestedTags.length === 1 ? "with_tag" : "with_tags";
+      successLabel += " " + t(tagKey).replace("{{tags}}", tagLabel);
     }
 
-    successLabel += ", stay tuned!";
+    successLabel += ", " + t("stay_tuned");
 
     buttons.push(
       new ButtonBuilder()
@@ -194,24 +249,25 @@ export function buildButtons(
         .setDisabled(true)
     );
   } else {
-    let requestLabel = "Request";
+    let requestLabel = t("btn_request").replace("📥 ", "");
 
     if (mediaType === "tv" && selectedSeasons.length > 0) {
       if (selectedSeasons.includes("all")) {
-        requestLabel = "Request all seasons";
+        requestLabel = t("request_all_seasons");
       } else if (selectedSeasons.length === 1) {
-        requestLabel = `Request season ${selectedSeasons[0]}`;
+        requestLabel = t("request_season") + " " + selectedSeasons[0];
       } else {
         const seasons = [...selectedSeasons];
         const lastSeason = seasons.pop();
-        requestLabel = `Request seasons ${seasons.join(", ")} and ${lastSeason}`;
+        requestLabel = t("request_seasons") + " " + seasons.join(", ") + " " + t("and_connector") + " " + lastSeason;
       }
     }
 
     if (selectedTags.length > 0) {
       const tagLabel =
         selectedTags.length === 1 ? selectedTags[0] : selectedTags.join(", ");
-      requestLabel += ` with ${tagLabel} tag${selectedTags.length > 1 ? "s" : ""}`;
+      const tagKey = selectedTags.length === 1 ? "with_tag" : "with_tags";
+      requestLabel += " " + t(tagKey).replace("{{tags}}", tagLabel);
     }
 
     const seasonsParam =
@@ -251,16 +307,16 @@ export function buildButtons(
 
     if (uniqueSeasons.length <= 24) {
       const seasonOptions = [
-        { label: "All Seasons", value: "all" },
+        { label: t("all_seasons"), value: "all" },
         ...uniqueSeasons.map((s) => ({
-          label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+          label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
           value: String(s.season_number),
         })),
       ];
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`select_seasons|${tmdbId}|${tagsParam}`)
-        .setPlaceholder("Select seasons to request...")
+        .setPlaceholder(t("select_seasons_placeholder"))
         .setMinValues(1)
         .setMaxValues(Math.min(25, seasonOptions.length))
         .addOptions(seasonOptions);
@@ -272,9 +328,9 @@ export function buildButtons(
 
       const firstBatchSeasons = uniqueSeasons.slice(0, SEASONS_PER_MENU);
       const firstMenuOptions = [
-        { label: "All Seasons", value: "all" },
+        { label: t("all_seasons"), value: "all" },
         ...firstBatchSeasons.map((s) => ({
-          label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+          label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
           value: String(s.season_number),
         })),
       ];
@@ -298,7 +354,7 @@ export function buildButtons(
 
         if (batchSeasons.length > 0) {
           const batchOptions = batchSeasons.map((s) => ({
-            label: `Season ${s.season_number} (${s.episode_count} episodes)`,
+            label: t("season_label") + " " + s.season_number + " (" + s.episode_count + " " + t("episodes_label") + ")",
             value: String(s.season_number),
           }));
 

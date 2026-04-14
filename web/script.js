@@ -2,6 +2,18 @@
 let currentTranslations = {};
 let currentLanguage = 'en';
 
+// Global: clear webhook event log
+async function clearWebhookLog() {
+  try {
+    await fetch("/api/webhook-log", {
+      method: "DELETE",
+      credentials: "include",
+    });
+    // Reload the webhook tab
+    document.querySelector('.logs-tab-btn[data-target="webhook"]')?.click();
+  } catch (_) {}
+}
+
 function isSafeAvatarUrl(url) {
   if (typeof url !== "string") return false;
   try {
@@ -58,6 +70,15 @@ function sanitizeTranslationHtml(str) {
 }
 
 function updateUITranslations() {
+  // Update collapsible button text based on current language
+  document.querySelectorAll('.collapsible-btn').forEach(btn => {
+    const isOpen = btn.dataset.open !== "false";
+    const openKey = btn.dataset.i18nOpen || "config.show_less";
+    const closedKey = btn.dataset.i18nClosed || "config.show_more";
+    const key = isOpen ? openKey : closedKey;
+    const translation = getNestedTranslation(key);
+    if (translation) btn.textContent = translation;
+  });
   // Update all elements with data-i18n attributes
   document.querySelectorAll('[data-i18n]').forEach(element => {
     const key = element.getAttribute('data-i18n');
@@ -197,9 +218,43 @@ async function initializeI18n() {
   setupLanguageChangeHandler();
 }
 
+// ─── Global collapsible toggle ───────────────────────────────────────────────
+function toggleCollapsible(bodyId, btnEl) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  const hidden = body.style.display === "none" || body.classList.contains("collapsible-closed");
+  if (hidden) {
+    body.style.removeProperty("display");
+    body.classList.remove("collapsible-closed");
+    body.classList.add("collapsible-open");
+    if (btnEl) {
+      btnEl.dataset.open = "true";
+      btnEl.textContent = (typeof getNestedTranslation === "function") ? (getNestedTranslation("config.show_less") || "Weniger anzeigen") : "Weniger anzeigen";
+    }
+  } else {
+    body.style.setProperty("display", "none", "important");
+    body.classList.remove("collapsible-open");
+    body.classList.add("collapsible-closed");
+    if (btnEl) {
+      btnEl.dataset.open = "false";
+      btnEl.textContent = (typeof getNestedTranslation === "function") ? (getNestedTranslation("config.show_more") || "Mehr anzeigen") : "Mehr anzeigen";
+    }
+  }
+}
+
+// ─── Event delegation for collapsible buttons ────────────────────────────────
+document.addEventListener("click", function(e) {
+  const btn = e.target.closest("[data-collapse-target]");
+  if (!btn) return;
+  e.preventDefault();
+  toggleCollapsible(btn.dataset.collapseTarget, btn);
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize i18n first
   await initializeI18n();
+
+
 
   // Fetch and display app version
   fetch("/api/health")
@@ -245,11 +300,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Only start if not already running
     if (statusPollingInterval !== null) return;
 
-    // Immediately fetch status
+    // Immediately fetch status + health
     fetchStatus();
+    loadHealthCheck();
 
     // Then set up polling every 30 seconds (increased from 10s to reduce load)
-    statusPollingInterval = setInterval(fetchStatus, 30000);
+    statusPollingInterval = setInterval(() => { fetchStatus(); loadHealthCheck(); }, 30000);
   }
 
   function stopStatusPolling() {
@@ -259,12 +315,269 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // ─── Health Check Bar ──────────────────────────────────────────────────────
+  async function loadHealthCheck() {
+    try {
+      const res = await fetch("/api/health/details", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const bar = document.getElementById("health-check-bar");
+      if (!bar) return;
+      bar.style.display = "block";
+
+      const statusColors = {
+        reachable: "var(--green)",
+        unreachable: "var(--red)",
+        not_configured: "var(--subtext0)",
+      };
+
+      // Discord status from bot state
+      const discordEl = document.getElementById("health-discord");
+      if (discordEl) {
+        const discordStatus = data.bot?.running && data.bot?.connected ? "reachable" : data.bot?.running ? "unreachable" : "not_configured";
+        const icon = discordEl.querySelector("i");
+        if (icon) icon.style.color = statusColors[discordStatus];
+      }
+
+      // Service statuses
+      for (const svc of ["seerr", "jellyfin"]) {
+        const el = document.getElementById(`health-${svc}`);
+        if (el) {
+          const icon = el.querySelector("i");
+          if (icon) icon.style.color = statusColors[data.services?.[svc]] || "var(--subtext0)";
+        }
+      }
+
+      // Uptime
+      const uptimeEl = document.getElementById("health-uptime");
+      if (uptimeEl) {
+        uptimeEl.textContent = data.bot?.running ? `⏱ ${data.uptimeFormatted}` : "";
+      }
+    } catch (_) {}
+  }
+
+  // ─── Statistics Page ───────────────────────────────────────────────────────
+  async function loadStatistics() {
+    try {
+      const res = await fetch("/api/health/details", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Summary cards
+      const cmdStats = data.commandStats || {};
+      document.getElementById("stats-total-commands").textContent = cmdStats.totalCommands || 0;
+      document.getElementById("stats-total-users").textContent = (cmdStats.topUsers || []).length;
+      document.getElementById("stats-pending").textContent = data.pendingRequests || 0;
+      document.getElementById("stats-cache-rate").textContent = data.cache?.hitRate || "0%";
+
+      // Command bars
+      const barsEl = document.getElementById("stats-command-bars");
+      if (barsEl && cmdStats.commands) {
+        const commands = Object.entries(cmdStats.commands).sort((a, b) => b[1] - a[1]);
+        const max = commands.length > 0 ? commands[0][1] : 1;
+        barsEl.innerHTML = commands.map(([name, count]) => {
+          const pct = Math.max((count / max) * 100, 2);
+          return `<div style="display:flex;align-items:center;gap:0.5rem;">
+            <code style="min-width:80px;color:var(--mauve);font-size:0.85rem;">/${name}</code>
+            <div style="flex:1;background:var(--surface0);border-radius:4px;height:22px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--teal);border-radius:4px;transition:width 0.3s;"></div>
+            </div>
+            <span style="min-width:40px;text-align:right;font-size:0.85rem;color:var(--subtext0);">${count}</span>
+          </div>`;
+        }).join("");
+      }
+
+      // Top users
+      const usersEl = document.getElementById("stats-top-users");
+      if (usersEl && cmdStats.topUsers) {
+        usersEl.innerHTML = cmdStats.topUsers.map((u, i) => {
+          const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+          const avatar = u.avatarUrl
+            ? `<img src="${u.avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" />`
+            : `<div style="width:24px;height:24px;border-radius:50%;background:var(--surface1);"></div>`;
+          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1]).slice(0, 3)
+            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);">/${c} ${n}</span>`).join(" ");
+          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
+            <span style="min-width:24px;text-align:center;">${medal}</span>
+            ${avatar}
+            <span style="font-weight:600;color:var(--text);flex:1;">${u.username}</span>
+            <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">${cmdTags}</div>
+          </div>`;
+        }).join("");
+      }
+    } catch (_) {}
+  }
+
+  // Stats tab: auto-load when navigating
+  const statsResetBtn = document.getElementById("stats-reset-btn");
+  if (statsResetBtn) {
+    statsResetBtn.addEventListener("click", async () => {
+      if (!confirm(t("config.stats_reset_confirm") || "Reset all statistics? This cannot be undone.")) return;
+      try {
+        await fetch("/api/stats/reset", { method: "POST", credentials: "include" });
+        loadStatistics();
+        showToast(t("config.stats_reset_success") || "Statistics reset.");
+      } catch (_) {
+        showToast(t("errors.generic") || "Error");
+      }
+    });
+  }
+
   function showToast(message, duration = 3000) {
     toast.textContent = message;
     toast.classList.add("show");
     setTimeout(() => {
       toast.classList.remove("show");
     }, duration);
+  }
+
+
+  // ─── Per-event notification buttons table ─────────────────────────────────
+  const NOTIF_EVENTS = [
+    { key: "MEDIA_PENDING",       label: "New Request (Pending)" },
+    { key: "MEDIA_APPROVED",      label: "Request Approved" },
+    { key: "MEDIA_AUTO_APPROVED", label: "Auto-Approved" },
+    { key: "MEDIA_AVAILABLE",     label: "Now Available" },
+    { key: "MEDIA_DECLINED",      label: "Request Declined" },
+    { key: "MEDIA_FAILED",        label: "Download Failed" },
+    { key: "ISSUE_CREATED",       label: "Issue Reported" },
+    { key: "ISSUE_COMMENT",       label: "Issue Comment" },
+    { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
+    { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
+    { key: "RANDOM",               label: "/random" },
+    { key: "STATUS",               label: "/status" },
+  ];
+  const BTN_DEFS = [
+    { key: "seerr",      configKey: "EMBED_SHOW_BUTTON_SEERR" },
+    { key: "watch",      configKey: "EMBED_SHOW_BUTTON_WATCH" },
+    { key: "letterboxd", configKey: "EMBED_SHOW_BUTTON_LETTERBOXD" },
+    { key: "imdb",       configKey: "EMBED_SHOW_BUTTON_IMDB" },
+  ];
+
+  // Returns true if the global default for this button is ON
+  function globalBtnDefault(configData, btn) {
+    const val = configData && configData[btn.configKey];
+    // stored as "true"/"false" string, or boolean, or missing → default true
+    if (val === false || val === "false") return false;
+    return true;
+  }
+
+  function buildNotifButtonsTable(configData, resetToGlobal) {
+    const tbody = document.getElementById("notif-buttons-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    for (const evt of NOTIF_EVENTS) {
+      const perEventKey = "NOTIF_BUTTONS_" + evt.key;
+      const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
+
+      // Parse saved per-event value
+      let checkedMap = null;
+      if (raw) {
+        const parts = raw.toLowerCase().split(",").map(s => s.trim());
+        const on  = parts.filter(p => !p.startsWith("-"));
+        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+        checkedMap = {};
+        for (const b of BTN_DEFS) {
+          if (on.includes(b.key))       checkedMap[b.key] = true;
+          else if (off.includes(b.key)) checkedMap[b.key] = false;
+          else                          checkedMap[b.key] = globalBtnDefault(configData, b);
+        }
+      }
+
+      const tr = document.createElement("tr");
+      tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
+
+      const tdLabel = document.createElement("td");
+      tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
+      tdLabel.textContent = evt.label;
+      tr.appendChild(tdLabel);
+
+      for (const btn of BTN_DEFS) {
+        const td = document.createElement("td");
+        td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.event = evt.key;
+        cb.dataset.btn   = btn.key;
+        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
+        cb.checked = checkedMap ? checkedMap[btn.key] : globalBtnDefault(configData, btn);
+
+        cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
+        td.appendChild(cb);
+        tr.appendChild(td);
+      }
+      // Test button column
+      const tdTest = document.createElement("td");
+      tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem;";
+      const testBtn = document.createElement("button");
+      testBtn.type = "button";
+      testBtn.textContent = "\u25B6";
+      testBtn.title = "Send test to admin channel";
+      testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
+      testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
+      testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
+      testBtn.addEventListener("click", (function(evtKey, btn) {
+        return async function() {
+          btn.disabled = true;
+          btn.textContent = "\u2026";
+          try {
+            const r = await fetch("/api/test-notification-buttons", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ eventType: evtKey }),
+            });
+            const d = await r.json();
+            btn.textContent = d.success ? "\u2705" : "\u274C";
+            if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
+          } catch (e) {
+            btn.textContent = "\u274C";
+          }
+          setTimeout(function() { btn.disabled = false; btn.textContent = "\u25B6"; }, 3000);
+        };
+      })(evt.key, testBtn));
+      tdTest.appendChild(testBtn);
+      tr.appendChild(tdTest);
+
+      tbody.appendChild(tr);
+    }
+
+    // If reset: write empty values so save will clear per-event config
+    if (resetToGlobal) {
+      for (const evt of NOTIF_EVENTS) {
+        saveNotifButtonsRow(evt.key);
+      }
+    }
+  }
+
+  function saveNotifButtonsRow(eventKey) {
+    const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
+    const parts = [];
+    cbs.forEach(cb => {
+      parts.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
+    });
+    const envKey = "NOTIF_BUTTONS_" + eventKey;
+    let inp = document.getElementById(envKey);
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "hidden";
+      inp.id   = envKey;
+      inp.name = envKey;
+      document.getElementById("config-form")?.appendChild(inp);
+    }
+    inp.value = parts.join(",");
+  }
+
+  // Reset button handler — wired up after DOM ready
+  function initNotifButtonsReset(configData) {
+    const btn = document.getElementById("reset-notif-buttons-btn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      buildNotifButtonsTable(configData, true);
+    });
   }
 
   async function fetchConfig() {
@@ -305,6 +618,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
       
+      // Build per-event buttons table (reads from configData, not DOM)
+      buildNotifButtonsTable(config);
+      initNotifButtonsReset(config);
+
       // Sync app-language selector with LANGUAGE config value
       if (config.LANGUAGE) {
         const appLanguageSelect = document.getElementById('app-language');
@@ -331,11 +648,88 @@ document.addEventListener("DOMContentLoaded", async () => {
         seasonsNotifyInput.value = config.JELLYFIN_NOTIFY_SEASONS === "true" ? "true" : "";
       }
       
+      // Widget toggle: fetch real key and check if enabled
+      if (widgetToggle) {
+        const realKey = await fetchWidgetApiKey();
+        widgetToggle.checked = realKey.length > 0;
+        updateWidgetUI();
+      }
+
       await fetchWebhookSecret(); // ensures secret is loaded before updateWebhookUrl
       updateWebhookUrl();
+
+      // Grey out notification types not enabled in Seerr
+      await applySeerrNotifTypes();
     } catch (error) {
       console.error("[fetchConfig] Error:", error);
       showToast("Config error: " + (error.message || "Unknown error"));
+    }
+  }
+
+  // ─── Map Seerr notification type keys to title input IDs ───────────────────
+  const SEERR_KEY_TO_TITLE_ID = {
+    MEDIA_PENDING:       "NOTIF_TITLE_MEDIA_PENDING",
+    MEDIA_APPROVED:      "NOTIF_TITLE_MEDIA_APPROVED",
+    MEDIA_AUTO_APPROVED: "NOTIF_TITLE_MEDIA_AUTO_APPROVED",
+    MEDIA_AVAILABLE:     "NOTIF_TITLE_MEDIA_AVAILABLE",
+    MEDIA_DECLINED:      "NOTIF_TITLE_MEDIA_DECLINED",
+    MEDIA_FAILED:        "NOTIF_TITLE_MEDIA_FAILED",
+    ISSUE_CREATED:       "NOTIF_TITLE_ISSUE_CREATED",
+    ISSUE_COMMENT:       "NOTIF_TITLE_ISSUE_COMMENT",
+    ISSUE_RESOLVED:      "NOTIF_TITLE_ISSUE_RESOLVED",
+    ISSUE_REOPENED:      "NOTIF_TITLE_ISSUE_REOPENED",
+  };
+
+  async function applySeerrNotifTypes() {
+    try {
+      const res = await fetch("/api/seerr-notification-types", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success) return;
+
+      const { enabledTypes, webhookEnabled } = data;
+
+      // ── Notification title inputs ──
+      for (const [seerrKey, inputId] of Object.entries(SEERR_KEY_TO_TITLE_ID)) {
+        const input = document.getElementById(inputId);
+        if (!input) continue;
+        const label = input.previousElementSibling;
+        const isEnabled = enabledTypes[seerrKey] === true;
+
+        input.classList.toggle("notif-disabled", !isEnabled);
+        input.disabled = !isEnabled;
+        if (label) label.classList.toggle("notif-disabled", !isEnabled);
+      }
+
+      // ── Buttons-per-notification table rows ──
+      const tbody = document.getElementById("notif-buttons-table-body");
+      if (tbody) {
+        tbody.querySelectorAll("tr").forEach(tr => {
+          const cb = tr.querySelector("input[data-event]");
+          if (!cb) return;
+          const evtKey = cb.dataset.event;
+          // RANDOM, STATUS are Questorr-only → always enabled
+          if (evtKey === "RANDOM" || evtKey === "STATUS") return;
+          const seerrKey = evtKey === "TEST" ? "TEST_NOTIFICATION" : evtKey;
+          const isEnabled = enabledTypes[seerrKey] === true;
+
+          tr.classList.toggle("notif-disabled", !isEnabled);
+          tr.querySelectorAll("input[type=checkbox]").forEach(c => { c.disabled = !isEnabled; });
+          tr.querySelectorAll("button").forEach(b => { b.disabled = !isEnabled; });
+        });
+      }
+
+      // ── Show a hint if webhook is disabled entirely ──
+      if (!webhookEnabled) {
+        const hintText = (typeof getNestedTranslation === "function" && getNestedTranslation("config.seerr_webhook_disabled")) || "Webhook notifications are disabled in Seerr.";
+        const titlesBody = document.getElementById("notif-titles-body");
+        const buttonsBody = document.getElementById("notif-buttons-body");
+        const hint = '<div class="seerr-webhook-hint" style="font-size:0.82rem;color:var(--peach, #fab387);margin-bottom:0.75rem;"><i class="bi bi-exclamation-triangle-fill"></i> ' + hintText + '</div>';
+        if (titlesBody && !titlesBody.querySelector(".seerr-webhook-hint")) titlesBody.insertAdjacentHTML("afterbegin", hint);
+        if (buttonsBody && !buttonsBody.querySelector(".seerr-webhook-hint")) buttonsBody.insertAdjacentHTML("afterbegin", hint);
+      }
+    } catch (e) {
+      // Silently ignore — Seerr may not be configured yet
     }
   }
 
@@ -357,13 +751,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       botControlBtn.classList.remove("btn-success");
       botControlBtn.classList.add("btn-danger");
       botControlIcon.className = "bi bi-pause-fill";
-      botControlText.textContent = "Stop Bot";
+      botControlText.textContent = t("bot.stop") || "Bot stoppen";
       botControlBtn.dataset.action = "stop";
     } else {
       botControlBtn.classList.remove("btn-danger");
       botControlBtn.classList.add("btn-success");
       botControlIcon.className = "bi bi-play-fill";
-      botControlText.textContent = "Start Bot";
+      botControlText.textContent = t("bot.start") || "Bot starten";
       botControlBtn.dataset.action = "start";
     }
   }
@@ -437,6 +831,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           const seerrUrl = document.getElementById("SEERR_URL")?.value;
           const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
           if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+          // Auto-load Jellyfin libraries if configured
+          loadJellyfinLibraries(true);
         });
         startStatusPolling();
       } else {
@@ -605,13 +1001,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             const seerrUrl = document.getElementById("SEERR_URL")?.value;
             const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
             if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+            loadJellyfinLibraries(true);
           });
           startStatusPolling();
         } else {
           authError.textContent = data.message;
         }
       } catch (error) {
-        authError.textContent = "Login failed. Please try again.";
+        authError.textContent = t("auth.login_failed") || "Anmeldung fehlgeschlagen. Bitte erneut versuchen.";
       }
     });
   }
@@ -640,13 +1037,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             const seerrUrl = document.getElementById("SEERR_URL")?.value;
             const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
             if (seerrUrl && seerrKey) loadSeerrProfilesAndServers(seerrUrl, seerrKey, true);
+            loadJellyfinLibraries(true);
           });
           startStatusPolling();
         } else {
           authError.textContent = data.message;
         }
       } catch (error) {
-        authError.textContent = "Registration failed. Please try again.";
+        authError.textContent = t("auth.register_failed") || "Registrierung fehlgeschlagen. Bitte erneut versuchen.";
       }
     });
   }
@@ -663,6 +1061,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  // --- Unsaved Changes Warning ---
+  let formDirty = false;
+  form?.addEventListener("input", () => { formDirty = true; });
+  form?.addEventListener("change", () => { formDirty = true; });
+  window.addEventListener("beforeunload", (e) => {
+    if (formDirty) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
 
   // --- Event Listeners ---
 
@@ -823,6 +1232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast((t("errors.save_config") || "Save error") + ": " + errorMsg);
       } else {
         const result = await response.json();
+        formDirty = false;
         // Check if commands were updated
         const msg = result.message || "";
         if (msg.toLowerCase().includes("command") || msg.toLowerCase().includes("updated")) {
@@ -843,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     botControlBtn.disabled = true;
     const originalText = botControlText.textContent;
-    botControlText.textContent = "Processing...";
+    botControlText.textContent = t("config.processing") || "Verarbeite...";
 
     try {
       const response = await fetch(`/api/${action}-bot`, {
@@ -852,7 +1262,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        showToast(`Error: ${result.message || result.error || response.status}`);
+        showToast(`${t("common.error") || "Fehler"}: ${result.message || result.error || response.status}`);
         botControlText.textContent = originalText; // Restore text on failure
         botControlBtn.disabled = false;
       } else {
@@ -871,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 1000); // Fetch status after a short delay to get the new state
       }
     } catch (error) {
-      showToast(`Failed to ${action} bot.`);
+      showToast(t("errors.bot_control_failed") || "Bot-Steuerung fehlgeschlagen.");
       botControlText.textContent = originalText; // Restore text on failure
       botControlBtn.disabled = false;
     }
@@ -886,10 +1296,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Handle About page separately
       if (targetId === "about") {
-        // Hide dashboard layout
-        document.querySelector(".dashboard-layout").style.display = "none";
-        // Show about page
+        // Hide everything that takes layout space
+        document.getElementById("dashboard-content").style.display = "none";
+        document.querySelector(".hero").style.display = "none";
+        document.querySelector(".footer").style.display = "none";
+        const _showBtn = document.getElementById("show-header-btn");
+        if (_showBtn) _showBtn.style.display = "none";
+        const _logsEl = document.getElementById("logs-section");
+        if (_logsEl) _logsEl.style.display = "none";
+        // Show about page (outside main — independent)
         document.getElementById("about-page").style.display = "block";
+        window.scrollTo(0, 0);
         // Update dashboard title to "Back to Configuration"
         const dashboardTitle = document.getElementById("dashboard-title");
         dashboardTitle.innerHTML =
@@ -917,9 +1334,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadMappings();
       }
 
+      // Auto-load Jellyfin libraries if not yet loaded
+      if (targetId === "jellyfin") {
+        if (librariesList && !librariesList.innerHTML.trim()) {
+          loadJellyfinLibraries(true);
+        }
+      }
+
       // Load roles when role mapping tab is opened
       if (targetId === "roles") {
         loadRoles();
+      }
+
+      // Load statistics when stats tab is opened
+      if (targetId === "stats") {
+        loadStatistics();
       }
     });
   });
@@ -932,6 +1361,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (dashboardTitle.classList.contains("back-link")) {
       // Show dashboard layout
       document.querySelector(".dashboard-layout").style.display = "grid";
+      document.getElementById("dashboard-content").style.display = "";
+      document.querySelector(".hero").style.display = "";
+      document.querySelector(".footer").style.display = "";
+      // Restore show-header-btn if hero is collapsed
+      const _heroEl = document.getElementById("main-hero");
+      const _showBtn = document.getElementById("show-header-btn");
+      if (_showBtn && _heroEl && _heroEl.classList.contains("collapsed")) {
+        _showBtn.style.display = "";
+      }
       // Hide about page
       document.getElementById("about-page").style.display = "none";
       // Reset dashboard title
@@ -1035,7 +1473,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testDailyRecBtn) {
     testDailyRecBtn?.addEventListener("click", async () => {
       testDailyRecBtn.disabled = true;
-      if (testDailyRecStatus) testDailyRecStatus.textContent = "Sending...";
+      if (testDailyRecStatus) testDailyRecStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-daily-recommendation", {
           method: "POST",
@@ -1046,10 +1484,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         const data = await response.json();
         if (data.success || response.ok) {
-          if (testDailyRecStatus) testDailyRecStatus.textContent = "✅ Sent!";
+          if (testDailyRecStatus) testDailyRecStatus.textContent = "✅ " + (t("config.test_sent") || "Gesendet!");
           showToast(t("config.test_sent") || "Gesendet!");
         } else {
-          if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ Failed";
+          if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ " + (t("common.error") || "Fehler");
           showToast(data.message || "Fehler beim Senden.");
         }
       } catch (err) {
@@ -1069,7 +1507,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testSeerrWebhookBtn) {
     testSeerrWebhookBtn?.addEventListener("click", async () => {
       testSeerrWebhookBtn.disabled = true;
-      if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "Sending...";
+      if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-seerr-webhook", {
           method: "POST",
@@ -1101,7 +1539,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (testNotifBtnsBtn) {
     testNotifBtnsBtn.addEventListener("click", async () => {
       testNotifBtnsBtn.disabled = true;
-      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "Sending...";
+      if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = t("config.sending") || "Wird gesendet...";
       try {
         const response = await fetch("/api/test-notification-buttons", {
           method: "POST",
@@ -1111,20 +1549,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await response.json();
         if (data.success || response.ok) {
           if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + (data.message || t("config.test_sent") || "Sent!");
-          showToast(data.message || "Test notification sent!");
+          showToast(data.message || t("config.test_sent") || "Gesendet!");
         } else {
           if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (data.message || "Failed");
           showToast(data.message || "Test failed.");
         }
       } catch (err) {
         if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ Error";
-        showToast("Error sending test notification.");
+        showToast(t("errors.test_notification_failed") || "Fehler beim Senden der Test-Benachrichtigung.");
       } finally {
         testNotifBtnsBtn.disabled = false;
         setTimeout(() => { if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = ""; }, 4000);
       }
     });
   }
+
 
   // Copy Seerr webhook URL (uses real URL with secret, not the masked display)
   const copySeerrWebhookBtn = document.getElementById("copy-seerr-webhook-btn");
@@ -1152,6 +1591,89 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy)
           .then(() => showToast(t("ui.copied") || "Kopiert!"))
+          .catch(() => fallbackCopyTextToClipboard(textToCopy));
+      } else {
+        fallbackCopyTextToClipboard(textToCopy);
+      }
+    });
+  }
+
+  // ── Widget Enable/Disable & Copy URL ────────────────────────────────────
+  const widgetToggle = document.getElementById("widget-enabled-toggle");
+  const widgetSettings = document.getElementById("widget-settings");
+  const widgetUrlSection = document.getElementById("widget-url-section");
+  const widgetApiKeyInput = document.getElementById("WIDGET_API_KEY");
+  const widgetEmbedUrlEl = document.getElementById("widget-embed-url");
+  let _realWidgetKey = ""; // Stores the unmasked key fetched from the API
+
+  /** Generate a random 32-char hex key in the browser */
+  function generateWidgetKey() {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /** Fetch the real (unmasked) widget API key from the server */
+  async function fetchWidgetApiKey() {
+    try {
+      const resp = await fetch("/api/widget-api-key", { credentials: "include" });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.key) {
+          _realWidgetKey = data.key;
+          return data.key;
+        }
+      }
+    } catch (_) {}
+    return "";
+  }
+
+  function updateWidgetUI() {
+    if (!widgetToggle || !widgetSettings) return;
+    const enabled = widgetToggle.checked;
+    widgetSettings.style.display = enabled ? "block" : "none";
+
+    // Show URL section when widget is enabled and we have a real key
+    if (widgetUrlSection) {
+      widgetUrlSection.style.display = (enabled && _realWidgetKey) ? "block" : "none";
+    }
+    if (widgetEmbedUrlEl && _realWidgetKey) {
+      const origin = window.location.origin;
+      const fullUrl = `${origin}/api/widget/embed?key=${encodeURIComponent(_realWidgetKey)}`;
+      widgetEmbedUrlEl.textContent = `${origin}/api/widget/embed?key=••••••••`;
+      widgetEmbedUrlEl.dataset.realUrl = fullUrl;
+    }
+    // Sync hidden input with real key for form submission
+    if (widgetApiKeyInput) {
+      widgetApiKeyInput.value = _realWidgetKey;
+    }
+  }
+
+  if (widgetToggle) {
+    widgetToggle.addEventListener("change", () => {
+      if (widgetToggle.checked) {
+        // Auto-generate a key if none exists yet
+        if (!_realWidgetKey) {
+          _realWidgetKey = generateWidgetKey();
+        }
+      } else {
+        // Disabling widget — clear the API key
+        _realWidgetKey = "";
+      }
+      updateWidgetUI();
+    });
+  }
+  // widgetApiKeyInput is a hidden field — no manual input listener needed
+
+  // Copy widget URL
+  const copyWidgetUrlBtn = document.getElementById("copy-widget-url-btn");
+  if (copyWidgetUrlBtn) {
+    copyWidgetUrlBtn.addEventListener("click", () => {
+      const textToCopy = widgetEmbedUrlEl?.dataset.realUrl || "";
+      if (!textToCopy) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => showToast(t("ui.copied") || "Copied!"))
           .catch(() => fallbackCopyTextToClipboard(textToCopy));
       } else {
         fallbackCopyTextToClipboard(textToCopy);
@@ -1457,7 +1979,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const apiKey = document.getElementById("SEERR_API_KEY").value;
 
       testSeerrBtn.disabled = true;
-      testSeerrStatus.textContent = "Testing...";
+      testSeerrStatus.textContent = t("config.testing") || "Teste...";
       testSeerrStatus.style.color = "var(--text)";
 
       try {
@@ -1494,7 +2016,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!silent) {
         if (loadSeerrOptionsBtn) loadSeerrOptionsBtn.disabled = true;
         if (loadSeerrOptionsStatus) {
-          loadSeerrOptionsStatus.textContent = "Loading...";
+          loadSeerrOptionsStatus.textContent = t("common.loading") || "Wird geladen...";
           loadSeerrOptionsStatus.style.color = "var(--text)";
         }
       }
@@ -1596,7 +2118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (error) {
       if (!silent && loadSeerrOptionsStatus) {
-        loadSeerrOptionsStatus.textContent = error.message || "Failed to load options";
+        loadSeerrOptionsStatus.textContent = error.message || t("errors.seerr_load_options") || "Fehler beim Laden der Optionen";
         loadSeerrOptionsStatus.style.color = "#f38ba8";
       }
     } finally {
@@ -1610,7 +2132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const apiKey = document.getElementById("SEERR_API_KEY").value;
       if (!url || !apiKey) {
         if (loadSeerrOptionsStatus) {
-          loadSeerrOptionsStatus.textContent = "Enter URL and API Key first";
+          loadSeerrOptionsStatus.textContent = t("errors.seerr_enter_url_key") || "Bitte zuerst URL und API-Key eingeben";
           loadSeerrOptionsStatus.style.color = "#f38ba8";
         }
         return;
@@ -1622,11 +2144,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Test Jellyfin Endpoint
   if (testJellyfinBtn) {
     testJellyfinBtn?.addEventListener("click", async () => {
-      const url = document.getElementById("JELLYFIN_BASE_URL").value;
-      const apiKey = document.getElementById("JELLYFIN_API_KEY").value;
+      const url = (document.getElementById("JELLYFIN_BASE_URL") || {}).value || "";
+      const apiKey = (document.getElementById("JELLYFIN_API_KEY") || {}).value || "";
 
       testJellyfinBtn.disabled = true;
-      testJellyfinStatus.textContent = "Testing...";
+      testJellyfinStatus.textContent = t("config.testing") || "Teste...";
       testJellyfinStatus.style.color = "var(--text)";
 
       try {
@@ -1667,62 +2189,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         testJellyfinBtn.disabled = false;
       }
     });
-  }
-
-  // Test Notification Buttons
-  const testNotificationStatus = document.getElementById("test-notification-status");
-  const testMovieBtn = document.getElementById("test-movie-notification-btn");
-  const testSeriesBtn = document.getElementById("test-series-notification-btn");
-  const testSeasonBtn = document.getElementById("test-season-notification-btn");
-  const testBatchSeasonsBtn = document.getElementById("test-batch-seasons-notification-btn");
-  const testEpisodesBtn = document.getElementById("test-episodes-notification-btn");
-  const testBatchEpisodesBtn = document.getElementById("test-batch-episodes-notification-btn");
-
-  async function sendTestNotification(type) {
-    const statusEl = testNotificationStatus;
-    if (!statusEl) return;
-
-    statusEl.textContent = `Sending test ${type} notification...`;
-    statusEl.style.color = "var(--text)";
-
-    try {
-      const response = await fetch("/api/test-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        statusEl.textContent = result.message || `Test ${type} notification sent successfully!`;
-        statusEl.style.color = "var(--green)";
-      } else {
-        throw new Error(result.message || "Failed to send test notification");
-      }
-    } catch (error) {
-      statusEl.textContent = error.message || `Failed to send test ${type} notification`;
-      statusEl.style.color = "#f38ba8"; // Red
-    }
-  }
-
-  if (testMovieBtn) {
-    testMovieBtn?.addEventListener("click", () => sendTestNotification("movie"));
-  }
-  if (testSeriesBtn) {
-    testSeriesBtn?.addEventListener("click", () => sendTestNotification("series"));
-  }
-  if (testSeasonBtn) {
-    testSeasonBtn?.addEventListener("click", () => sendTestNotification("season"));
-  }
-  if (testBatchSeasonsBtn) {
-    testBatchSeasonsBtn?.addEventListener("click", () => sendTestNotification("batch-seasons"));
-  }
-  if (testEpisodesBtn) {
-    testEpisodesBtn?.addEventListener("click", () => sendTestNotification("episodes"));
-  }
-  if (testBatchEpisodesBtn) {
-    testBatchEpisodesBtn?.addEventListener("click", () => sendTestNotification("batch-episodes"));
   }
 
   // Test Random Pick Button
@@ -1774,24 +2240,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     "JELLYFIN_NOTIFICATION_LIBRARIES"
   );
 
-  if (fetchLibrariesBtn) {
-    fetchLibrariesBtn?.addEventListener("click", async () => {
-      const url = document.getElementById("JELLYFIN_BASE_URL").value;
-      const apiKey = document.getElementById("JELLYFIN_API_KEY").value;
+  // Reusable function to load and display Jellyfin libraries
+  // silent=true suppresses toast messages (used for auto-load)
+  async function loadJellyfinLibraries(silent = false) {
+    const urlEl = document.getElementById("JELLYFIN_BASE_URL");
+    const apiKeyEl = document.getElementById("JELLYFIN_API_KEY");
+    const url = urlEl ? urlEl.value : "";
+    const apiKey = apiKeyEl ? apiKeyEl.value : "";
 
-      if (!url || !url.trim()) {
-        showToast("Please enter Jellyfin URL first.");
-        return;
-      }
+    if (!url || !url.trim()) {
+      if (!silent) showToast(t("config.jellyfin_load_url_missing") || "Bitte zuerst die Jellyfin-URL eingeben.");
+      return;
+    }
 
-      if (!apiKey || !apiKey.trim()) {
-        showToast("Please enter Jellyfin API Key first.");
-        return;
-      }
+    if (!apiKey || !apiKey.trim()) {
+      if (!silent) showToast(t("config.jellyfin_load_key_missing") || "Bitte zuerst den Jellyfin API-Key eingeben.");
+      return;
+    }
 
-      fetchLibrariesBtn.disabled = true;
-      librariesList.innerHTML =
-        '<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>Loading libraries...</div>';
+    if (fetchLibrariesBtn) fetchLibrariesBtn.disabled = true;
+    librariesList.innerHTML =
+      `<div style="padding: 1rem; text-align: center; color: var(--subtext0);"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite; margin-right: 0.5rem;"></i>${t("config.jellyfin_loading_libraries") || "Lade Bibliotheken..."}</div>`;
 
       try {
         const response = await fetch("/api/jellyfin-libraries", {
@@ -1802,7 +2271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!response.ok) {
           const result = await response.json();
-          throw new Error(result.message || "Failed to fetch libraries");
+          throw new Error(result.message || t("errors.jellyfin_fetch_libraries") || "Fehler beim Laden der Bibliotheken");
         }
 
         const result = await response.json();
@@ -1812,7 +2281,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           if (libraries.length === 0) {
             librariesList.innerHTML =
-              '<div class="libraries-empty">No libraries found.</div>';
+              `<div class="libraries-empty">${t("config.jellyfin_no_libraries") || "Keine Bibliotheken gefunden."}</div>`;
           } else {
             // Get currently enabled libraries (object format: { libraryId: channelId })
             let libraryChannels = {};
@@ -1825,7 +2294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (Array.isArray(parsed)) {
                   // Convert array to object with default channel
                   const defaultChannel =
-                    document.getElementById("JELLYFIN_CHANNEL_ID").value || "";
+                    (document.getElementById("JELLYFIN_CHANNEL_ID") || {}).value || "";
                   parsed.forEach((libId) => {
                     libraryChannels[libId] = defaultChannel;
                   });
@@ -1840,7 +2309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // If no libraries selected yet, enable all by default with default channel
             const allEnabled = Object.keys(libraryChannels).length === 0;
             const defaultChannel =
-              document.getElementById("JELLYFIN_CHANNEL_ID").value || "";
+              (document.getElementById("JELLYFIN_CHANNEL_ID") || {}).value || "";
 
             librariesList.innerHTML = libraries
               .map((lib) => {
@@ -1871,7 +2340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   data-library-id="${lib.id}"
                   ${!isChecked ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -1879,10 +2348,10 @@ document.addEventListener("DOMContentLoaded", async () => {
               .join("");
 
             // Add TV Seasons and Episodes section
-            const episodesEnabled = document.getElementById("JELLYFIN_NOTIFY_EPISODES").value === "true";
-            const seasonsEnabled = document.getElementById("JELLYFIN_NOTIFY_SEASONS").value === "true";
-            const episodeChannel = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID").value || "";
-            const seasonChannel = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID").value || "";
+            const episodesEnabled = (document.getElementById("JELLYFIN_NOTIFY_EPISODES") || {}).value === "true";
+            const seasonsEnabled = (document.getElementById("JELLYFIN_NOTIFY_SEASONS") || {}).value === "true";
+            const episodeChannel = (document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID") || {}).value || "";
+            const seasonChannel = (document.getElementById("JELLYFIN_SEASON_CHANNEL_ID") || {}).value || "";
 
             librariesList.innerHTML += `
               <div style="padding: 1rem 0.75rem 0.5rem; margin-top: 1rem; border-top: 1px solid var(--surface1);">
@@ -1907,7 +2376,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!episodesEnabled ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
 
@@ -1929,7 +2398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!seasonsEnabled ? "disabled" : ""}
                 >
-                  <option value="">Use Default Channel</option>
+                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -1996,18 +2465,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         librariesList.innerHTML = `<div style="padding: 1rem; color: var(--red); background: var(--surface0); border-radius: 6px;">
           <i class="bi bi-exclamation-triangle" style="margin-right: 0.5rem;"></i>${escapeHtml(
             error.message ||
-            "Failed to load libraries. Please check your Jellyfin URL and API Key."
+            t("errors.jellyfin_load_libraries") || "Fehler beim Laden der Bibliotheken. Bitte Jellyfin-URL und API-Key prüfen."
           )}
         </div>`;
       } finally {
-        fetchLibrariesBtn.disabled = false;
+        if (fetchLibrariesBtn) fetchLibrariesBtn.disabled = false;
       }
-    });
+  }
+
+  if (fetchLibrariesBtn) {
+    fetchLibrariesBtn?.addEventListener("click", () => loadJellyfinLibraries(false));
   }
 
   // Populate channel dropdowns with available Discord channels
   async function populateLibraryChannelDropdowns(libraryChannels) {
-    const guildId = document.getElementById("GUILD_ID").value;
+    const guildId = (document.getElementById("GUILD_ID") || {}).value || "";
     if (!guildId) {
       return; // Can't fetch channels without guild ID
     }
@@ -2028,7 +2500,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Clear and populate options
         select.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -2049,12 +2521,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Populate Episodes and Seasons channel selects
       const episodesSelect = document.getElementById("episodes-channel-select");
       const seasonsSelect = document.getElementById("seasons-channel-select");
-      const episodeChannel = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID").value || "";
-      const seasonChannel = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID").value || "";
+      const episodeChannel = (document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID") || {}).value || "";
+      const seasonChannel = (document.getElementById("JELLYFIN_SEASON_CHANNEL_ID") || {}).value || "";
 
       if (episodesSelect) {
         episodesSelect.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -2072,7 +2544,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (seasonsSelect) {
         seasonsSelect.innerHTML =
-          '<option value="">Use Default Channel</option>' +
+          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -2139,7 +2611,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    guildSelect.innerHTML = '<option value="">Loading servers...</option>';
+    guildSelect.innerHTML = `<option value="">${t('config.loading_servers') || 'Lade Server...'}</option>`;
 
     try {
       const response = await fetch("/api/discord/guilds");
@@ -2193,28 +2665,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          '<option value="">Select a channel...</option>';
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
       return;
     }
 
     // Set loading state for all selects
     if (channelSelect) {
-      channelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      channelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (episodeChannelSelect) {
-      episodeChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      episodeChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (seasonChannelSelect) {
-      seasonChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      seasonChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (dailyRandomPickChannelSelect) {
-      dailyRandomPickChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+      dailyRandomPickChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     const seerrChannelSelect = document.getElementById("SEERR_CHANNEL_ID");
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
-    if (seerrChannelSelect) seerrChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
-    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = '<option value="">Loading channels...</option>';
+    if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
       const response = await fetch(`/api/discord/channels/${guildId}`);
@@ -2224,7 +2696,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate main channel select
         if (channelSelect) {
           channelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -2287,7 +2759,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate daily random pick channel select
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -2357,7 +2829,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     } catch (error) {
@@ -2375,7 +2847,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          '<option value="">Select a channel...</option>';
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
     }
   }
@@ -2406,7 +2878,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            '<option value="">Select a channel...</option>';
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     });
@@ -2957,18 +3429,23 @@ document.addEventListener("DOMContentLoaded", async () => {
               )}</div>
             </div>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="deleteMapping('${
+          <button class="btn btn-danger btn-sm mapping-delete-btn" data-discord-id="${
             escapeHtml(mapping.discordUserId)
-          }')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+          }" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
             <i class="bi bi-trash"></i> Remove
           </button>
         </div>
       `;
       })
       .join("");
+
+    // Bind delete buttons via event listeners (CSP blocks inline onclick)
+    container.querySelectorAll(".mapping-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => deleteMapping(btn.dataset.discordId));
+    });
   }
 
-  window.deleteMapping = async function (discordUserId) {
+  async function deleteMapping(discordUserId) {
     if (!confirm(`Remove mapping for Discord user ${discordUserId}?`)) return;
 
     try {
@@ -2978,13 +3455,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const result = await response.json();
 
       if (result.success) {
-        showToast("Mapping removed successfully!");
+        showToast(t("config.mapping_removed") || "Zuordnung erfolgreich entfernt!");
         await loadMappings();
       } else {
         showToast(`Error: ${result.message}`);
       }
     } catch (error) {
-      showToast("Failed to remove mapping.");
+      showToast(t("errors.mapping_remove_failed") || "Fehler beim Entfernen der Zuordnung.");
     }
   };
 
@@ -2999,7 +3476,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const seerrUserId = seerrSelect.dataset.value;
 
       if (!discordUserId || !seerrUserId) {
-        showToast("Please select both a Discord user and a Seerr user.");
+        showToast(t("errors.mapping_select_both") || "Bitte wähle sowohl einen Discord-User als auch einen Seerr-User aus.");
         return;
       }
 
@@ -3028,7 +3505,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const result = await response.json();
 
         if (result.success) {
-          showToast("Mapping added successfully!");
+          showToast(t("config.mapping_added") || "Zuordnung erfolgreich hinzugefügt!");
 
           // Reset Discord custom select
           delete discordSelect.dataset.value;
@@ -3065,7 +3542,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           showToast(`Error: ${result.message}`);
         }
       } catch (error) {
-        showToast("Failed to add mapping.");
+        showToast(t("errors.mapping_add_failed") || "Fehler beim Hinzufügen der Zuordnung.");
       }
     });
   }
@@ -3140,7 +3617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } catch (error) {
         console.error("Refresh users error:", error);
-        showToast("Failed to refresh users. Check connections.");
+        showToast(t("errors.refresh_users_failed") || "Fehler beim Aktualisieren der Benutzer. Verbindungen prüfen.");
       } finally {
         refreshAllUsersBtn.disabled = false;
         refreshAllUsersBtn.innerHTML = originalHtml;
@@ -3476,11 +3953,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Logs page button click handler
   logsPageBtn?.addEventListener("click", async () => {
     setupSection.style.display = "none";
-    logsSection.style.display = "flex";
-
-    // Hide only hero and footer, keep navbar
+    document.getElementById("dashboard-content").style.display = "none";
     document.querySelector(".hero").style.display = "none";
     document.querySelector(".footer").style.display = "none";
+    const _showBtn = document.getElementById("show-header-btn");
+    if (_showBtn) _showBtn.style.display = "none";
+    const _aboutEl = document.getElementById("about-page");
+    if (_aboutEl) _aboutEl.style.display = "none";
+    logsSection.style.display = "flex";
+    // scrollTo AFTER all hides so layout is settled
+    requestAnimationFrame(() => window.scrollTo(0, 0));
 
     logsPageActive = true;
 
@@ -3535,21 +4017,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       logsContainer.innerHTML =
         '<div style="text-align: center; color: var(--subtext0); padding: 2rem;">Loading logs...</div>';
+      // Webhook filter uses all logs endpoint, then filters client-side
       const endpoint = type === "error" ? "/api/logs/error" : "/api/logs/all";
       const response = await fetch(endpoint);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      if (data.entries.length === 0) {
+      // Webhook tab: use structured webhook event log API for better display
+      if (type === "webhook") {
+        try {
+          const whRes = await fetch("/api/webhook-log", {
+            credentials: "include",
+          });
+          if (whRes.ok) {
+            const whData = await whRes.json();
+            if (whData.events && whData.events.length > 0) {
+              const whHtml = whData.events.map(e => {
+                const statusClass = e.status === "unauthorized" ? "error" : (e.status === "received" ? "info" : "warn");
+                return `<div class="log-entry">
+                  <span class="log-timestamp">${e.ts || ""}</span>
+                  <span class="log-level ${statusClass}">${(e.event || "?").toUpperCase()}</span>
+                  <span class="log-message">${escapeHtml(e.subject || "—")} <span style="color:var(--subtext0);font-size:0.85em">· ${e.status || ""} · ${e.ip || ""}</span></span>
+                </div>`;
+              }).join("");
+              const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button id="clear-webhook-log-btn" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
+              logsContainer.innerHTML = clearBtn + whHtml;
+              document.getElementById("clear-webhook-log-btn")?.addEventListener("click", clearWebhookLog);
+              return;
+            }
+          }
+        } catch (_) {}
+        // Fallback: filter general logs
+      }
+
+      let entries = data.entries;
+      if (type === "webhook") {
+        entries = entries.filter(e => e.message && e.message.includes("[SEERR WEBHOOK]"));
+      }
+
+      if (entries.length === 0) {
         const emptyMessage =
-          type === "error" ? "No errors found" : "No logs available";
+          type === "error" ? "No errors found" :
+          type === "webhook" ? "No webhook events in log yet." :
+          "No logs available";
         logsContainer.innerHTML = `<div class="logs-empty">${emptyMessage}</div>`;
         return;
       }
 
       // Build log entries HTML
-      const logsHtml = data.entries
+      const logsHtml = entries
         .map(
           (entry) => `
         <div class="log-entry">
@@ -3673,12 +4190,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         botControlBtnLogs.classList.remove("btn-success");
         botControlBtnLogs.classList.add("btn-danger");
         botControlBtnLogs.querySelector("i").className = "bi bi-pause-fill";
-        botControlTextLogs.textContent = "Stop Bot";
+        botControlTextLogs.textContent = t("bot.stop") || "Bot stoppen";
       } else {
         botControlBtnLogs.classList.remove("btn-danger");
         botControlBtnLogs.classList.add("btn-success");
         botControlBtnLogs.querySelector("i").className = "bi bi-play-fill";
-        botControlTextLogs.textContent = "Start Bot";
+        botControlTextLogs.textContent = t("bot.start") || "Bot starten";
       }
     } catch (error) {}
   }
@@ -3695,13 +4212,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       botControlBtnLogs.disabled = true;
       const originalText = botControlTextLogs.textContent;
-      botControlTextLogs.textContent = "Processing...";
+      botControlTextLogs.textContent = t("config.processing") || "Verarbeite...";
 
       const response = await fetch(endpoint, { method: "POST" });
 
       if (!response.ok) {
         const data = await response.json();
-        showToast(`Error: ${data.message}`);
+        showToast(`${t("common.error") || "Fehler"}: ${data.message}`);
         botControlTextLogs.textContent = originalText;
         botControlBtnLogs.disabled = false;
       } else {
@@ -3714,7 +4231,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }, 1000);
       }
     } catch (error) {
-      showToast(`Failed to control bot.`);
+      showToast(t("errors.bot_control_failed") || "Bot-Steuerung fehlgeschlagen.");
       botControlBtnLogs.disabled = false;
     }
   });
@@ -3725,10 +4242,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     logsSection.style.display = "none";
     setupSection.style.display = "block";
+    document.getElementById("dashboard-content").style.display = "";
 
     // Show hero and footer again
     document.querySelector(".hero").style.display = "block";
     document.querySelector(".footer").style.display = "block";
+    // Restore show-header-btn if hero is collapsed
+    const _heroEl2 = document.getElementById("main-hero");
+    const _showBtn2 = document.getElementById("show-header-btn");
+    if (_showBtn2 && _heroEl2 && _heroEl2.classList.contains("collapsed")) {
+      _showBtn2.style.display = "";
+    }
 
     logsPageActive = false;
 
@@ -4003,5 +4527,70 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Also update immediately if there's already a value
     updateSecondsFromMs();
+  }
+
+  // ─── Config Import Handler ──────────────────────────────────────────────────
+  const importInput = document.getElementById("import-config-input");
+  const importStatus = document.getElementById("import-config-status");
+  if (importInput) {
+    importInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      importInput.value = ""; // reset for re-upload
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        if (importStatus) importStatus.textContent = t("config.importing") || "Importiere...";
+        const res = await fetch("/api/config/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(json),
+        });
+        if (res.ok) {
+          if (importStatus) {
+            importStatus.textContent = "✅ " + (t("config.imported") || "Importiert!");
+            importStatus.style.color = "var(--green)";
+          }
+          // Reload config into the form
+          setTimeout(() => fetchConfig(), 500);
+          setTimeout(() => { if (importStatus) importStatus.textContent = ""; }, 3000);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          if (importStatus) {
+            importStatus.textContent = "❌ " + (err.message || t("errors.import_failed") || "Import fehlgeschlagen");
+            importStatus.style.color = "var(--red)";
+          }
+        }
+      } catch (err) {
+        if (importStatus) {
+          importStatus.textContent = "❌ Invalid JSON file";
+          importStatus.style.color = "var(--red)";
+        }
+      }
+    });
+  }
+
+  // Fix export button to include auth token
+  const exportBtn = document.getElementById("export-config-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch("/api/config/export", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Export failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `questorr-config-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("Export failed: " + err.message);
+      }
+    });
   }
 });

@@ -21,7 +21,7 @@
     <div class="content-wrapper">
       <nav class="navbar">
         <div class="container">
-          <a href="#" class="navbar-brand">
+          <a href="/" class="navbar-brand">
             <img src="/assets/logo-transparent.png" alt="Questorr Logo" class="logo" />
             <span id="dummy-mode-badge" style="display:none; margin-left: 0.75rem; padding: 0.35rem 0.75rem; background: #f38ba8; color: white; border-radius: 6px; font-size: 0.75rem; font-weight: bold; white-space: nowrap;">DUMMY MODE</span>
           </a>
@@ -29,7 +29,7 @@
             <li>
               <a href="#" class="about-link" data-target="about">
                 <i class="bi bi-info-circle-fill nav-icon" aria-hidden="true"></i>
-                <span>About</span>
+                <span data-i18n="navigation.about">About</span>
               </a>
             </li>
             <li>
@@ -60,7 +60,7 @@
             <li>
               <a href="#" id="logout-btn" class="hidden">
                 <i class="bi bi-box-arrow-right nav-icon" aria-hidden="true"></i>
-                <span>Logout</span>
+                <span data-i18n="navigation.logout">Logout</span>
               </a>
             </li>
           </ul>
@@ -161,6 +161,18 @@
               </button>
             </div>
 
+            <!-- Health Check Status Bar -->
+            <div id="health-check-bar" class="health-check-bar" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--surface0); border-radius: 8px; border: 1px solid var(--surface1);">
+              <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; font-size: 0.9rem;">
+                <span style="font-weight: 600; color: var(--text);" data-i18n="config.health_title">System Status</span>
+                <span id="health-discord" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Discord</span>
+                <span id="health-seerr" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Seerr</span>
+                <span id="health-jellyfin" class="health-item"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> Jellyfin</span>
+
+                <span id="health-uptime" style="color: var(--subtext0); margin-left: auto;"></span>
+              </div>
+            </div>
+
             <div class="dashboard-layout">
               <div class="dashboard-sidebar">
                 <nav class="dashboard-nav">
@@ -171,6 +183,7 @@
                   <a href="#" class="nav-item" data-target="mappings" data-i18n="config.nav_mappings">5. Benutzer-Zuordnung</a>
                   <a href="#" class="nav-item" data-target="roles" data-i18n="config.nav_roles">6. Rollen-Berechtigungen</a>
                   <a href="#" class="nav-item" data-target="misc" data-i18n="config.nav_misc">7. Verschiedenes</a>
+                  <a href="#" class="nav-item" data-target="stats" data-i18n="config.nav_stats">8. Statistics</a>
                   <button type="submit" form="config-form" class="btn btn-primary" data-i18n="config.save_button">Einstellungen speichern</button>
                 </nav>
               </div>
@@ -415,21 +428,21 @@
                         <div class="seerr-channels-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
                           <div class="form-group">
                             <label for="SEERR_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;">
-                              Default Seerr Channel
+                              <span data-i18n="config.seerr_default_channel">Standard Seerr-Kanal</span>
                               <div style="font-size: 0.82rem; color: var(--subtext0); font-weight: 400; margin-top: 0.15rem;" data-i18n="config.seerr_default_channel_desc">Receives: Approved, Available, Declined, Failed, Issues</div>
                             </label>
                             <select id="SEERR_CHANNEL_ID" name="SEERR_CHANNEL_ID" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Select a channel —</option>
+                              <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
                             </select>
                           </div>
 
                           <div class="form-group">
                             <label for="SEERR_ADMIN_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;">
-                              Admin Channel
+                              <span data-i18n="config.seerr_admin_channel">Admin-Kanal</span>
                               <div style="font-size: 0.82rem; color: var(--subtext0); font-weight: 400; margin-top: 0.15rem;" data-i18n="config.seerr_admin_channel_desc">Receives: Pending approval, Download failed</div>
                             </label>
                             <select id="SEERR_ADMIN_CHANNEL_ID" name="SEERR_ADMIN_CHANNEL_ID" class="form-select channel-select" data-channel-select="true">
-                              <option value="">— Same as default Seerr channel —</option>
+                              <option value="" data-i18n="config.seerr_admin_channel_same">— Wie Standard Seerr-Kanal —</option>
                             </select>
                           </div>
                         </div>
@@ -440,6 +453,7 @@
                           <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.75rem;">
                             <span data-i18n="config.seerr_root_folder_desc">Route notifications to the correct Discord channel based on Radarr/Sonarr root folder.</span>
                             <br><small style="color: var(--subtext0);" data-i18n="config.seerr_root_folder_hint">⚠️ Click "Load Root Folders" first before adding a mapping.</small>
+                            <br><small style="color: var(--teal);" data-i18n="config.seerr_root_folder_optional">💡 Optional: If you only have one root folder per media type, you can skip this and use the Jellyfin Library → Channel mapping in Step 4 instead.</small>
                           </div>
 
                           <!-- Load Root Folders Button -->
@@ -569,9 +583,38 @@
                         </div>
                       </div>
 
+                      <!-- Jellyfin Libraries -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="font-weight: 600;" data-i18n="config.jellyfin_libraries_label">Jellyfin-Bibliotheken</label>
+                        <button type="button" id="fetch-libraries-btn" class="btn btn-secondary" style="margin-top: 0.5rem;">
+                          <i class="bi bi-collection"></i> <span data-i18n="config.jellyfin_load_libraries">Bibliotheken laden</span>
+                        </button>
+                        <div id="fetch-libraries-status" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
+                        <div id="libraries-list" style="margin-top: 0.75rem;"></div>
+                        <input type="hidden" id="JELLYFIN_NOTIFICATION_LIBRARIES" name="JELLYFIN_NOTIFICATION_LIBRARIES" />
+                      </div>
+
                       <!-- Default Notification Channel (configured in Discord tab) -->
                       <div class="form-group" style="margin-top: 1.5rem; padding: 0.75rem; background: var(--surface0); border-radius: 8px;">
                         <p style="margin: 0; font-size: 0.9rem; color: var(--subtext0);"><strong style="color: var(--text);" data-i18n="config.jellyfin_fallback_channel">📢 Default Notification Channel</strong><br><span data-i18n="config.jellyfin_fallback_desc">The fallback channel is configured in tab 1. Discord → Default Notification Channel.</span></p>
+                      </div>
+
+                      <!-- Jellyfin Retry Delay -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="JELLYFIN_RETRY_DELAY_SECONDS" data-i18n="config.jellyfin_retry_label">Retry Delay (seconds)</label>
+                        <input
+                          type="number"
+                          id="JELLYFIN_RETRY_DELAY_SECONDS"
+                          name="JELLYFIN_RETRY_DELAY_SECONDS"
+                          min="0"
+                          max="600"
+                          step="5"
+                          value="30"
+                          style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid var(--surface1); background:var(--surface0); color:var(--text); font-size:1rem;"
+                        />
+                        <div class="form-text" data-i18n="config.jellyfin_retry_help">
+                          When a new item is available, Jellyfin may not have scanned it yet. Questorr will retry the library lookup after this delay (up to 3 times). Set to 0 to disable. Max: 600s (10 min).
+                        </div>
                       </div>
 
                       <!-- Info Box -->
@@ -602,15 +645,15 @@
                           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                             <h4 style="font-size: 1.1rem; margin: 0; color: var(--mauve); line-height: 1.4;" data-i18n="config.mappings_add">New Mapping</h4>
                             <button type="button" id="refresh-all-users-btn" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; height: fit-content;">
-                              <i class="bi bi-arrow-clockwise"></i> Refresh Users
+                              <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.mappings_refresh">Refresh Users</span>
                             </button>
                           </div>
                           <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                              <label for="discord-user-select" style="margin-bottom: 0;">Discord User</label>
+                              <label for="discord-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_discord_label">Discord User</label>
                             </div>
                             <div class="custom-select" id="discord-user-select">
-                              <input type="text" class="custom-select-trigger" placeholder="Search Discord users..." readonly />
+                              <input type="text" class="custom-select-trigger" placeholder="Discord-User suchen..." data-i18n="config.mappings_discord_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
                               <div class="custom-select-dropdown">
                                 <div class="custom-select-options">
@@ -624,10 +667,10 @@
                           </div>
                           <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                              <label for="seerr-user-select" style="margin-bottom: 0;">Seerr User</label>
+                              <label for="seerr-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_seerr_label">Seerr User</label>
                             </div>
                             <div class="custom-select" id="seerr-user-select">
-                              <input type="text" class="custom-select-trigger" placeholder="Search Seerr users..." readonly />
+                              <input type="text" class="custom-select-trigger" placeholder="Seerr-User suchen..." data-i18n="config.mappings_seerr_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
                               <div class="custom-select-dropdown">
                                 <div class="custom-select-options">
@@ -650,7 +693,7 @@
                     <fieldset>
                       <legend data-i18n="config.roles_section">Role Permissions</legend>
                       <p class="form-text" style="margin-bottom: 1.5rem;">
-                        <span data-i18n="config.roles_desc">Control who can use bot commands. If no roles are selected in the allowlist, all members can use commands.</span> If any role is added to the blocklist, members with that role will be blocked regardless of allowlist settings.
+                        <span data-i18n="config.roles_desc">Control who can use bot commands. If no roles are selected in the allowlist, all members can use commands.</span> <span data-i18n="config.roles_blocklist_info">If any role is added to the blocklist, members with that role will be blocked regardless of allowlist settings.</span>
                       </p>
                       
                       <div class="form-group">
@@ -724,90 +767,102 @@
                       </div>
 
                       <!-- Bot Command Options -->
-                      <div class="form-group" style="margin-top: 1.5rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--mauve);">
-                        <label style="font-weight: 700; color: var(--mauve); display: block; margin-bottom: 0.75rem;" data-i18n="config.cmd_options_title">Bot Command Options</label>
+
+                      <!-- Command Rate Limiting -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="COMMAND_RATE_LIMIT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.rate_limit_label">Command Rate Limit</label>
+                        <input type="number" id="COMMAND_RATE_LIMIT" name="COMMAND_RATE_LIMIT" placeholder="10" min="0" max="100"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.rate_limit_desc">Maximum Discord commands per user per minute. Set to 0 to disable rate limiting.</span>
+                        </div>
+                      </div>
+
+                      <!-- Embed Footer Text -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="EMBED_FOOTER_TEXT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.embed_footer_label">Embed Footer Text</label>
+                        <input type="text" id="EMBED_FOOTER_TEXT" name="EMBED_FOOTER_TEXT" placeholder="Powered by Questorr" maxlength="200"
+                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.embed_footer_desc">Custom footer text shown on all Discord embeds. Leave empty for no footer.</span>
+                        </div>
+                      </div>
+
+                      <!-- Embed Extra Info Toggles -->
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 0.6rem;" data-i18n="config.embed_extra_title">Additional Embed Information</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="EMBED_SHOW_CONTENT_RATING" name="EMBED_SHOW_CONTENT_RATING" />
+                            <span data-i18n="config.embed_content_rating_label">Content Rating (FSK/MPAA)</span>
+                          </label>
+                          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="EMBED_SHOW_PROVIDERS" name="EMBED_SHOW_PROVIDERS" />
+                            <span data-i18n="config.embed_providers_label">Streaming Providers</span>
+                          </label>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.75rem;">
+                          <div style="flex: 1; min-width: 200px;">
+                            <label for="CONTENT_RATING_COUNTRY" style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.content_rating_country_label">Rating Country</label>
+                            <input type="text" id="CONTENT_RATING_COUNTRY" name="CONTENT_RATING_COUNTRY" placeholder="US, DE, GB..."
+                              style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface1); background: var(--surface0); color: var(--text); font-size: 0.9rem; margin-top: 0.25rem;" />
+                          </div>
+                          <div style="flex: 1; min-width: 200px;">
+                            <label for="PROVIDER_COUNTRY" style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.provider_country_label">Provider Country</label>
+                            <input type="text" id="PROVIDER_COUNTRY" name="PROVIDER_COUNTRY" placeholder="US, DE, GB..."
+                              style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface1); background: var(--surface0); color: var(--text); font-size: 0.9rem; margin-top: 0.25rem;" />
+                          </div>
+                        </div>
+                        <div class="form-text" style="margin-top: 0.4rem;" data-i18n="config.embed_extra_help">
+                          Leave country fields empty to auto-detect from bot language (e.g. DE for German, US for English).
+                        </div>
+                      </div>
+
+                      <!-- Widget Section -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--teal);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                          <input type="checkbox" id="widget-enabled-toggle" />
+                          <strong data-i18n="config.widget_title">Enable Widget</strong>
+                        </label>
                         <div class="form-text" style="margin-bottom: 1rem;">
-                          <span data-i18n="config.cmd_options_desc">Configure which options are shown or available for each Discord command.</span>
+                          <span data-i18n="config.widget_desc">Provide an embeddable HTML widget for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics and start/stop controls.</span>
                         </div>
 
-                        <!-- /request options -->
-                        <div style="margin-bottom: 1.25rem;">
-                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;">/request</div>
-                          <div class="form-text" style="margin-bottom: 0.75rem;">
-                            <span data-i18n="config.request_ui_desc">Choose which optional fields are visible when users run /request.</span>
-                            <br><strong style="color: var(--peach);"><span data-i18n="config.request_ui_warning">⚠️ After changes the bot will restart automatically to update commands.</span></strong>
-                          </div>
-                          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                              <input type="checkbox" id="SHOW_TAG_SELECTION" name="SHOW_TAG_SELECTION" checked />
-                              <div>
-                                <strong data-i18n="config.show_tag_selection">🏷️ Show Tag Selection</strong>
-                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_tag_selection_desc">Users can select a Radarr/Sonarr tag (e.g. 'anime')</span></div>
-                              </div>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                              <input type="checkbox" id="SHOW_SERVER_SELECTION" name="SHOW_SERVER_SELECTION" checked />
-                              <div>
-                                <strong data-i18n="config.show_server_selection">🖥️ Show Server Selection</strong>
-                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_server_selection_desc">Users can choose between multiple Radarr/Sonarr instances</span></div>
-                              </div>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; background: var(--surface1);">
-                              <input type="checkbox" id="SHOW_QUALITY_SELECTION" name="SHOW_QUALITY_SELECTION" checked />
-                              <div>
-                                <strong data-i18n="config.show_quality_selection">🎬 Show Quality Profile Selection</strong>
-                                <div style="font-size: 0.82rem; color: var(--subtext0);"><span data-i18n="config.show_quality_selection_desc">Users can select a quality profile for the download</span></div>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
+                        <div id="widget-settings" style="display: none;">
+                          <!-- Hidden input for form submission — key is auto-generated -->
+                          <input type="hidden" id="WIDGET_API_KEY" name="WIDGET_API_KEY" />
 
-                        <!-- Discord Commands & Notification Buttons -->
-                        <div style="border-top: 1px solid var(--surface1); padding-top: 1rem;">
-                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.command_toggles_title">Discord Commands</div>
-                          <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.75rem;" data-i18n="config.command_toggles_desc">Enable or disable individual Discord slash commands.</div>
-                          <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.5rem;">
-                            <input type="checkbox" id="SHOW_STATUS_COMMAND" name="SHOW_STATUS_COMMAND" checked style="margin-top: 3px; flex-shrink: 0;" />
-                            <div>
-                              <strong data-i18n="config.show_status_command">🔎 Enable /status Command</strong>
-                              <div style="font-size: 0.82rem; color: var(--subtext0); margin-top: 0.2rem;" data-i18n="config.show_status_command_desc">Check the Seerr request status of any title directly in Discord</div>
+                          <div id="widget-url-section" style="margin-top: 0.75rem; border: 1px solid var(--teal); border-radius: 8px; padding: 1rem; display: none;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: var(--teal); font-size: 0.95rem; font-weight: 700;" data-i18n="config.widget_url_title">📊 Widget Embed URL</h4>
+                            <p style="margin: 0 0 0.75rem 0; font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.widget_url_desc">Use this URL as an iFrame source in Homarr, Homepage or Organizr:</p>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                              <code id="widget-embed-url" style="flex: 1; padding: 0.5rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.85rem; min-width: 200px; word-break: break-all;"></code>
+                              <button type="button" id="copy-widget-url-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.widget_url_copy">Copy URL</button>
                             </div>
-                          </label>
-                          <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.75rem;">
-                            <input type="checkbox" id="SHOW_RANDOM_COMMAND" name="SHOW_RANDOM_COMMAND" checked style="margin-top: 3px; flex-shrink: 0;" />
-                            <div>
-                              <strong data-i18n="config.show_random_command">🎲 Enable /random Command</strong>
-                              <div style="font-size: 0.82rem; color: var(--subtext0); margin-top: 0.2rem;" data-i18n="config.show_random_command_desc">Show a random movie or series from your Jellyfin library</div>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.widget_url_note">The API key is embedded in the URL but hidden from the display. Save after enabling to activate the widget.</p>
+                          </div>
+
+                          <div class="form-group" style="margin-top: 1rem;">
+                            <label for="WIDGET_ALLOWED_ORIGINS" data-i18n="config.widget_allowed_origins_label">Allowed Origins</label>
+                            <input
+                              type="text"
+                              id="WIDGET_ALLOWED_ORIGINS"
+                              name="WIDGET_ALLOWED_ORIGINS"
+                              placeholder="https://homarr.example.com https://dashboard.local"
+                              style="width:100%; padding:0.75rem; border-radius:8px; border:1px solid var(--surface1); background:var(--surface0); color:var(--text); font-size:1rem;"
+                            />
+                            <div class="form-text" data-i18n="config.widget_allowed_origins_help">
+                              Space-separated list of origins allowed to embed the widget in an iFrame. Leave empty for same-origin only. Use * to allow all origins.
                             </div>
-                          </label>
-                          <div style="border-top: 1px solid var(--surface1); padding-top: 0.75rem;">
-                            <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notification_buttons_title">Notification Buttons</div>
-                            <div style="font-size: 0.82rem; color: var(--subtext0); margin-bottom: 0.6rem;" data-i18n="config.notification_buttons_desc">Choose which buttons appear on Discord notification embeds.</div>
-                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.4rem 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.4rem;">
-                              <input type="checkbox" id="EMBED_SHOW_BUTTON_SEERR" name="EMBED_SHOW_BUTTON_SEERR" checked style="margin-top: 3px; flex-shrink: 0;" />
-                              <div><strong data-i18n="config.btn_view_seerr">View on Seerr</strong>
-                              <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.btn_view_seerr_desc">Link to the media page in Seerr</div></div>
+                          </div>
+
+                          <div class="form-group" style="margin-top: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                              <input type="checkbox" id="WIDGET_ANONYMIZE_STATS" name="WIDGET_ANONYMIZE_STATS" />
+                              <span data-i18n="config.widget_anonymize_label">Anonymize User Stats</span>
                             </label>
-                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.4rem 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.4rem;">
-                              <input type="checkbox" id="EMBED_SHOW_BUTTON_WATCH" name="EMBED_SHOW_BUTTON_WATCH" checked style="margin-top: 3px; flex-shrink: 0;" />
-                              <div><strong data-i18n="config.btn_watch_now">▶ Watch Now!</strong>
-                              <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.btn_watch_now_desc">Direct link to the Jellyfin player (available content only)</div></div>
-                            </label>
-                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.4rem 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.4rem;">
-                              <input type="checkbox" id="EMBED_SHOW_BUTTON_LETTERBOXD" name="EMBED_SHOW_BUTTON_LETTERBOXD" checked style="margin-top: 3px; flex-shrink: 0;" />
-                              <div><strong data-i18n="config.btn_letterboxd">Letterboxd</strong>
-                              <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.btn_letterboxd_desc">Link to the Letterboxd page (movies only)</div></div>
-                            </label>
-                            <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.4rem 0.5rem; border-radius: 6px; background: var(--surface1); cursor: pointer; margin-bottom: 0.5rem;">
-                              <input type="checkbox" id="EMBED_SHOW_BUTTON_IMDB" name="EMBED_SHOW_BUTTON_IMDB" checked style="margin-top: 3px; flex-shrink: 0;" />
-                              <div><strong data-i18n="config.btn_imdb">IMDb</strong>
-                              <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.btn_imdb_desc">Link to the IMDb page</div></div>
-                            </label>
-                            <div style="margin-top: 0.5rem;">
-                              <button type="button" id="test-notification-buttons-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">
-                                <i class="bi bi-bell"></i> <span data-i18n="config.test_notification_buttons">Test Buttons</span>
-                              </button>
-                              <span id="test-notification-buttons-status" style="margin-left: 0.75rem; font-size: 0.9rem;"></span>
+                            <div class="form-text" data-i18n="config.widget_anonymize_help">
+                              When enabled, usernames and avatars in widget stats are replaced with "User 1", "User 2", etc. to protect privacy.
                             </div>
                           </div>
                         </div>
@@ -817,7 +872,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
                           <input type="checkbox" id="DAILY_RANDOM_PICK_ENABLED" name="DAILY_RANDOM_PICK_ENABLED" />
-                          Enable Daily Random Pick
+                          <strong data-i18n="config.daily_random_title">Tägliche Zufallsauswahl aktivieren</strong>
                         </label>
 
                         <div class="form-text" style="margin-bottom: 1rem;">
@@ -830,10 +885,10 @@
                             id="DAILY_RANDOM_PICK_CHANNEL_ID"
                             name="DAILY_RANDOM_PICK_CHANNEL_ID"
                             style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                            <option value="" style="color: var(--subtext0);">Select a channel...</option>
+                            <option value="" style="color: var(--subtext0);" data-i18n="config.daily_random_channel_placeholder">Kanal auswählen...</option>
                           </select>
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            Discord channel for daily random picks
+                            <span data-i18n="config.daily_random_channel_help">Discord-Kanal für tägliche Zufallsvorschläge</span>
                           </div>
                         </div>
 
@@ -847,7 +902,7 @@
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-random-pick-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; margin: 0; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <i class="bi bi-shuffle"></i> Test Random Pick
+                            <i class="bi bi-shuffle"></i> <span data-i18n="config.daily_random_test">Zufallsauswahl testen</span>
                           </button>
                         </div>
                       </div>
@@ -870,10 +925,10 @@
                             class="form-select channel-select"
                             data-channel-select="true"
                             style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                            <option value="">— Select a channel —</option>
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
                           </select>
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            Discord channel for daily recommendations from your Jellyfin library
+                            <span data-i18n="config.daily_rec_channel_help">Discord-Kanal für tägliche Empfehlungen aus deiner Jellyfin-Bibliothek</span>
                           </div>
                         </div>
 
@@ -881,7 +936,7 @@
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-daily-recommendation-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <i class="bi bi-stars"></i> Test Recommendation
+                            <i class="bi bi-stars"></i> <span data-i18n="config.daily_rec_test">Empfehlung testen</span>
                           </button>
                           <span id="test-daily-recommendation-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
                         </div>
@@ -900,15 +955,177 @@
                             <span data-i18n="config.language_help">Select the language for the Questorr dashboard.</span>
                           </div>
                         </div>
+                      
+                      <!-- Notification Title Customization -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_titles_title">Notification Titles</div>
+                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" data-collapse-target="notif-titles-body" data-open="false" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Mehr anzeigen</button>
+                        </div>
+                        <div id="notif-titles-body" class="collapsible-body collapsible-closed" style="display:none !important;">
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1.25rem;" data-i18n="config.notif_titles_desc">Customize the title line of each Discord notification. Leave empty to use the default for the selected Bot Language.</div>
+
+                        <div style="display: grid; gap: 0.6rem;">
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_pending">New Request</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_PENDING" name="NOTIF_TITLE_MEDIA_PENDING" class="form-control" placeholder="New Request – Pending Approval" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_approved">Request Approved</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_APPROVED" name="NOTIF_TITLE_MEDIA_APPROVED" class="form-control" placeholder="Request Approved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_auto_approved">Request Auto-Approved</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AUTO_APPROVED" name="NOTIF_TITLE_MEDIA_AUTO_APPROVED" class="form-control" placeholder="Request Auto-Approved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_available">Now Available</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AVAILABLE" name="NOTIF_TITLE_MEDIA_AVAILABLE" class="form-control" placeholder="Now Available!" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_declined">Request Declined</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_DECLINED" name="NOTIF_TITLE_MEDIA_DECLINED" class="form-control" placeholder="Request Declined" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_failed">Download Failed</label>
+                          <input type="text" id="NOTIF_TITLE_MEDIA_FAILED" name="NOTIF_TITLE_MEDIA_FAILED" class="form-control" placeholder="Download Failed" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_created">Issue Reported</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_CREATED" name="NOTIF_TITLE_ISSUE_CREATED" class="form-control" placeholder="Issue Reported" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_comment">Issue Comment</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_COMMENT" name="NOTIF_TITLE_ISSUE_COMMENT" class="form-control" placeholder="Issue Comment" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_resolved">Issue Resolved</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_RESOLVED" name="NOTIF_TITLE_ISSUE_RESOLVED" class="form-control" placeholder="Issue Resolved" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_reopened">Issue Reopened</label>
+                          <input type="text" id="NOTIF_TITLE_ISSUE_REOPENED" name="NOTIF_TITLE_ISSUE_REOPENED" class="form-control" placeholder="Issue Reopened" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_random">Daily Random Pick</label>
+                          <input type="text" id="NOTIF_TITLE_DAILY_RANDOM" name="NOTIF_TITLE_DAILY_RANDOM" class="form-control" placeholder="Today's Random Pick" style="margin-bottom: 0.5rem;" />
+
+                          <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_recommendation">Daily Recommendation</label>
+                          <input type="text" id="NOTIF_TITLE_DAILY_RECOMMENDATION" name="NOTIF_TITLE_DAILY_RECOMMENDATION" class="form-control" placeholder="Today's Recommendation from your Library" style="margin-bottom: 0.5rem;" />
+
+                        </div>
+                      </div>
+
+                      
+                      <!-- Per-Event Notification Buttons -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                          <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Share Tech Mono', monospace;" data-i18n="config.notif_buttons_per_event_title">Buttons per Notification</div>
+                          <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" data-collapse-target="notif-buttons-body" data-open="false" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Mehr anzeigen</button>
+                        </div>
+                        <div id="notif-buttons-body" class="collapsible-body collapsible-closed" style="display:none !important;">
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
+                        <div style="overflow-x: auto;">
+                          <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace;">
+                            <thead>
+                              <tr style="border-bottom: 1px solid var(--surface1); color: var(--subtext0);">
+                                <th style="text-align: left; padding: 0.4rem 0.5rem; font-weight: 600;" data-i18n="config.notif_btn_col_event">Event</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Seerr</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Watch</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Ltrbxd</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">IMDb</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem;">Test</th>
+                              </tr>
+                            </thead>
+                            <tbody id="notif-buttons-table-body">
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                          <button type="button" id="reset-notif-buttons-btn" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.75rem;" data-i18n="config.notif_buttons_reset">↺ Reset to defaults</button>
+                          <span style="font-size: 0.78rem; color: var(--subtext0);" data-i18n="config.notif_buttons_reset_hint">Resets all rows to the Standard-Buttons above.</span>
+                        </div>
+                      </div>
+                        </div>
+                        
+                      
+
+                        </div>
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <label for="bot-language" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.bot_language_label">Bot Language</label>
+                        <select id="bot-language" name="BOT_LANGUAGE" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                          <option value="en">English</option>
+                          <option value="de">Deutsch</option>
+                        </select>
+                        <div class="form-text" style="margin-top: 0.5rem;">
+                          <span data-i18n="config.bot_language_help">Language for Discord notifications, bot messages and button labels.</span>
+                        </div>
+                      </div>
+
+                      <!-- Config Export / Import -->
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.export_import_title">Config Export / Import</div>
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.export_import_desc">Download your current configuration as a backup, or restore it from a previously exported file. API keys are masked in the export — they will not be overwritten on import.</div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                          <a id="export-config-btn" href="/api/config/export" download style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem; text-decoration: none;" class="btn btn-secondary">
+                            <i class="bi bi-download"></i> <span data-i18n="config.export_config">Export Config</span>
+                          </a>
+                          <label class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem; cursor: pointer; margin: 0;">
+                            <i class="bi bi-upload"></i> <span data-i18n="config.import_config">Import Config</span>
+                            <input type="file" id="import-config-input" accept=".json" style="display: none;" />
+                          </label>
+                          <span id="import-config-status" style="font-size: 0.9rem;"></span>
+                        </div>
                       </div>
                     </fieldset>
                   </div>
 
                 </form>
+
+                <!-- Statistics Pane (outside form — read-only) -->
+                <div id="config-pane-stats" class="config-pane">
+                  <fieldset>
+                    <legend data-i18n="config.stats_section">Statistics</legend>
+
+                    <!-- Summary Cards -->
+                    <div id="stats-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--teal);" id="stats-total-commands">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_total_commands">Total Commands</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--blue);" id="stats-total-users">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_total_users">Active Users</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--peach);" id="stats-pending">0</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_pending">Pending Requests</div>
+                      </div>
+                      <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: var(--green);" id="stats-cache-rate">0%</div>
+                        <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_cache_hit">Cache Hit Rate</div>
+                      </div>
+                    </div>
+
+                    <!-- Command Breakdown -->
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_commands_title">Command Usage</h4>
+                      <div id="stats-command-bars" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                    </div>
+
+                    <!-- Top Users -->
+                    <div style="margin-bottom: 1.5rem;">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_users_title">Top Users</h4>
+                      <div id="stats-top-users" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface1);">
+                      <button type="button" id="stats-reset-btn" class="btn btn-danger" style="font-size: 0.85rem;">
+                        <i class="bi bi-trash"></i> <span data-i18n="config.stats_reset">Reset Statistics</span>
+                      </button>
+                    </div>
+                  </fieldset>
+                </div>
+
               </div>
           </div>
 
-          <!-- About Page (Independent) -->
+          </div>
+        </section>
+      </main>
+
+      <!-- About Page (Independent) -->
           <div id="about-page" class="about-page" style="display: none;">
             <div class="about-content">
               <h2 data-i18n="about.title">About Questorr</h2>
@@ -919,18 +1136,41 @@
               <div class="features-list">
                 <h3 class="features-title" data-i18n="about.features_title">Features</h3>
                 <ul>
+                  <!-- Bot Commands -->
                   <li><i class="bi bi-search"></i><div data-i18n="about.feature_search"><code>/search &lt;title&gt;</code> Search for movies and TV shows with auto-suggestions. A rich embed with poster, description, rating and genre is shown — request directly from the embed. For TV shows, you can select individual seasons.</div></li>
                   <li><i class="bi bi-send-fill"></i><div data-i18n="about.feature_request"><code>/request &lt;title&gt;</code> Instantly send a media request to Seerr. For TV shows, all seasons are requested automatically. Optionally configure tag, server and quality profile selection.</div></li>
                   <li><i class="bi bi-fire"></i><div data-i18n="about.feature_trending"><code>/trending</code> Browse the week's most popular movies and TV shows from TMDB — discover what's hot right now and request directly.</div></li>
                   <li><i class="bi bi-patch-question-fill"></i><div data-i18n="about.feature_status"><code>/status &lt;title&gt;</code> Check the current <strong style="color: var(--blue);">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.</div></li>
                   <li><i class="bi bi-shuffle"></i><div data-i18n="about.feature_random"><code>/random movie</code> or <code>/random series</code> — get a <strong style="color: var(--blue);">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.</div></li>
+                  <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
+                  <li><i class="bi bi-calendar-event"></i><div data-i18n="about.feature_upcoming"><code>/upcoming</code> Browse <strong style="color: var(--blue);">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.</div></li>
+                  <li><i class="bi bi-clock-history"></i><div data-i18n="about.feature_history"><code>/history</code> See what was <strong style="color: var(--blue);">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.</div></li>
+                  <li><i class="bi bi-stars"></i><div data-i18n="about.feature_recommend"><code>/recommend &lt;title&gt;</code> Get <strong style="color: var(--blue);">personalized recommendations</strong> based on any movie or TV show. Shows 5 similar titles with TMDB ratings and Jellyfin availability status — with Watch Now buttons for content already in your library.</div></li>
+                  <li><i class="bi bi-compass-fill"></i><div data-i18n="about.feature_discover"><code>/discover</code> Explore movies and TV shows by <strong style="color: var(--blue);">genre, year and minimum rating</strong>. Results show Jellyfin availability — perfect for "I want to watch something but don't know what" moments.<br><strong style="color: var(--blue);">Options:</strong> <code>type</code> (required), <code>genre</code> (optional, autocomplete), <code>year</code> (optional), <code>rating</code> (optional).</div></li>
+                  <li><i class="bi bi-collection-fill"></i><div data-i18n="about.feature_collection"><code>/collection &lt;title&gt;</code> View all movies in a <strong style="color: var(--blue);">franchise or collection</strong> (e.g. Lord of the Rings, Marvel). Shows which parts are available on Jellyfin with Watch Now buttons.</div></li>
+                  <li><i class="bi bi-person-badge-fill"></i><div data-i18n="about.feature_cast"><code>/cast &lt;name&gt;</code> Browse an actor's <strong style="color: var(--blue);">filmography</strong> with character names, ratings and Jellyfin availability. Sorted by popularity — autocomplete suggests actors with their known roles.</div></li>
+                  <li><i class="bi bi-diagram-2-fill"></i><div data-i18n="about.feature_similar"><code>/similar &lt;title&gt;</code> Find <strong style="color: var(--blue);">similar titles</strong> based on genre and keywords — a different algorithm than <code>/recommend</code>. Shows availability status and Watch Now buttons.</div></li>
+                  <li><i class="bi bi-shield-fill-check"></i><div data-i18n="about.feature_content_rating"><strong style="color: var(--blue);">Content ratings</strong> (FSK, MPAA) are shown in search embeds — configurable by country. Know if a title is age-appropriate before requesting.</div></li>
+                  <li><i class="bi bi-tv-fill"></i><div data-i18n="about.feature_providers"><strong style="color: var(--blue);">Streaming providers</strong> show where a title is available for streaming (Netflix, Disney+, etc.) — powered by TMDB and JustWatch data.</div></li>
+                  <li><i class="bi bi-play-btn-fill"></i><div data-i18n="about.feature_trailer"><strong style="color: var(--blue);">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.</div></li>
+                  <!-- Notifications & Routing -->
                   <li><i class="bi bi-bell-fill"></i><div data-i18n="about.feature_notifications">Receive rich Discord notifications for every Seerr event: pending approval, approved, available, declined, failed and issues — each routed to the right channel automatically.</div></li>
+                  <li><i class="bi bi-check2-circle"></i><div data-i18n="about.feature_approve_decline">Admins can <strong style="color: var(--blue);">approve or decline</strong> pending Seerr requests directly from the Discord notification — no need to open the Seerr dashboard.</div></li>
                   <li><i class="bi bi-diagram-3-fill"></i><div data-i18n="about.feature_routing">Automatically route <strong style="color: var(--blue);">MEDIA_AVAILABLE</strong> notifications to the correct Discord channel based on the Radarr/Sonarr root folder — one channel per library category.</div></li>
-                  <li><i class="bi bi-film"></i><div data-i18n="about.feature_databases">Embeds are enriched with data from <strong style="color: var(--blue);">TMDB</strong> and <strong style="color: var(--blue);">OMDb</strong>: posters, backdrops, IMDb ratings, runtime, genre and a direct Watch Now link.</div></li>
-                  <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
+                  <li><i class="bi bi-signpost-split-fill"></i><div data-i18n="about.feature_media_type_routing">Route notifications to different Discord channels based on <strong style="color: var(--blue);">media type</strong> (movies vs series). Configurable alongside root folder and library-based routing.</div></li>
                   <li><i class="bi bi-chat-left-dots"></i><div data-i18n="about.feature_direct_messages">Users receive a <strong style="color: var(--blue);">private DM</strong> when their requested content becomes available on Jellyfin — so nobody misses the moment their request is ready.</div></li>
                   <li><i class="bi bi-calendar-heart"></i><div data-i18n="about.feature_daily">Post a <strong style="color: var(--blue);">Daily Random Pick</strong> from TMDB or a <strong style="color: var(--blue);">Daily Recommendation</strong> from your existing Jellyfin library into a Discord channel — great for community engagement.</div></li>
+                  <!-- Enrichment & Customization -->
+                  <li><i class="bi bi-film"></i><div data-i18n="about.feature_databases">Embeds are enriched with data from <strong style="color: var(--blue);">TMDB</strong> and <strong style="color: var(--blue);">OMDb</strong>: posters, backdrops, IMDb ratings, runtime, genre and a direct Watch Now link.</div></li>
+                  <li><i class="bi bi-toggles"></i><div data-i18n="about.feature_button_toggles">Configure which notification buttons (View on Seerr, Watch Now, Letterboxd, IMDb) appear on Discord embeds — individually togglable in the dashboard.</div></li>
+                  <li><i class="bi bi-textarea-t"></i><div data-i18n="about.feature_embed_footer">Add a <strong style="color: var(--blue);">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.</div></li>
+                  <!-- Administration -->
+                  <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
+                  <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
+                  <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
                   <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
+                  <li><i class="bi bi-heart-pulse-fill"></i><div data-i18n="about.feature_health_check">Built-in <strong style="color: var(--blue);">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.</div></li>
+                  <li><i class="bi bi-window-sidebar"></i><div data-i18n="about.feature_widget">Embeddable <strong style="color: var(--blue);">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.</div></li>
                 </ul>
               </div>
 
@@ -973,11 +1213,8 @@
             </div>
           </div>
 
-        </section>
-      </main>
-
       <!-- Logs Section -->
-      <section id="logs-section" class="setup-section" style="display: none;">
+      <section id="logs-section" style="display: none;">
         <div class="container">
           <div style="margin-bottom: 1rem; flex-shrink: 0;">
             <button type="button" id="back-to-config-btn" data-i18n="logs.back_to_config">
@@ -992,6 +1229,9 @@
               </button>
               <button type="button" class="logs-tab-btn" data-target="error" data-i18n="logs.errors" data-i18n="logs.errors">
                 Errors
+              </button>
+              <button type="button" class="logs-tab-btn" data-target="webhook" data-i18n="logs.webhook">
+                Webhook
               </button>
               <button type="button" id="refresh-logs-btn" class="logs-tab-btn" title="Refresh logs" data-i18n="logs.refresh" data-i18n-attr="title">
                 <i class="bi bi-arrow-clockwise"></i>
@@ -1024,8 +1264,6 @@
         </div>
       </section>
 
-      </main>
-
       <footer class="footer">
         <div
           class="container"
@@ -1055,7 +1293,7 @@
           </div>
         </div>
       </footer>
-
+    </div><!-- /content-wrapper -->
     <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
     <script src="script.js"></script>
 

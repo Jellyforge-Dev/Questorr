@@ -4,6 +4,7 @@
  */
 
 import { SlashCommandBuilder } from "discord.js";
+import logger from "../utils/logger.js";
 
 /**
  * Get all command definitions
@@ -14,7 +15,7 @@ export function getCommands() {
   const showTag = process.env.SHOW_TAG_SELECTION;
   const showServer = process.env.SHOW_SERVER_SELECTION;
   const showQuality = process.env.SHOW_QUALITY_SELECTION;
-  console.log(`[getCommands] SHOW_TAG=${showTag} SHOW_SERVER=${showServer} SHOW_QUALITY=${showQuality}`);
+  logger.debug(`[getCommands] SHOW_TAG=${showTag} SHOW_SERVER=${showServer} SHOW_QUALITY=${showQuality}`);
 
   return [
     new SlashCommandBuilder()
@@ -90,6 +91,125 @@ export function getCommands() {
           opt.setName("title").setDescription("Title to check").setRequired(true).setAutocomplete(true)
         ),
     ] : []),
+    new SlashCommandBuilder()
+      .setName("history")
+      .setDescription("View recently added movies and series on Jellyfin")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Filter by type")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All", value: "all" },
+            { name: "🎬 Movies", value: "movie" },
+            { name: "📺 Series", value: "series" }
+          )
+      ),
+    new SlashCommandBuilder()
+      .setName("upcoming")
+      .setDescription("Browse upcoming movie releases and new TV shows from TMDB")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Filter by type")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All", value: "all" },
+            { name: "🎬 Movies", value: "movie" },
+            { name: "📺 TV Shows", value: "tv" }
+          )
+      ),
+    new SlashCommandBuilder()
+      .setName("watchlist")
+      .setDescription("View recent media requests from Seerr")
+      .addStringOption((opt) =>
+        opt
+          .setName("filter")
+          .setDescription("Filter requests")
+          .setRequired(false)
+          .addChoices(
+            { name: "📋 All Requests", value: "all" },
+            { name: "👤 My Requests", value: "mine" },
+            { name: "⏳ Pending", value: "pending" },
+            { name: "✅ Available", value: "available" }
+          )
+      ),
+    new SlashCommandBuilder()
+      .setName("recommend")
+      .setDescription("Get recommendations based on a movie or TV show")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Title to base recommendations on")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
+    new SlashCommandBuilder()
+      .setName("discover")
+      .setDescription("Discover movies or TV shows by genre, year, and rating")
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Movie or TV show?")
+          .setRequired(true)
+          .addChoices(
+            { name: "\uD83C\uDFAC Movies", value: "movie" },
+            { name: "\uD83D\uDCFA TV Shows", value: "tv" }
+          )
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("genre")
+          .setDescription("Filter by genre")
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addIntegerOption((opt) =>
+        opt
+          .setName("year")
+          .setDescription("Filter by release year (e.g. 2024)")
+          .setRequired(false)
+          .setMinValue(1900)
+          .setMaxValue(2030)
+      )
+      .addNumberOption((opt) =>
+        opt
+          .setName("rating")
+          .setDescription("Minimum rating (e.g. 7.0)")
+          .setRequired(false)
+          .setMinValue(1)
+          .setMaxValue(10)
+      ),
+    new SlashCommandBuilder()
+      .setName("collection")
+      .setDescription("View all movies in a franchise/collection")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Search for a movie to find its collection")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
+    new SlashCommandBuilder()
+      .setName("cast")
+      .setDescription("Browse an actor's filmography with library availability")
+      .addStringOption((opt) =>
+        opt
+          .setName("name")
+          .setDescription("Actor or actress name")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
+    new SlashCommandBuilder()
+      .setName("similar")
+      .setDescription("Find similar titles based on genre and keywords")
+      .addStringOption((opt) =>
+        opt
+          .setName("title")
+          .setDescription("Movie or TV show to find similar titles for")
+          .setRequired(true)
+          .setAutocomplete(true)
+      ),
     ...(process.env.SHOW_RANDOM_COMMAND !== "false" ? [
       new SlashCommandBuilder()
         .setName("random")

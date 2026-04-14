@@ -6,6 +6,7 @@ export const SENSITIVE_FIELDS = [
   "JELLYFIN_API_KEY",
   "TMDB_API_KEY",
   "OMDB_API_KEY",
+  "WIDGET_API_KEY",
 ];
 
 export const STRIPPED_FIELDS = ["JWT_SECRET", "WEBHOOK_SECRET"];

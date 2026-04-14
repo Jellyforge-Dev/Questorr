@@ -10,6 +10,7 @@ import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
+import apiCache from "./utils/cache.js";
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -144,7 +145,7 @@ function verifyVolumeConfiguration() {
   // Ensure config directory exists
   if (!fs.existsSync(configDir)) {
     try {
-      fs.mkdirSync(configDir, { recursive: true, mode: 0o777 });
+      fs.mkdirSync(configDir, { recursive: true, mode: 0o755 });
       logger.info(`✅ Created config directory at ${configDir}`);
     } catch (error) {
       logger.error(
@@ -194,7 +195,10 @@ if (trustProxy) {
 function configureWebServer() {
   // Security headers via Helmet (CSP, etc.)
   // Must be registered at the top level, not inside a request handler.
-  app.use(helmet({
+  // Skip Helmet for widget embed route (needs its own CSP for iFrame embedding)
+  app.use((req, res, next) => {
+    if (req.path === "/api/widget/embed") return next();
+    return helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -225,11 +229,20 @@ function configureWebServer() {
       },
     },
     crossOriginEmbedderPolicy: false,
-  }));
+  })(req, res, next);
+  });
 
   // Additional manual security headers
   app.use((_req, res, next) => {
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    // Allow iFrame embedding for widget route only (restricted to same origin by default)
+    if (_req.path === "/api/widget/embed") {
+      const widgetOrigins = readConfig()?.WIDGET_ALLOWED_ORIGINS || "";
+      const frameAncestors = widgetOrigins.trim() ? widgetOrigins.trim() : "'self'";
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Content-Security-Policy", `frame-ancestors ${frameAncestors}`);
+    } else {
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    }
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-XSS-Protection", "1; mode=block");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -239,6 +252,28 @@ function configureWebServer() {
   // Middleware for parsing JSON bodies - MUST be before routes that use req.body
   app.use(express.json());
   app.use(cookieParser());
+
+  // CSRF protection: verify Origin header on state-changing requests.
+  // SameSite=Strict cookies already block most CSRF, but this adds defense-in-depth
+  // for older browsers that don't support SameSite.
+  app.use((req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+    // Skip for webhook endpoint (authenticated via secret, not cookies)
+    if (req.path === "/seerr-webhook") return next();
+    // Skip for widget endpoints (authenticated via API key, not cookies)
+    if (req.path.startsWith("/api/widget/")) return next();
+    const origin = req.headers["origin"];
+    // If no Origin header (e.g. server-to-server), allow — cookie auth still applies
+    if (!origin) return next();
+    // Verify origin matches the host
+    const expectedHost = req.headers["host"];
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost === expectedHost) return next();
+    } catch (_) { /* invalid origin URL */ }
+    logger.warn(`[CSRF] Blocked request from origin ${origin} (expected host: ${expectedHost}) to ${req.path}`);
+    return res.status(403).json({ success: false, error: "Forbidden: origin mismatch" });
+  });
 
   // Rate limiting middleware - DoS protection
   const apiLimiter = rateLimit({
@@ -647,22 +682,54 @@ function configureWebServer() {
     validate: { trustProxy: false },
   });
 
-  app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
+  // ─── Webhook Event Log buffer ──────────────────────────────────────────────
+  const webhookEventLog = [];
+  const WEBHOOK_LOG_MAX = 50;
+  function appendWebhookLog(entry) {
+    webhookEventLog.unshift({ ...entry, ts: new Date().toISOString() });
+    if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
+  }
+
+    app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
     try {
       // Validate webhook secret via Authorization header.
       // Seerr sends this via the "Authorization Header" field in webhook settings.
       // Using a header prevents the secret from appearing in reverse proxy logs.
       const configuredSecret = process.env.WEBHOOK_SECRET || readConfig()?.WEBHOOK_SECRET;
-      if (configuredSecret && configuredSecret.trim() !== "") {
-        const incomingSecret = req.headers["authorization"] || "";
-        if (incomingSecret !== configuredSecret.trim()) {
-          logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
-          return res.status(401).send("Unauthorized");
-        }
+      if (!configuredSecret || configuredSecret.trim() === "") {
+        logger.warn(`[SEERR WEBHOOK] ⛔ Rejected – no webhook secret configured. Set one in the dashboard first. (IP: ${req.ip})`);
+        appendWebhookLog({ event: "NO_SECRET", subject: "—", status: "rejected", ip: req.ip });
+        return res.status(503).send("Webhook secret not configured");
+      }
+      const incomingSecret = req.headers["authorization"] || "";
+      const a = Buffer.from(incomingSecret);
+      const b = Buffer.from(configuredSecret.trim());
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
+        appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
+        return res.status(401).send("Unauthorized");
       }
 
-      logger.info(`[SEERR WEBHOOK] 📥 Received webhook | event: ${req.body?.notification_type || "UNKNOWN"} | subject: "${req.body?.subject || "–"}"`);
-      logger.debug(`[SEERR WEBHOOK] Headers: ${JSON.stringify(req.headers)}`);
+      // Sanitize webhook fields before logging (prevent log injection)
+      const sanitize = (val, maxLen = 200) => {
+        if (typeof val !== "string") return "—";
+        return val.replace(/[\x00-\x1f\x7f]/g, "").substring(0, maxLen);
+      };
+      const eventType = sanitize(req.body?.notification_type || "UNKNOWN", 50);
+      const subject = sanitize(req.body?.subject || "—", 200);
+
+      logger.info(`[SEERR WEBHOOK] 📥 Received webhook | event: ${eventType} | subject: "${subject}"`);
+      appendWebhookLog({
+        event: eventType,
+        subject: subject,
+        status: "received",
+        ip: req.ip,
+      });
+      // Redact sensitive headers before logging
+      const safeHeaders = { ...req.headers };
+      if (safeHeaders.authorization) safeHeaders.authorization = "[REDACTED]";
+      if (safeHeaders["x-webhook-secret"]) safeHeaders["x-webhook-secret"] = "[REDACTED]";
+      logger.debug(`[SEERR WEBHOOK] Headers: ${JSON.stringify(safeHeaders)}`);
 
       if (!req.body || Object.keys(req.body).length === 0) {
         logger.warn("[SEERR WEBHOOK] ⚠️ Empty body – check Seerr webhook configuration");
@@ -697,6 +764,7 @@ function configureWebServer() {
       const oldShowQuality = process.env.SHOW_QUALITY_SELECTION;
       const oldShowStatus = process.env.SHOW_STATUS_COMMAND;
       const oldShowRandom = process.env.SHOW_RANDOM_COMMAND;
+      const oldBotLanguage = process.env.BOT_LANGUAGE;
 
       // Normalize SEERR_URL to remove /api/v1 suffix if present
       if (
@@ -757,6 +825,12 @@ function configureWebServer() {
       }
 
       loadConfig(); // Reload config into process.env
+
+      // Clear TMDB cache when language changes (cached results are language-specific)
+      if (oldBotLanguage !== process.env.BOT_LANGUAGE) {
+        apiCache.clearTMDB();
+        logger.info(`🌐 Language changed (${oldBotLanguage} → ${process.env.BOT_LANGUAGE}), TMDB cache cleared`);
+      }
 
       // Check if Discord credentials are complete and changed
       const hasDiscordCreds = process.env.DISCORD_TOKEN && process.env.BOT_ID;
@@ -902,6 +976,167 @@ function configureWebServer() {
       res.status(500).json({ success: false, message: err.message });
     }
   });
+
+  // Test notification buttons – sends a test embed to the admin channel
+  app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
+    try {
+      if (!botState.isBotRunning || !botState.discordClient) {
+        return res.status(400).json({ success: false, message: "Bot is not running" });
+      }
+      const channelId = process.env.SEERR_ADMIN_CHANNEL_ID || process.env.SEERR_CHANNEL_ID;
+      if (!channelId) {
+        return res.status(400).json({ success: false, message: "No admin or Seerr channel configured (Step 2)." });
+      }
+      const channel = await botState.discordClient.channels.fetch(channelId);
+      const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
+
+      const eventType = (req.body && req.body.eventType) || "MEDIA_AVAILABLE";
+
+      // Realistic test data pool
+      const MOVIES = [
+        { title: "Fight Club", year: 1999, tmdbId: 550,   imdbId: "tt0137523", overview: "An insomniac office worker forms an underground fight club with a soap salesman.", poster: "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg" },
+        { title: "John Wick",  year: 2014, tmdbId: 245891, imdbId: "tt2911666", overview: "An ex-hitman comes out of retirement to track down the gangsters that took everything from him.", poster: "https://image.tmdb.org/t/p/w500/fZPSd91yGE9fCcCe6OoQr6E3Bev.jpg" },
+        { title: "The Dark Knight", year: 2008, tmdbId: 155, imdbId: "tt0468569", overview: "Batman raises the stakes in his war on crime with the help of Lt. Jim Gordon.", poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg" },
+        { title: "Interstellar", year: 2014, tmdbId: 157336, imdbId: "tt0816692", overview: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.", poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg" },
+      ];
+      const TV_SHOWS = [
+        { title: "Breaking Bad",      year: 2008, tmdbId: 1396,  imdbId: "tt0903747", overview: "A chemistry teacher diagnosed with cancer turns to manufacturing methamphetamine.", poster: "https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg" },
+        { title: "Two and a Half Men",year: 2003, tmdbId: 1900,  imdbId: "tt0369179", overview: "A hedonistic jingle writer's free-wheeling life is upended when his uptight brother moves in.", poster: "https://image.tmdb.org/t/p/w500/ez9Evx2yyEGFpCe2wYRNxstPFNn.jpg" },
+        { title: "The Office",        year: 2005, tmdbId: 2316,  imdbId: "tt0386676", overview: "A mockumentary on a group of typical office workers at a paper supply company.", poster: "https://image.tmdb.org/t/p/w500/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg" },
+      ];
+
+      const isIssue = eventType.startsWith("ISSUE_");
+      const pool = isIssue ? MOVIES : (Math.random() < 0.7 ? MOVIES : TV_SHOWS);
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      const mediaType = TV_SHOWS.includes(item) ? "tv" : "movie";
+
+      // Per-event button config
+      const perEventRaw = process.env["NOTIF_BUTTONS_" + eventType] || "";
+      let showSeerr, showWatch, showLboxd, showImdb;
+      if (perEventRaw) {
+        const parts = perEventRaw.toLowerCase().split(",").map(function(s) { return s.trim(); });
+        const on  = parts.filter(function(p) { return !p.startsWith("-"); });
+        const off = parts.filter(function(p) { return  p.startsWith("-"); }).map(function(p) { return p.slice(1); });
+        showSeerr = on.includes("seerr")      ? true : off.includes("seerr")      ? false : process.env.EMBED_SHOW_BUTTON_SEERR      !== "false";
+        showWatch = on.includes("watch")      ? true : off.includes("watch")      ? false : process.env.EMBED_SHOW_BUTTON_WATCH       !== "false";
+        showLboxd = on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false";
+        showImdb  = on.includes("imdb")       ? true : off.includes("imdb")       ? false : process.env.EMBED_SHOW_BUTTON_IMDB        !== "false";
+      } else {
+        showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR      !== "false";
+        showWatch = process.env.EMBED_SHOW_BUTTON_WATCH       !== "false";
+        showLboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false";
+        showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB        !== "false";
+      }
+
+      const EVENT_LABELS = {
+        MEDIA_PENDING: "New Request – Pending Approval", MEDIA_APPROVED: "Request Approved",
+        MEDIA_AUTO_APPROVED: "Request Auto-Approved",        MEDIA_AVAILABLE: "Now Available!",
+        MEDIA_DECLINED: "Request Declined",                  MEDIA_FAILED: "Download Failed",
+        ISSUE_CREATED: "Issue Reported",                     ISSUE_COMMENT: "Issue Comment",
+        ISSUE_RESOLVED: "Issue Resolved",                    ISSUE_REOPENED: "Issue Reopened",
+        TEST_NOTIFICATION: "Test Notification",
+      };
+
+      const embed = new EmbedBuilder()
+        .setColor("#1ec8a0")
+        .setAuthor({ name: EVENT_LABELS[eventType] || eventType })
+        .setTitle(item.title + " (" + item.year + ")")
+        .setDescription(item.overview)
+        .setThumbnail(item.poster)
+        .setTimestamp();
+
+      const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
+      const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
+      function isUrl(u) { try { new URL(u); return true; } catch { return false; } }
+
+      const buttons = [];
+      if (showSeerr && seerrBase) {
+        const seerrUrl = seerrBase + "/" + mediaType + "/" + item.tmdbId;
+        if (isUrl(seerrUrl)) buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("View on Seerr").setURL(seerrUrl));
+      }
+      if (showWatch && jfBase && isUrl(jfBase + "/web/index.html")) {
+        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Watch Now!").setURL(jfBase + "/web/index.html"));
+      }
+      if (showLboxd && mediaType === "movie") {
+        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Letterboxd").setURL("https://letterboxd.com/imdb/" + item.imdbId + "/"));
+      }
+      if (showImdb) {
+        buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("IMDb").setURL("https://www.imdb.com/title/" + item.imdbId + "/"));
+      }
+
+      const msgOptions = { embeds: [embed] };
+      if (buttons.length > 0) msgOptions.components = [new ActionRowBuilder().addComponents(buttons)];
+      await channel.send(msgOptions);
+
+      const activeLabels = [showSeerr ? "Seerr" : null, showWatch ? "Watch" : null, showLboxd ? "Ltrbxd" : null, showImdb ? "IMDb" : null].filter(Boolean);
+      res.json({ success: true, message: "[" + (EVENT_LABELS[eventType] || eventType) + "] " + item.title + " — " + (activeLabels.join(", ") || "no buttons") });
+    } catch (err) {
+      logger.error("Error sending test notification buttons:", err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ─── Webhook Log API ─────────────────────────────────────────────────────────
+  app.get("/api/webhook-log", authenticateToken, (req, res) => {
+    res.json({ success: true, events: webhookEventLog });
+  });
+
+  app.delete("/api/webhook-log", authenticateToken, (req, res) => {
+    webhookEventLog.length = 0;
+    res.json({ success: true, message: "Webhook log cleared." });
+  });
+
+
+  // ─── Config Export ────────────────────────────────────────────────────────────
+  app.get("/api/config/export", authenticateToken, (req, res) => {
+    try {
+      const config = readConfig();
+      if (!config) return res.status(500).json({ success: false, message: "No config found." });
+      const exportable = { ...config };
+      const STRIP = ["JWT_SECRET", "WEBHOOK_SECRET"];
+      const MASK = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+      for (const f of STRIP) delete exportable[f];
+      for (const f of MASK) {
+        if (exportable[f] && typeof exportable[f] === "string" && exportable[f].length > 4)
+          exportable[f] = "MASKED:" + exportable[f].slice(-4);
+      }
+      if (Array.isArray(exportable.USERS)) exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
+      exportable._exportedAt = new Date().toISOString();
+      exportable._questorrVersion = "2.3.0";
+      const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
+      res.setHeader("Content-Disposition", "attachment; filename=" + filename);
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(exportable, null, 2));
+      logger.info("[Config] Configuration exported");
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // ─── Config Import ────────────────────────────────────────────────────────────
+  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
+    try {
+      const imported = req.body;
+      if (!imported || typeof imported !== "object") return res.status(400).json({ success: false, message: "Invalid JSON." });
+      delete imported._exportedAt;
+      delete imported._questorrVersion;
+      const existing = readConfig() || {};
+      const merged = { ...existing };
+      const MASKED_FIELDS = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+      for (const [key, value] of Object.entries(imported)) {
+        if (["USERS", "JWT_SECRET", "WEBHOOK_SECRET"].includes(key)) continue;
+        if (MASKED_FIELDS.includes(key) && typeof value === "string" && value.startsWith("MASKED:")) continue;
+        merged[key] = value;
+      }
+      writeConfig(merged);
+      loadConfigToEnv(merged);
+      logger.info("[Config] Configuration imported");
+      res.json({ success: true, message: "Configuration imported. Please save settings and restart the bot." });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
 
   app.post("/api/test-daily-recommendation", authenticateToken, async (_req, res) => {
     try {

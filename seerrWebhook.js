@@ -12,10 +12,12 @@
  *   1. Root-folder → channel mapping  (SEERR_ROOT_FOLDER_CHANNELS)
  *   2. Jellyfin library → channel mapping (JELLYFIN_NOTIFICATION_LIBRARIES)
  *      matched via TMDB ID lookup against Jellyfin library
- *   3. SEERR_CHANNEL_ID
- *   4. JELLYFIN_CHANNEL_ID
+ *   3. Media-type → channel mapping (CHANNEL_MOVIES / CHANNEL_SERIES)
+ *   4. SEERR_CHANNEL_ID
+ *   5. JELLYFIN_CHANNEL_ID
  */
 
+import { t, tNotif } from "./utils/botStrings.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -32,67 +34,67 @@ import { findBestBackdrop } from "./api/tmdb.js";
 const EVENT_CONFIG = {
   MEDIA_PENDING: {
     emoji: "⏳",
-    label: "New Request – Pending Approval",
+    label: tNotif("event_pending",       "NOTIF_TITLE_MEDIA_PENDING"),
     color: "#f9e2af",
     adminOnly: true,
   },
   MEDIA_APPROVED: {
     emoji: "✅",
-    label: "Request Approved",
+    label: tNotif("event_approved",       "NOTIF_TITLE_MEDIA_APPROVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AUTO_APPROVED: {
     emoji: "⚡",
-    label: "Request Auto-Approved",
+    label: tNotif("event_auto_approved",  "NOTIF_TITLE_MEDIA_AUTO_APPROVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AVAILABLE: {
     emoji: "🎉",
-    label: "Now Available!",
+    label: tNotif("event_available",      "NOTIF_TITLE_MEDIA_AVAILABLE"),
     color: "#1ec8a0",
     adminOnly: false,
   },
   MEDIA_DECLINED: {
     emoji: "❌",
-    label: "Request Declined",
+    label: tNotif("event_declined",       "NOTIF_TITLE_MEDIA_DECLINED"),
     color: "#f38ba8",
     adminOnly: false,
   },
   MEDIA_FAILED: {
     emoji: "💥",
-    label: "Download Failed",
+    label: tNotif("event_failed",         "NOTIF_TITLE_MEDIA_FAILED"),
     color: "#f38ba8",
     adminOnly: true,
   },
   ISSUE_CREATED: {
     emoji: "🐛",
-    label: "Issue Reported",
+    label: tNotif("event_issue_created",  "NOTIF_TITLE_ISSUE_CREATED"),
     color: "#ef9f76",
     adminOnly: false,
   },
   ISSUE_COMMENT: {
     emoji: "💬",
-    label: "Issue Comment",
+    label: tNotif("event_issue_comment",  "NOTIF_TITLE_ISSUE_COMMENT"),
     color: "#89b4fa",
     adminOnly: false,
   },
   ISSUE_RESOLVED: {
     emoji: "✔️",
-    label: "Issue Resolved",
+    label: tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"),
     color: "#2eb87e",
     adminOnly: false,
   },
   ISSUE_REOPENED: {
     emoji: "🔄",
-    label: "Issue Reopened",
+    label: tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"),
     color: "#ef9f76",
     adminOnly: false,
   },
   TEST_NOTIFICATION: {
     emoji: "🔔",
-    label: "Test Notification",
+    label: tNotif("event_test",           "NOTIF_TITLE_TEST"),
     color: "#89b4fa",
     adminOnly: false,
   },
@@ -166,6 +168,20 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
   return null;
 }
 
+/**
+ * Media-type channel routing.
+ * Returns the channel ID for movie or tv, or null if not configured.
+ */
+export function resolveMediaTypeChannel(mediaType) {
+  if (mediaType === "movie" && process.env.CHANNEL_MOVIES) {
+    return process.env.CHANNEL_MOVIES;
+  }
+  if (mediaType === "tv" && process.env.CHANNEL_SERIES) {
+    return process.env.CHANNEL_SERIES;
+  }
+  return null;
+}
+
 async function resolveChannel(rootFolder, tmdbId, mediaType) {
   // 1. Root-folder mapping
   if (rootFolder) {
@@ -199,7 +215,16 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
     }
   }
 
-  // 3 & 4. Fallbacks
+  // 3. Media-type routing (movie → CHANNEL_MOVIES, tv → CHANNEL_SERIES)
+  if (mediaType) {
+    const mediaTypeChannel = resolveMediaTypeChannel(mediaType);
+    if (mediaTypeChannel) {
+      logger.info(`[SEERR WEBHOOK] ✅ Media type "${mediaType}" → channel ${mediaTypeChannel}`);
+      return mediaTypeChannel;
+    }
+  }
+
+  // 4 & 5. Fallbacks
   const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID;
   if (fallback) logger.debug(`[SEERR WEBHOOK] Using fallback channel: ${fallback}`);
   return fallback || null;
@@ -450,7 +475,24 @@ async function processEvent(data, eventType, cfg, client) {
     findJellyfinItemId(tmdbId, mediaType),
   ]);
 
-  const channelId = channelIdResolved;
+  let channelId = channelIdResolved;
+
+  // Step 2b: Retry Jellyfin library lookup for MEDIA_AVAILABLE if item wasn't found
+  // (Race condition: Seerr fires MEDIA_AVAILABLE before Jellyfin has scanned the file)
+  const retryDelay = parseInt(process.env.JELLYFIN_RETRY_DELAY_SECONDS || "30", 10);
+  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
+  const usedFallback = channelId === fallback;
+
+  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
+    // Channel resolved to fallback — Jellyfin library lookup likely failed due to race condition
+    // Schedule a background retry
+    logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
+    scheduleJellyfinRetry({
+      data, eventType, cfg, client, tmdbDetails, imdbId,
+      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+      retryDelay, fallbackChannelId: channelId,
+    });
+  }
 
   if (!channelId) {
     logger.error(`[SEERR WEBHOOK] ❌ No Discord channel configured for ${eventType} – set SEERR_CHANNEL_ID`);
@@ -463,9 +505,48 @@ async function processEvent(data, eventType, cfg, client) {
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
   const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
 
-  // MEDIA_PENDING and MEDIA_DECLINED go only to the requester via DM (not channel)
-  const dmOnlyEvents = ["MEDIA_PENDING", "MEDIA_DECLINED"];
-  if (dmOnlyEvents.includes(eventType)) {
+  // MEDIA_PENDING: send to admin channel with approve/decline buttons, THEN DM requester
+  // MEDIA_DECLINED: DM only
+  if (eventType === "MEDIA_PENDING") {
+    const adminChannelId = resolveAdminChannel();
+    if (adminChannelId) {
+      try {
+        const adminChannel = await client.channels.fetch(adminChannelId);
+        const adminOptions = { embeds: [embed] };
+        // Build admin action row with approve/decline + link buttons
+        const adminButtons = [];
+        const requestId = request?.request_id || null;
+        if (requestId) {
+          adminButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`seerr_approve|${requestId}`)
+              .setLabel(t("btn_approve"))
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setCustomId(`seerr_decline|${requestId}`)
+              .setLabel(t("btn_decline"))
+              .setStyle(ButtonStyle.Danger)
+          );
+        }
+        if (buttons) {
+          // Add any link buttons (Seerr, IMDb etc.) from the standard button builder
+          const linkBtns = buttons.components.filter(c => c.data.style === ButtonStyle.Link);
+          adminButtons.push(...linkBtns);
+        }
+        if (adminButtons.length > 0) {
+          adminOptions.components = [new ActionRowBuilder().addComponents(adminButtons)];
+        }
+        await adminChannel.send(adminOptions);
+        logger.info(`[SEERR WEBHOOK] ✅ Sent MEDIA_PENDING with approve/decline to admin channel ${adminChannelId}`);
+      } catch (err) {
+        logger.error(`[SEERR WEBHOOK] ❌ Failed to send to admin channel: ${err.message}`);
+      }
+    }
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    return;
+  }
+
+  if (eventType === "MEDIA_DECLINED") {
     await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
     return;
   }
@@ -508,6 +589,25 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     .setTitle(subject || "Questorr Notification")
     .setTimestamp();
 
+  const footerText = process.env.EMBED_FOOTER_TEXT;
+  const requesterName = request?.requestedBy_username;
+
+  if (requesterName && eventType === "MEDIA_PENDING") {
+    const requesterFooter = t("requested_by").replace("{{user}}", requesterName);
+    const combinedFooter = footerText ? `${requesterFooter} \u2022 ${footerText}` : requesterFooter;
+
+    let avatarUrl = null;
+    const seerrUrl = process.env.SEERR_URL;
+    if (request?.requestedBy_avatar && seerrUrl) {
+      avatarUrl = request.requestedBy_avatar.startsWith("http")
+        ? request.requestedBy_avatar
+        : `${seerrUrl.replace(/\/+$/, "")}${request.requestedBy_avatar}`;
+    }
+    embed.setFooter(avatarUrl ? { text: combinedFooter, iconURL: avatarUrl } : { text: combinedFooter });
+  } else if (footerText) {
+    embed.setFooter({ text: footerText });
+  }
+
   // Poster thumbnail
   if (tmdbDetails?.poster_path) {
     embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
@@ -534,13 +634,13 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     case "MEDIA_FAILED": {
       const fields = [];
       if (mediaType) {
-        fields.push({ name: "Type", value: mediaType === "movie" ? "🎬 Movie" : "📺 TV Show", inline: true });
+        fields.push({ name: "Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       }
-      if (request?.requestedBy_username) {
-        fields.push({ name: "Requested by", value: request.requestedBy_username, inline: true });
+      if (request?.requestedBy_username && ["MEDIA_PENDING", "MEDIA_DECLINED", "MEDIA_FAILED"].includes(eventType)) {
+        fields.push({ name: t("field_requested_by"), value: request.requestedBy_username, inline: true });
       }
       if ((eventType === "MEDIA_DECLINED" || eventType === "MEDIA_FAILED") && request?.comment) {
-        fields.push({ name: "Reason", value: request.comment, inline: false });
+        fields.push({ name: t("field_reason"), value: request.comment, inline: false });
       }
       if (Array.isArray(extra) && extra.length > 0) {
         for (const item of extra) {
@@ -557,7 +657,7 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
       const fields = [];
       if (issue?.issue_type) fields.push({ name: "Issue Type", value: issue.issue_type, inline: true });
       if (issue?.reportedBy_username) fields.push({ name: "Reported by", value: issue.reportedBy_username, inline: true });
-      if (mediaType) fields.push({ name: "Media Type", value: mediaType === "movie" ? "🎬 Movie" : "📺 TV Show", inline: true });
+      if (mediaType) fields.push({ name: "Media Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       if (fields.length > 0) embed.addFields(...fields);
       break;
     }
@@ -582,12 +682,41 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
+function getEventButtons(eventType) {
+  // Per-event button config: NOTIF_BUTTONS_MEDIA_AVAILABLE=seerr,watch,-letterboxd,-imdb
+  // Positive = always show, -negative = always hide, missing = use global toggle
+  const envKey = "NOTIF_BUTTONS_" + eventType;
+  const custom = process.env[envKey];
+  if (custom !== undefined && custom !== "") {
+    const parts = custom.toLowerCase().split(",").map(s => s.trim());
+    const on  = parts.filter(p => !p.startsWith("-"));
+    const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+    const glob = {
+      showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
+      showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
+      showLetterboxd: process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false",
+      showImdb:       process.env.EMBED_SHOW_BUTTON_IMDB        !== "false",
+    };
+    return {
+      showSeerr:      on.includes("seerr")      ? true : off.includes("seerr")      ? false : glob.showSeerr,
+      showWatch:      on.includes("watch")      ? true : off.includes("watch")      ? false : glob.showWatch,
+      showLetterboxd: on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : glob.showLetterboxd,
+      showImdb:       on.includes("imdb")       ? true : off.includes("imdb")       ? false : glob.showImdb,
+    };
+  }
+  // Fall back to global toggles
+  return {
+    showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
+    showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
+    showLetterboxd: process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false",
+    showImdb:       process.env.EMBED_SHOW_BUTTON_IMDB        !== "false",
+  };
+}
+
 function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   const components = [];
 
-  const showSeerr = process.env.EMBED_SHOW_BUTTON_SEERR !== "false";
-  const showWatch = process.env.EMBED_SHOW_BUTTON_WATCH !== "false";
-  const showImdb  = process.env.EMBED_SHOW_BUTTON_IMDB !== "false";
+  const { showSeerr, showWatch, showImdb } = getEventButtons(eventType);
 
   // View on Seerr
   if (showSeerr) {
@@ -596,7 +725,7 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("View on Seerr")
+          .setLabel(t("btn_view_seerr"))
           .setURL(seerrUrl)
       );
     }
@@ -609,20 +738,34 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("▶ Watch Now!")
+          .setLabel(t("btn_watch_now"))
           .setURL(watchUrl)
       );
     }
   }
 
-  // IMDb – from TMDB external_ids (most reliable)
+  // Letterboxd – movies only
+  const { showLetterboxd } = getEventButtons(eventType);
+  if (showLetterboxd && imdbId && mediaType === "movie") {
+    const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
+    if (isValidUrl(lboxdUrl)) {
+      components.push(
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setLabel(t("btn_letterboxd"))
+          .setURL(lboxdUrl)
+      );
+    }
+  }
+
+  // IMDb
   if (showImdb && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
       components.push(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel("IMDb")
+          .setLabel(t("btn_imdb"))
           .setURL(imdbUrl)
       );
     }
@@ -666,6 +809,9 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
       .setTitle(data.subject || "Questorr Notification")
       .setDescription(dmDescription)
       .setTimestamp();
+
+    const dmFooter = process.env.EMBED_FOOTER_TEXT;
+    if (dmFooter) dmEmbed.setFooter({ text: dmFooter });
 
     if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
     if (embed.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
@@ -713,6 +859,75 @@ async function findDiscordIdForSeerrUser(data) {
   }
 
   return null;
+}
+
+// ─── Jellyfin Retry (Background) ─────────────────────────────────────────────
+
+/**
+ * Schedule a background retry for Jellyfin library lookup.
+ * When MEDIA_AVAILABLE fires before Jellyfin has scanned the file,
+ * the initial lookup returns nothing and routing falls back to SEERR_CHANNEL_ID.
+ * This retry waits, then re-runs the lookup and — if a better channel is found —
+ * sends a corrected notification to the right channel.
+ */
+function scheduleJellyfinRetry(ctx) {
+  const {
+    data, eventType, cfg, client, tmdbDetails, imdbId,
+    rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+    retryDelay, fallbackChannelId,
+  } = ctx;
+
+  const maxRetries = 3;
+  let attempt = 0;
+
+  const tryRetry = async () => {
+    attempt++;
+    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
+
+    try {
+      // Clear TMDB cache entry so findVerifiedJellyfinItem gets fresh title data
+      // (cache is still valid, just re-use it)
+      const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
+      const jellyfinItemId = await findVerifiedJellyfinItem(tmdbId, mediaType);
+
+      if (channelId && channelId !== fallbackChannelId) {
+        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
+
+        if (!client || !client.isReady()) {
+          logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping corrected notification`);
+          return;
+        }
+
+        // Build and send the corrected notification
+        const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
+        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+
+        const channel = await client.channels.fetch(channelId);
+        const messageOptions = { embeds: [embed] };
+        if (buttons) messageOptions.components = [buttons];
+        await channel.send(messageOptions);
+        logger.info(`[SEERR WEBHOOK] ✅ Sent corrected ${eventType} notification for "${subject}" to channel ${channelId}`);
+
+        // Delete the original fallback message if possible
+        // (not implemented — would need to store message ID from initial send)
+        return;
+      }
+
+      if (attempt < maxRetries) {
+        logger.info(`[SEERR WEBHOOK] Retry ${attempt} – still no Jellyfin match, next retry in ${retryDelay}s`);
+        setTimeout(tryRetry, retryDelay * 1000);
+      } else {
+        logger.info(`[SEERR WEBHOOK] ⚠️ All ${maxRetries} retries exhausted for "${subject}" – notification stays in fallback channel`);
+      }
+    } catch (err) {
+      logger.error(`[SEERR WEBHOOK] Retry ${attempt} error for "${subject}": ${err.message}`);
+      if (attempt < maxRetries) {
+        setTimeout(tryRetry, retryDelay * 1000);
+      }
+    }
+  };
+
+  setTimeout(tryRetry, retryDelay * 1000);
 }
 
 // ─── Cleanup ──────────────────────────────────────────────────────────────────
