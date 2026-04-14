@@ -67,6 +67,8 @@ export async function handleSeerrApproveDecline(interaction) {
         content: `❌ Failed to ${isApprove ? "approve" : "decline"} request: ${err.message}`,
         flags: 64,
       });
-    } catch (_) {}
+    } catch (followUpErr) {
+      logger.debug("[seerrApproveDecline] Follow-up message failed: %s", followUpErr.message);
+    }
   }
 }

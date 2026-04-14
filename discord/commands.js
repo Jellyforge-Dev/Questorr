@@ -4,6 +4,7 @@
  */
 
 import { SlashCommandBuilder } from "discord.js";
+import logger from "../utils/logger.js";
 
 /**
  * Get all command definitions
@@ -14,7 +15,7 @@ export function getCommands() {
   const showTag = process.env.SHOW_TAG_SELECTION;
   const showServer = process.env.SHOW_SERVER_SELECTION;
   const showQuality = process.env.SHOW_QUALITY_SELECTION;
-  console.log(`[getCommands] SHOW_TAG=${showTag} SHOW_SERVER=${showServer} SHOW_QUALITY=${showQuality}`);
+  logger.debug(`[getCommands] SHOW_TAG=${showTag} SHOW_SERVER=${showServer} SHOW_QUALITY=${showQuality}`);
 
   return [
     new SlashCommandBuilder()

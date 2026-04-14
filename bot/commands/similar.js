@@ -82,7 +82,9 @@ export async function handleSimilarCommand(interaction) {
         try {
           const sr = await seerrApi.checkMediaStatus(id, mediaType, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
-        } catch (_) {}
+        } catch (err) {
+          logger.debug("[similar] Seerr status check failed for %s: %s", id, err.message);
+        }
 
         return { id, title, year, rating, overview, available, jellyfinItemId, seerrStatus };
       })

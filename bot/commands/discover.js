@@ -68,7 +68,9 @@ export async function handleDiscoverCommand(interaction) {
         try {
           const sr = await seerrApi.checkMediaStatus(id, mediaType, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
-        } catch (_) {}
+        } catch (err) {
+          logger.debug("[discover] Seerr status check failed for %s: %s", id, err.message);
+        }
 
         return { id, title, yearStr, rating, overview, available, jellyfinItemId, seerrStatus };
       })

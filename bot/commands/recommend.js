@@ -88,7 +88,9 @@ export async function handleRecommendCommand(interaction) {
         try {
           const sr = await seerrApi.checkMediaStatus(id, type, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
-        } catch (_) {}
+        } catch (err) {
+          logger.debug("[recommend] Seerr status check failed for %s: %s", id, err.message);
+        }
 
         return { id, type, title, year, rating, overview, available, jellyfinItemId, seerrStatus };
       })

@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.2.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.3.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -29,6 +29,11 @@
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
 | 🔎 `/status` | Check the Seerr request status of any title — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested |
 | 🎲 `/random` | Get a random movie or series from your Jellyfin library — with poster, summary, genre, runtime and rating. Only visible to the user who ran the command |
+| 💡 `/recommend` | Get recommendations based on a movie or TV show via TMDB |
+| 🧭 `/discover` | Discover media by genre, year and minimum rating |
+| 📦 `/collection` | View all movies in a franchise/collection with availability |
+| 🎭 `/cast` | Browse an actor's full filmography with pagination |
+| 🔗 `/similar` | Find similar titles based on genre and keywords |
 | 🔔 Smart notifications | Rich Discord embeds for all Seerr events (pending, approved, available, declined, failed, issues) |
 | 📺 Channel routing | Notifications automatically routed to the correct channel based on Radarr/Sonarr root folder |
 | 🔕 Private events | New request and declined notifications go directly to the requester as a DM — not to the public channel |
@@ -41,6 +46,13 @@
 | 🎨 Custom embed colors | Customize notification embed colors per event type |
 | ⚙️ Web dashboard | Full configuration at `http://your-server:8282` — Tetris-style UI |
 | 📱 Mobile-friendly | Responsive dashboard, works on smartphones and tablets |
+| ✅ Availability status | All embed lists show Seerr status: ✅ available, ⏳ requested, 📥 partial |
+| 🎬 Content ratings | FSK/MPAA age ratings in search embeds, configurable by country |
+| 📡 Streaming providers | Show where a title is available for streaming (Netflix, Disney+, etc.) |
+| ▶️ Trailer buttons | YouTube trailer links in /search and /request embeds |
+| 💚 Health-check bar | Real-time service status display in the dashboard |
+| 📊 Statistics dashboard | Command usage statistics with per-user breakdown |
+| 🧩 Embeddable widget | HTML widget for Homarr/Homepage/Organizr with bot status and controls |
 | 🌍 Multi-language | English and German dashboard interface |
 
 ---
@@ -107,7 +119,7 @@ Reverse proxy forward settings: Scheme: `http` · Host / Forward hostname: `ques
 |---|---|
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
-| `2.2.0` | Specific version |
+| `2.3.0` | Specific version |
 
 ### Manual (Development)
 
@@ -199,7 +211,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 ## 🔒 Security
 
-Questorr v2.2.0 includes the following security hardening:
+Questorr v2.3.0 includes the following security hardening:
 
 | Feature | Details |
 |---|---|
@@ -209,6 +221,9 @@ Questorr v2.2.0 includes the following security hardening:
 | Brute-force protection | Login lockouts persist across container restarts (written to disk) |
 | Rate limiting | API, config and webhook endpoints are rate-limited |
 | Configurable trust proxy | `TRUST_PROXY=false` disables proxy trust for direct deployments |
+| Directory permissions | Config directories created with `0o755` instead of `0o777` |
+| Audit logging | Webhook secret and widget API key access are logged |
+| Dependency updates | All npm dependencies updated, 0 known vulnerabilities |
 
 ---
 
@@ -221,9 +236,9 @@ These features are on the roadmap and may be added in future releases:
 - **Notification button toggles** ✅ *Added in v2.2.0*
 - **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
 - **Config Export / Import** — download and restore the full configuration as a JSON backup
-- **Bot Status Widget** — show uptime and recent activity in the dashboard
+- **Bot Status Widget** ✅ *Added in v2.3.0*
 - **Multi-language bot responses** — Discord bot replies in the user's preferred language
-- **Statistics** — `/stats` command showing library size, recent additions and request counts
+- **Statistics** ✅ *Added in v2.3.0*
 
 ---
 

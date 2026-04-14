@@ -30,7 +30,9 @@ export async function handleUpcomingCommand(interaction) {
         try {
           const sr = await seerrApi.checkMediaStatus(r.id, r.media_type, [], getSeerrUrl(), getSeerrApiKey());
           seerrStatus = sr?.status ?? null;
-        } catch (_) {}
+        } catch (err) {
+          logger.debug("[upcoming] Seerr status check failed for %s: %s", r.id, err.message);
+        }
         return { ...r, seerrStatus };
       })
     );
