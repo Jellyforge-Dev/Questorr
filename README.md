@@ -234,10 +234,10 @@ These features are on the roadmap and may be added in future releases:
 - **`/status <title>`** ✅ *Added in v2.1.1*
 - **`/random movie|series`** ✅ *Added in v2.2.0*
 - **Notification button toggles** ✅ *Added in v2.2.0*
-- **Webhook Test Log** — view the last received webhook events in the dashboard for easier debugging
-- **Config Export / Import** — download and restore the full configuration as a JSON backup
+- **Webhook Test Log** ✅ *Added in v2.3.0*
+- **Config Export / Import** ✅ *Added in v2.3.0*
 - **Bot Status Widget** ✅ *Added in v2.3.0*
-- **Multi-language bot responses** — Discord bot replies in the user's preferred language
+- **Multi-language bot responses** ✅ *Added in v2.3.0*
 - **Statistics** ✅ *Added in v2.3.0*
 
 ---
@@ -342,6 +342,6 @@ This project is licensed under the [GNU Affero General Public License v3.0 (AGPL
 
 <div align="center">
 
-Forked from [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Buy me a Coffee](https://ko-fi.com/jellyforgedev)
+Inspired by [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Maintained by [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Buy me a Coffee](https://ko-fi.com/jellyforgedev)
 
 </div>

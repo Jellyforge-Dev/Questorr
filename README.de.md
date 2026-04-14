@@ -234,10 +234,10 @@ Diese Funktionen sind auf der Roadmap und werden möglicherweise in zukünftigen
 - **`/status <Titel>`** ✅ *Hinzugefügt in v2.1.1*
 - **`/random movie|series`** ✅ *Hinzugefügt in v2.2.0*
 - **Benachrichtigungs-Button-Toggles** ✅ *Hinzugefügt in v2.2.0*
-- **Webhook-Testprotokoll** — die letzten empfangenen Webhook-Events im Dashboard anzeigen für einfacheres Debugging
-- **Konfigurations-Export / Import** — die vollständige Konfiguration als JSON-Backup herunterladen und wiederherstellen
+- **Webhook-Testprotokoll** ✅ *Hinzugefügt in v2.3.0*
+- **Konfigurations-Export / Import** ✅ *Hinzugefügt in v2.3.0*
 - **Bot-Status-Widget** ✅ *Hinzugefügt in v2.3.0*
-- **Mehrsprachige Bot-Antworten** — Discord-Bot antwortet in der bevorzugten Sprache des Nutzers
+- **Mehrsprachige Bot-Antworten** ✅ *Hinzugefügt in v2.3.0*
 - **Statistiken** ✅ *Hinzugefügt in v2.3.0*
 
 ---
@@ -342,6 +342,6 @@ Dieses Projekt ist unter der [GNU Affero General Public License v3.0 (AGPL-3.0)]
 
 <div align="center">
 
-Geforkt von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
+Inspiriert von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
 
 </div>
