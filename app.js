@@ -226,6 +226,11 @@ function configureWebServer() {
         ],
         connectSrc: ["'self'"],
         frameAncestors: ["'none'"],
+        // Disable upgrade-insecure-requests — Helmet enables this by default,
+        // which forces browsers to load all resources via HTTPS. This breaks
+        // direct HTTP access (e.g. http://IP:8282 without a reverse proxy).
+        // When behind an HTTPS proxy, the proxy handles the upgrade instead.
+        upgradeInsecureRequests: null,
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -646,7 +651,17 @@ function configureWebServer() {
     }
   });
 
-  // Global error handler middleware - must be last
+  // Static file serving — must be BEFORE the error handler so that
+  // CSS, JS, images and locale files are served for unauthenticated visitors.
+  app.use("/assets", express.static(path.join(__dirname, "assets")));
+  app.use("/locales", express.static(path.join(__dirname, "locales")));
+  app.use(express.static(path.join(__dirname, "web")));
+
+  app.get("/", (_req, res) => {
+    res.sendFile(path.join(__dirname, "web", "index.html"));
+  });
+
+  // Global error handler middleware — must be AFTER all routes and static handlers
   app.use((err, req, res, _next) => {
     logger.error("Express error handler:", {
       error: err.message,
@@ -663,14 +678,6 @@ function configureWebServer() {
       success: false,
       error: message,
     });
-  });
-
-  app.use("/assets", express.static(path.join(__dirname, "assets")));
-  app.use("/locales", express.static(path.join(__dirname, "locales")));
-  app.use(express.static(path.join(__dirname, "web")));
-
-  app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "web", "index.html"));
   });
 
   const webhookLimiter = rateLimit({
