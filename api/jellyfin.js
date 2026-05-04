@@ -497,7 +497,13 @@ export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "
     });
     return response.data?.Items || [];
   } catch (err) {
-    logger.error("Failed to fetch latest additions from Jellyfin:", err?.message);
+    const status = err?.response?.status;
+    const msg = err?.message || String(err);
+    if (status) {
+      logger.error(`Failed to fetch latest additions from Jellyfin: HTTP ${status} — ${msg}`);
+    } else {
+      logger.error(`Failed to fetch latest additions from Jellyfin: ${msg}`);
+    }
     return [];
   }
 }
