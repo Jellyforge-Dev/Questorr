@@ -2,6 +2,7 @@ services:
   questorr:
     image: jellyforge/questorr:latest
     container_name: questorr
+    hostname: questorr
     restart: unless-stopped
     environment:
       - WEBHOOK_PORT=8282
