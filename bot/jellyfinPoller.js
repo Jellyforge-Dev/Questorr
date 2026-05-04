@@ -40,7 +40,7 @@ import {
   resolveConfigLibraryId,
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
-import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince } from "../api/jellyfin.js";
+import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, seedAllItemIds } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -114,13 +114,17 @@ export function stopJellyfinPoller() {
  * Prevents flooding when the bot starts or restarts.
  */
 async function seedPoll(apiKey, baseUrl) {
-  const items = await fetchLatestAdditions(apiKey, baseUrl, 100, "all");
-  let count = 0;
-  for (const item of items) {
-    deduplicator.checkAndRecord(item.Id);
-    count++;
+  try {
+    const total = await seedAllItemIds(apiKey, baseUrl, (items) => {
+      for (const item of items) deduplicator.checkAndRecord(item.Id);
+    });
+    logger.info(`[Jellyfin Poller] Seeded ${total} items as already seen (no notifications)`);
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Full seed failed (${err.message}) – falling back to top-100 seed`);
+    const items = await fetchLatestAdditions(apiKey, baseUrl, 100, "all");
+    for (const item of items) deduplicator.checkAndRecord(item.Id);
+    logger.info(`[Jellyfin Poller] Seeded ${items.length} items (fallback, no notifications)`);
   }
-  logger.info(`[Jellyfin Poller] Seeded ${count} items as already seen (no notifications)`);
 }
 
 /**

@@ -505,6 +505,42 @@ export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "
 }
 
 /**
+ * Paginated fetch of ALL item IDs in the Jellyfin library for seed deduplication.
+ * Calls onBatch(items) for each page so the caller can record IDs incrementally.
+ * Returns total number of items fetched.
+ */
+export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
+  const base = baseUrl.replace(/\/$/, "");
+  const batchSize = 500;
+  let startIndex = 0;
+  let totalFetched = 0;
+
+  while (true) {
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        IncludeItemTypes: "Movie,Series,Season,Episode",
+        Fields: "Id",
+        StartIndex: startIndex,
+        Limit: batchSize,
+        SortBy: "DateCreated",
+        SortOrder: "Descending",
+      },
+      timeout: 20000,
+    });
+    const items = response.data?.Items || [];
+    const total = response.data?.TotalRecordCount ?? Infinity;
+    if (items.length === 0) break;
+    onBatch(items);
+    totalFetched += items.length;
+    if (totalFetched >= total || items.length < batchSize) break;
+    startIndex += batchSize;
+  }
+  return totalFetched;
+}
+
+/**
  * Fetch items that Jellyfin indexed (saved to database) after `since`.
  * Uses MinDateLastSaved which reflects when Jellyfin scanned the file —
  * not the file's creation date — so items with old file timestamps are
