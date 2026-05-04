@@ -110,14 +110,13 @@ export function stopJellyfinPoller() {
  * Prevents flooding when the bot starts or restarts.
  */
 async function seedPoll(apiKey, baseUrl) {
-  // Fetch enough items to cover the recent library additions
   const items = await fetchLatestAdditions(apiKey, baseUrl, 100, "all");
   let count = 0;
   for (const item of items) {
-    deduplicator.checkAndRecord(item.Id); // marks as seen, returns false (new)
+    deduplicator.checkAndRecord(item.Id);
     count++;
   }
-  logger.debug(`[Jellyfin Poller] Seeded ${count} items as already seen`);
+  logger.info(`[Jellyfin Poller] Seeded ${count} items as already seen (no notifications)`);
 }
 
 /**
@@ -135,10 +134,11 @@ async function poll(client, apiKey, baseUrl) {
     const newItems = [];
 
     for (const item of items) {
-      // deduplicator.checkAndRecord returns true if ALREADY seen
       if (deduplicator.checkAndRecord(item.Id)) continue;
       newItems.push(item);
     }
+
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched, ${newItems.length} new`);
 
     if (newItems.length === 0) return;
 
@@ -171,7 +171,10 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   if (!typeSettings) return;
 
   // Per-type toggle
-  if (process.env[typeSettings.envKey] !== "true") return;
+  if (process.env[typeSettings.envKey] !== "true") {
+    logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – ${typeSettings.envKey} is not "true" (value: "${process.env[typeSettings.envKey]}")`);
+    return;
+  }
 
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
