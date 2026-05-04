@@ -40,13 +40,14 @@ import {
   resolveConfigLibraryId,
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
-import { findLibraryByAncestors, fetchLatestAdditions } from "../api/jellyfin.js";
+import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let pollerTimer = null;
 let initialized = false;
+let lastPollTime = null; // set after seed poll; regular polls query MinDateLastSaved >= lastPollTime
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 
@@ -81,14 +82,16 @@ export function startJellyfinPoller(client) {
 
   logger.info(`[Jellyfin Poller] Starting – polling every ${intervalSec}s`);
 
-  // Seed poll: mark existing items as seen without sending notifications
+  // Seed poll: record existing items so we don't notify for them, then
+  // set lastPollTime so regular polls use MinDateLastSaved from this moment.
   seedPoll(apiKey, baseUrl).then(() => {
+    lastPollTime = new Date();
     initialized = true;
     logger.info("[Jellyfin Poller] ✅ Seed poll complete – watching for new items");
     pollerTimer = setInterval(() => poll(client, apiKey, baseUrl), intervalSec * 1000);
   }).catch((err) => {
     logger.error("[Jellyfin Poller] Seed poll failed:", err.message);
-    // Still start regular polling so we recover when Jellyfin comes back
+    lastPollTime = new Date();
     initialized = true;
     pollerTimer = setInterval(() => poll(client, apiKey, baseUrl), intervalSec * 1000);
   });
@@ -100,6 +103,7 @@ export function stopJellyfinPoller() {
     pollerTimer = null;
   }
   initialized = false;
+  lastPollTime = null;
   logger.info("[Jellyfin Poller] Stopped");
 }
 
@@ -129,16 +133,25 @@ async function poll(client, apiKey, baseUrl) {
     return;
   }
 
-  try {
-    const items = await fetchLatestAdditions(apiKey, baseUrl, 50, "all");
-    const newItems = [];
+  // Snapshot the current time before fetching so we don't miss items
+  // added during this poll window.
+  const thisPollTime = new Date();
+  const sinceTime = lastPollTime;
 
+  try {
+    const items = await fetchItemsAddedSince(apiKey, baseUrl, sinceTime);
+    lastPollTime = thisPollTime;
+
+    const newItems = [];
     for (const item of items) {
-      if (deduplicator.checkAndRecord(item.Id)) continue;
+      if (deduplicator.checkAndRecord(item.Id)) {
+        logger.debug(`[Jellyfin Poller] Already seen: "${item.Name}" (${item.Id})`);
+        continue;
+      }
       newItems.push(item);
     }
 
-    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched, ${newItems.length} new`);
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched since ${sinceTime.toISOString()}, ${newItems.length} new`);
 
     if (newItems.length === 0) return;
 

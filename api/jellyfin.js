@@ -499,11 +499,38 @@ export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "
   } catch (err) {
     const status = err?.response?.status;
     const msg = err?.message || String(err);
-    if (status) {
-      logger.error(`Failed to fetch latest additions from Jellyfin: HTTP ${status} — ${msg}`);
-    } else {
-      logger.error(`Failed to fetch latest additions from Jellyfin: ${msg}`);
-    }
+    logger.error(`Failed to fetch latest additions from Jellyfin: ${status ? `HTTP ${status} — ` : ""}${msg}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch items that Jellyfin indexed (saved to database) after `since`.
+ * Uses MinDateLastSaved which reflects when Jellyfin scanned the file —
+ * not the file's creation date — so items with old file timestamps are
+ * detected correctly.
+ */
+export async function fetchItemsAddedSince(apiKey, baseUrl, since) {
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        IncludeItemTypes: "Movie,Series,Season,Episode",
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+        MinDateLastSaved: since.toISOString(),
+        SortBy: "DateCreated",
+        SortOrder: "Descending",
+        Limit: 200,
+      },
+      timeout: 8000,
+    });
+    return response.data?.Items || [];
+  } catch (err) {
+    const status = err?.response?.status;
+    const msg = err?.message || String(err);
+    logger.error(`Failed to fetch items added since ${since.toISOString()}: ${status ? `HTTP ${status} — ` : ""}${msg}`);
     return [];
   }
 }
