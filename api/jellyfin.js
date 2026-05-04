@@ -479,14 +479,17 @@ export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
 export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "all") {
   try {
     const base = baseUrl.replace(/\/$/, "");
-    const includeTypes = type === "movie" ? "Movie" : type === "series" ? "Series" : "Movie,Series";
+    const includeTypes =
+      type === "movie"  ? "Movie" :
+      type === "series" ? "Series" :
+      "Movie,Series,Season,Episode";
     const response = await axios.get(`${base}/Items`, {
       headers: { "X-MediaBrowser-Token": apiKey },
       params: {
         SortBy: "DateCreated",
         SortOrder: "Descending",
         Limit: limit,
-        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated",
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
         IncludeItemTypes: includeTypes,
         Recursive: true,
       },

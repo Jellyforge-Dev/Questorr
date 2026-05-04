@@ -788,8 +788,11 @@ function configureWebServer() {
         // Load existing config to preserve USER_MAPPINGS and other non-form fields
         const existingConfig = readConfig() || {};
 
-        // Merge with existing config, preserving USER_MAPPINGS and other fields not in the form
+        // Merge: template defaults → existing values → new form values.
+        // Template is the base so keys absent from the form and from existing
+        // config still get their intended defaults (e.g. JELLYFIN_NOTIFY_MOVIES).
         const finalConfig = {
+          ...configTemplate,
           ...existingConfig,
           ...configData,
           // Ensure USER_MAPPINGS, USERS, JWT_SECRET, and WEBHOOK_SECRET are preserved
