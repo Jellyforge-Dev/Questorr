@@ -12,40 +12,67 @@ import logger from "../utils/logger.js";
 
 let dailyRandomPickTimer = null;
 
+/** Returns ms until the next occurrence of HH:MM today-or-tomorrow. */
+function msUntilTime(hour, minute) {
+  const now = new Date();
+  const next = new Date();
+  next.setHours(hour, minute, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next - now;
+}
+
 export function scheduleDailyRandomPick(client) {
   if (dailyRandomPickTimer) {
+    clearTimeout(dailyRandomPickTimer);
     clearInterval(dailyRandomPickTimer);
+    dailyRandomPickTimer = null;
   }
 
   const enabled = process.env.DAILY_RANDOM_PICK_ENABLED === "true";
   if (!enabled) return;
 
   const channelId = process.env.DAILY_RANDOM_PICK_CHANNEL_ID;
-  const intervalMinutes = parseInt(process.env.DAILY_RANDOM_PICK_INTERVAL || "1440");
-
   if (!channelId) {
     logger.warn("Daily Random Pick is enabled but no channel is configured. Skipping.");
     return;
   }
 
-  if (intervalMinutes < 1) {
-    logger.warn("Daily Random Pick interval must be at least 1 minute. Skipping.");
-    return;
+  const timeStr = (process.env.DAILY_RANDOM_PICK_TIME || "").trim();
+  const timeMatch = timeStr.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+
+  if (timeMatch) {
+    // ── Time-based scheduling ──────────────────────────────────────────────
+    const hour   = parseInt(timeMatch[1], 10);
+    const minute = parseInt(timeMatch[2], 10);
+
+    const scheduleNext = () => {
+      const delay = msUntilTime(hour, minute);
+      logger.info(`📅 Daily Random Pick: next at ${timeStr} (in ${Math.round(delay / 60000)} min)`);
+      dailyRandomPickTimer = setTimeout(async () => {
+        await sendDailyRandomPick(client).catch((e) =>
+          logger.error("Error sending daily random pick:", e)
+        );
+        scheduleNext();
+      }, delay);
+    };
+    scheduleNext();
+  } else {
+    // ── Interval-based scheduling (legacy) ────────────────────────────────
+    const intervalMinutes = parseInt(process.env.DAILY_RANDOM_PICK_INTERVAL || "1440");
+    if (intervalMinutes < 1) {
+      logger.warn("Daily Random Pick interval must be at least 1 minute. Skipping.");
+      return;
+    }
+    const intervalMs = intervalMinutes * 60 * 1000;
+    logger.info(`📅 Daily Random Pick scheduled every ${intervalMinutes} minute${intervalMinutes !== 1 ? "s" : ""}`);
+
+    sendDailyRandomPick(client).catch((err) =>
+      logger.error("Error sending initial random pick:", err)
+    );
+    dailyRandomPickTimer = setInterval(async () => {
+      await sendDailyRandomPick(client);
+    }, intervalMs);
   }
-
-  const intervalMs = intervalMinutes * 60 * 1000;
-
-  logger.info(
-    `📅 Daily Random Pick scheduled every ${intervalMinutes} minute${intervalMinutes !== 1 ? "s" : ""}`
-  );
-
-  sendDailyRandomPick(client).catch((err) =>
-    logger.error("Error sending initial random pick:", err)
-  );
-
-  dailyRandomPickTimer = setInterval(async () => {
-    await sendDailyRandomPick(client);
-  }, intervalMs);
 }
 
 export async function sendDailyRandomPick(client) {
@@ -167,6 +194,7 @@ let dailyRecommendationTimer = null;
 
 export function scheduleDailyRecommendation(client) {
   if (dailyRecommendationTimer) {
+    clearTimeout(dailyRecommendationTimer);
     clearInterval(dailyRecommendationTimer);
     dailyRecommendationTimer = null;
   }
@@ -180,19 +208,38 @@ export function scheduleDailyRecommendation(client) {
     return;
   }
 
-  const intervalMinutes = parseInt(process.env.DAILY_RECOMMENDATION_INTERVAL || "1440");
-  const intervalMs = intervalMinutes * 60 * 1000;
+  const timeStr = (process.env.DAILY_RECOMMENDATION_TIME || "").trim();
+  const timeMatch = timeStr.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
 
-  logger.info(`📅 Daily Recommendation scheduled every ${intervalMinutes} minute(s)`);
+  if (timeMatch) {
+    // ── Time-based scheduling ──────────────────────────────────────────────
+    const hour   = parseInt(timeMatch[1], 10);
+    const minute = parseInt(timeMatch[2], 10);
 
-  // Send immediately on start
-  sendDailyRecommendation(client).catch((err) =>
-    logger.error("[Daily Recommendation] Error on initial send:", err)
-  );
+    const scheduleNext = () => {
+      const delay = msUntilTime(hour, minute);
+      logger.info(`📅 Daily Recommendation: next at ${timeStr} (in ${Math.round(delay / 60000)} min)`);
+      dailyRecommendationTimer = setTimeout(async () => {
+        await sendDailyRecommendation(client).catch((e) =>
+          logger.error("[Daily Recommendation] Error:", e)
+        );
+        scheduleNext();
+      }, delay);
+    };
+    scheduleNext();
+  } else {
+    // ── Interval-based scheduling (legacy) ────────────────────────────────
+    const intervalMinutes = parseInt(process.env.DAILY_RECOMMENDATION_INTERVAL || "1440");
+    const intervalMs = intervalMinutes * 60 * 1000;
+    logger.info(`📅 Daily Recommendation scheduled every ${intervalMinutes} minute(s)`);
 
-  dailyRecommendationTimer = setInterval(async () => {
-    await sendDailyRecommendation(client);
-  }, intervalMs);
+    sendDailyRecommendation(client).catch((err) =>
+      logger.error("[Daily Recommendation] Error on initial send:", err)
+    );
+    dailyRecommendationTimer = setInterval(async () => {
+      await sendDailyRecommendation(client);
+    }, intervalMs);
+  }
 }
 
 export async function sendDailyRecommendation(client) {

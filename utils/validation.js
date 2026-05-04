@@ -104,6 +104,12 @@ export const configSchema = Joi.object({
   DAILY_RANDOM_PICK_ENABLED: Joi.string().valid("true", "false").optional(),
   DAILY_RANDOM_PICK_CHANNEL_ID: Joi.string().allow("").optional(),
   DAILY_RANDOM_PICK_INTERVAL: Joi.alternatives(Joi.string().allow(""), Joi.number().integer().min(1)).optional(),
+  DAILY_RANDOM_PICK_TIME: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).allow("").optional(),
+  DAILY_RECOMMENDATION_TIME: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).allow("").optional(),
+  JELLYFIN_POLL_INTERVAL_SECONDS: Joi.alternatives(
+    Joi.string().allow(""),
+    Joi.number().integer().min(0).max(86400)
+  ).optional(),
   DEFAULT_QUALITY_PROFILE_MOVIE: Joi.string().allow("").optional(),
   DEFAULT_QUALITY_PROFILE_TV: Joi.string().allow("").optional(),
   DEFAULT_SERVER_MOVIE: Joi.string().allow("").optional(),

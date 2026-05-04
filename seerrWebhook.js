@@ -18,6 +18,7 @@
  */
 
 import { t, tNotif } from "./utils/botStrings.js";
+import { markNotified } from "./utils/notifyDedup.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -483,17 +484,6 @@ async function processEvent(data, eventType, cfg, client) {
   const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
   const usedFallback = channelId === fallback;
 
-  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
-    // Channel resolved to fallback — Jellyfin library lookup likely failed due to race condition
-    // Schedule a background retry
-    logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
-    scheduleJellyfinRetry({
-      data, eventType, cfg, client, tmdbDetails, imdbId,
-      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-      retryDelay, fallbackChannelId: channelId,
-    });
-  }
-
   if (!channelId) {
     logger.error(`[SEERR WEBHOOK] ❌ No Discord channel configured for ${eventType} – set SEERR_CHANNEL_ID`);
     return;
@@ -563,8 +553,24 @@ async function processEvent(data, eventType, cfg, client) {
   const messageOptions = { embeds: [embed] };
   if (buttons) messageOptions.components = [buttons];
 
-  await channel.send(messageOptions);
+  const sentMessage = await channel.send(messageOptions);
   logger.info(`[SEERR WEBHOOK] ✅ Sent ${eventType} notification for "${subject}" to channel ${channelId}`);
+
+  // Mark this TMDB ID as notified so the Jellyfin webhook skips the duplicate
+  if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
+    markNotified(mediaType === "movie" ? "movie" : "tv", tmdbId);
+  }
+
+  // Pass fallback message ID to retry so it can be deleted if a better channel is found
+  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
+    scheduleJellyfinRetry({
+      data, eventType, cfg, client, tmdbDetails, imdbId,
+      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+      retryDelay, fallbackChannelId: channelId,
+      fallbackMessageId: sentMessage?.id || null,
+      fallbackChannel: channel,
+    });
+  }
 
   // DM requester for personal events
   await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
@@ -778,13 +784,10 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
 // ─── DM Requester ────────────────────────────────────────────────────────────
 
 async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
-  // DM on these events regardless of NOTIFY_ON_AVAILABLE
   const dmEvents = ["MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
   if (!dmEvents.includes(eventType)) return;
 
-  // Find Discord ID from user mapping
   const discordId = await findDiscordIdForSeerrUser(data);
-
   if (!discordId) {
     logger.debug(`[SEERR WEBHOOK] No Discord ID found for DM (event: ${eventType}, user: ${data.request?.requestedBy_username || "unknown"})`);
     return;
@@ -792,35 +795,73 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
 
   try {
     const user = await client.users.fetch(discordId);
+    const title = data.subject || "Questorr Notification";
+    const mediaTypeLabel = data.media?.media_type === "movie" ? t("field_type_movie") : t("field_type_tv");
+    const footerText = process.env.EMBED_FOOTER_TEXT;
 
-    // Use Seerr's own message field if present, else build a generic English fallback
-    const dmDescription = data.message
-      || (eventType === "MEDIA_AVAILABLE"
-        ? `**${data.subject}** is now available! 🎉`
-        : eventType === "MEDIA_APPROVED" || eventType === "MEDIA_AUTO_APPROVED"
-        ? `Your request for **${data.subject}** has been approved! ✅`
-        : eventType === "MEDIA_DECLINED"
-        ? `Your request for **${data.subject}** has been declined. ❌`
-        : `Your request status for **${data.subject}** has been updated.`);
+    let color, authorText, description;
+    const fields = [];
+
+    switch (eventType) {
+      case "MEDIA_PENDING":
+        color = "#f0a500";
+        authorText = "⏳ Anfrage eingereicht";
+        description = `Deine Anfrage für **${title}** wurde erfolgreich eingereicht und wird in Kürze von einem Admin geprüft.`;
+        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
+        break;
+
+      case "MEDIA_APPROVED":
+        color = "#1ec8a0";
+        authorText = "✅ Anfrage genehmigt";
+        description = `Deine Anfrage für **${title}** wurde von einem Admin **genehmigt**. Der Download startet in Kürze – du erhältst eine weitere Nachricht, sobald der Inhalt verfügbar ist.`;
+        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
+        break;
+
+      case "MEDIA_AUTO_APPROVED":
+        color = "#1ec8a0";
+        authorText = "⚡ Automatisch genehmigt";
+        description = `Deine Anfrage für **${title}** wurde **automatisch genehmigt** und der Download läuft bereits. Du erhältst eine Nachricht, sobald der Inhalt bereitsteht.`;
+        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
+        break;
+
+      case "MEDIA_DECLINED": {
+        color = "#e74c3c";
+        authorText = "❌ Anfrage abgelehnt";
+        description = `Deine Anfrage für **${title}** wurde **abgelehnt**.`;
+        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
+        const declineReason = data.request?.comment;
+        if (declineReason) fields.push({ name: "Begründung", value: declineReason, inline: false });
+        break;
+      }
+
+      case "MEDIA_AVAILABLE":
+        color = "#2ecc71";
+        authorText = "🎉 Jetzt verfügbar!";
+        description = `**${title}** ist ab sofort in Jellyfin verfügbar. Viel Spaß beim Schauen!`;
+        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
+        break;
+
+      default:
+        return;
+    }
 
     const dmEmbed = new EmbedBuilder()
-      .setColor(cfg.color)
-      .setAuthor({ name: `${cfg.emoji} ${cfg.label}` })
-      .setTitle(data.subject || "Questorr Notification")
-      .setDescription(dmDescription)
+      .setColor(color)
+      .setAuthor({ name: authorText })
+      .setTitle(title)
+      .setDescription(description)
       .setTimestamp();
 
-    const dmFooter = process.env.EMBED_FOOTER_TEXT;
-    if (dmFooter) dmEmbed.setFooter({ text: dmFooter });
-
+    if (footerText) dmEmbed.setFooter({ text: footerText });
+    if (fields.length > 0) dmEmbed.addFields(...fields);
     if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
     if (embed.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
 
     const dmOptions = { embeds: [dmEmbed] };
-    if (buttons) dmOptions.components = [buttons];
+    if (eventType === "MEDIA_AVAILABLE" && buttons) dmOptions.components = [buttons];
 
     await user.send(dmOptions);
-    logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${data.subject}"`);
+    logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);
   } catch (err) {
     logger.warn(`[SEERR WEBHOOK] Could not send DM to ${discordId}: ${err.message}`);
   }
@@ -874,8 +915,10 @@ function scheduleJellyfinRetry(ctx) {
   const {
     data, eventType, cfg, client, tmdbDetails, imdbId,
     rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-    retryDelay, fallbackChannelId,
+    retryDelay, fallbackChannelId, fallbackMessageId, fallbackChannel,
   } = ctx;
+
+  logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
 
   const maxRetries = 3;
   let attempt = 0;
@@ -885,8 +928,6 @@ function scheduleJellyfinRetry(ctx) {
     logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
 
     try {
-      // Clear TMDB cache entry so findVerifiedJellyfinItem gets fresh title data
-      // (cache is still valid, just re-use it)
       const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
       const jellyfinItemId = await findVerifiedJellyfinItem(tmdbId, mediaType);
 
@@ -898,7 +939,18 @@ function scheduleJellyfinRetry(ctx) {
           return;
         }
 
-        // Build and send the corrected notification
+        // Delete the fallback-channel message before sending to the correct channel
+        if (fallbackMessageId && fallbackChannel) {
+          try {
+            const fallbackMsg = await fallbackChannel.messages.fetch(fallbackMessageId);
+            await fallbackMsg.delete();
+            logger.info(`[SEERR WEBHOOK] 🗑️ Deleted fallback message ${fallbackMessageId} from channel ${fallbackChannelId}`);
+          } catch (delErr) {
+            logger.debug(`[SEERR WEBHOOK] Could not delete fallback message: ${delErr.message}`);
+          }
+        }
+
+        // Build and send the corrected notification to the right channel
         const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
         const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
 
@@ -907,9 +959,6 @@ function scheduleJellyfinRetry(ctx) {
         if (buttons) messageOptions.components = [buttons];
         await channel.send(messageOptions);
         logger.info(`[SEERR WEBHOOK] ✅ Sent corrected ${eventType} notification for "${subject}" to channel ${channelId}`);
-
-        // Delete the original fallback message if possible
-        // (not implemented — would need to store message ID from initial send)
         return;
       }
 

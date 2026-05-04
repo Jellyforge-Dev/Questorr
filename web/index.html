@@ -617,6 +617,26 @@
                         </div>
                       </div>
 
+                      <!-- Jellyfin Auto-Erkennung neuer Inhalte -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
+                        <p style="margin: 0 0 0.75rem; font-weight: 700; color: var(--green);">🔍 Automatische Erkennung neuer Inhalte</p>
+                        <p style="margin: 0 0 1rem; font-size: 0.88rem; color: var(--subtext0);">
+                          Questorr prüft selbstständig in regelmäßigen Abständen, ob neue Filme oder Serien zu Jellyfin hinzugefügt wurden – auch wenn sie <strong>nicht</strong> über Seerr angefragt wurden. Beim ersten Start werden alle vorhandenen Inhalte still erfasst; Benachrichtigungen werden nur für danach hinzugefügte Inhalte gesendet.
+                        </p>
+                        <div class="form-group">
+                          <label for="JELLYFIN_POLL_INTERVAL_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;">Prüf-Intervall (Sekunden)</label>
+                          <input type="number" id="JELLYFIN_POLL_INTERVAL_SECONDS" name="JELLYFIN_POLL_INTERVAL_SECONDS"
+                            placeholder="300" min="0" max="86400" step="30"
+                            style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                          <div class="form-text" style="margin-top:0.5rem;">
+                            Wie oft Jellyfin auf neue Inhalte geprüft wird. Standard: 300 (= 5 Minuten). <strong>0 = deaktiviert.</strong>
+                          </div>
+                        </div>
+                        <p style="margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--subtext0);">
+                          Die Bibliothek-→-Kanal-Zuordnung oben gilt auch für diese Benachrichtigungen. Der Fallback-Kanal (links oben) wird verwendet, wenn keine Bibliothek passt.
+                        </p>
+                      </div>
+
                       <!-- Info Box -->
                       <div style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--mauve);">
                         <p style="margin: 0; font-size: 0.95rem; color: var(--subtext0);">
@@ -893,10 +913,18 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (minutes)</label>
+                          <label for="DAILY_RANDOM_PICK_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Uhrzeit (HH:MM)</label>
+                          <input type="time" id="DAILY_RANDOM_PICK_TIME" name="DAILY_RANDOM_PICK_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;">
+                            Genaue Uhrzeit für den täglichen Versand (z.B. 08:00). Wenn gesetzt, wird der Interval ignoriert.
+                          </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
                           <input type="number" id="DAILY_RANDOM_PICK_INTERVAL" name="DAILY_RANDOM_PICK_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            <span data-i18n="config.daily_random_interval_help">How often to send a pick in minutes (default: 1440 = 24 hours)</span>
+                            <span data-i18n="config.daily_random_interval_help">Intervall in Minuten (Standard: 1440 = 24h)</span>
                           </div>
                         </div>
 
@@ -932,7 +960,21 @@
                           </div>
                         </div>
 
-                        
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RECOMMENDATION_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Uhrzeit (HH:MM)</label>
+                          <input type="time" id="DAILY_RECOMMENDATION_TIME" name="DAILY_RECOMMENDATION_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;">
+                            Genaue Uhrzeit für den täglichen Versand (z.B. 20:00). Wenn gesetzt, wird der Interval ignoriert.
+                          </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
+                          <input type="number" id="DAILY_RECOMMENDATION_INTERVAL" name="DAILY_RECOMMENDATION_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;">
+                            Intervall in Minuten (Standard: 1440 = 24h)
+                          </div>
+                        </div>
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-daily-recommendation-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">

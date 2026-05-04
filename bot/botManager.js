@@ -8,6 +8,7 @@ import { registerCommands } from "../discord/commands.js";
 import { botState, loadPendingRequests } from "./botState.js";
 import { registerInteractions } from "./interactions.js";
 import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
+import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -69,10 +70,9 @@ export async function startBot() {
       botState.isBotRunning = true;
       botState.botStartedAt = Date.now();
 
-      logger.info("ℹ️ Jellyfin notifications will be received via webhooks.");
-
       scheduleDailyRandomPick(client);
       scheduleDailyRecommendation(client);
+      startJellyfinPoller(client);
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });
