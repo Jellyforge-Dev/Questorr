@@ -23,6 +23,8 @@
  *   JELLYFIN_CHANNEL_ID             fallback channel when no library mapping matches
  */
 
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import path from "path";
 import axios from "axios";
 import {
   EmbedBuilder,
@@ -42,12 +44,38 @@ import {
 } from "../jellyfin/libraryResolver.js";
 import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, seedAllItemIds, fetchItemDetails } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
+import { CONFIG_PATH } from "../utils/configFile.js";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let pollerTimer = null;
 let initialized = false;
-let lastPollTime = null; // set after seed poll; regular polls query MinDateLastSaved >= lastPollTime
+
+// ─── Seen-set persistence ─────────────────────────────────────────────────────
+
+const SEEN_ITEMS_FILE = path.join(path.dirname(CONFIG_PATH), "seen-items.json");
+// If the saved file is older than this, treat it as stale and do a fresh seed.
+const SEEN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function loadSeenItems() {
+  try {
+    if (!existsSync(SEEN_ITEMS_FILE)) return null;
+    const data = JSON.parse(readFileSync(SEEN_ITEMS_FILE, "utf-8"));
+    if (!data.savedAt || Date.now() - data.savedAt > SEEN_MAX_AGE_MS) return null;
+    return new Map(data.items); // [[id, timestamp], ...]
+  } catch {
+    return null;
+  }
+}
+
+function saveSeenItems() {
+  try {
+    const items = [...deduplicator.seenItems.entries()];
+    writeFileSync(SEEN_ITEMS_FILE, JSON.stringify({ savedAt: Date.now(), items }), "utf-8");
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Could not save seen-items: ${err.message}`);
+  }
+}
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 
@@ -90,16 +118,12 @@ export function startJellyfinPoller(client) {
 
   logger.info(`[Jellyfin Poller] Starting – polling every ${intervalSec}s`);
 
-  // Seed poll: record existing items so we don't notify for them, then
-  // set lastPollTime so regular polls use MinDateLastSaved from this moment.
   seedPoll(apiKey, baseUrl).then(() => {
-    lastPollTime = new Date();
     initialized = true;
     logger.info("[Jellyfin Poller] ✅ Seed poll complete – watching for new items");
     pollerTimer = setInterval(() => poll(client, apiKey, baseUrl), intervalSec * 1000);
   }).catch((err) => {
     logger.error("[Jellyfin Poller] Seed poll failed:", err.message);
-    lastPollTime = new Date();
     initialized = true;
     pollerTimer = setInterval(() => poll(client, apiKey, baseUrl), intervalSec * 1000);
   });
@@ -111,7 +135,7 @@ export function stopJellyfinPoller() {
     pollerTimer = null;
   }
   initialized = false;
-  lastPollTime = null;
+  saveSeenItems();
   logger.info("[Jellyfin Poller] Stopped");
 }
 
@@ -120,8 +144,17 @@ export function stopJellyfinPoller() {
 /**
  * Fetch current items and mark them as seen – no Discord notification.
  * Prevents flooding when the bot starts or restarts.
+ * If a recent seen-items file exists on disk, restores from it instead of
+ * re-seeding — so items added just before a restart are still detected.
  */
 async function seedPoll(apiKey, baseUrl) {
+  const stored = loadSeenItems();
+  if (stored) {
+    for (const [id, ts] of stored) deduplicator.seenItems.set(id, ts);
+    logger.info(`[Jellyfin Poller] Restored ${stored.size} seen items from disk (skipping reseed)`);
+    return;
+  }
+
   try {
     const total = await seedAllItemIds(apiKey, baseUrl, (items) => {
       for (const item of items) deduplicator.checkAndRecord(item.Id);
@@ -133,6 +166,8 @@ async function seedPoll(apiKey, baseUrl) {
     for (const item of items) deduplicator.checkAndRecord(item.Id);
     logger.info(`[Jellyfin Poller] Seeded ${items.length} items (fallback, no notifications)`);
   }
+
+  saveSeenItems();
 }
 
 /**
@@ -145,14 +180,8 @@ async function poll(client, apiKey, baseUrl) {
     return;
   }
 
-  // Snapshot the current time before fetching so we don't miss items
-  // added during this poll window.
-  const thisPollTime = new Date();
-  const sinceTime = lastPollTime;
-
   try {
-    const items = await fetchItemsAddedSince(apiKey, baseUrl, sinceTime);
-    lastPollTime = thisPollTime;
+    const items = await fetchItemsAddedSince(apiKey, baseUrl);
 
     const newItems = [];
     for (const item of items) {
@@ -163,7 +192,10 @@ async function poll(client, apiKey, baseUrl) {
       newItems.push(item);
     }
 
-    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched since ${sinceTime.toISOString()}, ${newItems.length} new`);
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (top 200 by DateCreated), ${newItems.length} new`);
+
+    deduplicator.cleanup();
+    saveSeenItems();
 
     if (newItems.length === 0) return;
 
