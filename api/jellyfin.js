@@ -541,34 +541,54 @@ export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
 }
 
 /**
- * Fetch items that Jellyfin indexed (saved to database) after `since`.
+ * Fetch ALL items that Jellyfin indexed (saved to database) after `since`.
+ * Paginates in batches of 500 so no item is missed even when Jellyfin's
+ * metadata scanner touches hundreds of existing items in the same poll window.
  * Uses MinDateLastSaved which reflects when Jellyfin scanned the file —
  * not the file's creation date — so items with old file timestamps are
  * detected correctly.
  */
 export async function fetchItemsAddedSince(apiKey, baseUrl, since) {
-  try {
-    const base = baseUrl.replace(/\/$/, "");
-    const response = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        IncludeItemTypes: "Movie,Series,Season,Episode",
-        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
-        MinDateLastSaved: since.toISOString(),
-        SortBy: "DateCreated",
-        SortOrder: "Descending",
-        Limit: 200,
-      },
-      timeout: 8000,
-    });
-    return response.data?.Items || [];
-  } catch (err) {
-    const status = err?.response?.status;
-    const msg = err?.message || String(err);
-    logger.error(`Failed to fetch items added since ${since.toISOString()}: ${status ? `HTTP ${status} — ` : ""}${msg}`);
-    return [];
+  const base = baseUrl.replace(/\/$/, "");
+  const batchSize = 500;
+  const allItems = [];
+  let startIndex = 0;
+
+  while (true) {
+    let response;
+    try {
+      response = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series,Season,Episode",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          MinDateLastSaved: since.toISOString(),
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          StartIndex: startIndex,
+          Limit: batchSize,
+        },
+        timeout: 15000,
+      });
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = err?.message || String(err);
+      logger.error(`Failed to fetch items added since ${since.toISOString()} (startIndex=${startIndex}): ${status ? `HTTP ${status} — ` : ""}${msg}`);
+      break;
+    }
+
+    const items = response.data?.Items || [];
+    const total = response.data?.TotalRecordCount ?? 0;
+
+    if (items.length === 0) break;
+    allItems.push(...items);
+
+    if (allItems.length >= total || items.length < batchSize) break;
+    startIndex += items.length;
   }
+
+  return allItems;
 }
 
 /**
