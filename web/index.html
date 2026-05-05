@@ -654,6 +654,38 @@
                           </div>
                           <div class="form-text" style="margin-top:0.5rem;">Für welche Inhaltstypen Benachrichtigungen gesendet werden sollen.</div>
                         </div>
+
+                        <!-- Poller Button Configuration -->
+                        <div class="form-group" style="margin-top:1rem;">
+                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Buttons in Benachrichtigung</label>
+                          <div style="display:flex;flex-wrap:wrap;gap:1rem;">
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" name="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              ▶️ Jetzt ansehen
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" name="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              🎬 IMDb
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" name="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              📝 Letterboxd
+                            </label>
+                          </div>
+                          <div class="form-text" style="margin-top:0.5rem;">Welche Buttons in automatischen Jellyfin-Benachrichtigungen angezeigt werden.</div>
+                        </div>
+
+                        <!-- Metadata Delay -->
+                        <div class="form-group" style="margin-top:1rem;">
+                          <label for="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;">Metadaten-Verzögerung (Sekunden)</label>
+                          <input type="number" id="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" name="JELLYFIN_POLLER_METADATA_DELAY_SECONDS"
+                            placeholder="60" min="0" max="600" step="10"
+                            style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                          <div class="form-text" style="margin-top:0.5rem;">
+                            Wartezeit bevor eine Benachrichtigung gesendet wird, wenn Jellyfin noch keinen TMDB-Link gefunden hat (z. B. bei frisch importierten Inhalten). Standard: 60s. <strong>0 = sofort senden.</strong>
+                          </div>
+                        </div>
+
                         <p style="margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--subtext0);">
                           Die Bibliothek-→-Kanal-Zuordnung oben gilt auch für diese Benachrichtigungen. Der Fallback-Kanal (links oben) wird verwendet, wenn keine Bibliothek passt.
                         </p>

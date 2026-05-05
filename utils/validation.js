@@ -110,6 +110,13 @@ export const configSchema = Joi.object({
     Joi.string().allow(""),
     Joi.number().integer().min(0).max(86400)
   ).optional(),
+  JELLYFIN_POLLER_METADATA_DELAY_SECONDS: Joi.alternatives(
+    Joi.string().allow(""),
+    Joi.number().integer().min(0).max(600)
+  ).optional(),
+  JELLYFIN_POLLER_SHOW_BUTTON_WATCH: Joi.string().valid("true", "false").optional(),
+  JELLYFIN_POLLER_SHOW_BUTTON_IMDB: Joi.string().valid("true", "false").optional(),
+  JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD: Joi.string().valid("true", "false").optional(),
   DEFAULT_QUALITY_PROFILE_MOVIE: Joi.string().allow("").optional(),
   DEFAULT_QUALITY_PROFILE_TV: Joi.string().allow("").optional(),
   DEFAULT_SERVER_MOVIE: Joi.string().allow("").optional(),

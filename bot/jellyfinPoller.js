@@ -40,7 +40,7 @@ import {
   resolveConfigLibraryId,
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
-import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, seedAllItemIds } from "../api/jellyfin.js";
+import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, seedAllItemIds, fetchItemDetails } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -57,6 +57,14 @@ const TYPE_SETTINGS = {
   Season:  { envKey: "JELLYFIN_NOTIFY_SEASONS",   emoji: "📀", color: "#17b8c4", label: "Staffel" },
   Episode: { envKey: "JELLYFIN_NOTIFY_EPISODES",  emoji: "▶️",  color: "#17b8c4", label: "Episode" },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getTmdbLanguage() {
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase().split("-")[0];
+  const map = { de: "de-DE", en: "en-US", sv: "sv-SE", fr: "fr-FR", es: "es-ES", pt: "pt-BR", nl: "nl-NL", it: "it-IT", pl: "pl-PL", ru: "ru-RU" };
+  return map[lang] || "en-US";
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -194,7 +202,6 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   }
 
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
-  const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
   // Cross-webhook dedup: skip if Seerr already sent MEDIA_AVAILABLE for this TMDB ID
@@ -202,6 +209,31 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – already notified via Seerr webhook`);
     return;
   }
+
+  // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish scanning metadata
+  const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
+  if (!tmdbId && process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0) {
+    logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB ID yet – waiting ${delaySec}s for metadata scan`);
+    setTimeout(async () => {
+      const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
+      await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
+        logger.error(`[Jellyfin Poller] Delayed notify failed for "${item.Name}": ${err.message}`)
+      );
+    }, delaySec * 1000);
+    return;
+  }
+
+  await doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
+}
+
+async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
+  const itemType = item.Type;
+  const typeSettings = TYPE_SETTINGS[itemType];
+  if (!typeSettings) return;
+
+  const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
+  const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
+  const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
   logger.info(`[Jellyfin Poller] New ${itemType}: "${item.Name}" (TMDB: ${tmdbId || "—"})`);
 
@@ -282,7 +314,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
         ? `https://api.themoviedb.org/3/movie/${tmdbId}`
         : `https://api.themoviedb.org/3/tv/${tmdbId}`;
       const res = await axios.get(endpoint, {
-        params: { api_key: process.env.TMDB_API_KEY, append_to_response: "images" },
+        params: { api_key: process.env.TMDB_API_KEY, language: getTmdbLanguage(), append_to_response: "images" },
         timeout: 8000,
       });
       tmdbData = res.data;
@@ -324,7 +356,12 @@ function buildButtons(item, itemType, imdbId, baseUrl) {
   const serverId = process.env.JELLYFIN_SERVER_ID || "";
   const jfBase = (baseUrl || "").replace(/\/$/, "");
 
-  if (process.env.EMBED_SHOW_BUTTON_WATCH !== "false" && jfBase && item.Id) {
+  // Poller-specific toggles fall back to global EMBED_SHOW_BUTTON_* if not set
+  const showWatch      = process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH      ?? process.env.EMBED_SHOW_BUTTON_WATCH      ?? "true";
+  const showImdb       = process.env.JELLYFIN_POLLER_SHOW_BUTTON_IMDB       ?? process.env.EMBED_SHOW_BUTTON_IMDB       ?? "true";
+  const showLetterboxd = process.env.JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD ?? process.env.EMBED_SHOW_BUTTON_LETTERBOXD ?? "true";
+
+  if (showWatch !== "false" && jfBase && item.Id) {
     const watchUrl = `${jfBase}/web/index.html#!/details?id=${item.Id}&serverId=${serverId}`;
     if (isValidUrl(watchUrl)) {
       components.push(
@@ -333,7 +370,7 @@ function buildButtons(item, itemType, imdbId, baseUrl) {
     }
   }
 
-  if (process.env.EMBED_SHOW_BUTTON_IMDB !== "false" && imdbId) {
+  if (showImdb !== "false" && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
       components.push(
@@ -342,7 +379,7 @@ function buildButtons(item, itemType, imdbId, baseUrl) {
     }
   }
 
-  if (process.env.EMBED_SHOW_BUTTON_LETTERBOXD !== "false" && imdbId && itemType === "Movie") {
+  if (showLetterboxd !== "false" && imdbId && itemType === "Movie") {
     const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     if (isValidUrl(lboxdUrl)) {
       components.push(
