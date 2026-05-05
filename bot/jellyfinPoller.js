@@ -23,7 +23,7 @@
  *   JELLYFIN_CHANNEL_ID             fallback channel when no library mapping matches
  */
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import path from "path";
 import axios from "axios";
 import {
@@ -71,7 +71,9 @@ function loadSeenItems() {
 function saveSeenItems() {
   try {
     const items = [...deduplicator.seenItems.entries()];
-    writeFileSync(SEEN_ITEMS_FILE, JSON.stringify({ savedAt: Date.now(), items }), "utf-8");
+    const tmp = SEEN_ITEMS_FILE + ".tmp";
+    writeFileSync(tmp, JSON.stringify({ savedAt: Date.now(), items }), "utf-8");
+    renameSync(tmp, SEEN_ITEMS_FILE);
   } catch (err) {
     logger.warn(`[Jellyfin Poller] Could not save seen-items: ${err.message}`);
   }

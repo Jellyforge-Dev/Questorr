@@ -28,11 +28,9 @@ export function savePendingRequests() {
     for (const [key, userSet] of pendingRequests) {
       serialized[key] = Array.from(userSet);
     }
-    fs.writeFileSync(
-      PENDING_REQUESTS_PATH,
-      JSON.stringify(serialized, null, 2),
-      { encoding: "utf-8", mode: 0o600 }
-    );
+    const tmp = PENDING_REQUESTS_PATH + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(serialized, null, 2), { encoding: "utf-8", mode: 0o600 });
+    fs.renameSync(tmp, PENDING_REQUESTS_PATH);
   } catch (err) {
     logger.warn(`⚠️ Failed to persist pending requests to disk: ${err.message}`);
   }

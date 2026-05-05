@@ -1,8 +1,9 @@
 import { approveRequest, declineRequest } from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { t } from "../../utils/botStrings.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import logger from "../../utils/logger.js";
+import { botState } from "../botState.js";
 
 /**
  * Handle approve/decline button clicks on MEDIA_PENDING admin notifications.
@@ -21,10 +22,48 @@ export async function handleSeerrApproveDecline(interaction) {
   await interaction.deferUpdate();
 
   try {
+    let apiResult;
     if (isApprove) {
-      await approveRequest(parseInt(requestId, 10), seerrUrl, apiKey);
+      apiResult = await approveRequest(parseInt(requestId, 10), seerrUrl, apiKey);
     } else {
-      await declineRequest(parseInt(requestId, 10), seerrUrl, apiKey);
+      apiResult = await declineRequest(parseInt(requestId, 10), seerrUrl, apiKey);
+    }
+
+    // DM the requester
+    try {
+      const discordClient = botState.discordClient;
+      if (discordClient && apiResult) {
+        let discordId = apiResult?.requestedBy?.settings?.discordId;
+        if (!discordId) {
+          const seerrUsername = apiResult?.requestedBy?.username || apiResult?.requestedBy?.displayName;
+          if (seerrUsername) {
+            try {
+              const raw = process.env.USER_MAPPINGS;
+              const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
+              const match = Array.isArray(mappings) && mappings.find(
+                (m) => m.seerrDisplayName === seerrUsername || String(m.seerrUserId) === String(seerrUsername)
+              );
+              if (match?.discordUserId) discordId = match.discordUserId;
+            } catch (_) {}
+          }
+        }
+        if (discordId) {
+          const title = interaction.message.embeds[0]?.title || "Unknown";
+          const dmEmbed = new EmbedBuilder()
+            .setColor(isApprove ? "#1ec8a0" : "#e74c3c")
+            .setAuthor({ name: isApprove ? "✅ Anfrage genehmigt" : "❌ Anfrage abgelehnt" })
+            .setTitle(title)
+            .setDescription(isApprove
+              ? `Deine Anfrage für **${title}** wurde von einem Admin **genehmigt**. Der Download startet in Kürze.`
+              : `Deine Anfrage für **${title}** wurde **abgelehnt**.`)
+            .setTimestamp();
+          const dmUser = await discordClient.users.fetch(discordId);
+          await dmUser.send({ embeds: [dmEmbed] });
+          logger.info(`[SEERR] ✉️ DM sent to ${discordId} after ${isApprove ? "approval" : "decline"} of "${title}"`);
+        }
+      }
+    } catch (dmErr) {
+      logger.warn(`[SEERR] Could not send DM after ${isApprove ? "approve" : "decline"}: ${dmErr.message}`);
     }
 
     // Update the message: disable buttons and show who acted

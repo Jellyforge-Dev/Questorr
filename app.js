@@ -235,6 +235,12 @@ function configureWebServer() {
       },
     },
     crossOriginEmbedderPolicy: false,
+    // Only send HSTS when the connection is actually over HTTPS (direct TLS or
+    // behind a reverse proxy that sets X-Forwarded-Proto: https).
+    // Sending HSTS over plain HTTP would break future HTTP-only access.
+    hsts: (req.secure || req.headers["x-forwarded-proto"] === "https")
+      ? { maxAge: 31536000, includeSubDomains: true }
+      : false,
   })(req, res, next);
   });
 
@@ -243,7 +249,16 @@ function configureWebServer() {
     // Allow iFrame embedding for widget route only (restricted to same origin by default)
     if (_req.path === "/api/widget/embed") {
       const widgetOrigins = readConfig()?.WIDGET_ALLOWED_ORIGINS || "";
-      const frameAncestors = widgetOrigins.trim() ? widgetOrigins.trim() : "'self'";
+      // Validate each origin: must be a valid URL with http(s) scheme and no private/internal hosts
+      const validOrigins = widgetOrigins.trim()
+        ? widgetOrigins.trim().split(/\s+/).filter((o) => {
+            try {
+              const u = new URL(o);
+              return u.protocol === "http:" || u.protocol === "https:";
+            } catch (_) { return false; }
+          })
+        : [];
+      const frameAncestors = validOrigins.length > 0 ? validOrigins.join(" ") : "'self'";
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
       res.setHeader("Content-Security-Policy", `frame-ancestors ${frameAncestors}`);
     } else {
@@ -698,7 +713,7 @@ function configureWebServer() {
     if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
   }
 
-    app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
+    app.post("/seerr-webhook", webhookLimiter, express.json({ limit: "100kb", type: "*/*" }), async (req, res) => {
     try {
       // Validate webhook secret via Authorization header.
       // Seerr sends this via the "Authorization Header" field in webhook settings.

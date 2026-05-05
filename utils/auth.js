@@ -15,9 +15,15 @@ const MAX_FAILED_ATTEMPTS = 5;          // lock after this many consecutive fail
 const LOCKOUT_DURATION_MS = 10 * 60 * 1000; // 10 min lockout
 const BASE_DELAY_MS = 300;              // progressive delay per failure: attempt * 300ms
 const MAX_DELAY_MS = 4000;             // cap at 4s
- 
+
+// IP-based lockout triggers sooner: many usernames tried from one IP = credential stuffing
+const MAX_IP_FAILED_ATTEMPTS = 15;
+const IP_LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 // username → { count: number, lockedUntil: number, timerId: NodeJS.Timeout|null }
 const failedAttempts = new Map();
+// ip → { count: number, lockedUntil: number, timerId: NodeJS.Timeout|null }
+const ipFailedAttempts = new Map();
  
 // Persist active lockouts to disk so they survive container restarts.
 // Only locked accounts (lockedUntil > now) are written – partial failure
@@ -107,6 +113,35 @@ function progressiveDelay(username) {
   return ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve();
 }
 
+// --- IP-BASED BRUTE-FORCE PROTECTION ---
+
+function getIpEntry(ip) {
+  return ipFailedAttempts.get(ip) || { count: 0, lockedUntil: 0, timerId: null };
+}
+
+function recordIpFailure(ip) {
+  const entry = getIpEntry(ip);
+  if (entry.timerId) clearTimeout(entry.timerId);
+  const count = entry.count + 1;
+  const lockedUntil = count >= MAX_IP_FAILED_ATTEMPTS ? Date.now() + IP_LOCKOUT_DURATION_MS : entry.lockedUntil;
+  const timerId = setTimeout(() => ipFailedAttempts.delete(ip), IP_LOCKOUT_DURATION_MS + 5000);
+  if (typeof timerId.unref === "function") timerId.unref();
+  ipFailedAttempts.set(ip, { count, lockedUntil, timerId });
+  return { count, lockedUntil };
+}
+
+function clearIpFailures(ip) {
+  ipFailedAttempts.delete(ip);
+}
+
+function checkIpLockout(ip) {
+  const entry = getIpEntry(ip);
+  if (entry.lockedUntil > Date.now()) {
+    return Math.ceil((entry.lockedUntil - Date.now()) / 1000);
+  }
+  return 0;
+}
+
 // Generate or retrieve JWT_SECRET
 function getOrGenerateJwtSecret() {
   // ALWAYS try to load from config file first (most important)
@@ -145,10 +180,32 @@ function getOrGenerateJwtSecret() {
 // Initialize JWT_SECRET once at module load (CRITICAL: must be constant for token verification)
 const JWT_SECRET = getOrGenerateJwtSecret();
 
-// In-memory set of revoked token JTIs (cleared on restart, which also invalidates all tokens if secret rotates)
+// Revoked JWT JTIs — persisted to disk so logout survives restarts
 const revokedTokens = new Set();
-// Maximum time (in ms) to keep a revoked token JTI in memory, to avoid unbounded TTLs
 const MAX_REVOKE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const REVOKED_TOKENS_PATH = path.join(path.dirname(CONFIG_PATH), "revoked-tokens.json");
+
+function saveRevokedTokens() {
+  try {
+    fs.writeFileSync(REVOKED_TOKENS_PATH, JSON.stringify([...revokedTokens]), { mode: 0o600 });
+  } catch (err) {
+    logger.warn("[Auth] Could not persist revoked tokens:", err.message);
+  }
+}
+
+function loadRevokedTokens() {
+  try {
+    if (!fs.existsSync(REVOKED_TOKENS_PATH)) return;
+    const raw = fs.readFileSync(REVOKED_TOKENS_PATH, "utf-8");
+    const list = JSON.parse(raw);
+    if (Array.isArray(list)) list.forEach((jti) => revokedTokens.add(jti));
+    logger.debug(`[Auth] Loaded ${revokedTokens.size} revoked token(s) from disk`);
+  } catch (err) {
+    logger.warn("[Auth] Could not load revoked tokens from disk:", err.message);
+  }
+}
+
+loadRevokedTokens();
 
 function revokeToken(token) {
   try {
@@ -169,8 +226,9 @@ function revokeToken(token) {
     }
     const ttl = Math.min(ttlFromExpMs, MAX_REVOKE_TTL_MS);
     revokedTokens.add(decoded.jti);
+    saveRevokedTokens();
     // Auto-cleanup: remove JTI after bounded TTL (.unref so timers don't block process exit)
-    const timeout = setTimeout(() => revokedTokens.delete(decoded.jti), ttl);
+    const timeout = setTimeout(() => { revokedTokens.delete(decoded.jti); saveRevokedTokens(); }, ttl);
     if (typeof timeout.unref === "function") {
       timeout.unref();
     }
@@ -219,6 +277,15 @@ export const login = async (req, res) => {
   }
 
   // Check lockout before doing anything else
+  const ipSecondsRemaining = checkIpLockout(req.ip);
+  if (ipSecondsRemaining > 0) {
+    logger.warn(`🔒 Login blocked for IP ${req.ip} — IP locked (${ipSecondsRemaining}s remaining)`);
+    return res.status(429).json({
+      success: false,
+      message: `Too many failed attempts. Try again in ${ipSecondsRemaining} seconds.`,
+    });
+  }
+
   const secondsRemaining = checkLockout(username);
   if (secondsRemaining > 0) {
     logger.warn(`🔒 Login blocked for "${username}" — account locked (${secondsRemaining}s remaining, from ${req.ip})`);
@@ -240,6 +307,7 @@ export const login = async (req, res) => {
   if (!user || !validPassword) {
     await progressiveDelay(username);
     const { count } = recordFailure(username);
+    recordIpFailure(req.ip);
     const attemptsLeft = MAX_FAILED_ATTEMPTS - count;
     if (attemptsLeft <= 0) {
       logger.warn(`🔒 Account "${username}" locked after ${MAX_FAILED_ATTEMPTS} failed attempts (from ${req.ip})`);
@@ -255,6 +323,7 @@ export const login = async (req, res) => {
   }
 
   clearFailures(username);
+  clearIpFailures(req.ip);
 
   const token = jwt.sign({ id: user.id, username: user.username, jti: crypto.randomUUID() }, JWT_SECRET, {
     expiresIn: AUTH_TOKEN_EXPIRATION,

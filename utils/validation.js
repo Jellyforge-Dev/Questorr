@@ -4,6 +4,31 @@
  */
 
 import Joi from "joi";
+import net from "net";
+
+/**
+ * Joi custom validator for server URLs (SEERR_URL, JELLYFIN_BASE_URL).
+ * Allows private/LAN IPs (needed for self-hosted services) but blocks the
+ * cloud metadata endpoint (169.254.169.254) and the unspecified address (0.0.0.0)
+ * which have no legitimate use as target hosts.
+ */
+function validateServerUrl(value, helpers) {
+  if (!value) return value;
+  try {
+    const u = new URL(value);
+    const host = u.hostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+    if (net.isIP(host)) {
+      // Block cloud instance metadata endpoint and unspecified address
+      const blocked = ["169.254.169.254", "0.0.0.0", "::"];
+      if (blocked.includes(host)) {
+        return helpers.error("any.invalid");
+      }
+    }
+  } catch (_) {
+    return helpers.error("string.uri");
+  }
+  return value;
+}
 
 // --- CONFIG VALIDATION ---
 export const configSchema = Joi.object({
@@ -38,11 +63,11 @@ export const configSchema = Joi.object({
   DISCORD_TOKEN: Joi.string().allow("").optional(),
   BOT_ID: Joi.string().allow("").optional(),
   GUILD_ID: Joi.string().allow("").optional(),
-  SEERR_URL: Joi.string().uri().allow("").optional(),
+  SEERR_URL: Joi.string().uri().allow("").optional().custom(validateServerUrl),
   SEERR_API_KEY: Joi.string().allow("").optional(),
   TMDB_API_KEY: Joi.string().allow("").optional(),
   OMDB_API_KEY: Joi.string().allow("").optional(),
-  JELLYFIN_BASE_URL: Joi.string().uri().allow("").optional(),
+  JELLYFIN_BASE_URL: Joi.string().uri().allow("").optional().custom(validateServerUrl),
   JELLYFIN_API_KEY: Joi.string().allow("").optional(),
   JELLYFIN_SERVER_ID: Joi.string().allow("").optional(),
   JELLYFIN_CHANNEL_ID: Joi.string().allow("").optional(),
