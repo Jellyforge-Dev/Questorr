@@ -180,6 +180,8 @@
     "seerr_webhook_replace": "",
     "seerr_webhook_header_desc": "",
     "seerr_webhook_copy_secret": "",
+    "seerr_webhook_warning": "",
+    "test_seerr_roundtrip": "",
     "seerr_root_folder_load": "",
     "jellyfin_fallback_channel": "",
     "jellyfin_fallback_desc": "",

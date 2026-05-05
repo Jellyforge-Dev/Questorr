@@ -1532,6 +1532,101 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Round-Trip Test button — triggers Seerr's API to fire its webhook so we
+  // can verify the full chain (URL + Authorization header) end-to-end.
+  const rtBtn = document.getElementById("test-seerr-roundtrip-btn");
+  if (rtBtn) {
+    rtBtn.addEventListener("click", async () => {
+      rtBtn.disabled = true;
+      const statusEl = document.getElementById("test-seerr-webhook-status");
+      if (statusEl) statusEl.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/test-seerr-roundtrip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (statusEl) statusEl.textContent = "✅";
+          showToast(data.message || "Round-Trip erfolgreich!");
+        } else {
+          if (statusEl) statusEl.textContent = "❌";
+          showToast(data.message || "Round-Trip fehlgeschlagen.");
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "❌";
+        showToast("Fehler beim Round-Trip-Test.");
+      } finally {
+        rtBtn.disabled = false;
+        setTimeout(() => {
+          const s = document.getElementById("test-seerr-webhook-status");
+          if (s) s.textContent = "";
+        }, 6000);
+      }
+    });
+  }
+
+  // ─── Seerr Webhook Live-Status-Badge ────────────────────────────────────────
+  // Polls /api/webhook-log every 30s, shows the most recent event in the
+  // Seerr-Webhook setup box so the user can see at a glance whether the secret
+  // is configured correctly in Seerr.
+  const seerrWebhookBadge = document.getElementById("seerr-webhook-status-badge");
+  if (seerrWebhookBadge) {
+    const formatRelativeTime = (iso) => {
+      if (!iso) return "";
+      const diffMs = Date.now() - new Date(iso).getTime();
+      if (Number.isNaN(diffMs) || diffMs < 0) return "";
+      const sec = Math.floor(diffMs / 1000);
+      if (sec < 60) return `vor ${sec}s`;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `vor ${min} Min`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `vor ${hr} h`;
+      const day = Math.floor(hr / 24);
+      return `vor ${day} d`;
+    };
+
+    const renderBadge = (events) => {
+      if (!events || events.length === 0) {
+        seerrWebhookBadge.style.display = "inline-flex";
+        seerrWebhookBadge.style.background = "rgba(249, 226, 175, 0.15)";
+        seerrWebhookBadge.style.color = "var(--yellow)";
+        seerrWebhookBadge.title = "Es wurde noch nie ein Webhook von Seerr empfangen. Trage URL und Secret in Seerr ein und sende einen Test.";
+        seerrWebhookBadge.innerHTML = "🟡 Noch nie empfangen";
+        return;
+      }
+      const latest = events[0]; // events are unshifted, latest is index 0
+      const rel = formatRelativeTime(latest.ts);
+      const isAuthFail = latest.status === "unauthorized" || latest.event === "AUTH_FAIL" || latest.event === "NO_SECRET";
+      seerrWebhookBadge.style.display = "inline-flex";
+      if (isAuthFail) {
+        seerrWebhookBadge.style.background = "rgba(243, 139, 168, 0.15)";
+        seerrWebhookBadge.style.color = "var(--red)";
+        const subjectHint = latest.subject && latest.subject !== "—" ? ` · ${latest.subject}` : "";
+        seerrWebhookBadge.title = `Letzter Webhook-Versuch wurde mit ${latest.event} abgewiesen. Prüfe das Authorization-Header-Secret in Seerr.${subjectHint}`;
+        seerrWebhookBadge.innerHTML = `🔴 Auth-Fehler · ${rel}`;
+      } else {
+        seerrWebhookBadge.style.background = "rgba(166, 227, 161, 0.15)";
+        seerrWebhookBadge.style.color = "var(--green)";
+        seerrWebhookBadge.title = `Letzter Webhook empfangen (${latest.event || "ok"}) · ${latest.subject || ""}`;
+        seerrWebhookBadge.innerHTML = `🟢 OK · ${rel}`;
+      }
+    };
+
+    const refreshBadge = async () => {
+      try {
+        const res = await fetch("/api/webhook-log", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderBadge(data.events || []);
+      } catch (_) { /* silent */ }
+    };
+
+    refreshBadge();
+    setInterval(refreshBadge, 30 * 1000);
+  }
+
 
   // Test Notification Buttons
   const testNotifBtnsBtn = document.getElementById("test-notification-buttons-btn");

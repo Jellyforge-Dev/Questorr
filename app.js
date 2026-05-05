@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import net from "net";
 import { fileURLToPath } from "url";
+import axios from "axios";
 import express from "express";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
@@ -712,8 +713,13 @@ function configureWebServer() {
       const a = Buffer.from(incomingSecret);
       const b = Buffer.from(configuredSecret.trim());
       if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
-        appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
+        // Diagnostic hint — never log the actual secret, only its length and a 4-char prefix.
+        // Helps users distinguish: missing header, wrong-length paste, or trailing whitespace.
+        const hint = incomingSecret.length === 0
+          ? "no Authorization header"
+          : `len=${incomingSecret.length} (expected ${b.length})${incomingSecret.length >= 4 ? `, prefix=${incomingSecret.slice(0, 4)}…` : ""}`;
+        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – ${hint} (IP: ${req.ip})`);
+        appendWebhookLog({ event: "AUTH_FAIL", subject: hint, status: "unauthorized", ip: req.ip });
         return res.status(401).send("Unauthorized");
       }
 
@@ -984,6 +990,75 @@ function configureWebServer() {
     } catch (err) {
       logger.error("Error sending Seerr webhook test:", err);
       res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // Seerr → Questorr round-trip test: asks Seerr's API to fire its configured
+  // webhook, then watches our own webhookEventLog for the resulting callback.
+  // Confirms the full chain (Seerr URL + Authorization header) is correct.
+  app.post("/api/test-seerr-roundtrip", authenticateToken, async (req, res) => {
+    const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "").replace(/\/api\/v1\/?$/, "");
+    const apiKey = process.env.SEERR_API_KEY;
+    if (!seerrUrl || !apiKey) {
+      return res.status(400).json({ success: false, message: "SEERR_URL or SEERR_API_KEY not configured." });
+    }
+
+    try {
+      // 1. Fetch Seerr's currently saved webhook notification settings.
+      const cfgRes = await axios.get(`${seerrUrl}/api/v1/settings/notifications/webhook`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: 8000,
+      });
+      const cfg = cfgRes.data || {};
+
+      // 2. Snapshot the latest event timestamp so we can detect new arrivals.
+      const before = webhookEventLog[0]?.ts || null;
+
+      // 3. Trigger Seerr to send a test notification to that webhook.
+      await axios.post(`${seerrUrl}/api/v1/settings/notifications/webhook/test`, cfg, {
+        headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+        timeout: 10000,
+      });
+
+      // 4. Poll our webhookEventLog for up to 6 seconds for a fresh entry.
+      const deadline = Date.now() + 6000;
+      let arrival = null;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 500));
+        const top = webhookEventLog[0];
+        if (top && top.ts !== before) {
+          arrival = top;
+          break;
+        }
+      }
+
+      if (!arrival) {
+        return res.json({
+          success: false,
+          message: "Seerr akzeptierte den Test-Auftrag, aber Questorr hat innerhalb von 6 Sekunden keinen Callback erhalten. Prüfe: Erreichbarkeit der Webhook-URL aus Seerr (Docker-Networking, Firewall) und ob Seerr den Webhook überhaupt aktiviert hat.",
+        });
+      }
+
+      if (arrival.status === "unauthorized") {
+        return res.json({
+          success: false,
+          message: `Seerr hat den Webhook gesendet, aber Questorr hat ihn mit Auth-Fehler abgewiesen (${arrival.subject || "-"}). Das Authorization-Header-Secret in Seerr stimmt nicht mit Questorr überein.`,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `✅ Round-Trip erfolgreich: Seerr → Questorr funktioniert. (Event: ${arrival.event}, Subject: ${arrival.subject})`,
+      });
+    } catch (err) {
+      const status = err?.response?.status;
+      const body = err?.response?.data;
+      const detail = status ? `HTTP ${status}${typeof body === "string" ? ` — ${body}` : ""}` : (err?.message || String(err));
+      logger.error(`[Seerr Round-Trip Test] ${detail}`);
+      return res.status(500).json({
+        success: false,
+        message: `Seerr-API-Aufruf fehlgeschlagen: ${detail}. Prüfe SEERR_URL und SEERR_API_KEY.`,
+      });
     }
   });
 

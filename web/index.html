@@ -412,11 +412,18 @@
 							<code id="seerr-webhook-secret-display" style="flex: 1; padding: 0.4rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.9rem; min-width: 120px;">–</code>
 							<button type="button" id="copy-seerr-webhook-secret-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.seerr_webhook_copy_secret">Copy Secret</button>
 						</div>
-                        <div style="margin-top: 0.75rem;">
-                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">
-                            <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Webhook testen</span>
+						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(243, 139, 168, 0.10); border-left: 3px solid var(--red); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_warning">
+							⚠️ <strong>Wichtig:</strong> Trage das Secret in Seerr in das Feld <strong>"Authorization Header"</strong> ein — <em>nicht</em> in die URL. Ohne korrektes Secret werden alle Webhook-Events mit HTTP 401 abgewiesen und du erhältst keine DM- oder Channel-Benachrichtigungen.
+						</div>
+                        <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Sendet eine Test-Notification direkt an Discord (umgeht die Auth-Prüfung)">
+                            <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Discord-Test</span>
                           </button>
-                          <span id="test-seerr-webhook-status" style="margin-left: 0.75rem; font-size: 0.9rem;"></span>
+                          <button type="button" id="test-seerr-roundtrip-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Triggert Seerr, einen Webhook an Questorr zu senden — testet die volle Kette inkl. Authorization-Header">
+                            <i class="bi bi-arrow-left-right"></i> <span data-i18n="config.test_seerr_roundtrip">Round-Trip Test</span>
+                          </button>
+                          <span id="test-seerr-webhook-status" style="font-size: 0.9rem;"></span>
+                          <div id="seerr-webhook-status-badge" style="display: none; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.82rem; margin-left: auto;" title=""></div>
                         </div>
                       </div>
 
@@ -823,7 +830,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="PRIVATE_MESSAGE_MODE" name="PRIVATE_MESSAGE_MODE" />
-                          Ephemeral Message Mode
+                          <span data-i18n="config.misc_ephemeral">Ephemeral Message Mode (/search only)</span>
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_ephemeral_desc">When enabled, all bot responses are only visible to the user. When disabled, successful results are visible to everyone.</span>
