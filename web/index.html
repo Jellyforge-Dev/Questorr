@@ -300,13 +300,16 @@
                         </div>
                         <div class="form-group" style="margin-bottom: 0.75rem;">
                           <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.post_help_channel">Channel</label>
-                          <select
-                            id="post-help-channel-id"
-                            class="form-select channel-select"
-                            data-channel-select="true"
-                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
-                          </select>
+                          <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select
+                              id="post-help-channel-id"
+                              style="flex: 1; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                              <option value="">— Kanal auswählen —</option>
+                            </select>
+                            <button type="button" id="post-help-load-channels-btn" title="Kanäle laden" style="padding: 0.75rem; background: var(--surface1); border: 1px solid var(--surface2); border-radius: 8px; color: var(--text); cursor: pointer; font-size: 1rem; flex-shrink: 0;">
+                              <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                          </div>
                         </div>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
                           <input type="checkbox" id="post-help-pin" />

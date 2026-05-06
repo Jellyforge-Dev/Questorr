@@ -4847,38 +4847,48 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Post Help Wizard — mirror JELLYFIN_CHANNEL_ID options into the post-help select.
-  // This is guaranteed to work because both selects are in the same Discord pane
-  // and JELLYFIN_CHANNEL_ID is always populated by loadDiscordChannels.
-  (function mirrorPostHelpChannelSelect() {
-    const source = document.getElementById("JELLYFIN_CHANNEL_ID");
-    const target = document.getElementById("post-help-channel-id");
-    if (!source || !target) return;
+  // Post Help Wizard — load channels directly from the API when the refresh button is clicked.
+  (function initPostHelpChannelLoader() {
+    const loadBtn = document.getElementById("post-help-load-channels-btn");
+    const sel = document.getElementById("post-help-channel-id");
+    if (!loadBtn || !sel) return;
 
-    function syncOptions() {
-      if (source.options.length <= 1) return; // source not yet populated
-      if (target.options.length > 1) return;  // target already populated
-      const savedVal = target.value;
-      target.innerHTML = "";
-      Array.from(source.options).forEach(opt => {
-        // Replace placeholder text of first option
-        const clone = opt.cloneNode(true);
-        if (clone.value === "" && clone.index === 0) {
-          clone.textContent = "— Kanal auswählen —";
+    async function fetchAndPopulate() {
+      const guildId = document.getElementById("GUILD_ID")?.value;
+      if (!guildId) {
+        sel.innerHTML = '<option value="">— Erst einen Server auswählen —</option>';
+        return;
+      }
+      loadBtn.disabled = true;
+      loadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+      sel.innerHTML = '<option value="">Lade Kanäle...</option>';
+      try {
+        const res = await fetch(`/api/discord/channels/${guildId}`, { credentials: "include" });
+        const data = await res.json();
+        if (data.success && data.channels?.length) {
+          sel.innerHTML = '<option value="">— Kanal auswählen —</option>';
+          data.channels.forEach(ch => {
+            const opt = document.createElement("option");
+            opt.value = ch.id;
+            const icon = ch.type === "announcement" ? " 📢" : ch.type === "forum-thread" ? " 🧵" : "";
+            opt.textContent = `#${ch.name}${icon}`;
+            sel.appendChild(opt);
+          });
+        } else {
+          sel.innerHTML = `<option value="">— ${data.message || "Keine Kanäle gefunden"} —</option>`;
         }
-        target.appendChild(clone);
-      });
-      if (savedVal) target.value = savedVal;
+      } catch (err) {
+        sel.innerHTML = '<option value="">— Fehler beim Laden —</option>';
+      } finally {
+        loadBtn.disabled = false;
+        loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+      }
     }
 
-    // Try immediately (in case channels already loaded)
-    syncOptions();
+    loadBtn.addEventListener("click", fetchAndPopulate);
 
-    // Also watch for changes to the source (MutationObserver)
-    new MutationObserver(syncOptions).observe(source, { childList: true });
-
-    // Also sync on focus (lazy fallback)
-    target.addEventListener("mousedown", syncOptions);
+    // Auto-load once when the page is ready if a guild is already configured
+    setTimeout(fetchAndPopulate, 500);
   })();
 
   // Post Help Wizard button
