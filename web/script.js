@@ -1382,6 +1382,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadMappings();
       }
 
+      // Auto-load root folder mappings when Seerr tab is opened
+      // Only triggers if: tab body is empty, Seerr is configured, and bot is running
+      if (targetId === "seerr") {
+        const container = document.getElementById("root-folder-mappings");
+        const seerrUrl = document.getElementById("SEERR_URL")?.value;
+        const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
+        const btn = document.getElementById("load-root-folders-btn");
+        if (container && !container.innerHTML.trim() && seerrUrl && seerrKey && btn && !btn.disabled) {
+          btn.click();
+        }
+      }
+
       // Auto-load Jellyfin libraries if not yet loaded
       if (targetId === "jellyfin") {
         if (librariesList && !librariesList.innerHTML.trim()) {
