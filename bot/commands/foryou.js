@@ -1,24 +1,44 @@
 /**
- * /foryou — personalized recommendations powered by Jellyfin's native engine.
+ * /foryou — personalized recommendations from your Jellyfin watch history.
  *
- * Calls Jellyfin's `/Movies/Recommendations` endpoint, which uses the user's actual
- * watch history (recently played, liked items, directors/actors) to surface library
- * items they haven't watched yet. Pure server-side — no TMDB roundtrip, no third
- * party.
+ * Approach:
+ *   1. Read the user's recently played Jellyfin items (Movies + Series).
+ *   2. For each item with a TMDB ID, fetch TMDB /recommendations.
+ *   3. Aggregate by frequency × rating — a title surfaced by multiple seeds
+ *      with high TMDB score wins. This is what makes the result actually
+ *      personalised: different watch histories yield different aggregations.
+ *   4. Filter out items already in the user's history.
+ *   5. Check Jellyfin availability + Seerr request status for each survivor.
+ *   6. Show top 5 with Watch buttons (in library) or Request buttons (missing).
  *
  * User identity chain:
  *   Discord ID → USER_MAPPINGS → Seerr user ID → Seerr API → Jellyfin user ID
  *
- * Without a Jellyfin user ID we tell the user to set up the mapping in Step 5.
- * Movies only — Jellyfin's recommendation engine is movie-focused.
+ * Why not Jellyfin's native /Movies/Recommendations: tested with two users
+ * having totally different watch histories — both got the same 5 titles
+ * (just different "BaselineItemName"). The engine sorts alphabetically
+ * within sparse categories and isn't actually using similarity in practice.
+ *
+ * Why not Streamystats: its recommendations endpoint requires Jellyfin user
+ * session credentials that Streamystats then forwards to Jellyfin; in our
+ * setup Jellyfin returns HTTP 400 to Streamystats' auth call regardless of
+ * verified-correct credentials. Outside our control.
  */
 
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
-import { resolveJellyfinUserId, fetchJellyfinRecommendations } from "../../api/jellyfin.js";
-import { buildJellyfinUrl, getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import * as tmdbApi from "../../api/tmdb.js";
+import * as seerrApi from "../../api/seerr.js";
+import {
+  fetchUserRecentlyPlayed,
+  resolveJellyfinUserId,
+  findJellyfinItemByTmdbId,
+} from "../../api/jellyfin.js";
+import { buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
+
+const TYPE_FROM_JF = { Movie: "movie", Series: "tv" };
 
 function getUserMappings() {
   try {
@@ -30,13 +50,26 @@ function getUserMappings() {
   }
 }
 
+/** Extract TMDB ID + media type + title from a Jellyfin item's ProviderIds. */
+function jfToSeed(item) {
+  const tmdbId =
+    item.ProviderIds?.Tmdb ||
+    item.ProviderIds?.tmdb ||
+    item.ProviderIds?.TheMovieDb ||
+    item.ProviderIds?.themoviedb;
+  if (!tmdbId) return null;
+  const type = TYPE_FROM_JF[item.Type] || "movie";
+  return { tmdbId: String(tmdbId), type, title: item.Name };
+}
+
 export async function handleForYouCommand(interaction) {
   await interaction.deferReply({ flags: 64 });
 
+  const tmdbKey = getTmdbApiKey();
   const jfKey = process.env.JELLYFIN_API_KEY;
   const jfBase = process.env.JELLYFIN_BASE_URL;
 
-  if (!jfKey || !jfBase) {
+  if (!tmdbKey || !jfKey || !jfBase) {
     return interaction.editReply({ content: t("command_config_missing") });
   }
 
@@ -46,7 +79,7 @@ export async function handleForYouCommand(interaction) {
     const seerrApiKey = getSeerrApiKey();
     const userMappings = getUserMappings();
 
-    // Resolve Jellyfin user ID via Seerr chain
+    // Resolve the user's Jellyfin user ID via the Seerr chain
     const jellyfinUserId =
       seerrUrl && seerrApiKey
         ? await resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey)
@@ -58,29 +91,113 @@ export async function handleForYouCommand(interaction) {
       return interaction.editReply({ content: t("foryou_no_jellyfin_user") });
     }
 
-    // Fetch personalized recommendations from Jellyfin.
-    // Smaller categoryLimit/itemLimit = faster response on large libraries.
-    const recs = await fetchJellyfinRecommendations(jellyfinUserId, jfKey, jfBase, {
-      categoryLimit: 3,
-      itemLimit: 5,
-      totalLimit: 5,
-    });
+    // Step 1: read watch history
+    const watched = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 20);
+    logger.info(`[foryou] Jellyfin watch history: ${watched.length} items`);
 
-    logger.info(`[foryou] Jellyfin returned ${recs.length} recommendations for ${jellyfinUserId}`);
+    if (watched.length === 0) {
+      return interaction.editReply({ content: t("foryou_no_history") });
+    }
 
-    if (recs.length === 0) {
+    // Step 2: pick up to 5 random seeds with TMDB IDs (random = different
+    // recommendations each call, not just the same recently-played 5)
+    const watchedTmdbIds = new Set();
+    const allSeeds = [];
+    for (const item of watched) {
+      const seed = jfToSeed(item);
+      if (!seed) continue;
+      watchedTmdbIds.add(seed.tmdbId);
+      allSeeds.push(seed);
+    }
+    const seeds = [...allSeeds].sort(() => Math.random() - 0.5).slice(0, 5);
+
+    if (seeds.length === 0) {
+      logger.warn(`[foryou] None of ${watched.length} watched items have TMDB IDs`);
       return interaction.editReply({ content: t("foryou_no_recommendations") });
     }
 
-    // Build embed lines
-    const lines = recs.map((rec, i) => {
+    logger.info(`[foryou] Seeds: ${seeds.map((s) => `${s.title}(${s.type}/${s.tmdbId})`).join(", ")}`);
+
+    // Step 3: fetch TMDB recommendations for each seed in parallel
+    const recArrays = await Promise.all(
+      seeds.map((s) => tmdbApi.tmdbGetSimilar(s.tmdbId, s.type, tmdbKey).catch(() => []))
+    );
+    logger.info(`[foryou] TMDB rec counts per seed: [${recArrays.map((a) => a.length).join(", ")}]`);
+
+    // Step 4: aggregate by id, scoring frequency × vote_average
+    const aggregated = new Map(); // tmdbId → { item, score, type, sourceTitle }
+    for (let i = 0; i < recArrays.length; i++) {
+      const sourceType = seeds[i].type;
+      const sourceTitle = seeds[i].title;
+      for (const rec of recArrays[i]) {
+        const id = String(rec.id);
+        if (watchedTmdbIds.has(id)) continue; // skip already watched
+        const incScore = (rec.vote_average || 0) + 5; // base so frequency multiplier matters
+        if (aggregated.has(id)) {
+          aggregated.get(id).score += incScore;
+        } else {
+          aggregated.set(id, { item: rec, score: incScore, type: sourceType, sourceTitle });
+        }
+      }
+    }
+
+    if (aggregated.size === 0) {
+      return interaction.editReply({ content: t("foryou_no_recommendations") });
+    }
+
+    // Step 5: take top 5 by aggregated score
+    const top = [...aggregated.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    // Step 6: enrich with Jellyfin availability + Seerr status
+    const enriched = await Promise.all(
+      top.map(async ({ item, type, sourceTitle }) => {
+        const id = String(item.id);
+        const title = item.title || item.name || "Unknown";
+        const year = (item.release_date || item.first_air_date || "").substring(0, 4);
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
+
+        let jellyfinItemId = null;
+        try {
+          jellyfinItemId = await findJellyfinItemByTmdbId(id, type, title, jfKey, jfBase);
+        } catch { /* ignore */ }
+
+        let seerrStatus = null;
+        if (seerrUrl && seerrApiKey) {
+          try {
+            const sr = await seerrApi.checkMediaStatus(id, type, [], seerrUrl, seerrApiKey);
+            seerrStatus = sr?.status ?? null;
+          } catch { /* ignore */ }
+        }
+
+        return {
+          id,
+          type,
+          title,
+          year,
+          rating,
+          jellyfinItemId,
+          seerrStatus,
+          available: !!jellyfinItemId,
+          sourceTitle,
+        };
+      })
+    );
+
+    // Build embed
+    const lines = enriched.map((rec, i) => {
+      let icon = "⚪";
+      if (rec.seerrStatus === 5 || rec.available) icon = "✅";
+      else if (rec.seerrStatus === 4 || rec.seerrStatus === 3 || rec.seerrStatus === 2) icon = "⏳";
+
       const yearStr = rec.year ? ` (${rec.year})` : "";
-      const ratingStr = rec.rating ? ` ⭐ ${rec.rating.toFixed(1)}` : "";
-      const reasonStr = rec.reason ? `\n   *${t("foryou_because_watched")} ${rec.reason}*` : "";
-      return `${i + 1}. ✅ **${rec.name}${yearStr}**${ratingStr}${reasonStr}`;
+      const ratingStr = rec.rating ? ` ⭐ ${rec.rating}` : "";
+      const reasonStr = `\n   *${t("foryou_because_watched")} ${rec.sourceTitle}*`;
+      return `${i + 1}. ${icon} **${rec.title}${yearStr}**${ratingStr}${reasonStr}`;
     });
 
-    const description = `${t("foryou_based_on_jellyfin")}\n\n${lines.join("\n")}`;
+    const description = `${t("foryou_based_on_jellyfin")}\n\n${lines.join("\n")}\n\n${t("foryou_legend")}`;
 
     const embed = new EmbedBuilder()
       .setColor("#a6e3a1")
@@ -88,24 +205,32 @@ export async function handleForYouCommand(interaction) {
       .setDescription(description)
       .setTimestamp();
 
-    // Watch buttons — all recs are in the Jellyfin library
-    const buttons = [];
-    for (const rec of recs) {
-      if (!rec.id) continue;
-      const watchUrl = buildJellyfinUrl(rec.id);
-      if (watchUrl && isValidUrl(watchUrl)) {
-        buttons.push(
+    // Buttons: Watch for available items, Request for missing ones
+    const components = [];
+    for (const rec of enriched.slice(0, 5)) {
+      if (rec.available && rec.jellyfinItemId) {
+        const watchUrl = buildJellyfinUrl(rec.jellyfinItemId);
+        if (watchUrl && isValidUrl(watchUrl)) {
+          components.push(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel(`▶ ${rec.title.substring(0, 60)}`)
+              .setURL(watchUrl)
+          );
+        }
+      } else if (rec.seerrStatus === null || rec.seerrStatus === 1) {
+        components.push(
           new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setLabel(`▶ ${rec.name.substring(0, 60)}`)
-            .setURL(watchUrl)
+            .setStyle(ButtonStyle.Primary)
+            .setLabel(`+ ${rec.title.substring(0, 60)}`)
+            .setCustomId(`request_random_${rec.id}_${rec.type}`)
         );
       }
     }
 
     const replyOpts = { embeds: [embed] };
-    if (buttons.length > 0) {
-      replyOpts.components = [new ActionRowBuilder().addComponents(buttons.slice(0, 5))];
+    if (components.length > 0) {
+      replyOpts.components = [new ActionRowBuilder().addComponents(components.slice(0, 5))];
     }
 
     return interaction.editReply(replyOpts);
