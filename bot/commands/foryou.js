@@ -1,14 +1,15 @@
 /**
  * /foryou — personalized recommendations.
  *
- * Strategy:
- *   1. Resolve Discord user → Jellyfin user ID via USER_MAPPINGS → Seerr → jellyfinUserId.
- *   2. Fetch user's recently played items (top 5 movies + series).
- *      - If no mapping or no history: fall back to server-wide top-played items.
- *   3. For each, query TMDB recommendations endpoint in parallel.
- *   4. Aggregate, dedupe, sort by frequency × score.
- *   5. Check Jellyfin/Seerr availability for the top 5.
- *   6. Render embed with availability indicators + Request buttons for missing items.
+ * Seed priority:
+ *   1. Seerr request history for the mapped user (Discord → USER_MAPPINGS → Seerr ID).
+ *      Requires only a Seerr mapping — no Jellyfin user ID needed.
+ *   2. Jellyfin watch history (requires USER_MAPPINGS → Seerr → jellyfinUserId chain).
+ *   3. Server-wide recently-added Jellyfin items (no mapping required).
+ *
+ * For each seed TMDB /recommendations is called in parallel. Results are aggregated by
+ * frequency × vote_average, deduplicated, checked for Jellyfin/Seerr availability and
+ * presented as an ephemeral embed with Watch/Request buttons.
  */
 
 import { t } from "../../utils/botStrings.js";
@@ -27,6 +28,26 @@ import logger from "../../utils/logger.js";
 
 const TYPE_FROM_JF = { Movie: "movie", Series: "tv" };
 
+/** Extract Seerr user ID from USER_MAPPINGS for a given Discord ID. */
+function getSeerrUserId(discordId) {
+  try {
+    const raw = process.env.USER_MAPPINGS;
+    let mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
+    if (Array.isArray(mappings)) {
+      const entry = mappings.find(
+        (m) => String(m.discordId || m.discord_id) === String(discordId)
+      );
+      return entry?.seerrId || entry?.seerr_id || entry?.userId || null;
+    }
+    if (mappings && typeof mappings === "object") {
+      return mappings[discordId] || mappings[String(discordId)] || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function handleForYouCommand(interaction) {
   await interaction.deferReply({ flags: 64 });
 
@@ -43,23 +64,28 @@ export async function handleForYouCommand(interaction) {
     const seerrUrl = getSeerrUrl();
     const seerrApiKey = getSeerrApiKey();
 
-    // Parse USER_MAPPINGS (stored as array in config)
+    // ── Step 1: resolve user identity ─────────────────────────────────────
+    const seerrUserId = getSeerrUserId(discordId);
+
+    // Try to resolve Jellyfin user ID too (for watch history, if Seerr has it)
     let userMappings = [];
     try {
       const raw = process.env.USER_MAPPINGS;
       userMappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
     } catch { userMappings = []; }
 
-    // Step 1: resolve Discord → Jellyfin user
     const jellyfinUserId = (seerrUrl && seerrApiKey)
       ? await resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey)
       : null;
 
-    // Step 2: fetch watch history
-    let seedItems = [];
+    logger.info(`[foryou] Discord ${discordId} → seerrUserId=${seerrUserId ?? "none"} jellyfinUserId=${jellyfinUserId ?? "none"}`);
+
+    // ── Step 2: collect seeds ──────────────────────────────────────────────
+    // Priority: Seerr requests → Jellyfin history → recently-added fallback
+    let seeds = [];
     let usedFallback = false;
 
-    const pickSeeds = (items) => items
+    const pickSeedsFromJF = (items) => items
       .map((item) => {
         const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb
           || item.ProviderIds?.TheMovieDb || item.ProviderIds?.themoviedb;
@@ -67,28 +93,35 @@ export async function handleForYouCommand(interaction) {
         return tmdbId ? { tmdbId: String(tmdbId), type, title: item.Name } : null;
       })
       .filter(Boolean)
-      .slice(0, 3);
+      .slice(0, 5);
 
-    if (jellyfinUserId) {
-      logger.info(`[foryou] Resolved Discord ${discordId} → Jellyfin ${jellyfinUserId}`);
-      seedItems = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 10);
-      logger.info(`[foryou] fetchUserRecentlyPlayed returned ${seedItems.length} items`);
-    } else {
-      logger.info(`[foryou] No Jellyfin user mapping for Discord ${discordId} — skipping personal history`);
+    // 2a. Seerr request history — works with any Seerr mapping, no Jellyfin ID needed
+    if (seerrUserId && seerrUrl && seerrApiKey) {
+      const seerrRequests = await seerrApi.fetchSeerrUserRequests(seerrUserId, seerrUrl, seerrApiKey, 20);
+      logger.info(`[foryou] Seerr requests for user ${seerrUserId}: ${seerrRequests.length} items`);
+      // Shuffle so we don't always pick the 3 most-recent; pick up to 5 random seeds
+      const shuffled = seerrRequests.sort(() => Math.random() - 0.5);
+      seeds = shuffled.slice(0, 5);
     }
 
-    let seeds = pickSeeds(seedItems);
+    // 2b. Jellyfin watch history (if jellyfinUserId resolved)
+    if (seeds.length === 0 && jellyfinUserId) {
+      const jfItems = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 10);
+      logger.info(`[foryou] Jellyfin history for ${jellyfinUserId}: ${jfItems.length} items`);
+      seeds = pickSeedsFromJF(jfItems);
+    }
 
+    // 2c. Recently-added fallback (no user mapping at all)
     if (seeds.length === 0) {
       usedFallback = true;
-      logger.info(`[foryou] No usable personal seeds — falling back to recently-added library items`);
-      const topPlayed = await fetchServerTopPlayed(jfKey, jfBase, 20);
-      logger.info(`[foryou] fetchServerTopPlayed returned ${topPlayed.length} items, tmdbIds: ${topPlayed.filter(i => i.ProviderIds?.Tmdb || i.ProviderIds?.TheMovieDb).length} with TMDB ID`);
-      seeds = pickSeeds(topPlayed);
+      logger.info(`[foryou] No user seeds — falling back to recently-added library items`);
+      const recent = await fetchServerTopPlayed(jfKey, jfBase, 20);
+      logger.info(`[foryou] Recently-added: ${recent.length} items`);
+      seeds = pickSeedsFromJF(recent);
     }
 
     if (seeds.length === 0) {
-      logger.warn(`[foryou] All fallbacks exhausted for ${discordId} — no TMDB-mapped items in Jellyfin library`);
+      logger.warn(`[foryou] All sources exhausted for ${discordId}`);
       return interaction.editReply({ content: t("foryou_no_recommendations") });
     }
 
@@ -156,7 +189,15 @@ export async function handleForYouCommand(interaction) {
       .setAuthor({ name: t("foryou_title") })
       .setTimestamp();
 
-    const subtitleKey = usedFallback ? "foryou_based_on_server" : "foryou_based_on";
+    // Determine subtitle based on which seed source was actually used
+    let subtitleKey;
+    if (usedFallback) {
+      subtitleKey = "foryou_based_on_server";
+    } else if (seerrUserId) {
+      subtitleKey = "foryou_based_on_requests"; // primary: Seerr request history
+    } else {
+      subtitleKey = "foryou_based_on"; // secondary: Jellyfin watch history
+    }
     const seedTitles = seeds.map((s) => `*${s.title}*`).join(", ");
 
     const lines = enriched.map((rec, i) => {
@@ -171,7 +212,8 @@ export async function handleForYouCommand(interaction) {
     });
 
     let description = `${t(subtitleKey)}\n*${seedTitles}*\n\n${lines.join("\n")}\n\n${t("foryou_legend")}`;
-    if (usedFallback && !jellyfinUserId) {
+    // Only show the "not linked" warning when there's truly no mapping at all
+    if (!seerrUserId && !jellyfinUserId) {
       description = `${t("foryou_no_jellyfin_user")}\n\n${description}`;
     }
     embed.setDescription(description);

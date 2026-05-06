@@ -468,6 +468,42 @@ export async function fetchSeerrUserById(userId, seerrUrl, apiKey) {
 }
 
 /**
+ * Fetch media requests submitted by a specific Seerr user.
+ * Returns the N most-recent requests with TMDB IDs so they can be used
+ * as personalisation seeds for /foryou recommendations.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} limit - Max number of requests to return (default 20)
+ * @returns {Promise<Array<{tmdbId:string, type:string, title:string}>>}
+ */
+export async function fetchSeerrUserRequests(userId, seerrUrl, apiKey, limit = 20) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request`, {
+        headers: { "X-Api-Key": apiKey },
+        params: { take: limit, sort: "modified", requestedBy: userId },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr user requests for ${userId}` }
+    );
+    const results = response.data?.results || [];
+    return results
+      .filter((r) => r.media?.tmdbId)
+      .map((r) => ({
+        tmdbId: String(r.media.tmdbId),
+        type: r.type === "tv" ? "tv" : "movie",
+        title: r.media.title || r.media.name || "Unknown",
+      }));
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserRequests(${userId}) failed: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
  * Fetch a single Seerr request by ID.
  * @param {number|string} requestId - Seerr request ID
  * @param {string} seerrUrl - Seerr base URL
