@@ -1,10 +1,10 @@
-import { approveRequest, declineRequest } from "../../api/seerr.js";
+import { approveRequest, declineRequest, fetchRequestById } from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { t } from "../../utils/botStrings.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../../utils/logger.js";
 import { botState } from "../botState.js";
-import { sendRequesterDm } from "../../seerrWebhook.js";
+import { sendRequesterDm, removeAdminPendingMsg } from "../../seerrWebhook.js";
 
 /**
  * Handle approve/decline button clicks on MEDIA_PENDING admin notifications.
@@ -23,6 +23,47 @@ export async function handleSeerrApproveDecline(interaction) {
   await interaction.deferUpdate();
 
   try {
+    // ── Pre-flight: check current status before acting ──────────────────────
+    const STATUS_PENDING = 1;
+    const current = await fetchRequestById(requestId, seerrUrl, apiKey);
+    if (current && current.status !== STATUS_PENDING) {
+      // Request is no longer pending — disable the buttons and inform the admin
+      const statusLabel = (() => {
+        switch (current.status) {
+          case 2: return t("admin_status_approved");
+          case 3: return t("admin_status_declined");
+          case 5: return t("admin_status_available");
+          default: return t("admin_status_other");
+        }
+      })();
+      const handler = current.modifiedBy?.displayName
+        ? ` (${current.modifiedBy.displayName})`
+        : "";
+
+      // Disable all interactive (non-link) buttons in the original row
+      const originalRow = interaction.message.components[0];
+      const disabledButtons = [];
+      if (originalRow) {
+        for (const comp of originalRow.components) {
+          if (comp.data.style === ButtonStyle.Link) {
+            disabledButtons.push(ButtonBuilder.from(comp));
+          } else {
+            disabledButtons.push(ButtonBuilder.from(comp).setDisabled(true));
+          }
+        }
+      }
+      if (disabledButtons.length > 0) {
+        await interaction.editReply({
+          components: [new ActionRowBuilder().addComponents(disabledButtons)],
+        });
+      }
+      await interaction.followUp({
+        content: t("admin_already_handled", { status: statusLabel, handler }),
+        flags: 64,
+      });
+      return;
+    }
+
     let apiResult;
     if (isApprove) {
       apiResult = await approveRequest(parseInt(requestId, 10), seerrUrl, apiKey);
@@ -90,6 +131,8 @@ export async function handleSeerrApproveDecline(interaction) {
       components: [new ActionRowBuilder().addComponents(newButtons)],
     });
 
+    // Remove from pending map so the status poller doesn't also try to edit it
+    removeAdminPendingMsg(requestId);
     logger.info(`[SEERR] ${isApprove ? "✅ Approved" : "❌ Declined"} request ${requestId} by ${username}`);
   } catch (err) {
     logger.error(`[SEERR] Failed to ${isApprove ? "approve" : "decline"} request ${requestId}:`, err.message);

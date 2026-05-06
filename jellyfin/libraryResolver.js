@@ -1,8 +1,7 @@
 import * as jellyfinApi from "../api/jellyfin.js";
 import logger from "../utils/logger.js";
 
-const SEEN_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
-const CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CLEANUP_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 /**
  * Fetches all libraries from Jellyfin and returns the library array,
@@ -85,20 +84,21 @@ export class ItemDeduplicator {
   }
 
   /**
-   * Returns true if the item was seen recently (within SEEN_THRESHOLD_MS).
-   * If not seen recently, records it and returns false.
+   * Returns true if the item has ever been seen (persistent dedup).
+   * On a hit, refreshes the timestamp so the item is not evicted by cleanup.
+   * On a miss, records it and returns false.
    */
   checkAndRecord(itemId) {
-    const now = Date.now();
-    const lastSeen = this.seenItems.get(itemId);
-    if (lastSeen && now - lastSeen < SEEN_THRESHOLD_MS) {
-      return true; // already seen
+    if (this.seenItems.has(itemId)) {
+      // Refresh timestamp so frequently-visible items don't age out of cleanup
+      this.seenItems.set(itemId, Date.now());
+      return true; // already seen — do NOT post again
     }
-    this.seenItems.set(itemId, now);
+    this.seenItems.set(itemId, Date.now());
     return false;
   }
 
-  /** Remove entries older than 7 days to prevent unbounded growth. */
+  /** Remove entries older than 90 days to prevent unbounded growth. */
   cleanup() {
     const cutoff = Date.now() - CLEANUP_AGE_MS;
     for (const [id, ts] of this.seenItems) {

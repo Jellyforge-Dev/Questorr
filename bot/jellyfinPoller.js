@@ -55,7 +55,9 @@ let initialized = false;
 
 const SEEN_ITEMS_FILE = path.join(path.dirname(CONFIG_PATH), "seen-items.json");
 // If the saved file is older than this, treat it as stale and do a fresh seed.
-const SEEN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+// Must be >= CLEANUP_AGE_MS in libraryResolver.js (90 days) so we never
+// discard a valid seen-set just because it was saved "too long ago".
+const SEEN_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 function loadSeenItems() {
   try {
@@ -298,7 +300,7 @@ async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap,
   }
 
   const embed   = await buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings, baseUrl);
-  const buttons = buildButtons(item, itemType, imdbId, baseUrl);
+  const buttons = await buildButtons(item, itemType, imdbId, baseUrl);
 
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel) {
@@ -385,17 +387,35 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
-function buildButtons(item, itemType, imdbId, baseUrl) {
+async function buildButtons(item, itemType, imdbId, baseUrl) {
   const components = [];
   const serverId = process.env.JELLYFIN_SERVER_ID || "";
   const jfBase = (baseUrl || "").replace(/\/$/, "");
 
-  // Poller-specific toggles fall back to global EMBED_SHOW_BUTTON_* if not set
-  const showWatch      = process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH      ?? process.env.EMBED_SHOW_BUTTON_WATCH      ?? "true";
-  const showImdb       = process.env.JELLYFIN_POLLER_SHOW_BUTTON_IMDB       ?? process.env.EMBED_SHOW_BUTTON_IMDB       ?? "true";
-  const showLetterboxd = process.env.JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD ?? process.env.EMBED_SHOW_BUTTON_LETTERBOXD ?? "true";
+  // Read button visibility from the central per-event matrix (NOTIF_BUTTONS_MEDIA_AVAILABLE).
+  // Legacy JELLYFIN_POLLER_SHOW_BUTTON_* keys are kept as overrides for backward compat:
+  // if they are explicitly set, they take priority over the matrix value.
+  let showWatch, showImdb, showLetterboxd;
+  try {
+    const { getEventButtons } = await import("../seerrWebhook.js");
+    const btns = getEventButtons("MEDIA_AVAILABLE", "CHANNEL");
+    showWatch      = process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH      !== undefined
+                       ? process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH !== "false"
+                       : btns.showWatch;
+    showImdb       = process.env.JELLYFIN_POLLER_SHOW_BUTTON_IMDB       !== undefined
+                       ? process.env.JELLYFIN_POLLER_SHOW_BUTTON_IMDB !== "false"
+                       : btns.showImdb;
+    showLetterboxd = process.env.JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD !== undefined
+                       ? process.env.JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD !== "false"
+                       : btns.showLetterboxd;
+  } catch {
+    // Fallback to global toggles if import fails
+    showWatch      = process.env.EMBED_SHOW_BUTTON_WATCH       !== "false";
+    showImdb       = process.env.EMBED_SHOW_BUTTON_IMDB        !== "false";
+    showLetterboxd = process.env.EMBED_SHOW_BUTTON_LETTERBOXD  !== "false";
+  }
 
-  if (showWatch !== "false" && jfBase && item.Id) {
+  if (showWatch && jfBase && item.Id) {
     const watchUrl = `${jfBase}/web/index.html#!/details?id=${item.Id}&serverId=${serverId}`;
     if (isValidUrl(watchUrl)) {
       components.push(
@@ -404,7 +424,7 @@ function buildButtons(item, itemType, imdbId, baseUrl) {
     }
   }
 
-  if (showImdb !== "false" && imdbId) {
+  if (showImdb && imdbId) {
     const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
     if (isValidUrl(imdbUrl)) {
       components.push(
@@ -413,7 +433,7 @@ function buildButtons(item, itemType, imdbId, baseUrl) {
     }
   }
 
-  if (showLetterboxd !== "false" && imdbId && itemType === "Movie") {
+  if (showLetterboxd && imdbId && itemType === "Movie") {
     const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     if (isValidUrl(lboxdUrl)) {
       components.push(

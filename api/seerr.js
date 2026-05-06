@@ -441,6 +441,30 @@ export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all")
 }
 
 /**
+ * Fetch a single Seerr request by ID.
+ * @param {number|string} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object|null>} Request object or null on error
+ */
+export async function fetchRequestById(requestId, seerrUrl, apiKey) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request/${requestId}`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr fetch request ${requestId}` }
+    );
+    return response.data;
+  } catch (err) {
+    logger.warn(`[Seerr] fetchRequestById(${requestId}) failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
  * Send a media request to Seerr
  * @param {Object} params - Request parameters
  * @returns {Promise<Object>} Response data

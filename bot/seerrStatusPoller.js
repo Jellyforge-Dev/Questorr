@@ -18,10 +18,12 @@
  */
 
 import { fetchRequests } from "../api/seerr.js";
-import { sendRequesterDm } from "../seerrWebhook.js";
+import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
 import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
 import logger from "../utils/logger.js";
 import { botState } from "./botState.js";
+import { t } from "../utils/botStrings.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 let pollerTimer = null;
 const lastSeenStatus = new Map(); // requestId → status
@@ -117,9 +119,56 @@ async function poll(seedOnly) {
       const eventType = status === STATUS_APPROVED ? "MEDIA_APPROVED" : "MEDIA_DECLINED";
       const dedupKey = `${eventType.toLowerCase()}-poller-${reqId}`;
 
+      // ── Edit admin embed to show disabled status button ──────────────────
+      if (botState.discordClient) {
+        const msgRef = getAdminPendingMsg(reqId);
+        if (msgRef) {
+          try {
+            const ch = await botState.discordClient.channels.fetch(msgRef.channelId);
+            if (ch) {
+              const msg = await ch.messages.fetch(msgRef.messageId);
+              if (msg) {
+                const label = status === STATUS_APPROVED
+                  ? `✅ ${t("admin_status_approved")} (Seerr)`
+                  : `❌ ${t("admin_status_declined")} (Seerr)`;
+                const style = status === STATUS_APPROVED ? ButtonStyle.Success : ButtonStyle.Danger;
+                // Keep link buttons, replace interactive ones with a single disabled status button
+                const newButtons = [
+                  new ButtonBuilder()
+                    .setCustomId("seerr_action_done")
+                    .setLabel(label)
+                    .setStyle(style)
+                    .setDisabled(true),
+                ];
+                for (const row of msg.components) {
+                  for (const comp of row.components) {
+                    if (comp.data.style === ButtonStyle.Link) {
+                      newButtons.push(ButtonBuilder.from(comp));
+                    }
+                  }
+                }
+                await msg.edit({
+                  components: [new ActionRowBuilder().addComponents(newButtons)],
+                });
+                logger.info(
+                  `[SEERR Status Poller] ✅ Edited admin embed for request ${reqId} (${label})`
+                );
+              }
+            }
+          } catch (editErr) {
+            logger.debug(
+              `[SEERR Status Poller] Could not edit admin embed for request ${reqId}: ${editErr.message}`
+            );
+          } finally {
+            removeAdminPendingMsg(reqId);
+          }
+        }
+      }
+
+      // ── Send requester DM ─────────────────────────────────────────────────
       if (wasRecentlyNotified("approval", dedupKey)) {
         logger.debug(
-          `[SEERR Status Poller] Skipping ${eventType} for request ${reqId} (recently notified)`
+          `[SEERR Status Poller] Skipping ${eventType} DM for request ${reqId} (recently notified)`
         );
       } else if (botState.discordClient) {
         const synth = {

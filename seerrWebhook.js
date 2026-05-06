@@ -17,6 +17,8 @@
  *   5. JELLYFIN_CHANNEL_ID
  */
 
+import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
+import path from "path";
 import { t, tNotif } from "./utils/botStrings.js";
 import { markNotified } from "./utils/notifyDedup.js";
 import {
@@ -29,6 +31,61 @@ import axios from "axios";
 import logger from "./utils/logger.js";
 import { isValidUrl } from "./utils/url.js";
 import { findBestBackdrop } from "./api/tmdb.js";
+import { CONFIG_PATH } from "./utils/configFile.js";
+
+// ─── Admin Pending Messages persistence ──────────────────────────────────────
+// Maps requestId → { channelId, messageId } so the status poller can edit the
+// admin embed when Seerr approves/declines from its own UI.
+
+const ADMIN_PENDING_MSGS_PATH = path.join(
+  path.dirname(CONFIG_PATH),
+  "admin-pending-messages.json"
+);
+
+// In-memory map; loaded once on first use
+let _adminPendingMsgs = null;
+
+function loadAdminPendingMsgs() {
+  if (_adminPendingMsgs) return _adminPendingMsgs;
+  try {
+    if (existsSync(ADMIN_PENDING_MSGS_PATH)) {
+      _adminPendingMsgs = JSON.parse(readFileSync(ADMIN_PENDING_MSGS_PATH, "utf-8"));
+    } else {
+      _adminPendingMsgs = {};
+    }
+  } catch {
+    _adminPendingMsgs = {};
+  }
+  return _adminPendingMsgs;
+}
+
+function saveAdminPendingMsgs() {
+  try {
+    const tmp = ADMIN_PENDING_MSGS_PATH + ".tmp";
+    writeFileSync(tmp, JSON.stringify(_adminPendingMsgs, null, 2), "utf-8");
+    renameSync(tmp, ADMIN_PENDING_MSGS_PATH);
+  } catch (err) {
+    logger.warn(`[SEERR WEBHOOK] Could not save admin-pending-messages: ${err.message}`);
+  }
+}
+
+export function recordAdminPendingMsg(requestId, channelId, messageId) {
+  const map = loadAdminPendingMsgs();
+  map[String(requestId)] = { channelId, messageId };
+  saveAdminPendingMsgs();
+}
+
+export function getAdminPendingMsg(requestId) {
+  return loadAdminPendingMsgs()[String(requestId)] || null;
+}
+
+export function removeAdminPendingMsg(requestId) {
+  const map = loadAdminPendingMsgs();
+  if (map[String(requestId)]) {
+    delete map[String(requestId)];
+    saveAdminPendingMsgs();
+  }
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -234,32 +291,48 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
 /**
  * Find a Jellyfin item by TMDB ID.
  *
- * Jellyfin's AnyProviderIdEquals is broken on this server (returns all items).
- * Instead we use the TMDB title to search, then verify the TMDB ID in ProviderIds.
- * TMDB data must be fetched before calling this function (tmdbCache must be populated).
+ * Strategy (two-pass):
+ *   1. AnyProviderIdEquals query — works regardless of library language/title.
+ *   2. Title-search fallback — catches items whose TMDB ID is not yet indexed
+ *      (e.g. freshly downloaded, metadata scan still running).
+ *
+ * TMDB data must be fetched before calling this function (tmdbCache must be
+ * populated) so we have a title available for the fallback pass.
  */
 export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   const apiKey = process.env.JELLYFIN_API_KEY;
   const baseUrl = process.env.JELLYFIN_BASE_URL;
   if (!apiKey || !baseUrl) return null;
 
-  // Get title from TMDB cache – must be populated before this is called
+  // ── Pass 1: provider-ID query (language-agnostic) ──────────────────────────
+  try {
+    const { findItemByTmdbId } = await import("./api/jellyfin.js");
+    const itemId = await findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl);
+    if (itemId) {
+      logger.info(`[SEERR WEBHOOK] ✅ Found via TMDB-ID query: Jellyfin ID=${itemId} (TMDB ${tmdbId})`);
+      return itemId;
+    }
+    logger.info(`[SEERR WEBHOOK] TMDB-ID query returned nothing for TMDB ${tmdbId} – falling back to title search`);
+  } catch (e) {
+    logger.warn(`[SEERR WEBHOOK] TMDB-ID query error for ${tmdbId}: ${e.message} – falling back to title search`);
+  }
+
+  // ── Pass 2: title search with TMDB-ID verification ────────────────────────
   const cached = tmdbCache.get(`${mediaType}-${tmdbId}`);
   const title = cached?.data?.title || cached?.data?.name
              || cached?.data?.original_title || cached?.data?.original_name;
 
   if (!title) {
-    logger.warn(`[SEERR WEBHOOK] No TMDB title in cache for ${mediaType}/${tmdbId} – cannot search Jellyfin`);
+    logger.warn(`[SEERR WEBHOOK] No TMDB title in cache for ${mediaType}/${tmdbId} – cannot do title-search fallback`);
     return null;
   }
 
   const base = baseUrl.replace(/\/$/, "");
   const itemType = mediaType === "movie" ? "Movie" : "Series";
 
-  logger.info(`[SEERR WEBHOOK] Searching Jellyfin for "${title}" (TMDB ${tmdbId})`);
+  logger.info(`[SEERR WEBHOOK] Title-search fallback: "${title}" (TMDB ${tmdbId})`);
 
   try {
-    // Search by title, verify TMDB ID in results
     const res = await axios.get(`${base}/Items`, {
       headers: { "X-MediaBrowser-Token": apiKey },
       params: {
@@ -280,20 +353,18 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
       const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
       logger.debug(`[SEERR WEBHOOK] Candidate: "${item.Name}" (${item.ProductionYear}) TMDB=${itemTmdbId}`);
       if (String(itemTmdbId) === String(tmdbId)) {
-        logger.info(`[SEERR WEBHOOK] ✅ Verified: "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
+        logger.info(`[SEERR WEBHOOK] ✅ Title-search verified: "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
         return item.Id;
       }
     }
 
-    // If no TMDB match, try year-based fallback for newly added items
-    // (ProviderIds may not be indexed yet right after download)
+    // Year-based fallback for freshly-added items whose TMDB ID is not yet indexed
     const year = cached?.data?.release_date?.substring(0, 4)
               || cached?.data?.first_air_date?.substring(0, 4);
 
     if (year) {
       for (const item of items) {
         const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
-        // Only accept if no conflicting TMDB ID (could be unindexed new item)
         if (!itemTmdbId && String(item.ProductionYear) === String(year)) {
           logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback: "${item.Name}" (${year}) ID=${item.Id} – TMDB ID not yet indexed`);
           return item.Id;
@@ -301,10 +372,10 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
       }
     }
 
-    logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} ("${title}")`);
+    logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} ("${title}") after both passes`);
     return null;
   } catch (e) {
-    logger.warn(`[SEERR WEBHOOK] Jellyfin search error for "${title}": ${e.message}`);
+    logger.warn(`[SEERR WEBHOOK] Title-search error for "${title}": ${e.message}`);
     return null;
   }
 }
@@ -526,7 +597,11 @@ async function processEvent(data, eventType, cfg, client) {
         if (adminButtons.length > 0) {
           adminOptions.components = [new ActionRowBuilder().addComponents(adminButtons)];
         }
-        await adminChannel.send(adminOptions);
+        const adminMsg = await adminChannel.send(adminOptions);
+        // Persist message reference so the status poller can edit it later
+        if (requestId) {
+          recordAdminPendingMsg(requestId, adminChannelId, adminMsg.id);
+        }
         logger.info(`[SEERR WEBHOOK] ✅ Sent MEDIA_PENDING with approve/decline to admin channel ${adminChannelId}`);
       } catch (err) {
         logger.error(`[SEERR WEBHOOK] ❌ Failed to send to admin channel: ${err.message}`);
@@ -704,7 +779,7 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
-function getEventButtons(eventType, variant = "CHANNEL") {
+export function getEventButtons(eventType, variant = "CHANNEL") {
   // Per-event button config: NOTIF_BUTTONS_MEDIA_AVAILABLE=seerr,watch,-letterboxd,-imdb
   // Positive = always show, -negative = always hide, missing = use global toggle
   // For DM variant: NOTIF_BUTTONS_MEDIA_AVAILABLE_DM with the same format.
