@@ -4847,6 +4847,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Post Help Wizard — mirror JELLYFIN_CHANNEL_ID options into the post-help select.
+  // This is guaranteed to work because both selects are in the same Discord pane
+  // and JELLYFIN_CHANNEL_ID is always populated by loadDiscordChannels.
+  (function mirrorPostHelpChannelSelect() {
+    const source = document.getElementById("JELLYFIN_CHANNEL_ID");
+    const target = document.getElementById("post-help-channel-id");
+    if (!source || !target) return;
+
+    function syncOptions() {
+      if (source.options.length <= 1) return; // source not yet populated
+      if (target.options.length > 1) return;  // target already populated
+      const savedVal = target.value;
+      target.innerHTML = "";
+      Array.from(source.options).forEach(opt => {
+        // Replace placeholder text of first option
+        const clone = opt.cloneNode(true);
+        if (clone.value === "" && clone.index === 0) {
+          clone.textContent = "— Kanal auswählen —";
+        }
+        target.appendChild(clone);
+      });
+      if (savedVal) target.value = savedVal;
+    }
+
+    // Try immediately (in case channels already loaded)
+    syncOptions();
+
+    // Also watch for changes to the source (MutationObserver)
+    new MutationObserver(syncOptions).observe(source, { childList: true });
+
+    // Also sync on focus (lazy fallback)
+    target.addEventListener("mousedown", syncOptions);
+  })();
+
   // Post Help Wizard button
   const postHelpBtn = document.getElementById("post-help-btn");
   const postHelpStatus = document.getElementById("post-help-status");
