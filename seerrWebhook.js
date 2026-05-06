@@ -561,14 +561,30 @@ async function processEvent(data, eventType, cfg, client) {
     markNotified(mediaType === "movie" ? "movie" : "tv", tmdbId);
   }
 
-  // Pass fallback message ID to retry so it can be deleted if a better channel is found
-  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
+  // Schedule retry for two distinct cases:
+  //  - "relocate": initial routing fell back to default channel — find the right channel and resend
+  //  - "edit"   : routing was direct, but Jellyfin had not scanned the file yet — re-lookup and add
+  //               the Watch-Now button by editing the existing message (no double post)
+  const needsRelocate = usedFallback;
+  const needsEditForWatchButton = !usedFallback && !jellyfinItemId;
+  if (
+    eventType === "MEDIA_AVAILABLE" &&
+    !cfg.adminOnly &&
+    retryDelay > 0 &&
+    tmdbId &&
+    mediaType &&
+    (needsRelocate || needsEditForWatchButton)
+  ) {
     scheduleJellyfinRetry({
       data, eventType, cfg, client, tmdbDetails, imdbId,
       rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-      retryDelay, fallbackChannelId: channelId,
+      retryDelay,
+      mode: needsRelocate ? "relocate" : "edit",
+      fallbackChannelId: channelId,
       fallbackMessageId: sentMessage?.id || null,
       fallbackChannel: channel,
+      sentMessage,
+      sentChannel: channel,
     });
   }
 
@@ -881,38 +897,80 @@ async function findDiscordIdForSeerrUser(data) {
 
 /**
  * Schedule a background retry for Jellyfin library lookup.
- * When MEDIA_AVAILABLE fires before Jellyfin has scanned the file,
- * the initial lookup returns nothing and routing falls back to SEERR_CHANNEL_ID.
- * This retry waits, then re-runs the lookup and — if a better channel is found —
- * sends a corrected notification to the right channel.
+ *
+ * Two modes:
+ *  - "relocate": Initial routing fell back to default channel because the
+ *    Jellyfin library lookup returned nothing. Retry the lookup; if a better
+ *    channel is found, delete the fallback-channel message and resend in
+ *    the correct channel.
+ *  - "edit"   : Initial routing was correct (no fallback) but Jellyfin had
+ *    not scanned the file yet, so the Watch-Now button could not be built.
+ *    Retry the lookup; if the item shows up, edit the existing message in
+ *    place and add the Watch-Now button (no double post).
  */
 function scheduleJellyfinRetry(ctx) {
   const {
     data, eventType, cfg, client, tmdbDetails, imdbId,
     rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-    retryDelay, fallbackChannelId, fallbackMessageId, fallbackChannel,
+    retryDelay, mode = "relocate",
+    fallbackChannelId, fallbackMessageId, fallbackChannel,
+    sentMessage, sentChannel,
   } = ctx;
 
-  logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
+  logger.info(
+    `[SEERR WEBHOOK] ⏳ Jellyfin lookup retry scheduled (mode=${mode}) in ${retryDelay}s for "${subject}"`
+  );
 
   const maxRetries = 3;
   let attempt = 0;
 
   const tryRetry = async () => {
     attempt++;
-    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
+    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} (mode=${mode}) – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
 
     try {
-      const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
+      if (!client || !client.isReady()) {
+        logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping retry`);
+        return;
+      }
+
+      const channelId = mode === "relocate"
+        ? await resolveChannelViaJellyfin(tmdbId, mediaType)
+        : null;
       const jellyfinItemId = await findVerifiedJellyfinItem(tmdbId, mediaType);
 
-      if (channelId && channelId !== fallbackChannelId) {
-        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
-
-        if (!client || !client.isReady()) {
-          logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping corrected notification`);
+      // ─── Mode: edit (in-place button update) ────────────────────────────
+      if (mode === "edit") {
+        if (!jellyfinItemId) {
+          if (attempt < maxRetries) {
+            logger.info(`[SEERR WEBHOOK] Retry ${attempt} (edit) – Jellyfin item still missing, next retry in ${retryDelay}s`);
+            setTimeout(tryRetry, retryDelay * 1000);
+          } else {
+            logger.info(`[SEERR WEBHOOK] ⚠️ Watch-Now button retry exhausted for "${subject}" – message stays without Watch button`);
+          }
           return;
         }
+
+        if (!sentMessage || !sentChannel) {
+          logger.debug(`[SEERR WEBHOOK] Edit retry has no sentMessage/sentChannel reference for "${subject}" – skipping`);
+          return;
+        }
+
+        try {
+          // Verify the message still exists (mod could have deleted it)
+          const fresh = await sentChannel.messages.fetch(sentMessage.id);
+          const newButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+          await fresh.edit({ components: newButtons ? [newButtons] : [] });
+          logger.info(`[SEERR WEBHOOK] ✏️ Watch-Now button added to "${subject}" after retry ${attempt}`);
+        } catch (editErr) {
+          logger.debug(`[SEERR WEBHOOK] Could not edit message for "${subject}": ${editErr.message}`);
+        }
+        return;
+      }
+
+      // ─── Mode: relocate (existing behavior) ─────────────────────────────
+      if (channelId && channelId !== fallbackChannelId) {
+        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
 
         // Delete the fallback-channel message before sending to the correct channel
         if (fallbackMessageId && fallbackChannel) {
