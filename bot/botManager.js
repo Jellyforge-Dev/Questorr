@@ -8,6 +8,7 @@ import { registerCommands } from "../discord/commands.js";
 import { botState, loadPendingRequests } from "./botState.js";
 import { registerInteractions } from "./interactions.js";
 import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
+import { scheduleCleanupAdvisor, stopCleanupAdvisor } from "./cleanupAdvisor.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
@@ -73,6 +74,7 @@ export async function startBot() {
 
       scheduleDailyRandomPick(client);
       scheduleDailyRecommendation(client);
+      scheduleCleanupAdvisor(client);
       startJellyfinPoller(client);
       startSeerrStatusPoller();
 

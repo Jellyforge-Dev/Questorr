@@ -732,3 +732,157 @@ export async function findJellyfinItemByTmdbId(tmdbId, mediaType, title, apiKey,
     return null;
   }
 }
+
+// ─── Watch-History & Cleanup Helpers ─────────────────────────────────────────
+
+/**
+ * Fetch a user's recently played items from Jellyfin.
+ * Returns Movies + Series sorted by DatePlayed descending.
+ *
+ * @param {string} jellyfinUserId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} limit
+ * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
+ */
+export async function fetchUserRecentlyPlayed(jellyfinUserId, apiKey, baseUrl, limit = 10) {
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + `/Users/${jellyfinUserId}/Items`;
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "DatePlayed",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Movie,Series",
+          Filters: "IsPlayed",
+          Limit: limit,
+          Fields: "ProviderIds,UserData",
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin user recently-played ${jellyfinUserId}` }
+    );
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchUserRecentlyPlayed error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch server-wide top-played items as fallback when no per-user history exists.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} limit
+ * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
+ */
+export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "PlayCount",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Movie,Series",
+          Limit: limit,
+          Fields: "ProviderIds,UserData",
+        },
+        timeout: 8000,
+      }),
+      { label: "Jellyfin server top-played" }
+    );
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchServerTopPlayed error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Resolve a Discord user ID to a Jellyfin user ID via:
+ *   Discord ID → USER_MAPPINGS → Seerr User ID → Seerr-User.jellyfinUserId
+ *
+ * @param {string} discordId
+ * @param {Array|Object|string} userMappings - USER_MAPPINGS config value
+ * @param {string} seerrUrl
+ * @param {string} seerrApiKey
+ * @returns {Promise<string|null>} Jellyfin user ID or null
+ */
+export async function resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey) {
+  try {
+    // Parse USER_MAPPINGS — can be array, object, or JSON string
+    let mappings = userMappings;
+    if (typeof mappings === "string") {
+      try { mappings = JSON.parse(mappings); } catch { return null; }
+    }
+
+    // Find Seerr user ID for this Discord ID
+    let seerrUserId = null;
+    if (Array.isArray(mappings)) {
+      const entry = mappings.find(
+        (m) => String(m.discordId || m.discord_id) === String(discordId)
+      );
+      seerrUserId = entry?.seerrId || entry?.seerr_id || entry?.userId;
+    } else if (mappings && typeof mappings === "object") {
+      seerrUserId = mappings[discordId] || mappings[String(discordId)];
+    }
+    if (!seerrUserId) return null;
+
+    // Look up Jellyfin user ID via Seerr
+    const { fetchSeerrUserById } = await import("./seerr.js");
+    const seerrUser = await fetchSeerrUserById(seerrUserId, seerrUrl, seerrApiKey);
+    return seerrUser?.jellyfinUserId || null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] resolveJellyfinUserId error: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
+ * Fetch a paged list of items for cleanup analysis.
+ * Returns Movie items with PlayCount, LastPlayedDate, DateCreated, file size.
+ *
+ * Uses server-aggregated UserData (Jellyfin returns aggregated playback stats
+ * across all users when querying without a userId).
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {Object} opts
+ * @param {number} [opts.limit=2000]
+ * @returns {Promise<Array>} Raw items with at least { Id, Name, ProductionYear,
+ *   DateCreated, UserData: { PlayCount, LastPlayedDate }, MediaSources: [{ Size }] }
+ */
+export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
+  const limit = opts.limit ?? 2000;
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie",
+          SortBy: "DateCreated",
+          SortOrder: "Ascending",
+          Limit: limit,
+          Fields: "DateCreated,UserData,MediaSources,ProductionYear",
+        },
+        timeout: 30000,
+      }),
+      { label: "Jellyfin cleanup-advisor items" }
+    );
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchUnwatchedAggregateItems error: ${err?.message || err}`);
+    return [];
+  }
+}

@@ -1549,6 +1549,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  // Test Cleanup Advisor button
+  const testCleanupBtn = document.getElementById("test-cleanup-advisor-btn");
+  const testCleanupStatus = document.getElementById("test-cleanup-advisor-status");
+  if (testCleanupBtn) {
+    testCleanupBtn.addEventListener("click", async () => {
+      testCleanupBtn.disabled = true;
+      if (testCleanupStatus) testCleanupStatus.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/test-cleanup-advisor", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (testCleanupStatus) testCleanupStatus.textContent = "✅ " + data.message;
+          showToast(data.message);
+        } else {
+          if (testCleanupStatus) testCleanupStatus.textContent = "❌ " + (data.message || (t("common.error") || "Fehler"));
+          showToast(data.message || "Fehler beim Senden.");
+        }
+      } catch (err) {
+        if (testCleanupStatus) testCleanupStatus.textContent = "❌ Error";
+        showToast("Fehler beim Senden.");
+      } finally {
+        testCleanupBtn.disabled = false;
+        setTimeout(() => { if (testCleanupStatus) testCleanupStatus.textContent = ""; }, 5000);
+      }
+    });
+  }
+
   // Test Seerr Webhook button
   const testSeerrWebhookBtn = document.getElementById("test-seerr-webhook-btn");
   const testSeerrWebhookStatus = document.getElementById("test-seerr-webhook-status");

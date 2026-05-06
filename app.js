@@ -11,6 +11,7 @@ import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
+import { runCleanupAdvisor } from "./bot/cleanupAdvisor.js";
 import apiCache from "./utils/cache.js";
 
 // ESM __dirname equivalent
@@ -1290,6 +1291,39 @@ function configureWebServer() {
         success: false,
         message: error.message || "Failed to send random pick. Check logs for details.",
       });
+    }
+  });
+
+  // Cleanup Advisor — manual trigger from web UI
+  app.post("/api/test-cleanup-advisor", authenticateToken, async (_req, res) => {
+    try {
+      if (!botState.discordClient || !botState.discordClient.isReady()) {
+        return res.status(400).json({
+          success: false,
+          message: "Discord bot is not running. Please start the bot first.",
+        });
+      }
+      const channelId = process.env.CLEANUP_ADVISOR_CHANNEL_ID;
+      if (!channelId) {
+        return res.status(400).json({
+          success: false,
+          message: "Cleanup Advisor channel is not configured.",
+        });
+      }
+      const result = await runCleanupAdvisor(botState.discordClient);
+      if (!result.posted) {
+        return res.status(400).json({
+          success: false,
+          message: result.message || "Cleanup advisor did not post — check logs.",
+        });
+      }
+      return res.json({
+        success: true,
+        message: `Cleanup post sent (${result.count} items, ${result.totalSizeGb} GB).`,
+      });
+    } catch (err) {
+      logger.error("Failed to run cleanup advisor:", err);
+      return res.status(500).json({ success: false, message: err.message || "Cleanup advisor failed." });
     }
   });
 

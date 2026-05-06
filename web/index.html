@@ -1067,8 +1067,79 @@
                         </div>
                       </div>
 
+                      <!-- Cleanup Advisor Section -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                          <input type="checkbox" id="CLEANUP_ADVISOR_ENABLED" name="CLEANUP_ADVISOR_ENABLED" />
+                          <strong data-i18n="config.cleanup_advisor_title">Enable Cleanup Advisor</strong>
+                        </label>
+                        <div class="form-text" style="margin-bottom: 1rem;">
+                          <span data-i18n="config.cleanup_advisor_desc">Weekly admin-channel post listing movies that haven't been watched in a long time, to help free up storage. Movies only.</span>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="CLEANUP_ADVISOR_CHANNEL_ID" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_channel">Channel</label>
+                          <select
+                            id="CLEANUP_ADVISOR_CHANNEL_ID"
+                            name="CLEANUP_ADVISOR_CHANNEL_ID"
+                            class="form-select channel-select"
+                            data-channel-select="true"
+                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
+                          </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_ADVISOR_DAY" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_day">Day of week</label>
+                            <select id="CLEANUP_ADVISOR_DAY" name="CLEANUP_ADVISOR_DAY" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;">
+                              <option value="monday">Monday</option>
+                              <option value="tuesday">Tuesday</option>
+                              <option value="wednesday">Wednesday</option>
+                              <option value="thursday">Thursday</option>
+                              <option value="friday">Friday</option>
+                              <option value="saturday">Saturday</option>
+                              <option value="sunday" selected>Sunday</option>
+                            </select>
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_ADVISOR_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_time">Time (HH:MM)</label>
+                            <input type="time" id="CLEANUP_ADVISOR_TIME" name="CLEANUP_ADVISOR_TIME" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MIN_AGE_DAYS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_min_age">Min. age in library (days)</label>
+                            <input type="number" id="CLEANUP_MIN_AGE_DAYS" name="CLEANUP_MIN_AGE_DAYS" placeholder="365" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MAX_PLAYCOUNT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_play">Max. play count</label>
+                            <input type="number" id="CLEANUP_MAX_PLAYCOUNT" name="CLEANUP_MAX_PLAYCOUNT" placeholder="1" min="0" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MIN_DAYS_SINCE_PLAYED" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_since_played">Min. days since last play</label>
+                            <input type="number" id="CLEANUP_MIN_DAYS_SINCE_PLAYED" name="CLEANUP_MIN_DAYS_SINCE_PLAYED" placeholder="180" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MAX_RESULTS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_results">Max. results per post</label>
+                            <input type="number" id="CLEANUP_MAX_RESULTS" name="CLEANUP_MAX_RESULTS" placeholder="25" min="1" max="50" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          </div>
+                        </div>
+
+                        <div style="margin-top: 1rem;">
+                          <button type="button" id="test-cleanup-advisor-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="bi bi-trash"></i> <span data-i18n="config.cleanup_test">Cleanup-Vorschlag jetzt senden</span>
+                          </button>
+                          <span id="test-cleanup-advisor-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
+                        </div>
+                      </div>
+
                       <!-- Discord Embed Colors Section -->
-                      
+
 
                       <!-- Language Section -->
                               <div class="form-group">

@@ -441,6 +441,33 @@ export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all")
 }
 
 /**
+ * Fetch a single Seerr user by ID.
+ * Used to resolve Discord-User → Seerr-User → Jellyfin-User-ID for personalized
+ * recommendations.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object|null>} User object (with `jellyfinUserId` field) or null
+ */
+export async function fetchSeerrUserById(userId, seerrUrl, apiKey) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/user/${userId}`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr fetch user ${userId}` }
+    );
+    return response.data;
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserById(${userId}) failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
  * Fetch a single Seerr request by ID.
  * @param {number|string} requestId - Seerr request ID
  * @param {string} seerrUrl - Seerr base URL

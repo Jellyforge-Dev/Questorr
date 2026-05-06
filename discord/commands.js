@@ -145,6 +145,9 @@ export function getCommands() {
           .setAutocomplete(true)
       ),
     new SlashCommandBuilder()
+      .setName("foryou")
+      .setDescription("Personalized recommendations based on what you've watched on Jellyfin"),
+    new SlashCommandBuilder()
       .setName("discover")
       .setDescription("Discover movies or TV shows by genre, year, and rating")
       .addStringOption((opt) =>

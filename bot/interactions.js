@@ -5,6 +5,7 @@ import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/wa
 import { handleUpcomingCommand } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
+import { handleForYouCommand } from "./commands/foryou.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -143,6 +144,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "recommend") {
           return handleRecommendCommand(interaction);
+        }
+        if (interaction.commandName === "foryou") {
+          return handleForYouCommand(interaction);
         }
         if (interaction.commandName === "discover") {
           return handleDiscoverCommand(interaction);
