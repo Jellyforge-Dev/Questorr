@@ -4080,33 +4080,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   let guildRoles = [];
 
   async function loadRoles() {
-    if (rolesLoaded && guildRoles.length > 0) {
-      return;
-    }
-
+    // Always re-render — never short-circuit. Otherwise saved selections fail
+    // to re-populate after a page reload + tab switch.
     try {
-      const response = await fetch("/api/discord-roles");
-      const data = await response.json();
-
-      if (data.success && data.roles) {
-        guildRoles = data.roles;
-        rolesLoaded = true;
-
-        // Load current config to get saved allowlist/blocklist
-        const configResponse = await fetch("/api/config");
-        const config = await configResponse.json();
-        const allowlist = config.ROLE_ALLOWLIST || [];
-        const blocklist = config.ROLE_BLOCKLIST || [];
-
-        populateRoleList("allowlist-roles", allowlist);
-        populateRoleList("blocklist-roles", blocklist);
-      } else {
-        document.getElementById("allowlist-roles").innerHTML =
-          `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
-        document.getElementById("blocklist-roles").innerHTML =
-          `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
+      // Re-use cached guild roles if already fetched (cheap), otherwise pull
+      if (!rolesLoaded || guildRoles.length === 0) {
+        const response = await fetch("/api/discord-roles");
+        const data = await response.json();
+        if (data.success && data.roles) {
+          guildRoles = data.roles;
+          rolesLoaded = true;
+        } else {
+          document.getElementById("allowlist-roles").innerHTML =
+            `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
+          document.getElementById("blocklist-roles").innerHTML =
+            `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
+          return;
+        }
       }
-    } catch (error) {}
+
+      // Always re-fetch saved selections so changes persist across tab switches/reloads
+      const configResponse = await fetch("/api/config");
+      const config = await configResponse.json();
+      // Defensive: API may return arrays, JSON-strings, or undefined
+      const parseList = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === "string" && v.trim()) {
+          try { const parsed = JSON.parse(v); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+        }
+        return [];
+      };
+      populateRoleList("allowlist-roles", parseList(config.ROLE_ALLOWLIST));
+      populateRoleList("blocklist-roles", parseList(config.ROLE_BLOCKLIST));
+    } catch (error) {
+      console.warn("[loadRoles] error:", error);
+    }
   }
 
   function populateRoleList(containerId, selectedRoles) {
