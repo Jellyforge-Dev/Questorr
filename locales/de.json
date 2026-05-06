@@ -253,6 +253,7 @@
     "seerr_webhook_header_desc": "Füge in Seerr außerdem einen Autorisierungs-Header zur Authentifizierung hinzu:",
     "seerr_webhook_copy_secret": "Secret kopieren",
     "seerr_webhook_warning": "⚠️ <strong>Wichtig:</strong> Trage das Secret in Seerr in das Feld <strong>\"Authorization Header\"</strong> ein — <em>nicht</em> in die URL. Ohne korrektes Secret werden alle Webhook-Events mit HTTP 401 abgewiesen und du erhältst keine DM- oder Channel-Benachrichtigungen.",
+    "seerr_webhook_notif_types_hint": "ℹ️ <strong>Tipp:</strong> Aktiviere in Seerr unter <em>Settings → Notifications → Webhook → Notification Types</em> mindestens <strong>Request Pending Approval</strong>, <strong>Request Approved</strong>, <strong>Request Auto-Approved</strong>, <strong>Request Declined</strong>, <strong>Request Available</strong> und <strong>Request Failed</strong> — sonst bekommen User keine Status-DMs, wenn ein Admin Anfragen direkt in der Seerr-UI genehmigt.",
     "test_seerr_roundtrip": "Round-Trip Test",
     "seerr_root_folder_load": "Root Folders laden",
     "jellyfin_fallback_channel": "📢 Standard-Benachrichtigungskanal",
@@ -289,6 +290,10 @@
     "misc_ephemeral_desc": "Wenn aktiviert, sind die Antworten des <code>/search</code>-Befehls nur für den Benutzer sichtbar. <em>Hinweis: Diese Option betrifft nur die Suche — Anfragen via <code>/request</code> und Webhook-Benachrichtigungen sind davon nicht beeinflusst.</em>",
     "misc_autoapprove": "Seerr Anfragen automatisch genehmigen",
     "misc_autoapprove_desc": "Wenn aktiviert, werden Anfragen automatisch in Seerr genehmigt. Wenn deaktiviert, bleiben Anfragen 'Ausstehend'.",
+    "misc_status_polling": "Seerr Status-Polling für Approve-DMs",
+    "misc_status_polling_desc": "Sicherheitsnetz: pollt Seerr-Anfragen periodisch und sendet eine DM, wenn eine Anfrage in der Seerr-UI genehmigt/abgelehnt wurde — auch wenn Seerr keinen MEDIA_APPROVED-Webhook gesendet hat. Erhöht die API-Last leicht. Aktiviere dies, wenn Genehmigungen direkt in Seerr keine DMs auslösen.",
+    "misc_status_polling_interval": "Status-Poller Intervall (Sekunden)",
+    "misc_status_polling_interval_desc": "Standard: 120s. Minimum 30s, Maximum 3600s.",
     "widget_title": "Widget aktivieren",
     "widget_desc": "Stellt ein einbettbares HTML-Widget für Homarr, Homepage oder Organizr bereit. Zeigt Bot-Status, Uptime, Command-Statistiken und Start/Stop-Steuerung.",
     "widget_api_key_label": "Widget API-Key",
@@ -587,5 +592,19 @@
   "toast": {
     "saved": "Einstellungen erfolgreich gespeichert.",
     "saved_commands": "Einstellungen gespeichert. Discord Commands aktualisiert."
+  },
+  "dm": {
+    "pending_author": "⏳ Anfrage eingereicht",
+    "pending_description": "Deine Anfrage für **{{title}}** wurde erfolgreich eingereicht und wird in Kürze von einem Admin geprüft.",
+    "approved_author": "✅ Anfrage genehmigt",
+    "approved_description": "Deine Anfrage für **{{title}}** wurde von einem Admin **genehmigt**. Du erhältst eine Nachricht, sobald deine Anfrage verfügbar ist.",
+    "auto_approved_author": "⚡ Automatisch genehmigt",
+    "auto_approved_description": "Deine Anfrage für **{{title}}** wurde **automatisch genehmigt**. Du erhältst eine Nachricht, sobald deine Anfrage verfügbar ist.",
+    "declined_author": "❌ Anfrage abgelehnt",
+    "declined_description": "Deine Anfrage für **{{title}}** wurde **abgelehnt**.",
+    "available_author": "🎉 Jetzt verfügbar!",
+    "available_description": "**{{title}}** ist ab sofort in Jellyfin verfügbar. Viel Spaß beim Schauen!",
+    "field_type": "Typ",
+    "field_reason": "Begründung"
   }
 }

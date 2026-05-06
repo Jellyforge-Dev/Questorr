@@ -9,6 +9,7 @@ import { botState, loadPendingRequests } from "./botState.js";
 import { registerInteractions } from "./interactions.js";
 import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
+import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -73,6 +74,7 @@ export async function startBot() {
       scheduleDailyRandomPick(client);
       scheduleDailyRecommendation(client);
       startJellyfinPoller(client);
+      startSeerrStatusPoller();
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

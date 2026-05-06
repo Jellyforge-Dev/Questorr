@@ -783,9 +783,19 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
 
 // ─── DM Requester ────────────────────────────────────────────────────────────
 
-async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
-  const dmEvents = ["MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
-  if (!dmEvents.includes(eventType)) return;
+// Per-event metadata for DM rendering. `dmKey` selects the i18n keys
+// (dm_<dmKey>_author / dm_<dmKey>_description); `color` is the embed color.
+const DM_EVENT_META = {
+  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500" },
+  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0" },
+  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0" },
+  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c" },
+  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71" },
+};
+
+export async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
+  const meta = DM_EVENT_META[eventType];
+  if (!meta) return;
 
   const discordId = await findDiscordIdForSeerrUser(data);
   if (!discordId) {
@@ -799,54 +809,19 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
     const mediaTypeLabel = data.media?.media_type === "movie" ? t("field_type_movie") : t("field_type_tv");
     const footerText = process.env.EMBED_FOOTER_TEXT;
 
-    let color, authorText, description;
+    const authorText = t(`dm_${meta.dmKey}_author`);
+    const description = t(`dm_${meta.dmKey}_description`, { title });
+
     const fields = [];
-
-    switch (eventType) {
-      case "MEDIA_PENDING":
-        color = "#f0a500";
-        authorText = "⏳ Anfrage eingereicht";
-        description = `Deine Anfrage für **${title}** wurde erfolgreich eingereicht und wird in Kürze von einem Admin geprüft.`;
-        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
-        break;
-
-      case "MEDIA_APPROVED":
-        color = "#1ec8a0";
-        authorText = "✅ Anfrage genehmigt";
-        description = `Deine Anfrage für **${title}** wurde von einem Admin **genehmigt**. Der Download startet in Kürze – du erhältst eine weitere Nachricht, sobald der Inhalt verfügbar ist.`;
-        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
-        break;
-
-      case "MEDIA_AUTO_APPROVED":
-        color = "#1ec8a0";
-        authorText = "⚡ Automatisch genehmigt";
-        description = `Deine Anfrage für **${title}** wurde **automatisch genehmigt** und der Download läuft bereits. Du erhältst eine Nachricht, sobald der Inhalt bereitsteht.`;
-        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
-        break;
-
-      case "MEDIA_DECLINED": {
-        color = "#e74c3c";
-        authorText = "❌ Anfrage abgelehnt";
-        description = `Deine Anfrage für **${title}** wurde **abgelehnt**.`;
-        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
-        const declineReason = data.request?.comment;
-        if (declineReason) fields.push({ name: "Begründung", value: declineReason, inline: false });
-        break;
-      }
-
-      case "MEDIA_AVAILABLE":
-        color = "#2ecc71";
-        authorText = "🎉 Jetzt verfügbar!";
-        description = `**${title}** ist ab sofort in Jellyfin verfügbar. Viel Spaß beim Schauen!`;
-        if (data.media?.media_type) fields.push({ name: "Typ", value: mediaTypeLabel, inline: true });
-        break;
-
-      default:
-        return;
+    if (data.media?.media_type) {
+      fields.push({ name: t("dm_field_type"), value: mediaTypeLabel, inline: true });
+    }
+    if (eventType === "MEDIA_DECLINED" && data.request?.comment) {
+      fields.push({ name: t("dm_field_reason"), value: data.request.comment, inline: false });
     }
 
     const dmEmbed = new EmbedBuilder()
-      .setColor(color)
+      .setColor(meta.color)
       .setAuthor({ name: authorText })
       .setTitle(title)
       .setDescription(description)
@@ -854,8 +829,8 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
 
     if (footerText) dmEmbed.setFooter({ text: footerText });
     if (fields.length > 0) dmEmbed.addFields(...fields);
-    if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
-    if (embed.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
+    if (embed?.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
+    if (embed?.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
 
     const dmOptions = { embeds: [dmEmbed] };
     if (eventType === "MEDIA_AVAILABLE" && buttons) dmOptions.components = [buttons];

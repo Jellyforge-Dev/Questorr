@@ -145,6 +145,18 @@ const strings = {
     cast_not_found:        "\u274C Could not find this person on TMDB.",
     cast_no_credits:       "\u274C No movie or TV credits found for this person.",
     cast_error:            "\u274C Could not fetch filmography. Please try again.",
+    dm_pending_author:        "\u23F3 Request submitted",
+    dm_pending_description:   "Your request for **{{title}}** has been submitted and will be reviewed by an admin shortly.",
+    dm_approved_author:       "\u2705 Request approved",
+    dm_approved_description:  "Your request for **{{title}}** has been **approved** by an admin. You will be notified as soon as it becomes available.",
+    dm_auto_approved_author:  "\u26A1 Auto-approved",
+    dm_auto_approved_description: "Your request for **{{title}}** was **auto-approved**. You will be notified as soon as it becomes available.",
+    dm_declined_author:       "\u274C Request declined",
+    dm_declined_description:  "Your request for **{{title}}** was **declined**.",
+    dm_available_author:      "\uD83C\uDF89 Now available!",
+    dm_available_description: "**{{title}}** is now available in Jellyfin. Enjoy!",
+    dm_field_type:            "Type",
+    dm_field_reason:          "Reason",
   },
   de: {
     event_pending:        "Neue Anfrage \u2013 Ausstehend",
@@ -287,13 +299,31 @@ const strings = {
     cast_not_found:        "\u274C Diese Person konnte nicht auf TMDB gefunden werden.",
     cast_no_credits:       "\u274C Keine Film- oder Serien-Credits f\u00FCr diese Person gefunden.",
     cast_error:            "\u274C Filmografie konnte nicht abgerufen werden. Bitte versuche es erneut.",
+    dm_pending_author:        "\u23F3 Anfrage eingereicht",
+    dm_pending_description:   "Deine Anfrage f\u00FCr **{{title}}** wurde erfolgreich eingereicht und wird in K\u00FCrze von einem Admin gepr\u00FCft.",
+    dm_approved_author:       "\u2705 Anfrage genehmigt",
+    dm_approved_description:  "Deine Anfrage f\u00FCr **{{title}}** wurde von einem Admin **genehmigt**. Du erh\u00E4ltst eine Nachricht, sobald deine Anfrage verf\u00FCgbar ist.",
+    dm_auto_approved_author:  "\u26A1 Automatisch genehmigt",
+    dm_auto_approved_description: "Deine Anfrage f\u00FCr **{{title}}** wurde **automatisch genehmigt**. Du erh\u00E4ltst eine Nachricht, sobald deine Anfrage verf\u00FCgbar ist.",
+    dm_declined_author:       "\u274C Anfrage abgelehnt",
+    dm_declined_description:  "Deine Anfrage f\u00FCr **{{title}}** wurde **abgelehnt**.",
+    dm_available_author:      "\uD83C\uDF89 Jetzt verf\u00FCgbar!",
+    dm_available_description: "**{{title}}** ist ab sofort in Jellyfin verf\u00FCgbar. Viel Spa\u00DF beim Schauen!",
+    dm_field_type:            "Typ",
+    dm_field_reason:          "Begr\u00FCndung",
   },
 };
 
-export function t(key) {
+export function t(key, vars) {
   const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
   const dict = strings[lang] || strings["en"];
-  return dict[key] ?? strings["en"][key] ?? key;
+  let str = dict[key] ?? strings["en"][key] ?? key;
+  if (vars && typeof str === "string") {
+    for (const [k, v] of Object.entries(vars)) {
+      str = str.replace(new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, "g"), String(v));
+    }
+  }
+  return str;
 }
 
 export function tNotif(key, envKey) {

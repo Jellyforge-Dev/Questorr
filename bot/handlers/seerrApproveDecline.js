@@ -1,9 +1,10 @@
 import { approveRequest, declineRequest } from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { t } from "../../utils/botStrings.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../../utils/logger.js";
 import { botState } from "../botState.js";
+import { sendRequesterDm } from "../../seerrWebhook.js";
 
 /**
  * Handle approve/decline button clicks on MEDIA_PENDING admin notifications.
@@ -29,38 +30,28 @@ export async function handleSeerrApproveDecline(interaction) {
       apiResult = await declineRequest(parseInt(requestId, 10), seerrUrl, apiKey);
     }
 
-    // DM the requester
+    // DM the requester via the central sendRequesterDm() so texts/buttons stay
+    // consistent with webhook-driven DMs (same i18n keys, same embed shape).
     try {
       const discordClient = botState.discordClient;
       if (discordClient && apiResult) {
-        let discordId = apiResult?.requestedBy?.settings?.discordId;
-        if (!discordId) {
-          const seerrUsername = apiResult?.requestedBy?.username || apiResult?.requestedBy?.displayName;
-          if (seerrUsername) {
-            try {
-              const raw = process.env.USER_MAPPINGS;
-              const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
-              const match = Array.isArray(mappings) && mappings.find(
-                (m) => m.seerrDisplayName === seerrUsername || String(m.seerrUserId) === String(seerrUsername)
-              );
-              if (match?.discordUserId) discordId = match.discordUserId;
-            } catch (_) {}
-          }
-        }
-        if (discordId) {
-          const title = interaction.message.embeds[0]?.title || "Unknown";
-          const dmEmbed = new EmbedBuilder()
-            .setColor(isApprove ? "#1ec8a0" : "#e74c3c")
-            .setAuthor({ name: isApprove ? "✅ Anfrage genehmigt" : "❌ Anfrage abgelehnt" })
-            .setTitle(title)
-            .setDescription(isApprove
-              ? `Deine Anfrage für **${title}** wurde von einem Admin **genehmigt**. Der Download startet in Kürze.`
-              : `Deine Anfrage für **${title}** wurde **abgelehnt**.`)
-            .setTimestamp();
-          const dmUser = await discordClient.users.fetch(discordId);
-          await dmUser.send({ embeds: [dmEmbed] });
-          logger.info(`[SEERR] ✉️ DM sent to ${discordId} after ${isApprove ? "approval" : "decline"} of "${title}"`);
-        }
+        const synth = {
+          subject: interaction.message.embeds[0]?.title || "Unknown",
+          media: { media_type: apiResult?.type || apiResult?.media?.mediaType },
+          request: {
+            requestedBy_settings_discordId: apiResult?.requestedBy?.settings?.discordId,
+            requestedBy_username: apiResult?.requestedBy?.username || apiResult?.requestedBy?.displayName,
+            comment: null,
+          },
+        };
+        await sendRequesterDm(
+          synth,
+          isApprove ? "MEDIA_APPROVED" : "MEDIA_DECLINED",
+          {},
+          discordClient,
+          null,
+          null
+        );
       }
     } catch (dmErr) {
       logger.warn(`[SEERR] Could not send DM after ${isApprove ? "approve" : "decline"}: ${dmErr.message}`);

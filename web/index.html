@@ -415,6 +415,9 @@
 						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(243, 139, 168, 0.10); border-left: 3px solid var(--red); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_warning">
 							⚠️ <strong>Wichtig:</strong> Trage das Secret in Seerr in das Feld <strong>"Authorization Header"</strong> ein — <em>nicht</em> in die URL. Ohne korrektes Secret werden alle Webhook-Events mit HTTP 401 abgewiesen und du erhältst keine DM- oder Channel-Benachrichtigungen.
 						</div>
+						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(137, 180, 250, 0.10); border-left: 3px solid var(--blue); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_notif_types_hint">
+							ℹ️ <strong>Tipp:</strong> Aktiviere in Seerr unter <em>Settings → Notifications → Webhook → Notification Types</em> mindestens <strong>Request Pending Approval</strong>, <strong>Request Approved</strong>, <strong>Request Auto-Approved</strong>, <strong>Request Declined</strong>, <strong>Request Available</strong> und <strong>Request Failed</strong> — sonst bekommen User keine Status-DMs, wenn ein Admin Anfragen direkt in der Seerr-UI genehmigt.
+						</div>
                         <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                           <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Sendet eine Test-Notification direkt an Discord (umgeht die Auth-Prüfung)">
                             <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Discord-Test</span>
@@ -844,6 +847,25 @@
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_autoapprove_desc">When enabled, requests through the bot are automatically approved in Seerr.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="SEERR_STATUS_POLLING_ENABLED" name="SEERR_STATUS_POLLING_ENABLED" />
+                          <span data-i18n="config.misc_status_polling">Seerr Status-Polling für Approve-DMs</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.misc_status_polling_desc">Sicherheitsnetz: pollt Seerr-Anfragen alle 2 Minuten und sendet eine DM, wenn eine Anfrage in der Seerr-UI genehmigt wurde — auch wenn Seerr keinen MEDIA_APPROVED-Webhook gesendet hat. Erhöht die API-Last leicht. Aktiviere dies, wenn Genehmigungen über die Seerr-Oberfläche keine DMs auslösen.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="SEERR_STATUS_POLL_INTERVAL_SECONDS" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_status_polling_interval">Status-Poller Intervall (Sekunden)</label>
+                        <input type="number" id="SEERR_STATUS_POLL_INTERVAL_SECONDS" name="SEERR_STATUS_POLL_INTERVAL_SECONDS" placeholder="120" min="30" max="3600"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_status_polling_interval_desc">Standard: 120s. Minimum 30s, Maximum 3600s.</span>
                         </div>
                       </div>
 
