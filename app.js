@@ -12,6 +12,7 @@ import { handleSeerrWebhook } from "./seerrWebhook.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
 import { runCleanupAdvisor } from "./bot/cleanupAdvisor.js";
+import { fetchStreamystatsRecommendations } from "./api/streamystats.js";
 import apiCache from "./utils/cache.js";
 
 // ESM __dirname equivalent
@@ -1324,6 +1325,34 @@ function configureWebServer() {
     } catch (err) {
       logger.error("Failed to run cleanup advisor:", err);
       return res.status(500).json({ success: false, message: err.message || "Cleanup advisor failed." });
+    }
+  });
+
+  // Streamystats — connection/auth test from web UI
+  app.post("/api/test-streamystats", authenticateToken, async (_req, res) => {
+    const url = process.env.STREAMYSTATS_URL;
+    const user = process.env.STREAMYSTATS_USER;
+    const pass = process.env.STREAMYSTATS_PASS;
+    const jfBase = process.env.JELLYFIN_BASE_URL;
+    if (!url || !user || !pass || !jfBase) {
+      return res.json({
+        ok: false,
+        message: "MISSING_CONFIG",
+        details: { url: !!url, user: !!user, pass: !!pass, jfBase: !!jfBase },
+      });
+    }
+    try {
+      const recs = await fetchStreamystatsRecommendations(jfBase, url, user, pass, { limit: 1 });
+      return res.json({ ok: true, count: recs.length });
+    } catch (err) {
+      const status = err?.response?.status;
+      const body = err?.response?.data;
+      return res.json({
+        ok: false,
+        status,
+        message: status === 401 ? "AUTH_FAILED" : "REQUEST_FAILED",
+        details: typeof body === "string" ? body.slice(0, 300) : body,
+      });
     }
   });
 

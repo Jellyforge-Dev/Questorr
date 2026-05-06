@@ -1594,6 +1594,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Test Streamystats connection button
+  const testStreamystatsBtn = document.getElementById("test-streamystats-btn");
+  const testStreamystatsStatus = document.getElementById("test-streamystats-status");
+  if (testStreamystatsBtn) {
+    testStreamystatsBtn.addEventListener("click", async () => {
+      testStreamystatsBtn.disabled = true;
+      if (testStreamystatsStatus) testStreamystatsStatus.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/test-streamystats", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+        });
+        const data = await response.json();
+        if (data.ok) {
+          const okMsg = (t("config.streamystats_test_ok") || "✅ Connected ({{count}} test recommendation received)")
+            .replace("{{count}}", String(data.count ?? 0));
+          if (testStreamystatsStatus) testStreamystatsStatus.textContent = okMsg;
+          showToast(okMsg);
+        } else if (data.message === "MISSING_CONFIG") {
+          const msg = t("config.streamystats_test_no_url") || "❌ Streamystats URL, username, password, or Jellyfin URL missing.";
+          if (testStreamystatsStatus) testStreamystatsStatus.textContent = msg;
+          showToast(msg);
+        } else if (data.message === "AUTH_FAILED") {
+          const msg = t("config.streamystats_test_401") || "❌ Streamystats login failed — wrong username or password.";
+          if (testStreamystatsStatus) testStreamystatsStatus.textContent = msg;
+          showToast(msg);
+        } else {
+          const msg = (t("config.streamystats_test_fail") || "❌ Connection failed (HTTP {{status}}). Check URL and Streamystats logs.")
+            .replace("{{status}}", String(data.status ?? "?"));
+          if (testStreamystatsStatus) testStreamystatsStatus.textContent = msg;
+          showToast(msg);
+        }
+      } catch (err) {
+        if (testStreamystatsStatus) testStreamystatsStatus.textContent = "❌ Error";
+        showToast("Fehler beim Senden.");
+      } finally {
+        testStreamystatsBtn.disabled = false;
+        setTimeout(() => { if (testStreamystatsStatus) testStreamystatsStatus.textContent = ""; }, 8000);
+      }
+    });
+  }
+
   // Test Seerr Webhook button
   const testSeerrWebhookBtn = document.getElementById("test-seerr-webhook-btn");
   const testSeerrWebhookStatus = document.getElementById("test-seerr-webhook-status");

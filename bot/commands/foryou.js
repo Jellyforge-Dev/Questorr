@@ -139,6 +139,13 @@ export async function handleForYouCommand(interaction) {
 
     return interaction.editReply(replyOpts);
   } catch (err) {
+    if (err?.response?.status === 401) {
+      logger.error(
+        "[foryou] Streamystats auth failed (401):",
+        typeof err.response.data === "string" ? err.response.data.slice(0, 300) : err.response.data
+      );
+      return interaction.editReply({ content: t("foryou_auth_failed") });
+    }
     logger.error("[foryou] command error:", err);
     return interaction.editReply({ content: t("foryou_error") });
   }

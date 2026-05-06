@@ -65,15 +65,39 @@ function parseResponse(response) {
 async function authenticateAndFetch(base, jellyfinBaseUrl, username, password, queryParams) {
   logger.info(`[Streamystats] POST /api/recommendations (auth as "${username}")`);
 
-  const response = await axios.post(
-    `${base}/api/recommendations`,
-    { username, password },
-    {
-      params: queryParams,
-      headers: { "Content-Type": "application/json" },
-      timeout: 15000,
+  let response;
+  try {
+    response = await axios.post(
+      `${base}/api/recommendations`,
+      { username, password },
+      {
+        params: queryParams,
+        headers: { "Content-Type": "application/json" },
+        timeout: 15000,
+      }
+    );
+  } catch (err) {
+    // Surface the exact reason Streamystats rejected the request — usually
+    // their response body contains a clear string like "Invalid credentials"
+    // or "Server not found" that the bare 401 hides.
+    const status = err?.response?.status;
+    const body = err?.response?.data;
+    const bodyStr = typeof body === "string"
+      ? body.slice(0, 500)
+      : JSON.stringify(body)?.slice(0, 500);
+    if (status === 401) {
+      logger.error(
+        `[Streamystats] 401 — auth failed for user "${username}". Response body: ${bodyStr}`
+      );
+    } else if (status) {
+      logger.error(
+        `[Streamystats] HTTP ${status} from POST /api/recommendations. Response body: ${bodyStr}`
+      );
+    } else {
+      logger.error(`[Streamystats] Network/timeout error: ${err?.message || err}`);
     }
-  );
+    throw err;
+  }
 
   // Streamystats may return the session token in a Set-Cookie or response header.
   // Extract it so we can reuse it for GET requests and avoid re-authing each call.
