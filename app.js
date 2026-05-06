@@ -672,7 +672,16 @@ function configureWebServer() {
   // CSS, JS, images and locale files are served for unauthenticated visitors.
   app.use("/assets", express.static(path.join(__dirname, "assets")));
   app.use("/locales", express.static(path.join(__dirname, "locales")));
-  app.use(express.static(path.join(__dirname, "web")));
+  // Disable caching for dashboard JS/CSS so updates are always picked up immediately
+  app.use(express.static(path.join(__dirname, "web"), {
+    etag: false,
+    lastModified: false,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(".js") || filePath.endsWith(".css")) {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  }));
 
   app.get("/", (_req, res) => {
     res.sendFile(path.join(__dirname, "web", "index.html"));
