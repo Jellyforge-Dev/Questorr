@@ -382,6 +382,36 @@ r();setInterval(r,15000);
   res.type("html").send(html);
 });
 
+// ─── Post Help Wizard (authenticated) ────────────────────────────────────────
+router.post("/post-help", botControlLimiter, authenticateToken, async (req, res) => {
+  if (!botState.isBotRunning || !botState.discordClient) {
+    return res.status(400).json({ success: false, message: "Bot is not running." });
+  }
+  const { channelId, pin } = req.body;
+  if (!channelId) {
+    return res.status(400).json({ success: false, message: "channelId is required." });
+  }
+  try {
+    const channel = await botState.discordClient.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) {
+      return res.status(400).json({ success: false, message: "Channel not found or not a text channel." });
+    }
+    const { buildHelpEmbed, buildHelpComponents } = await import("../bot/helpers/helpMessage.js");
+    const message = await channel.send({
+      embeds: [buildHelpEmbed()],
+      components: buildHelpComponents(),
+    });
+    if (pin) {
+      await message.pin();
+    }
+    logger.info(`[post-help] Help wizard posted to #${channel.name} (${channelId})${pin ? " and pinned" : ""}`);
+    res.json({ success: true, messageId: message.id, channelId: channel.id });
+  } catch (err) {
+    logger.error("[post-help] Error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ─── Bot Status (authenticated) ──────────────────────────────────────────────
 router.get("/status", authenticateToken, (req, res) => {
   res.json({

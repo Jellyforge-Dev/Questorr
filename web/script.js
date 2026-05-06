@@ -4824,6 +4824,64 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Post Help Wizard button
+  const postHelpBtn = document.getElementById("post-help-btn");
+  const postHelpStatus = document.getElementById("post-help-status");
+  if (postHelpBtn) {
+    postHelpBtn.addEventListener("click", async () => {
+      const channelId = document.getElementById("post-help-channel-id")?.value;
+      const pin = document.getElementById("post-help-pin")?.checked;
+      if (!channelId) {
+        if (postHelpStatus) {
+          postHelpStatus.textContent = "⚠️ " + (t("config.select_channel") || "Please select a channel first.");
+          postHelpStatus.style.color = "var(--yellow)";
+        }
+        return;
+      }
+      postHelpBtn.disabled = true;
+      if (postHelpStatus) {
+        postHelpStatus.textContent = t("config.sending") || "Posting...";
+        postHelpStatus.style.color = "var(--subtext0)";
+      }
+      try {
+        const response = await fetch("/api/post-help", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+          body: JSON.stringify({ channelId, pin }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          const msg = pin
+            ? (t("config.post_help_success_pinned") || "✅ Posted and pinned!")
+            : (t("config.post_help_success") || "✅ Posted!");
+          if (postHelpStatus) {
+            postHelpStatus.textContent = msg;
+            postHelpStatus.style.color = "var(--green)";
+          }
+          showToast(msg);
+        } else {
+          if (postHelpStatus) {
+            postHelpStatus.textContent = "❌ " + (data.message || (t("common.error") || "Failed"));
+            postHelpStatus.style.color = "var(--red)";
+          }
+          showToast(data.message || "Failed to post help wizard.");
+        }
+      } catch (err) {
+        if (postHelpStatus) {
+          postHelpStatus.textContent = "❌ Connection error";
+          postHelpStatus.style.color = "var(--red)";
+        }
+        showToast("Connection error.");
+      } finally {
+        postHelpBtn.disabled = false;
+        setTimeout(() => { if (postHelpStatus) postHelpStatus.textContent = ""; }, 4000);
+      }
+    });
+  }
+
   // Fix export button to include auth token
   const exportBtn = document.getElementById("export-config-btn");
   if (exportBtn) {

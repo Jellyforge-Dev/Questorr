@@ -290,6 +290,36 @@
                         </div>
                       </div>
 
+                      <!-- Post Help Wizard Section -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
+                        <label style="font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 0.5rem; display: block;">
+                          <i class="bi bi-pin-angle-fill"></i> <span data-i18n="config.post_help_title">Post Help Wizard to Channel</span>
+                        </label>
+                        <div class="form-text" style="margin-bottom: 1rem;" data-i18n="config.post_help_desc">
+                          Post the /help wizard (embed + quick-action buttons) to a Discord channel so all users can access it without typing /help.
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.post_help_channel">Channel</label>
+                          <select
+                            id="post-help-channel-id"
+                            class="form-select channel-select"
+                            data-channel-select="true"
+                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
+                          </select>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                          <input type="checkbox" id="post-help-pin" />
+                          <span data-i18n="config.post_help_pin">Pin message after posting</span>
+                        </label>
+                        <div>
+                          <button type="button" id="post-help-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="bi bi-pin-angle-fill"></i> <span data-i18n="config.post_help_btn">Post Help Wizard</span>
+                          </button>
+                          <span id="post-help-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
+                        </div>
+                      </div>
+
                     </fieldset>
                   </div>
 
