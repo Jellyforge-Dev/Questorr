@@ -4847,55 +4847,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Post Help Wizard — populate channel select using the same getChannelsOnce()
-  // helper that all other channel dropdowns use.
+  // Post Help Wizard — copy options from JELLYFIN_CHANNEL_ID (same pane, always
+  // populated by loadDiscordChannels). Synchronous clone: no network, no async.
   (function initPostHelpChannelLoader() {
     const loadBtn = document.getElementById("post-help-load-channels-btn");
     const sel = document.getElementById("post-help-channel-id");
     if (!loadBtn || !sel) return;
 
-    function getGuildId() {
-      const gs = document.getElementById("GUILD_ID");
-      return gs?.value || gs?.dataset?.savedValue || "";
+    function cloneFromJellyfinSelect() {
+      const source = document.getElementById("JELLYFIN_CHANNEL_ID");
+      if (!source || source.options.length <= 1) return false;
+      sel.innerHTML = '<option value="">— Kanal auswählen —</option>';
+      Array.from(source.options).forEach(opt => {
+        if (!opt.value) return; // skip placeholder
+        sel.appendChild(opt.cloneNode(true));
+      });
+      return true;
     }
 
-    async function fetchAndPopulate() {
-      const guildId = getGuildId();
-      if (!guildId) {
-        sel.innerHTML = '<option value="">— Erst einen Server auswählen —</option>';
-        return;
-      }
-      loadBtn.disabled = true;
-      loadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
-      sel.innerHTML = '<option value="">Lade Kanäle...</option>';
-      try {
-        // Use the shared getChannelsOnce() — same function all other dropdowns use
-        const channels = await getChannelsOnce(guildId);
-        if (channels.length) {
-          sel.innerHTML = '<option value="">— Kanal auswählen —</option>';
-          channels.forEach(ch => {
-            const opt = document.createElement("option");
-            opt.value = ch.id;
-            const icon = ch.type === "announcement" ? " 📢" : ch.type === "forum-thread" ? " 🧵" : "";
-            opt.textContent = `#${ch.name}${icon}`;
-            sel.appendChild(opt);
-          });
-        } else {
-          sel.innerHTML = '<option value="">— Keine Kanäle gefunden —</option>';
-        }
-      } catch (err) {
-        sel.innerHTML = '<option value="">— Fehler beim Laden —</option>';
-      } finally {
-        loadBtn.disabled = false;
-        loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
-      }
-    }
+    loadBtn.addEventListener("click", cloneFromJellyfinSelect);
 
-    loadBtn.addEventListener("click", fetchAndPopulate);
-
-    // Auto-load: try immediately, then retry after guild finishes loading
-    fetchAndPopulate();
-    setTimeout(fetchAndPopulate, 2000);
+    // Auto-sync after guild + channels finish loading (JELLYFIN_CHANNEL_ID fills ~1-2s in)
+    setTimeout(cloneFromJellyfinSelect, 1500);
+    setTimeout(cloneFromJellyfinSelect, 3000);
   })();
 
   // Post Help Wizard button
