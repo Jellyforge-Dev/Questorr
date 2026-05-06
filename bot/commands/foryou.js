@@ -73,13 +73,15 @@ export async function handleForYouCommand(interaction) {
       logger.info(`[foryou] Resolved Discord ${discordId} → Jellyfin ${jellyfinUserId}`);
       seedItems = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 10);
       logger.info(`[foryou] fetchUserRecentlyPlayed returned ${seedItems.length} items`);
+    } else {
+      logger.info(`[foryou] No Jellyfin user mapping for Discord ${discordId} — skipping personal history`);
     }
 
     let seeds = pickSeeds(seedItems);
 
     if (seeds.length === 0) {
       usedFallback = true;
-      logger.info(`[foryou] No usable personal history for ${discordId} — trying server-wide top-played`);
+      logger.info(`[foryou] No usable personal seeds — falling back to recently-added library items`);
       const topPlayed = await fetchServerTopPlayed(jfKey, jfBase, 20);
       logger.info(`[foryou] fetchServerTopPlayed returned ${topPlayed.length} items, tmdbIds: ${topPlayed.filter(i => i.ProviderIds?.Tmdb || i.ProviderIds?.TheMovieDb).length} with TMDB ID`);
       seeds = pickSeeds(topPlayed);

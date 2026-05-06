@@ -781,6 +781,9 @@ export async function fetchUserRecentlyPlayed(jellyfinUserId, apiKey, baseUrl, l
  * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
  */
 export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
+  // NOTE: SortBy=PlayCount without a userId causes HTTP 500 on Jellyfin's /Items endpoint
+  // (PlayCount is user-scoped data). We sort by DateCreated (recently added) as a reliable
+  // server-wide fallback that always works with an admin API key.
   try {
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
@@ -789,15 +792,15 @@ export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
         headers: { "X-MediaBrowser-Token": apiKey },
         params: {
           Recursive: true,
-          SortBy: "PlayCount",
+          SortBy: "DateCreated",
           SortOrder: "Descending",
           IncludeItemTypes: "Movie,Series",
           Limit: limit,
-          Fields: "ProviderIds,UserData",
+          Fields: "ProviderIds",
         },
         timeout: 8000,
       }),
-      { label: "Jellyfin server top-played" }
+      { label: "Jellyfin server recently-added" }
     );
     return response.data?.Items || [];
   } catch (err) {
