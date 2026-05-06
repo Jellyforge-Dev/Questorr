@@ -2860,6 +2860,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         cleanupChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
+      const postHelpChanSelEmpty = document.getElementById("post-help-channel-id");
+      if (postHelpChanSelEmpty) postHelpChanSelEmpty.innerHTML = `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       return;
     }
 
@@ -2883,6 +2885,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
     if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    const postHelpChanSelLoading = document.getElementById("post-help-channel-id");
+    if (postHelpChanSelLoading) postHelpChanSelLoading.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
       const response = await fetch(`/api/discord/channels/${guildId}`);
@@ -3000,6 +3004,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate Cleanup Advisor channel select
         const cleanupChanSel = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
         populateSeerrSelect(cleanupChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "CLEANUP_ADVISOR_CHANNEL_ID");
+
+        // Populate Post Help Wizard channel select
+        const postHelpChanSel = document.getElementById("post-help-channel-id");
+        populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "post-help-channel-id");
 
         // Also populate root-folder channel dropdowns if any exist
         document.querySelectorAll(".root-folder-channel-select").forEach((sel) => {
