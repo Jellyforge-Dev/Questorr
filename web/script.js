@@ -3581,6 +3581,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById("mappings-list");
     if (!container) return;
 
+    // Toggle the "remove all" button: only visible when at least one mapping exists
+    const removeAllBtn = document.getElementById("remove-all-mappings-btn");
+    if (removeAllBtn) {
+      removeAllBtn.style.display =
+        Array.isArray(currentMappings) && currentMappings.length > 0 ? "" : "none";
+    }
+
     if (!Array.isArray(currentMappings) || currentMappings.length === 0) {
       container.innerHTML =
         '<p style="opacity: 0.7; font-style: italic;">No user mappings configured yet.</p>';
@@ -3677,6 +3684,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast(t("errors.mapping_remove_failed") || "Fehler beim Entfernen der Zuordnung.");
     }
   };
+
+  // Remove-all mappings button (shown only when ≥1 mapping exists)
+  const removeAllMappingsBtn = document.getElementById("remove-all-mappings-btn");
+  if (removeAllMappingsBtn) {
+    removeAllMappingsBtn.addEventListener("click", async () => {
+      const msg = t("config.remove_all_mappings_confirm")
+        || "Wirklich ALLE Benutzer-Zuordnungen entfernen?";
+      if (!confirm(msg)) return;
+      removeAllMappingsBtn.disabled = true;
+      try {
+        const response = await fetch("/api/user-mappings/all", { method: "DELETE" });
+        const result = await response.json();
+        if (result.success) {
+          showToast(t("config.remove_all_mappings_ok") || "Alle Zuordnungen entfernt.");
+          await loadMappings();
+        } else {
+          showToast(result.message || t("config.remove_all_mappings_fail") || "Fehler.");
+        }
+      } catch (err) {
+        showToast(t("config.remove_all_mappings_fail") || "Fehler beim Entfernen.");
+      } finally {
+        removeAllMappingsBtn.disabled = false;
+      }
+    });
+  }
 
   const addMappingBtn = document.getElementById("add-mapping-btn");
   if (addMappingBtn) {

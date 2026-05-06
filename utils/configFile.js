@@ -481,6 +481,6 @@ export function loadConfigToEnv() {
 
 export { getUsers, saveUser } from "./userStore.js";
 
-export { getUserMappings, saveUserMapping, deleteUserMapping } from "./userMappingStore.js";
+export { getUserMappings, saveUserMapping, deleteUserMapping, deleteAllUserMappings } from "./userMappingStore.js";
 
 export { normalizeSeerrUrl, getSeerrApiUrl } from "./seerrUrl.js";

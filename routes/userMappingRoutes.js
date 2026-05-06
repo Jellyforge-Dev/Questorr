@@ -5,6 +5,7 @@ import {
   getUserMappings,
   saveUserMapping,
   deleteUserMapping,
+  deleteAllUserMappings,
   loadConfigToEnv,
 } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
@@ -64,6 +65,22 @@ router.post(
     }
   }
 );
+
+// IMPORTANT: must be registered BEFORE the /:discordUserId route, otherwise
+// Express would match "all" as a discordUserId param.
+router.delete("/user-mappings/all", authenticateToken, (req, res) => {
+  try {
+    const removed = deleteAllUserMappings();
+    loadConfigToEnv();
+    res.json({ success: true, removed, message: `${removed} mapping(s) removed.` });
+  } catch (error) {
+    logger.error("Error clearing user mappings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to clear mappings - check server logs.",
+    });
+  }
+});
 
 router.delete("/user-mappings/:discordUserId", authenticateToken, (req, res) => {
   const { discordUserId } = req.params;
