@@ -97,11 +97,32 @@ export function stopCleanupAdvisor() {
   }
 }
 
+// Discord embed limits (discord.js validates against these and throws an
+// "AggregateError: Received one or more errors" if exceeded).
+const EMBED_DESCRIPTION_MAX = 4000; // 4096 hard limit, leave headroom
+const EMBED_FOOTER_MAX = 2000;
+
 /**
  * Execute one cleanup advisor run. Can be called manually via the test button.
  * Returns { posted: boolean, count: number, message?: string } for the test endpoint.
  */
 export async function runCleanupAdvisor(client) {
+  try {
+    return await runCleanupAdvisorInner(client);
+  } catch (err) {
+    // Re-log with full stack — the parent catches only err.message and we
+    // were getting useless "Received one or more errors" without context.
+    logger.error("[Cleanup Advisor] runtime error:", err?.stack || err);
+    if (err?.errors) {
+      for (const sub of err.errors) {
+        logger.error("[Cleanup Advisor] sub-error:", sub?.message || sub);
+      }
+    }
+    throw err;
+  }
+}
+
+async function runCleanupAdvisorInner(client) {
   const apiKey = process.env.JELLYFIN_API_KEY;
   const baseUrl = process.env.JELLYFIN_BASE_URL;
   const channelId = process.env.CLEANUP_ADVISOR_CHANNEL_ID;
@@ -201,16 +222,39 @@ export async function runCleanupAdvisor(client) {
         size: sizeStr,
       });
     });
-    embed.setDescription(`${t("cleanup_subtitle")}\n\n${lines.join("\n")}`);
-    embed.setFooter({
-      text: t("cleanup_total_storage", {
-        count: top.length,
-        size: totalSizeGb.toFixed(2),
-      }),
-    });
+    // Build the description, dropping lines from the bottom if we'd exceed
+    // Discord's 4096-char description limit. Better to truncate than crash.
+    const subtitle = t("cleanup_subtitle");
+    let description = `${subtitle}\n\n${lines.join("\n")}`;
+    if (description.length > EMBED_DESCRIPTION_MAX) {
+      const overflowMarker = `\n… (${lines.length} items, truncated)`;
+      let kept = lines.length;
+      while (kept > 0) {
+        const candidate = `${subtitle}\n\n${lines.slice(0, kept).join("\n")}${overflowMarker}`;
+        if (candidate.length <= EMBED_DESCRIPTION_MAX) { description = candidate; break; }
+        kept--;
+      }
+      if (kept === 0) description = `${subtitle}${overflowMarker}`.slice(0, EMBED_DESCRIPTION_MAX);
+      logger.warn(`[Cleanup Advisor] Description truncated: ${lines.length} → ${kept} lines (limit ${EMBED_DESCRIPTION_MAX} chars)`);
+    }
+    embed.setDescription(description);
+
+    const footerText = t("cleanup_total_storage", {
+      count: top.length,
+      size: totalSizeGb.toFixed(2),
+    }).slice(0, EMBED_FOOTER_MAX);
+    embed.setFooter({ text: footerText });
   }
 
-  await channel.send({ embeds: [embed] });
+  try {
+    await channel.send({ embeds: [embed] });
+  } catch (sendErr) {
+    logger.error(`[Cleanup Advisor] channel.send failed: ${sendErr?.message || sendErr}`);
+    if (sendErr?.rawError) {
+      logger.error("[Cleanup Advisor] Discord rawError:", JSON.stringify(sendErr.rawError));
+    }
+    return { posted: false, count: 0, message: `Discord send failed: ${sendErr?.message || sendErr}` };
+  }
   logger.info(`[Cleanup Advisor] Posted: ${top.length} candidates, ${totalSizeGb.toFixed(2)} GB total`);
 
   return { posted: true, count: top.length, totalSizeGb: Number(totalSizeGb.toFixed(2)) };
