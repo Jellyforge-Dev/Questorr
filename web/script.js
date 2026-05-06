@@ -1582,39 +1582,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Push (register) Slash Commands button
-  const pushCommandsBtn = document.getElementById("push-commands-btn");
-  const pushCommandsStatus = document.getElementById("push-commands-status");
-  if (pushCommandsBtn) {
-    pushCommandsBtn.addEventListener("click", async () => {
-      pushCommandsBtn.disabled = true;
-      if (pushCommandsStatus) pushCommandsStatus.textContent = t("config.sending") || "Wird gesendet...";
-      try {
-        const response = await fetch("/api/push-commands", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
-          if (pushCommandsStatus) pushCommandsStatus.textContent = "✅ " + (t("config.push_commands_ok") || data.message);
-          showToast(t("config.push_commands_ok") || data.message);
-        } else {
-          if (pushCommandsStatus) pushCommandsStatus.textContent = "❌ " + (t("config.push_commands_fail") || data.message);
-          showToast(data.message || t("config.push_commands_fail") || "Fehler.");
-        }
-      } catch (err) {
-        if (pushCommandsStatus) pushCommandsStatus.textContent = "❌ " + (t("config.push_commands_fail") || "Fehler");
-        showToast(t("config.push_commands_fail") || "Fehler.");
-      } finally {
-        pushCommandsBtn.disabled = false;
-        setTimeout(() => { if (pushCommandsStatus) pushCommandsStatus.textContent = ""; }, 5000);
-      }
-    });
-  }
-
   // Test Seerr Webhook button
   const testSeerrWebhookBtn = document.getElementById("test-seerr-webhook-btn");
   const testSeerrWebhookStatus = document.getElementById("test-seerr-webhook-status");

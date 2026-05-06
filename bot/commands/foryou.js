@@ -28,21 +28,19 @@ import logger from "../../utils/logger.js";
 
 const TYPE_FROM_JF = { Movie: "movie", Series: "tv" };
 
-/** Extract Seerr user ID from USER_MAPPINGS for a given Discord ID. */
+/**
+ * Extract Seerr user ID from USER_MAPPINGS for a given Discord ID.
+ * Mapping objects use { discordUserId, seerrUserId } (see utils/userMappingStore.js).
+ */
 function getSeerrUserId(discordId) {
   try {
     const raw = process.env.USER_MAPPINGS;
-    let mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
-    if (Array.isArray(mappings)) {
-      const entry = mappings.find(
-        (m) => String(m.discordId || m.discord_id) === String(discordId)
-      );
-      return entry?.seerrId || entry?.seerr_id || entry?.userId || null;
-    }
-    if (mappings && typeof mappings === "object") {
-      return mappings[discordId] || mappings[String(discordId)] || null;
-    }
-    return null;
+    const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
+    if (!Array.isArray(mappings)) return null;
+    const entry = mappings.find(
+      (m) => String(m.discordUserId) === String(discordId)
+    );
+    return entry?.seerrUserId ?? null;
   } catch {
     return null;
   }

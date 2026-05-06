@@ -821,22 +821,18 @@ export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
  */
 export async function resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey) {
   try {
-    // Parse USER_MAPPINGS — can be array, object, or JSON string
+    // Parse USER_MAPPINGS — array of { discordUserId, seerrUserId, ... } objects
+    // (see utils/userMappingStore.js for the canonical shape)
     let mappings = userMappings;
     if (typeof mappings === "string") {
       try { mappings = JSON.parse(mappings); } catch { return null; }
     }
+    if (!Array.isArray(mappings)) return null;
 
-    // Find Seerr user ID for this Discord ID
-    let seerrUserId = null;
-    if (Array.isArray(mappings)) {
-      const entry = mappings.find(
-        (m) => String(m.discordId || m.discord_id) === String(discordId)
-      );
-      seerrUserId = entry?.seerrId || entry?.seerr_id || entry?.userId;
-    } else if (mappings && typeof mappings === "object") {
-      seerrUserId = mappings[discordId] || mappings[String(discordId)];
-    }
+    const entry = mappings.find(
+      (m) => String(m.discordUserId) === String(discordId)
+    );
+    const seerrUserId = entry?.seerrUserId;
     if (!seerrUserId) return null;
 
     // Look up Jellyfin user ID via Seerr
