@@ -38,8 +38,10 @@ export async function handleForYouCommand(interaction) {
   const jfKey = process.env.JELLYFIN_API_KEY;
   const jfBase = process.env.JELLYFIN_BASE_URL;
   const streamystatsUrl = process.env.STREAMYSTATS_URL;
+  const streamystatsUser = process.env.STREAMYSTATS_USER;
+  const streamystatsPass = process.env.STREAMYSTATS_PASS;
 
-  if (!jfKey || !jfBase || !streamystatsUrl) {
+  if (!jfKey || !jfBase || !streamystatsUrl || !streamystatsUser || !streamystatsPass) {
     return interaction.editReply({ content: t("command_config_missing") });
   }
 
@@ -60,14 +62,20 @@ export async function handleForYouCommand(interaction) {
     );
 
     // Fetch recommendations from Streamystats.
-    // Without jellyfinUserId the Streamystats endpoint uses the authenticated user
-    // (= Jellyfin admin). We still show results but add a mapping hint.
-    const recs = await fetchStreamystatsRecommendations(jfKey, jfBase, streamystatsUrl, {
-      jellyfinUserId,
-      limit: 5,
-      type: "all",
-      range: "all",
-    });
+    // Without jellyfinUserId the Streamystats endpoint uses the authenticated user's
+    // data. We still show results but add a mapping hint.
+    const recs = await fetchStreamystatsRecommendations(
+      jfBase,
+      streamystatsUrl,
+      streamystatsUser,
+      streamystatsPass,
+      {
+        jellyfinUserId,
+        limit: 5,
+        type: "all",
+        range: "all",
+      }
+    );
 
     logger.info(`[foryou] Streamystats returned ${recs.length} recommendations`);
 
