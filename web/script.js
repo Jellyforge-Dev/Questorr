@@ -4847,14 +4847,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Post Help Wizard — load channels directly from the API when the refresh button is clicked.
+  // Post Help Wizard — populate channel select using the same getChannelsOnce()
+  // helper that all other channel dropdowns use.
   (function initPostHelpChannelLoader() {
     const loadBtn = document.getElementById("post-help-load-channels-btn");
     const sel = document.getElementById("post-help-channel-id");
     if (!loadBtn || !sel) return;
 
+    function getGuildId() {
+      const gs = document.getElementById("GUILD_ID");
+      return gs?.value || gs?.dataset?.savedValue || "";
+    }
+
     async function fetchAndPopulate() {
-      const guildId = document.getElementById("GUILD_ID")?.value;
+      const guildId = getGuildId();
       if (!guildId) {
         sel.innerHTML = '<option value="">— Erst einen Server auswählen —</option>';
         return;
@@ -4863,11 +4869,11 @@ document.addEventListener("DOMContentLoaded", () => {
       loadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
       sel.innerHTML = '<option value="">Lade Kanäle...</option>';
       try {
-        const res = await fetch(`/api/discord/channels/${guildId}`, { credentials: "include" });
-        const data = await res.json();
-        if (data.success && data.channels?.length) {
+        // Use the shared getChannelsOnce() — same function all other dropdowns use
+        const channels = await getChannelsOnce(guildId);
+        if (channels.length) {
           sel.innerHTML = '<option value="">— Kanal auswählen —</option>';
-          data.channels.forEach(ch => {
+          channels.forEach(ch => {
             const opt = document.createElement("option");
             opt.value = ch.id;
             const icon = ch.type === "announcement" ? " 📢" : ch.type === "forum-thread" ? " 🧵" : "";
@@ -4875,7 +4881,7 @@ document.addEventListener("DOMContentLoaded", () => {
             sel.appendChild(opt);
           });
         } else {
-          sel.innerHTML = `<option value="">— ${data.message || "Keine Kanäle gefunden"} —</option>`;
+          sel.innerHTML = '<option value="">— Keine Kanäle gefunden —</option>';
         }
       } catch (err) {
         sel.innerHTML = '<option value="">— Fehler beim Laden —</option>';
@@ -4887,8 +4893,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadBtn.addEventListener("click", fetchAndPopulate);
 
-    // Auto-load once when the page is ready if a guild is already configured
-    setTimeout(fetchAndPopulate, 500);
+    // Auto-load: try immediately, then retry after guild finishes loading
+    fetchAndPopulate();
+    setTimeout(fetchAndPopulate, 2000);
   })();
 
   // Post Help Wizard button
