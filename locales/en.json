@@ -172,6 +172,8 @@
     "show_random_command_desc": "Pick a random movie or series from Jellyfin",
     "daily_recommendation_title": "Enable Daily Recommendation",
     "daily_recommendation_desc": "Send a daily recommendation from your existing Jellyfin library to a Discord channel.",
+    "streamystats_url_label": "Streamystats URL",
+    "streamystats_url_desc": "URL of your self-hosted Streamystats instance. When set, the /foryou command uses vector-similarity recommendations from your watch history. The command is hidden from Discord when this is empty.",
     "cleanup_advisor_title": "Enable Cleanup Advisor",
     "cleanup_advisor_desc": "Weekly admin-channel post listing movies that haven't been watched in a long time, to help free up storage. Movies only.",
     "cleanup_channel": "Channel",

@@ -172,6 +172,8 @@
     "show_random_command_desc": "",
     "daily_recommendation_title": "",
     "daily_recommendation_desc": "",
+    "streamystats_url_label": "",
+    "streamystats_url_desc": "",
     "cleanup_advisor_title": "",
     "cleanup_advisor_desc": "",
     "cleanup_channel": "",

@@ -244,6 +244,8 @@
     "show_random_command_desc": "Zufälligen Film oder Serie aus Jellyfin anzeigen",
     "daily_recommendation_title": "Tägliche Empfehlung aktivieren",
     "daily_recommendation_desc": "Täglich eine Empfehlung aus deiner Jellyfin-Library in einen Discord-Channel senden.",
+    "streamystats_url_label": "Streamystats URL",
+    "streamystats_url_desc": "URL deiner selbst gehosteten Streamystats-Instanz. Wenn gesetzt, verwendet der /foryou-Befehl Vektor-Ähnlichkeitsempfehlungen aus deiner Watch-History. Der Befehl wird in Discord ausgeblendet, wenn dieses Feld leer ist.",
     "cleanup_advisor_title": "Cleanup-Advisor aktivieren",
     "cleanup_advisor_desc": "Wöchentlicher Admin-Channel-Post mit Filmen, die lange nicht mehr angeschaut wurden – zur Storage-Optimierung. Nur Filme.",
     "cleanup_channel": "Kanal",

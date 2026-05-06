@@ -810,7 +810,23 @@
                       <p class="form-text" style="margin-bottom: 1.5rem;">
                         <span data-i18n="config.misc_desc">Optional settings to enhance your bot experience.</span>
                       </p>
-                      
+
+                      <!-- Streamystats Section -->
+                      <div class="form-group" style="padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
+                        <label for="STREAMYSTATS_URL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.streamystats_url_label">Streamystats URL</label>
+                        <input
+                          type="url"
+                          id="STREAMYSTATS_URL"
+                          name="STREAMYSTATS_URL"
+                          class="form-control"
+                          placeholder="http://localhost:3000"
+                          style="margin-bottom: 0.5rem;"
+                        />
+                        <div class="form-text">
+                          <span data-i18n="config.streamystats_url_desc">URL of your self-hosted Streamystats instance. When set, the <strong>/foryou</strong> command uses vector-similarity recommendations from your watch history instead of TMDB. The command is hidden from Discord when this is empty.</span>
+                        </div>
+                      </div>
+
                       <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="AUTO_START_BOT" name="AUTO_START_BOT" />

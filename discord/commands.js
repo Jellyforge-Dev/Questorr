@@ -144,9 +144,12 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
-    new SlashCommandBuilder()
-      .setName("foryou")
-      .setDescription("Personalized recommendations based on what you've watched on Jellyfin"),
+    // /foryou is only registered when Streamystats is configured
+    ...(process.env.STREAMYSTATS_URL ? [
+      new SlashCommandBuilder()
+        .setName("foryou")
+        .setDescription("Personalized recommendations powered by your Streamystats watch history"),
+    ] : []),
     new SlashCommandBuilder()
       .setName("discover")
       .setDescription("Discover movies or TV shows by genre, year, and rating")
