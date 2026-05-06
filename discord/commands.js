@@ -19,6 +19,9 @@ export function getCommands() {
 
   return [
     new SlashCommandBuilder()
+      .setName("help")
+      .setDescription("Show all available commands and quick-action buttons"),
+    new SlashCommandBuilder()
       .setName("search")
       .setDescription("Search for a movie/TV show (you can request it later)")
       .addStringOption((opt) =>

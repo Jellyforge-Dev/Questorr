@@ -6,6 +6,8 @@ import { handleUpcomingCommand } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleForYouCommand } from "./commands/foryou.js";
+import { handleHelpCommand } from "./commands/help.js";
+import { handleWizardButton } from "./handlers/wizardButton.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -62,6 +64,9 @@ export function registerInteractions(client) {
 
       // ─── Buttons ───────────────────────────────────────────────────
       if (interaction.isButton()) {
+        if (interaction.customId.startsWith("wizard_")) {
+          return handleWizardButton(interaction);
+        }
         if (interaction.customId.startsWith("status_request_btn|")) {
           return handleStatusRequestButton(interaction);
         }
@@ -99,6 +104,11 @@ export function registerInteractions(client) {
       if (interaction.isCommand()) {
         // Track command usage
         trackCommand(interaction.commandName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
+
+        // /help works without backend config — handle BEFORE the gate below
+        if (interaction.commandName === "help") {
+          return handleHelpCommand(interaction);
+        }
 
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
           return interaction.reply({
