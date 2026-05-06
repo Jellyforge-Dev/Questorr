@@ -3009,6 +3009,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const postHelpChanSel = document.getElementById("post-help-channel-id");
         populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "post-help-channel-id");
 
+        // Generic fallback: populate any [data-channel-select="true"] elements not yet handled above
+        document.querySelectorAll("[data-channel-select='true']").forEach(sel => {
+          if (sel.options.length > 1) return; // already populated — skip
+          sel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Kanal auswählen'} —</option>`;
+          data.channels.forEach((channel) => {
+            const option = document.createElement("option");
+            option.value = channel.id;
+            const icon = channel.type === "announcement" ? " 📢" : channel.type === "forum-thread" ? " 🧵" : "";
+            option.textContent = `#${channel.name}${icon}`;
+            sel.appendChild(option);
+          });
+          const sv = sel.dataset.savedValue;
+          if (sv) sel.value = sv;
+        });
+
         // Also populate root-folder channel dropdowns if any exist
         document.querySelectorAll(".root-folder-channel-select").forEach((sel) => {
           const savedVal = sel.dataset.savedValue || sel.value;
