@@ -148,7 +148,17 @@ export function getCommands() {
     ...(process.env.JELLYFIN_BASE_URL && process.env.JELLYFIN_API_KEY ? [
       new SlashCommandBuilder()
         .setName("foryou")
-        .setDescription("Personalized movie recommendations based on your Jellyfin watch history"),
+        .setDescription("Personalized recommendations based on your Jellyfin watch history")
+        .addStringOption((opt) =>
+          opt
+            .setName("filter")
+            .setDescription("Filter results")
+            .setRequired(false)
+            .addChoices(
+              { name: "🌐 All recommendations (request what's missing)", value: "all" },
+              { name: "✅ Only available in library", value: "available" }
+            )
+        ),
     ] : []),
     new SlashCommandBuilder()
       .setName("discover")

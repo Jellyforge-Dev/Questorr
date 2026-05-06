@@ -69,6 +69,10 @@ export async function handleForYouCommand(interaction) {
   const jfKey = process.env.JELLYFIN_API_KEY;
   const jfBase = process.env.JELLYFIN_BASE_URL;
 
+  // Filter mode: "all" (default, includes missing items with Request button)
+  // or "available" (only library items)
+  const filterMode = interaction.options?.getString?.("filter") || "all";
+
   if (!tmdbKey || !jfKey || !jfBase) {
     return interaction.editReply({ content: t("command_config_missing") });
   }
@@ -145,14 +149,16 @@ export async function handleForYouCommand(interaction) {
       return interaction.editReply({ content: t("foryou_no_recommendations") });
     }
 
-    // Step 5: take top 5 by aggregated score
-    const top = [...aggregated.values()]
+    // Step 5: take more candidates than needed when filtering to library-only,
+    // so we can drop the unavailable ones and still surface 5 results.
+    const candidateCount = filterMode === "available" ? 25 : 5;
+    const candidates = [...aggregated.values()]
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, candidateCount);
 
     // Step 6: enrich with Jellyfin availability + Seerr status
-    const enriched = await Promise.all(
-      top.map(async ({ item, type, sourceTitle }) => {
+    const allEnriched = await Promise.all(
+      candidates.map(async ({ item, type, sourceTitle }) => {
         const id = String(item.id);
         const title = item.title || item.name || "Unknown";
         const year = (item.release_date || item.first_air_date || "").substring(0, 4);
@@ -184,6 +190,19 @@ export async function handleForYouCommand(interaction) {
         };
       })
     );
+
+    // Apply filter, then take top 5
+    const enriched = filterMode === "available"
+      ? allEnriched.filter((r) => r.available).slice(0, 5)
+      : allEnriched.slice(0, 5);
+
+    if (enriched.length === 0) {
+      return interaction.editReply({
+        content: filterMode === "available"
+          ? t("foryou_no_library_matches")
+          : t("foryou_no_recommendations"),
+      });
+    }
 
     // Build embed
     const lines = enriched.map((rec, i) => {
