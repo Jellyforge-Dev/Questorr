@@ -811,6 +811,8 @@ export async function fetchJellyfinRecommendations(
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Movies/Recommendations";
 
+    logger.info(`[Jellyfin] Fetching /Movies/Recommendations for user ${jellyfinUserId} (itemLimit=${itemLimit}, categoryLimit=${categoryLimit})`);
+
     const response = await withRetry(
       () => axios.get(safeBase.href, {
         headers: { "X-MediaBrowser-Token": apiKey },
@@ -820,12 +822,13 @@ export async function fetchJellyfinRecommendations(
           categoryLimit,
           fields: "ProductionYear,CommunityRating",
         },
-        timeout: 8000,
+        timeout: 45000, // Recommendation endpoint can be slow on large libraries
       }),
       { label: `Jellyfin recommendations for ${jellyfinUserId}` }
     );
 
     const categories = Array.isArray(response.data) ? response.data : [];
+    logger.info(`[Jellyfin] /Movies/Recommendations returned ${categories.length} categories`);
     const seen = new Set();
     const results = [];
 

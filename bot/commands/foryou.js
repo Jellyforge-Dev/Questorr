@@ -58,8 +58,11 @@ export async function handleForYouCommand(interaction) {
       return interaction.editReply({ content: t("foryou_no_jellyfin_user") });
     }
 
-    // Fetch personalized recommendations from Jellyfin
+    // Fetch personalized recommendations from Jellyfin.
+    // Smaller categoryLimit/itemLimit = faster response on large libraries.
     const recs = await fetchJellyfinRecommendations(jellyfinUserId, jfKey, jfBase, {
+      categoryLimit: 3,
+      itemLimit: 5,
       totalLimit: 5,
     });
 
