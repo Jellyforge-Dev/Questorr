@@ -144,11 +144,11 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
-    // /foryou is only registered when Streamystats is configured
-    ...(process.env.STREAMYSTATS_URL ? [
+    // /foryou registered whenever Jellyfin is configured (uses Jellyfin native recommendations)
+    ...(process.env.JELLYFIN_BASE_URL && process.env.JELLYFIN_API_KEY ? [
       new SlashCommandBuilder()
         .setName("foryou")
-        .setDescription("Personalized recommendations powered by your Streamystats watch history"),
+        .setDescription("Personalized movie recommendations based on your Jellyfin watch history"),
     ] : []),
     new SlashCommandBuilder()
       .setName("discover")

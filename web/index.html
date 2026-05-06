@@ -1068,55 +1068,6 @@
                         </div>
                       </div>
 
-                      <!-- Streamystats Section -->
-                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
-                        <label for="STREAMYSTATS_URL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.streamystats_url_label">Streamystats URL</label>
-                        <input
-                          type="url"
-                          id="STREAMYSTATS_URL"
-                          name="STREAMYSTATS_URL"
-                          class="form-control"
-                          placeholder="http://localhost:3000"
-                          style="margin-bottom: 0.5rem;"
-                        />
-                        <div class="form-text" style="margin-bottom: 1rem;">
-                          <span data-i18n="config.streamystats_url_desc">URL of your self-hosted Streamystats instance. When set, the <strong>/foryou</strong> command uses vector-similarity recommendations from your watch history. The command is hidden from Discord when this is empty.</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
-                          <div>
-                            <label for="STREAMYSTATS_USER" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.streamystats_user_label">Jellyfin Username</label>
-                            <input
-                              type="text"
-                              id="STREAMYSTATS_USER"
-                              name="STREAMYSTATS_USER"
-                              class="form-control"
-                              placeholder="admin"
-                              autocomplete="off"
-                            />
-                          </div>
-                          <div>
-                            <label for="STREAMYSTATS_PASS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.streamystats_pass_label">Jellyfin Password</label>
-                            <input
-                              type="password"
-                              id="STREAMYSTATS_PASS"
-                              name="STREAMYSTATS_PASS"
-                              class="form-control"
-                              placeholder="••••••••"
-                              autocomplete="new-password"
-                            />
-                          </div>
-                        </div>
-                        <div class="form-text" style="margin-top: 0.5rem;">
-                          <span data-i18n="config.streamystats_creds_desc">Jellyfin login credentials for Streamystats authentication. Use the same account you log into Streamystats with (admin recommended).</span>
-                        </div>
-                        <div style="margin-top: 1rem;">
-                          <button type="button" id="test-streamystats-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <i class="bi bi-link-45deg"></i> <span data-i18n="config.streamystats_test_btn">Test connection</span>
-                          </button>
-                          <span id="test-streamystats-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
-                        </div>
-                      </div>
-
                       <!-- Cleanup Advisor Section -->
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">

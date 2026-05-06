@@ -1,23 +1,21 @@
 /**
- * /foryou — personalized recommendations powered by Streamystats.
+ * /foryou — personalized recommendations powered by Jellyfin's native engine.
  *
- * Streamystats builds vector embeddings from Jellyfin watch history and finds
- * library items that are most similar to what the user has already watched.
+ * Calls Jellyfin's `/Movies/Recommendations` endpoint, which uses the user's actual
+ * watch history (recently played, liked items, directors/actors) to surface library
+ * items they haven't watched yet. Pure server-side — no TMDB roundtrip, no third
+ * party.
  *
  * User identity chain:
  *   Discord ID → USER_MAPPINGS → Seerr user ID → Seerr API → Jellyfin user ID
  *
- * If the user has no mapping, server-wide recommendations are shown (admin's
- * watch history used) along with a prompt to set up user mapping.
- *
- * The command is only registered in Discord when STREAMYSTATS_URL is configured
- * (see discord/commands.js).
+ * Without a Jellyfin user ID we tell the user to set up the mapping in Step 5.
+ * Movies only — Jellyfin's recommendation engine is movie-focused.
  */
 
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
-import { resolveJellyfinUserId } from "../../api/jellyfin.js";
-import { fetchStreamystatsRecommendations } from "../../api/streamystats.js";
+import { resolveJellyfinUserId, fetchJellyfinRecommendations } from "../../api/jellyfin.js";
 import { buildJellyfinUrl, getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
@@ -37,11 +35,8 @@ export async function handleForYouCommand(interaction) {
 
   const jfKey = process.env.JELLYFIN_API_KEY;
   const jfBase = process.env.JELLYFIN_BASE_URL;
-  const streamystatsUrl = process.env.STREAMYSTATS_URL;
-  const streamystatsUser = process.env.STREAMYSTATS_USER;
-  const streamystatsPass = process.env.STREAMYSTATS_PASS;
 
-  if (!jfKey || !jfBase || !streamystatsUrl || !streamystatsUser || !streamystatsPass) {
+  if (!jfKey || !jfBase) {
     return interaction.editReply({ content: t("command_config_missing") });
   }
 
@@ -51,33 +46,24 @@ export async function handleForYouCommand(interaction) {
     const seerrApiKey = getSeerrApiKey();
     const userMappings = getUserMappings();
 
-    // Resolve Jellyfin user ID via Seerr chain: Discord → USER_MAPPINGS → Seerr → Jellyfin
+    // Resolve Jellyfin user ID via Seerr chain
     const jellyfinUserId =
       seerrUrl && seerrApiKey
         ? await resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey)
         : null;
 
-    logger.info(
-      `[foryou] Discord ${discordId} → jellyfinUserId=${jellyfinUserId ?? "none"}`
-    );
+    logger.info(`[foryou] Discord ${discordId} → jellyfinUserId=${jellyfinUserId ?? "none"}`);
 
-    // Fetch recommendations from Streamystats.
-    // Without jellyfinUserId the Streamystats endpoint uses the authenticated user's
-    // data. We still show results but add a mapping hint.
-    const recs = await fetchStreamystatsRecommendations(
-      jfBase,
-      streamystatsUrl,
-      streamystatsUser,
-      streamystatsPass,
-      {
-        jellyfinUserId,
-        limit: 5,
-        type: "all",
-        range: "all",
-      }
-    );
+    if (!jellyfinUserId) {
+      return interaction.editReply({ content: t("foryou_no_jellyfin_user") });
+    }
 
-    logger.info(`[foryou] Streamystats returned ${recs.length} recommendations`);
+    // Fetch personalized recommendations from Jellyfin
+    const recs = await fetchJellyfinRecommendations(jellyfinUserId, jfKey, jfBase, {
+      totalLimit: 5,
+    });
+
+    logger.info(`[foryou] Jellyfin returned ${recs.length} recommendations for ${jellyfinUserId}`);
 
     if (recs.length === 0) {
       return interaction.editReply({ content: t("foryou_no_recommendations") });
@@ -87,29 +73,11 @@ export async function handleForYouCommand(interaction) {
     const lines = recs.map((rec, i) => {
       const yearStr = rec.year ? ` (${rec.year})` : "";
       const ratingStr = rec.rating ? ` ⭐ ${rec.rating.toFixed(1)}` : "";
-
-      // Show reason: "basedOn" list takes priority over the text reason
-      let contextLine = "";
-      if (rec.basedOn?.length) {
-        contextLine = `\n   *${t("foryou_because_watched")} ${rec.basedOn.join(", ")}*`;
-      } else if (rec.reason) {
-        contextLine = `\n   *${rec.reason}*`;
-      }
-
-      return `${i + 1}. ✅ **${rec.name}${yearStr}**${ratingStr}${contextLine}`;
+      const reasonStr = rec.reason ? `\n   *${t("foryou_because_watched")} ${rec.reason}*` : "";
+      return `${i + 1}. ✅ **${rec.name}${yearStr}**${ratingStr}${reasonStr}`;
     });
 
-    // Subtitle
-    const subtitle = jellyfinUserId
-      ? t("foryou_based_on_streamystats")
-      : t("foryou_based_on_server");
-
-    let description = `${subtitle}\n\n${lines.join("\n")}`;
-
-    // Show mapping hint when there's no user-specific data
-    if (!jellyfinUserId) {
-      description = `${t("foryou_no_jellyfin_user")}\n\n${description}`;
-    }
+    const description = `${t("foryou_based_on_jellyfin")}\n\n${lines.join("\n")}`;
 
     const embed = new EmbedBuilder()
       .setColor("#a6e3a1")
@@ -117,11 +85,11 @@ export async function handleForYouCommand(interaction) {
       .setDescription(description)
       .setTimestamp();
 
-    // Watch buttons — all Streamystats recommendations are items in the Jellyfin library
+    // Watch buttons — all recs are in the Jellyfin library
     const buttons = [];
     for (const rec of recs) {
-      if (!rec.jellyfinId) continue;
-      const watchUrl = buildJellyfinUrl(rec.jellyfinId);
+      if (!rec.id) continue;
+      const watchUrl = buildJellyfinUrl(rec.id);
       if (watchUrl && isValidUrl(watchUrl)) {
         buttons.push(
           new ButtonBuilder()
@@ -139,13 +107,6 @@ export async function handleForYouCommand(interaction) {
 
     return interaction.editReply(replyOpts);
   } catch (err) {
-    if (err?.response?.status === 401) {
-      logger.error(
-        "[foryou] Streamystats auth failed (401):",
-        typeof err.response.data === "string" ? err.response.data.slice(0, 300) : err.response.data
-      );
-      return interaction.editReply({ content: t("foryou_auth_failed") });
-    }
     logger.error("[foryou] command error:", err);
     return interaction.editReply({ content: t("foryou_error") });
   }
