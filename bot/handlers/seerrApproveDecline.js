@@ -50,7 +50,8 @@ export async function handleSeerrApproveDecline(interaction) {
           {},
           discordClient,
           null,
-          null
+          null,
+          { tmdbId: apiResult?.media?.tmdbId }
         );
       }
     } catch (dmErr) {

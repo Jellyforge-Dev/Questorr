@@ -463,103 +463,151 @@ document.addEventListener("DOMContentLoaded", async () => {
     return true;
   }
 
+  // Channel = posted in the Discord channel; DM = direct-message to the requester.
+  // Each event renders TWO sub-rows so users can configure both independently.
+  // /random and /status are command embeds, not webhook events \u2014 they have no DM
+  // counterpart, so we skip the DM sub-row for those.
+  const VARIANTS = [
+    { key: "CHANNEL", label: "Channel", envSuffix: ""   },
+    { key: "DM",      label: "DM",      envSuffix: "_DM" },
+  ];
+  const COMMAND_ONLY_EVENTS = new Set(["RANDOM", "STATUS"]);
+
   function buildNotifButtonsTable(configData, resetToGlobal) {
     const tbody = document.getElementById("notif-buttons-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
 
     for (const evt of NOTIF_EVENTS) {
-      const perEventKey = "NOTIF_BUTTONS_" + evt.key;
-      const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
+      const variantsForEvent = COMMAND_ONLY_EVENTS.has(evt.key)
+        ? [VARIANTS[0]]   // only Channel for command-only entries
+        : VARIANTS;
 
-      // Parse saved per-event value
-      let checkedMap = null;
-      if (raw) {
-        const parts = raw.toLowerCase().split(",").map(s => s.trim());
-        const on  = parts.filter(p => !p.startsWith("-"));
-        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
-        checkedMap = {};
-        for (const b of BTN_DEFS) {
-          if (on.includes(b.key))       checkedMap[b.key] = true;
-          else if (off.includes(b.key)) checkedMap[b.key] = false;
-          else                          checkedMap[b.key] = globalBtnDefault(configData, b);
-        }
-      }
+      variantsForEvent.forEach((variant, idx) => {
+        const perEventKey = "NOTIF_BUTTONS_" + evt.key + variant.envSuffix;
+        const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
 
-      const tr = document.createElement("tr");
-      tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
-
-      const tdLabel = document.createElement("td");
-      tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
-      tdLabel.textContent = evt.label;
-      tr.appendChild(tdLabel);
-
-      for (const btn of BTN_DEFS) {
-        const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.dataset.event = evt.key;
-        cb.dataset.btn   = btn.key;
-        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
-        cb.checked = checkedMap ? checkedMap[btn.key] : globalBtnDefault(configData, btn);
-
-        cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
-        td.appendChild(cb);
-        tr.appendChild(td);
-      }
-      // Test button column
-      const tdTest = document.createElement("td");
-      tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem;";
-      const testBtn = document.createElement("button");
-      testBtn.type = "button";
-      testBtn.textContent = "\u25B6";
-      testBtn.title = "Send test to admin channel";
-      testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
-      testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
-      testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
-      testBtn.addEventListener("click", (function(evtKey, btn) {
-        return async function() {
-          btn.disabled = true;
-          btn.textContent = "\u2026";
-          try {
-            const r = await fetch("/api/test-notification-buttons", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ eventType: evtKey }),
-            });
-            const d = await r.json();
-            btn.textContent = d.success ? "\u2705" : "\u274C";
-            if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
-          } catch (e) {
-            btn.textContent = "\u274C";
+        // Parse saved per-event value into checkbox state
+        let checkedMap = null;
+        if (raw) {
+          const parts = raw.toLowerCase().split(",").map(s => s.trim());
+          const on  = parts.filter(p => !p.startsWith("-"));
+          const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+          checkedMap = {};
+          for (const b of BTN_DEFS) {
+            if (on.includes(b.key))       checkedMap[b.key] = true;
+            else if (off.includes(b.key)) checkedMap[b.key] = false;
+            else                          checkedMap[b.key] = globalBtnDefault(configData, b);
           }
-          setTimeout(function() { btn.disabled = false; btn.textContent = "\u25B6"; }, 3000);
-        };
-      })(evt.key, testBtn));
-      tdTest.appendChild(testBtn);
-      tr.appendChild(tdTest);
+        }
+        // Default state when no override saved:
+        //  - Channel: global default
+        //  - DM:      always OFF (DMs default to no buttons unless explicitly enabled)
+        //  - DM for MEDIA_AVAILABLE: inherit Channel defaults for backward compat
+        const defaultDmInheritsChannel = evt.key === "MEDIA_AVAILABLE";
 
-      tbody.appendChild(tr);
+        const tr = document.createElement("tr");
+        tr.style.cssText = idx === variantsForEvent.length - 1
+          ? "border-bottom: 0.5px solid var(--surface1);"
+          : "";
+
+        // Event label only on first sub-row, with rowspan
+        if (idx === 0) {
+          const tdLabel = document.createElement("td");
+          tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap; vertical-align: middle;";
+          if (variantsForEvent.length > 1) tdLabel.rowSpan = variantsForEvent.length;
+          tdLabel.textContent = evt.label;
+          tr.appendChild(tdLabel);
+        }
+
+        // Variant column
+        const tdVariant = document.createElement("td");
+        tdVariant.style.cssText = "text-align: center; padding: 0.55rem 0.4rem; font-size: 0.78rem; color: var(--subtext0);";
+        tdVariant.textContent = variant.label;
+        tr.appendChild(tdVariant);
+
+        for (const btn of BTN_DEFS) {
+          const td = document.createElement("td");
+          td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.dataset.event   = evt.key;
+          cb.dataset.variant = variant.key;
+          cb.dataset.btn     = btn.key;
+          cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
+          if (checkedMap) {
+            cb.checked = checkedMap[btn.key];
+          } else if (variant.key === "DM" && !defaultDmInheritsChannel) {
+            cb.checked = false;
+          } else {
+            cb.checked = globalBtnDefault(configData, btn);
+          }
+
+          cb.addEventListener("change", () => saveNotifButtonsRow(evt.key, variant.key));
+          td.appendChild(cb);
+          tr.appendChild(td);
+        }
+
+        // Test button column \u2014 only on first sub-row, spans both
+        if (idx === 0) {
+          const tdTest = document.createElement("td");
+          tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem; vertical-align: middle;";
+          if (variantsForEvent.length > 1) tdTest.rowSpan = variantsForEvent.length;
+          const testBtn = document.createElement("button");
+          testBtn.type = "button";
+          testBtn.textContent = "\u25B6";
+          testBtn.title = "Send test to admin channel";
+          testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
+          testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
+          testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
+          testBtn.addEventListener("click", (function(evtKey, btn) {
+            return async function() {
+              btn.disabled = true;
+              btn.textContent = "\u2026";
+              try {
+                const r = await fetch("/api/test-notification-buttons", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ eventType: evtKey }),
+                });
+                const d = await r.json();
+                btn.textContent = d.success ? "\u2705" : "\u274C";
+                if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
+              } catch (e) {
+                btn.textContent = "\u274C";
+              }
+              setTimeout(function() { btn.disabled = false; btn.textContent = "\u25B6"; }, 3000);
+            };
+          })(evt.key, testBtn));
+          tdTest.appendChild(testBtn);
+          tr.appendChild(tdTest);
+        }
+
+        tbody.appendChild(tr);
+      });
     }
 
-    // If reset: write empty values so save will clear per-event config
+    // If reset: write empty values for both variants so save will clear per-event config
     if (resetToGlobal) {
       for (const evt of NOTIF_EVENTS) {
-        saveNotifButtonsRow(evt.key);
+        const variantsForEvent = COMMAND_ONLY_EVENTS.has(evt.key) ? [VARIANTS[0]] : VARIANTS;
+        for (const v of variantsForEvent) saveNotifButtonsRow(evt.key, v.key);
       }
     }
   }
 
-  function saveNotifButtonsRow(eventKey) {
-    const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
+  function saveNotifButtonsRow(eventKey, variantKey = "CHANNEL") {
+    const cbs = document.querySelectorAll(
+      `[data-event="${eventKey}"][data-variant="${variantKey}"]`
+    );
     const parts = [];
     cbs.forEach(cb => {
       parts.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
     });
-    const envKey = "NOTIF_BUTTONS_" + eventKey;
+    const variant = VARIANTS.find(v => v.key === variantKey) || VARIANTS[0];
+    const envKey = "NOTIF_BUTTONS_" + eventKey + variant.envSuffix;
     let inp = document.getElementById(envKey);
     if (!inp) {
       inp = document.createElement("input");

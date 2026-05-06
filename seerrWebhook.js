@@ -532,12 +532,12 @@ async function processEvent(data, eventType, cfg, client) {
         logger.error(`[SEERR WEBHOOK] ❌ Failed to send to admin channel: ${err.message}`);
       }
     }
-    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
     return;
   }
 
   if (eventType === "MEDIA_DECLINED") {
-    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
     return;
   }
 
@@ -589,7 +589,7 @@ async function processEvent(data, eventType, cfg, client) {
   }
 
   // DM requester for personal events
-  await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+  await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
 }
 
 // ─── Jellyfin Item Lookup ─────────────────────────────────────────────────────
@@ -704,15 +704,19 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
-function getEventButtons(eventType) {
+function getEventButtons(eventType, variant = "CHANNEL") {
   // Per-event button config: NOTIF_BUTTONS_MEDIA_AVAILABLE=seerr,watch,-letterboxd,-imdb
   // Positive = always show, -negative = always hide, missing = use global toggle
-  const envKey = "NOTIF_BUTTONS_" + eventType;
+  // For DM variant: NOTIF_BUTTONS_MEDIA_AVAILABLE_DM with the same format.
+  // DM resolution order: NOTIF_BUTTONS_<EVENT>_DM → all OFF (DMs default to no buttons,
+  // except MEDIA_AVAILABLE which inherits CHANNEL config for backward compat).
+  const isDm = variant === "DM";
+  const envKey = isDm ? `NOTIF_BUTTONS_${eventType}_DM` : `NOTIF_BUTTONS_${eventType}`;
   const custom = process.env[envKey];
-  if (custom !== undefined && custom !== "") {
-    const parts = custom.toLowerCase().split(",").map(s => s.trim());
-    const on  = parts.filter(p => !p.startsWith("-"));
-    const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+  const parseCustom = (raw) => {
+    const parts = raw.toLowerCase().split(",").map((s) => s.trim());
+    const on  = parts.filter((p) => !p.startsWith("-"));
+    const off = parts.filter((p) =>  p.startsWith("-")).map((p) => p.slice(1));
     const glob = {
       showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
       showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
@@ -725,8 +729,20 @@ function getEventButtons(eventType) {
       showLetterboxd: on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : glob.showLetterboxd,
       showImdb:       on.includes("imdb")       ? true : off.includes("imdb")       ? false : glob.showImdb,
     };
+  };
+
+  if (custom !== undefined && custom !== "") return parseCustom(custom);
+
+  if (isDm) {
+    // Backward-compat: MEDIA_AVAILABLE DMs historically inherited CHANNEL buttons.
+    // Other events default to no buttons in DMs.
+    if (eventType === "MEDIA_AVAILABLE") {
+      return getEventButtons(eventType, "CHANNEL");
+    }
+    return { showSeerr: false, showWatch: false, showLetterboxd: false, showImdb: false };
   }
-  // Fall back to global toggles
+
+  // Channel default: global toggles
   return {
     showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
     showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
@@ -735,10 +751,10 @@ function getEventButtons(eventType) {
   };
 }
 
-function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
+function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, variant = "CHANNEL") {
   const components = [];
 
-  const { showSeerr, showWatch, showImdb } = getEventButtons(eventType);
+  const { showSeerr, showWatch, showImdb, showLetterboxd } = getEventButtons(eventType, variant);
 
   // View on Seerr
   if (showSeerr) {
@@ -767,7 +783,6 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   }
 
   // Letterboxd – movies only
-  const { showLetterboxd } = getEventButtons(eventType);
   if (showLetterboxd && imdbId && mediaType === "movie") {
     const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     if (isValidUrl(lboxdUrl)) {
@@ -809,7 +824,19 @@ const DM_EVENT_META = {
   MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71" },
 };
 
-export async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
+/**
+ * Send a status DM to the requester.
+ *
+ * @param {Object} data       Webhook payload (or synthetic equivalent)
+ * @param {string} eventType  MEDIA_PENDING / MEDIA_APPROVED / etc.
+ * @param {Object} cfg        Routing config (currently unused inside DM, kept for parity)
+ * @param {Object} client     Discord client
+ * @param {Object} embed      Original channel embed (used for thumbnail/image inheritance)
+ * @param {Object} _legacyButtons  Ignored — DM buttons are now built per-event from
+ *                                 NOTIF_BUTTONS_<EVENT>_DM. Kept for signature stability.
+ * @param {Object} ctx        Optional { tmdbId, imdbId, jellyfinItemId } to enable rich link buttons.
+ */
+export async function sendRequesterDm(data, eventType, cfg, client, embed, _legacyButtons, ctx = {}) {
   const meta = DM_EVENT_META[eventType];
   if (!meta) return;
 
@@ -822,14 +849,15 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, butto
   try {
     const user = await client.users.fetch(discordId);
     const title = data.subject || "Questorr Notification";
-    const mediaTypeLabel = data.media?.media_type === "movie" ? t("field_type_movie") : t("field_type_tv");
+    const mediaType = data.media?.media_type;
+    const mediaTypeLabel = mediaType === "movie" ? t("field_type_movie") : t("field_type_tv");
     const footerText = process.env.EMBED_FOOTER_TEXT;
 
     const authorText = t(`dm_${meta.dmKey}_author`);
     const description = t(`dm_${meta.dmKey}_description`, { title });
 
     const fields = [];
-    if (data.media?.media_type) {
+    if (mediaType) {
       fields.push({ name: t("dm_field_type"), value: mediaTypeLabel, inline: true });
     }
     if (eventType === "MEDIA_DECLINED" && data.request?.comment) {
@@ -848,8 +876,14 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, butto
     if (embed?.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
     if (embed?.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
 
+    // Build DM-specific buttons via the per-event "DM" variant config.
+    const tmdbId = ctx.tmdbId ?? data.media?.tmdbId;
+    const imdbId = ctx.imdbId ?? null;
+    const jellyfinItemId = ctx.jellyfinItemId ?? null;
+    const dmButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "DM");
+
     const dmOptions = { embeds: [dmEmbed] };
-    if (eventType === "MEDIA_AVAILABLE" && buttons) dmOptions.components = [buttons];
+    if (dmButtons) dmOptions.components = [dmButtons];
 
     await user.send(dmOptions);
     logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);

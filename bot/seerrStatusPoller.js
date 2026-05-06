@@ -134,7 +134,7 @@ async function poll(seedOnly) {
           },
         };
         try {
-          await sendRequesterDm(synth, eventType, {}, botState.discordClient, null, null);
+          await sendRequesterDm(synth, eventType, {}, botState.discordClient, null, null, { tmdbId });
           markNotified("approval", dedupKey);
           logger.info(
             `[SEERR Status Poller] Detected pending→${
