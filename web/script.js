@@ -1582,6 +1582,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Push (register) Slash Commands button
+  const pushCommandsBtn = document.getElementById("push-commands-btn");
+  const pushCommandsStatus = document.getElementById("push-commands-status");
+  if (pushCommandsBtn) {
+    pushCommandsBtn.addEventListener("click", async () => {
+      pushCommandsBtn.disabled = true;
+      if (pushCommandsStatus) pushCommandsStatus.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/push-commands", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (pushCommandsStatus) pushCommandsStatus.textContent = "✅ " + (t("config.push_commands_ok") || data.message);
+          showToast(t("config.push_commands_ok") || data.message);
+        } else {
+          if (pushCommandsStatus) pushCommandsStatus.textContent = "❌ " + (t("config.push_commands_fail") || data.message);
+          showToast(data.message || t("config.push_commands_fail") || "Fehler.");
+        }
+      } catch (err) {
+        if (pushCommandsStatus) pushCommandsStatus.textContent = "❌ " + (t("config.push_commands_fail") || "Fehler");
+        showToast(t("config.push_commands_fail") || "Fehler.");
+      } finally {
+        pushCommandsBtn.disabled = false;
+        setTimeout(() => { if (pushCommandsStatus) pushCommandsStatus.textContent = ""; }, 5000);
+      }
+    });
+  }
+
   // Test Seerr Webhook button
   const testSeerrWebhookBtn = document.getElementById("test-seerr-webhook-btn");
   const testSeerrWebhookStatus = document.getElementById("test-seerr-webhook-status");
@@ -2825,6 +2858,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const episodeChannelSelect = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID");
     const seasonChannelSelect = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID");
     const dailyRandomPickChannelSelect = document.getElementById("DAILY_RANDOM_PICK_CHANNEL_ID");
+    const cleanupChannelSelect = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
 
     if (!guildId) {
       if (channelSelect) {
@@ -2843,6 +2877,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         dailyRandomPickChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
+      if (cleanupChannelSelect) {
+        cleanupChannelSelect.innerHTML =
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+      }
       return;
     }
 
@@ -2855,6 +2893,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (seasonChannelSelect) {
       seasonChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    }
+    if (cleanupChannelSelect) {
+      cleanupChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (dailyRandomPickChannelSelect) {
       dailyRandomPickChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
@@ -2977,6 +3018,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const dailyRecChannelSelect = document.getElementById("DAILY_RECOMMENDATION_CHANNEL_ID");
         populateSeerrSelect(dailyRecChannelSelect, `— ${t('config.select_channel') || 'Select a channel'} —`, "DAILY_RECOMMENDATION_CHANNEL_ID");
 
+        // Populate Cleanup Advisor channel select
+        const cleanupChanSel = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
+        populateSeerrSelect(cleanupChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "CLEANUP_ADVISOR_CHANNEL_ID");
+
         // Also populate root-folder channel dropdowns if any exist
         document.querySelectorAll(".root-folder-channel-select").forEach((sel) => {
           const savedVal = sel.dataset.savedValue || sel.value;
@@ -3007,6 +3052,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           dailyRandomPickChannelSelect.innerHTML =
             `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
+        if (cleanupChannelSelect) {
+          cleanupChannelSelect.innerHTML =
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+        }
       }
     } catch (error) {
       if (channelSelect) {
@@ -3025,6 +3074,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         dailyRandomPickChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
+      if (cleanupChannelSelect) {
+        cleanupChannelSelect.innerHTML =
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+      }
     }
   }
 
@@ -3039,7 +3092,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const episodeChannelSelect = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID");
         const seasonChannelSelect = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID");
         const dailyRandomPickChannelSelect = document.getElementById("DAILY_RANDOM_PICK_CHANNEL_ID");
-        
+        const cleanupChannelSelect2 = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
+
         if (channelSelect) {
           channelSelect.innerHTML =
             '<option value="">Select a server first...</option>';
@@ -3054,6 +3108,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+        }
+        if (cleanupChannelSelect2) {
+          cleanupChannelSelect2.innerHTML =
             `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }

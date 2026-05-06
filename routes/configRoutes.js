@@ -20,7 +20,10 @@ const NO_CACHE_HEADERS = {
 router.get("/config", authenticateToken, (req, res) => {
   Object.entries(NO_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
   const config = readConfig();
-  res.json(sanitizeConfigForClient(config ?? configTemplate));
+  // Merge template defaults with saved config so new keys always have defaults
+  // even when config.json was created before those keys existed.
+  const merged = { ...configTemplate, ...(config || {}) };
+  res.json(sanitizeConfigForClient(merged));
 });
 
 router.get("/webhook-secret", authenticateToken, (req, res) => {

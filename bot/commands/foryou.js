@@ -58,35 +58,46 @@ export async function handleForYouCommand(interaction) {
     // Step 2: fetch watch history
     let seedItems = [];
     let usedFallback = false;
-    if (jellyfinUserId) {
-      logger.info(`[foryou] Resolved Discord ${discordId} → Jellyfin ${jellyfinUserId}`);
-      seedItems = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 5);
-    }
-    if (seedItems.length === 0) {
-      usedFallback = true;
-      logger.info(`[foryou] No personal history for ${discordId} — using server-wide top-played`);
-      seedItems = await fetchServerTopPlayed(jfKey, jfBase, 5);
-    }
 
-    // Filter to items with TMDB IDs
-    const seeds = seedItems
+    const pickSeeds = (items) => items
       .map((item) => {
-        const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
+        const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb
+          || item.ProviderIds?.TheMovieDb || item.ProviderIds?.themoviedb;
         const type = TYPE_FROM_JF[item.Type] || "movie";
         return tmdbId ? { tmdbId: String(tmdbId), type, title: item.Name } : null;
       })
       .filter(Boolean)
       .slice(0, 3);
 
+    if (jellyfinUserId) {
+      logger.info(`[foryou] Resolved Discord ${discordId} → Jellyfin ${jellyfinUserId}`);
+      seedItems = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 10);
+      logger.info(`[foryou] fetchUserRecentlyPlayed returned ${seedItems.length} items`);
+    }
+
+    let seeds = pickSeeds(seedItems);
+
     if (seeds.length === 0) {
+      usedFallback = true;
+      logger.info(`[foryou] No usable personal history for ${discordId} — trying server-wide top-played`);
+      const topPlayed = await fetchServerTopPlayed(jfKey, jfBase, 20);
+      logger.info(`[foryou] fetchServerTopPlayed returned ${topPlayed.length} items, tmdbIds: ${topPlayed.filter(i => i.ProviderIds?.Tmdb || i.ProviderIds?.TheMovieDb).length} with TMDB ID`);
+      seeds = pickSeeds(topPlayed);
+    }
+
+    if (seeds.length === 0) {
+      logger.warn(`[foryou] All fallbacks exhausted for ${discordId} — no TMDB-mapped items in Jellyfin library`);
       return interaction.editReply({ content: t("foryou_no_recommendations") });
     }
+
+    logger.info(`[foryou] Using ${seeds.length} seed(s): ${seeds.map(s => `${s.title}(${s.tmdbId})`).join(", ")}`);
 
     // Step 3: fetch recommendations in parallel
     // tmdbGetSimilar internally calls TMDB's /recommendations endpoint
     const recArrays = await Promise.all(
       seeds.map((s) => tmdbApi.tmdbGetSimilar(s.tmdbId, s.type, tmdbKey).catch(() => []))
     );
+    logger.info(`[foryou] TMDB rec counts per seed: [${recArrays.map(a => a.length).join(", ")}]`);
 
     // Step 4: aggregate by id, scoring by frequency (number of seeds suggesting it) × vote_average
     const aggregated = new Map(); // tmdbId → { item, score, type }
