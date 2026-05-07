@@ -72,7 +72,8 @@ async function enrichWatchableWithJellyfinIds(requestsOnPage) {
   const jfKey = process.env.JELLYFIN_API_KEY;
   if (!jfBase || !jfKey) return;
   await Promise.all(requestsOnPage.map(async (r) => {
-    if (r.media?.status !== 5) return;
+    // Status 4 = partial (e.g. some seasons), 5 = fully available
+    if (r.media?.status !== 4 && r.media?.status !== 5) return;
     const tmdbId = r.media?.tmdbId;
     const mediaType = r.media?.mediaType || r.type;
     if (!tmdbId || !r._resolvedTitle) return;
@@ -148,15 +149,18 @@ function buildPaginationRow(page, totalPages, filter) {
 function buildWatchRows(requestsOnPage) {
   const buttons = [];
   for (const r of requestsOnPage) {
-    if (r.media?.status !== 5) continue;
+    const status = r.media?.status;
+    if (status !== 4 && status !== 5) continue;
     if (!r._jellyfinItemId) continue;
     const url = buildJellyfinUrl(r._jellyfinItemId);
     if (!url || !isValidUrl(url)) continue;
     const title = r._resolvedTitle || "Unknown";
+    // Partial items get the 🟡 prefix; available items the standard ▶
+    const prefix = status === 4 ? "🟡 ▶" : "▶";
     buttons.push(
       new ButtonBuilder()
         .setStyle(ButtonStyle.Link)
-        .setLabel(`▶ ${title.substring(0, 60)}`)
+        .setLabel(`${prefix} ${title.substring(0, 58)}`)
         .setURL(url)
     );
     if (buttons.length >= 20) break; // 4 rows × 5 buttons

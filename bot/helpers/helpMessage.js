@@ -96,11 +96,6 @@ export function buildHelpComponents() {
       .setLabel(t("wizard_btn_request"))
       .setEmoji("📥"),
     new ButtonBuilder()
-      .setCustomId("wizard_status")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_status"))
-      .setEmoji("❓"),
-    new ButtonBuilder()
       .setCustomId("wizard_recommend")
       .setStyle(ButtonStyle.Secondary)
       .setLabel(t("wizard_btn_recommend"))

@@ -26,8 +26,39 @@ function normalizeStr(s) {
 }
 
 /**
+ * Levenshtein edit distance — number of single-character edits between a and b.
+ * Used as fallback so that letter-swaps like "Pulb Fictoin" → "Pulp Fiction"
+ * are recognised even when no whole words match.
+ */
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, (_, i) => {
+    const row = new Array(n + 1).fill(0);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/**
  * Returns true when the TMDB top result looks different enough from the
  * user's raw input to warrant a "Did you mean X?" prompt.
+ *
+ * Hybrid logic:
+ *   1. Exact / substring match  → no prompt
+ *   2. Word-overlap ≥ 70 %      → no prompt (e.g. "dark knight" vs "The Dark Knight")
+ *   3. Levenshtein-sim ≥ 85 %   → no prompt (close letter-level match)
+ *   Otherwise                  → show prompt (typo or genuine ambiguity)
  */
 export function shouldShowDYM(userInput, topTitle) {
   if (!userInput || !topTitle) return false;
@@ -43,13 +74,20 @@ export function shouldShowDYM(userInput, topTitle) {
 
   // Word-overlap ratio: count how many of the user's words appear in the result
   const wordsA = a.split(" ").filter(w => w.length > 1);
-  if (wordsA.length === 0) return false;
-  const setB = new Set(b.split(" ").filter(w => w.length > 1));
-  const common = wordsA.filter(w => setB.has(w)).length;
-  const overlap = common / wordsA.length;
+  const setB   = new Set(b.split(" ").filter(w => w.length > 1));
+  const overlap = wordsA.length
+    ? wordsA.filter(w => setB.has(w)).length / wordsA.length
+    : 0;
 
-  // Show DYM when fewer than 70 % of the user's words are present in the title
-  return overlap < 0.7;
+  // Levenshtein similarity 0..1
+  const sim = 1 - levenshtein(a, b) / Math.max(a.length, b.length, 1);
+
+  // Show DYM only when BOTH heuristics say "different"
+  //   "Pulb Fictoin"  vs "Pulp Fiction"   → overlap 0,    sim ~0.83 → DYM
+  //   "Inception 10"  vs "Inception"      → overlap 0.5,  sim ~0.78 → DYM
+  //   "Inception"     vs "Inception 2010" → overlap 1.0             → no
+  //   "dark knight"   vs "The Dark Knight"→ substring                → no
+  return overlap < 0.7 && sim < 0.85;
 }
 
 // ── Ephemeral session store ───────────────────────────────────────────────────

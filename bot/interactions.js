@@ -8,8 +8,9 @@ import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleForYouCommand } from "./commands/foryou.js";
 import { handleHelpCommand } from "./commands/help.js";
 import { handleWizardButton } from "./handlers/wizardButton.js";
-import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
+import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_DIRECT_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
 import { handleDymYes, handleDymNo, handleDymPick } from "./handlers/didYouMean.js";
+import { showWizardSmartPicker, handleSmartPickerSelect, PICKER_BUTTON_IDS } from "./handlers/wizardSmartPicker.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -78,8 +79,13 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("dym_no|"))   return handleDymNo(interaction);
         if (interaction.customId.startsWith("dym_pick|")) return handleDymPick(interaction);
 
-        if (WIZARD_MODAL_BUTTON_IDS.includes(interaction.customId)) {
+        // /search & /request go straight to the modal
+        if (WIZARD_DIRECT_MODAL_BUTTON_IDS.includes(interaction.customId)) {
           return showWizardSearchModal(interaction);
+        }
+        // /recommend, /similar, /collection, /cast → contextual smart-picker
+        if (PICKER_BUTTON_IDS.includes(interaction.customId)) {
+          return showWizardSmartPicker(interaction);
         }
         if (interaction.customId.startsWith("wizard_")) {
           return handleWizardButton(interaction);
@@ -117,6 +123,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("select_tags|")) {
           return handleTagSelect(interaction);
+        }
+        if (interaction.customId.startsWith("smartpick|")) {
+          return handleSmartPickerSelect(interaction);
         }
       }
 

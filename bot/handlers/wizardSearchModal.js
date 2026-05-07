@@ -37,7 +37,14 @@ const MODAL_CONFIG = {
   wizard_status:     { command: "status",     labelKey: "wizard_modal_label_title", optionName: "title", titleKey: "wizard_modal_title_status",     placeholderKey: "wizard_modal_ph_title", dym: false },
 };
 
+// All button IDs supported by the modal flow (used by the smart-picker
+// custom-input fallback as well as direct routing).
 export const WIZARD_MODAL_BUTTON_IDS = Object.keys(MODAL_CONFIG);
+
+// Subset that should open a modal *directly* on click (no smart-picker step).
+// /search and /request stay modal-first because they're generic (no
+// reasonable shortlist of "recently watched" makes sense for a free search).
+export const WIZARD_DIRECT_MODAL_BUTTON_IDS = ["wizard_search", "wizard_request"];
 
 // ── Show modal ────────────────────────────────────────────────────────────────
 

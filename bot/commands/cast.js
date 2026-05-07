@@ -159,7 +159,9 @@ function buildCastComponents(items, page, personId) {
 }
 
 export async function handleCastCommand(interaction) {
-  await interaction.deferReply({ flags: 64 });
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ flags: 64 });
+  }
 
   const apiKey = getTmdbApiKey();
   if (!apiKey) {

@@ -7,7 +7,9 @@ import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
 export async function handleCollectionCommand(interaction) {
-  await interaction.deferReply({ flags: 64 });
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ flags: 64 });
+  }
 
   const apiKey = getTmdbApiKey();
   if (!apiKey) {
