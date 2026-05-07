@@ -20,7 +20,10 @@ export async function handleSearchOrRequest(
   const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true" || options.ephemeral === true;
 
   try {
-    await interaction.deferReply({ ephemeral: isPrivateMode });
+    // Skip if the interaction was already deferred (e.g. from the DYM flow)
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: isPrivateMode });
+    }
   } catch (err) {
     logger.error(`Failed to defer reply: ${err.message}`);
     return;

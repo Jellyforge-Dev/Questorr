@@ -9,6 +9,7 @@ import { handleForYouCommand } from "./commands/foryou.js";
 import { handleHelpCommand } from "./commands/help.js";
 import { handleWizardButton } from "./handlers/wizardButton.js";
 import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
+import { handleDymYes, handleDymNo, handleDymPick } from "./handlers/didYouMean.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -72,6 +73,11 @@ export function registerInteractions(client) {
 
       // ─── Buttons ───────────────────────────────────────────────────
       if (interaction.isButton()) {
+        // "Meintest du?" confirmation / alternative selection
+        if (interaction.customId.startsWith("dym_yes|"))  return handleDymYes(interaction);
+        if (interaction.customId.startsWith("dym_no|"))   return handleDymNo(interaction);
+        if (interaction.customId.startsWith("dym_pick|")) return handleDymPick(interaction);
+
         if (WIZARD_MODAL_BUTTON_IDS.includes(interaction.customId)) {
           return showWizardSearchModal(interaction);
         }
