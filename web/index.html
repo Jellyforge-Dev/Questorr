@@ -1284,6 +1284,19 @@
                         </div>
                       </div>
 
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <label for="DATE_FORMAT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.date_format_label">Date Format</label>
+                        <select id="DATE_FORMAT" name="DATE_FORMAT" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                          <option value="auto" data-i18n="config.date_format_auto">Auto (based on Bot Language)</option>
+                          <option value="dd.mm.yyyy">dd.mm.yyyy (07.05.2026)</option>
+                          <option value="yyyy-mm-dd">yyyy-mm-dd (2026-05-07)</option>
+                          <option value="mm/dd/yyyy">mm/dd/yyyy (05/07/2026)</option>
+                        </select>
+                        <div class="form-text" style="margin-top: 0.5rem;">
+                          <span data-i18n="config.date_format_help">Date display format used in /history, /upcoming, and /watchlist embeds.</span>
+                        </div>
+                      </div>
+
                       <!-- Config Export / Import -->
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <div style="font-size: 0.78rem; font-weight: 700; color: var(--subtext0); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.6rem; font-family: 'Share Tech Mono', monospace;" data-i18n="config.export_import_title">Config Export / Import</div>

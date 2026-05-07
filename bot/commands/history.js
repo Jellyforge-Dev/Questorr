@@ -2,6 +2,7 @@ import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder } from "discord.js";
 import { fetchLatestAdditions } from "../../api/jellyfin.js";
 import { buildJellyfinUrl } from "../helpers.js";
+import { formatDate } from "../../utils/dateFormat.js";
 import logger from "../../utils/logger.js";
 
 export async function handleHistoryCommand(interaction) {
@@ -27,8 +28,8 @@ export async function handleHistoryCommand(interaction) {
       const emoji = item.Type === "Movie" ? "🎬" : "📺";
       const year = item.ProductionYear ? ` (${item.ProductionYear})` : "";
       const rating = item.CommunityRating ? ` ⭐ ${item.CommunityRating.toFixed(1)}` : "";
-      const date = item.DateCreated ? new Date(item.DateCreated).toLocaleDateString() : "";
-      return `${i + 1}. ${emoji} **${item.Name}**${year}${rating}\n   ↳ Added ${date}`;
+      const date = formatDate(item.DateCreated);
+      return `${i + 1}. ${emoji} **${item.Name}**${year}${rating}\n   ↳ ${t("history_added")} ${date}`;
     });
 
     const embed = new EmbedBuilder()

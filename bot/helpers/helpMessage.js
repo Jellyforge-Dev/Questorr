@@ -83,5 +83,47 @@ export function buildHelpComponents() {
       .setEmoji("📅"),
   );
 
-  return [row1, row2];
+  // Modal-triggering buttons for search-style commands. Click → text-input popup.
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("wizard_search")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_search"))
+      .setEmoji("🔍"),
+    new ButtonBuilder()
+      .setCustomId("wizard_request")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_request"))
+      .setEmoji("📥"),
+    new ButtonBuilder()
+      .setCustomId("wizard_status")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_status"))
+      .setEmoji("❓"),
+    new ButtonBuilder()
+      .setCustomId("wizard_recommend")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_recommend"))
+      .setEmoji("⭐"),
+    new ButtonBuilder()
+      .setCustomId("wizard_similar")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_similar"))
+      .setEmoji("🔗"),
+  );
+
+  const row4 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("wizard_collection")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_collection"))
+      .setEmoji("📦"),
+    new ButtonBuilder()
+      .setCustomId("wizard_cast")
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("wizard_btn_cast"))
+      .setEmoji("🎭"),
+  );
+
+  return [row1, row2, row3, row4];
 }

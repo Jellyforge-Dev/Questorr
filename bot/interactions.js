@@ -2,12 +2,13 @@ import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
 import { handleRandomCommand } from "./commands/random.js";
 import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
-import { handleUpcomingCommand } from "./commands/upcoming.js";
+import { handleUpcomingCommand, handleUpcomingPagination } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
 import { handleForYouCommand } from "./commands/foryou.js";
 import { handleHelpCommand } from "./commands/help.js";
 import { handleWizardButton } from "./handlers/wizardButton.js";
+import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -62,8 +63,18 @@ export function registerInteractions(client) {
         return handleAutocomplete(interaction);
       }
 
+      // ─── Modal Submits ─────────────────────────────────────────────
+      if (interaction.isModalSubmit()) {
+        if (interaction.customId.startsWith("wizard_modal_submit|")) {
+          return handleWizardModalSubmit(interaction);
+        }
+      }
+
       // ─── Buttons ───────────────────────────────────────────────────
       if (interaction.isButton()) {
+        if (WIZARD_MODAL_BUTTON_IDS.includes(interaction.customId)) {
+          return showWizardSearchModal(interaction);
+        }
         if (interaction.customId.startsWith("wizard_")) {
           return handleWizardButton(interaction);
         }
@@ -87,6 +98,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("cast_prev|") || interaction.customId.startsWith("cast_next|")) {
           return handleCastPagination(interaction);
+        }
+        if (interaction.customId.startsWith("upcoming_prev|") || interaction.customId.startsWith("upcoming_next|")) {
+          return handleUpcomingPagination(interaction);
         }
       }
 

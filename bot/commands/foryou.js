@@ -212,7 +212,9 @@ export async function handleForYouCommand(interaction) {
 
       const yearStr = rec.year ? ` (${rec.year})` : "";
       const ratingStr = rec.rating ? ` ⭐ ${rec.rating}` : "";
-      const reasonStr = `\n   *${t("foryou_because_watched")} ${rec.sourceTitle}*`;
+      const reasonStr = rec.sourceTitle
+        ? `\n   ↳ *${t("foryou_because_watched")} ${rec.sourceTitle}*`
+        : "";
       return `${i + 1}. ${icon} **${rec.title}${yearStr}**${ratingStr}${reasonStr}`;
     });
 
