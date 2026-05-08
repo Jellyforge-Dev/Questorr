@@ -24,6 +24,7 @@ import { handleSeasonSelect } from "./handlers/seasonSelect.js";
 import { handleTagSelect } from "./handlers/tagSelect.js";
 import { handleRequestedButton } from "./handlers/requestedButton.js";
 import { handleSeerrApproveDecline } from "./handlers/seerrApproveDecline.js";
+import { handleCleanupPagination } from "./cleanupAdvisor.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
 import { checkCommandRateLimit } from "./commandRateLimit.js";
@@ -133,6 +134,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("upcoming_prev|") || interaction.customId.startsWith("upcoming_next|")) {
           return handleUpcomingPagination(interaction);
+        }
+        if (interaction.customId.startsWith("cleanup_prev|") || interaction.customId.startsWith("cleanup_next|")) {
+          return handleCleanupPagination(interaction);
         }
       }
 

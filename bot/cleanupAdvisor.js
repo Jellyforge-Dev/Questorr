@@ -15,7 +15,7 @@
  * Movies only — series PlayCount aggregation is unreliable.
  */
 
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../utils/logger.js";
 import { t } from "../utils/botStrings.js";
 import { fetchUnwatchedAggregateItems } from "../api/jellyfin.js";
@@ -27,6 +27,19 @@ const WEEKDAYS = {
   sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
   thursday: 4, friday: 5, saturday: 6,
 };
+
+// ── Pagination session store ─────────────────────────────────────────────────
+// Keyed by channelId → { candidates, page, pageSize, totalSizeGb, ts }
+// Sessions expire after SESSION_TTL_MS (24 h).
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+export const cleanupSessions = new Map();
+
+function pruneExpiredSessions() {
+  const now = Date.now();
+  for (const [key, session] of cleanupSessions) {
+    if (now - session.ts > SESSION_TTL_MS) cleanupSessions.delete(key);
+  }
+}
 
 /** ms until next occurrence of the given weekday + HH:MM. */
 function msUntilNextWeekday(targetDay, hour, minute) {
@@ -103,6 +116,124 @@ const EMBED_DESCRIPTION_MAX = 4000; // 4096 hard limit, leave headroom
 const EMBED_FOOTER_MAX = 2000;
 
 /**
+ * Build the cleanup embed for a given page.
+ * @param {Array} candidates - All sorted candidates
+ * @param {number} page - 0-based page index
+ * @param {number} pageSize - Items per page
+ * @returns {EmbedBuilder}
+ */
+function buildCleanupEmbed(candidates, page, pageSize) {
+  const totalPages = Math.ceil(candidates.length / pageSize) || 1;
+  const pageItems = candidates.slice(page * pageSize, (page + 1) * pageSize);
+  const pageSizeGb = pageItems.reduce((sum, c) => sum + (c.sizeBytes ?? 0), 0) / 1e9;
+  const totalSizeGb = candidates.reduce((sum, c) => sum + (c.sizeBytes ?? 0), 0) / 1e9;
+
+  const embed = new EmbedBuilder()
+    .setColor("#e07a3a")
+    .setAuthor({ name: t("cleanup_title") })
+    .setTimestamp();
+
+  if (candidates.length === 0) {
+    embed.setDescription(t("cleanup_no_candidates"));
+    return embed;
+  }
+
+  const formatDate = (ms) => {
+    if (!ms) return t("cleanup_never_played");
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const lines = pageItems.map((c) => {
+    const sizeStr = c.sizeBytes ? `${(c.sizeBytes / 1e9).toFixed(2)} GB` : "—";
+    const yearStr = c.year ? ` (${c.year})` : "";
+    const link = buildJellyfinUrl(c.id);
+    const titleStr = link ? `[${c.name}${yearStr}](${link})` : `${c.name}${yearStr}`;
+    return t("cleanup_item_line", {
+      title: titleStr,
+      plays: c.playCount,
+      last: formatDate(c.lastPlayed),
+      size: sizeStr,
+    });
+  });
+
+  const subtitle = t("cleanup_subtitle");
+  let description = `${subtitle}\n\n${lines.join("\n")}`;
+  if (description.length > EMBED_DESCRIPTION_MAX) {
+    const overflowMarker = `\n… (truncated)`;
+    let kept = lines.length;
+    while (kept > 0) {
+      const candidate = `${subtitle}\n\n${lines.slice(0, kept).join("\n")}${overflowMarker}`;
+      if (candidate.length <= EMBED_DESCRIPTION_MAX) { description = candidate; break; }
+      kept--;
+    }
+    if (kept === 0) description = `${subtitle}${overflowMarker}`.slice(0, EMBED_DESCRIPTION_MAX);
+  }
+  embed.setDescription(description);
+
+  const pageLabel = totalPages > 1 ? ` — Page ${page + 1}/${totalPages}` : "";
+  const footerText = t("cleanup_total_storage", {
+    count: candidates.length,
+    size: totalSizeGb.toFixed(2),
+  }) + pageLabel + (totalPages > 1 ? ` (${pageSizeGb.toFixed(2)} GB this page)` : "");
+  embed.setFooter({ text: footerText.slice(0, EMBED_FOOTER_MAX) });
+
+  return embed;
+}
+
+/**
+ * Build the navigation button row for pagination.
+ * Returns null if there is only one page.
+ */
+function buildNavRow(channelId, page, totalPages) {
+  if (totalPages <= 1) return null;
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`cleanup_prev|${channelId}`)
+      .setLabel("◀ Prev")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`cleanup_next|${channelId}`)
+      .setLabel("Next ▶")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page >= totalPages - 1)
+  );
+}
+
+/**
+ * Handle ◀ Prev / Next ▶ button interactions for cleanup pagination.
+ * Called from bot/interactions.js.
+ */
+export async function handleCleanupPagination(interaction) {
+  const [action, channelId] = interaction.customId.split("|");
+  pruneExpiredSessions();
+
+  const session = cleanupSessions.get(channelId);
+  if (!session) {
+    return interaction.reply({
+      content: "⚠️ Session expired — please trigger a new cleanup run.",
+      flags: 64,
+    });
+  }
+
+  const { candidates, pageSize } = session;
+  const totalPages = Math.ceil(candidates.length / pageSize) || 1;
+  let newPage = session.page;
+
+  if (action === "cleanup_next") newPage = Math.min(newPage + 1, totalPages - 1);
+  else newPage = Math.max(newPage - 1, 0);
+
+  session.page = newPage;
+
+  const embed = buildCleanupEmbed(candidates, newPage, pageSize);
+  const navRow = buildNavRow(channelId, newPage, totalPages);
+  const components = navRow ? [navRow] : [];
+
+  await interaction.update({ embeds: [embed], components });
+}
+
+/**
  * Execute one cleanup advisor run. Can be called manually via the test button.
  * Returns { posted: boolean, count: number, message?: string } for the test endpoint.
  */
@@ -138,13 +269,14 @@ async function runCleanupAdvisorInner(client) {
   const minAgeDays = parseInt(process.env.CLEANUP_MIN_AGE_DAYS || "365", 10);
   const maxPlayCount = parseInt(process.env.CLEANUP_MAX_PLAYCOUNT || "1", 10);
   const minDaysSincePlayed = parseInt(process.env.CLEANUP_MIN_DAYS_SINCE_PLAYED || "180", 10);
-  const maxResults = Math.max(0, Math.min(50, parseInt(process.env.CLEANUP_MAX_RESULTS || "25", 10)));
+  // CLEANUP_MAX_RESULTS now controls *items per page*, not the total shown
+  const pageSize = Math.max(1, Math.min(25, parseInt(process.env.CLEANUP_MAX_RESULTS || "25", 10)));
 
   const now = Date.now();
   const minAgeMs = minAgeDays * 86400000;
   const minSincePlayedMs = minDaysSincePlayed * 86400000;
 
-  logger.info(`[Cleanup Advisor] Running (minAge=${minAgeDays}d, maxPlay=${maxPlayCount}, sincePlayed=${minDaysSincePlayed}d, max=${maxResults})`);
+  logger.info(`[Cleanup Advisor] Running (minAge=${minAgeDays}d, maxPlay=${maxPlayCount}, sincePlayed=${minDaysSincePlayed}d, pageSize=${pageSize})`);
 
   const items = await fetchUnwatchedAggregateItems(apiKey, baseUrl, { limit: 5000 });
   logger.info(`[Cleanup Advisor] Fetched ${items.length} candidate items from Jellyfin`);
@@ -194,9 +326,6 @@ async function runCleanupAdvisorInner(client) {
     return (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0);
   });
 
-  const top = candidates.slice(0, maxResults);
-  const totalSizeGb = top.reduce((sum, c) => sum + (c.sizeBytes ?? 0), 0) / 1e9;
-
   // Fetch channel
   let channel;
   try {
@@ -206,58 +335,14 @@ async function runCleanupAdvisorInner(client) {
     return { posted: false, count: 0, message: `Channel fetch failed: ${err.message}` };
   }
 
-  // Build embed
-  const embed = new EmbedBuilder()
-    .setColor("#e07a3a")
-    .setAuthor({ name: t("cleanup_title") })
-    .setTimestamp();
+  const totalPages = Math.ceil(candidates.length / pageSize) || 1;
+  const embed = buildCleanupEmbed(candidates, 0, pageSize);
+  const navRow = buildNavRow(channelId, 0, totalPages);
+  const components = navRow ? [navRow] : [];
 
-  if (top.length === 0) {
-    embed.setDescription(t("cleanup_no_candidates"));
-  } else {
-    const formatDate = (ms) => {
-      if (!ms) return t("cleanup_never_played");
-      const d = new Date(ms);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    };
-    const lines = top.map((c) => {
-      const sizeStr = c.sizeBytes ? `${(c.sizeBytes / 1e9).toFixed(2)} GB` : "—";
-      const yearStr = c.year ? ` (${c.year})` : "";
-      const link = buildJellyfinUrl(c.id);
-      const titleStr = link ? `[${c.name}${yearStr}](${link})` : `${c.name}${yearStr}`;
-      return t("cleanup_item_line", {
-        title: titleStr,
-        plays: c.playCount,
-        last: formatDate(c.lastPlayed),
-        size: sizeStr,
-      });
-    });
-    // Build the description, dropping lines from the bottom if we'd exceed
-    // Discord's 4096-char description limit. Better to truncate than crash.
-    const subtitle = t("cleanup_subtitle");
-    let description = `${subtitle}\n\n${lines.join("\n")}`;
-    if (description.length > EMBED_DESCRIPTION_MAX) {
-      const overflowMarker = `\n… (${lines.length} items, truncated)`;
-      let kept = lines.length;
-      while (kept > 0) {
-        const candidate = `${subtitle}\n\n${lines.slice(0, kept).join("\n")}${overflowMarker}`;
-        if (candidate.length <= EMBED_DESCRIPTION_MAX) { description = candidate; break; }
-        kept--;
-      }
-      if (kept === 0) description = `${subtitle}${overflowMarker}`.slice(0, EMBED_DESCRIPTION_MAX);
-      logger.warn(`[Cleanup Advisor] Description truncated: ${lines.length} → ${kept} lines (limit ${EMBED_DESCRIPTION_MAX} chars)`);
-    }
-    embed.setDescription(description);
-
-    const footerText = t("cleanup_total_storage", {
-      count: top.length,
-      size: totalSizeGb.toFixed(2),
-    }).slice(0, EMBED_FOOTER_MAX);
-    embed.setFooter({ text: footerText });
-  }
-
+  let msg;
   try {
-    await channel.send({ embeds: [embed] });
+    msg = await channel.send({ embeds: [embed], components });
   } catch (sendErr) {
     logger.error(`[Cleanup Advisor] channel.send failed: ${sendErr?.message || sendErr}`);
     if (sendErr?.rawError) {
@@ -265,7 +350,21 @@ async function runCleanupAdvisorInner(client) {
     }
     return { posted: false, count: 0, message: `Discord send failed: ${sendErr?.message || sendErr}` };
   }
-  logger.info(`[Cleanup Advisor] Posted: ${top.length} candidates, ${totalSizeGb.toFixed(2)} GB total`);
 
-  return { posted: true, count: top.length, totalSizeGb: Number(totalSizeGb.toFixed(2)) };
+  // Store pagination session (pruning stale ones first)
+  pruneExpiredSessions();
+  cleanupSessions.set(channelId, {
+    candidates,
+    page: 0,
+    pageSize,
+    messageId: msg.id,
+    ts: Date.now(),
+  });
+
+  const totalSizeGb = candidates.reduce((sum, c) => sum + (c.sizeBytes ?? 0), 0) / 1e9;
+  logger.info(
+    `[Cleanup Advisor] Posted: ${candidates.length} candidates across ${totalPages} page(s), ${totalSizeGb.toFixed(2)} GB total`
+  );
+
+  return { posted: true, count: candidates.length, totalSizeGb: Number(totalSizeGb.toFixed(2)) };
 }
