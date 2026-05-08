@@ -1,8 +1,9 @@
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
+import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
-import { buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
+import { buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
@@ -85,7 +86,16 @@ export async function handleCollectionCommand(interaction) {
           }
         }
 
-        return { id: part.id, title, year, rating, available, jellyfinItemId };
+        // Seerr request status — used to suppress request-button on already-requested items
+        let seerrStatus = null;
+        try {
+          const sr = await seerrApi.checkMediaStatus(part.id, "movie", [], getSeerrUrl(), getSeerrApiKey());
+          seerrStatus = sr?.status ?? null;
+        } catch (err) {
+          logger.debug("[collection] Seerr status check failed for %s: %s", part.id, err.message);
+        }
+
+        return { id: part.id, title, year, rating, available, jellyfinItemId, seerrStatus };
       })
     );
 
@@ -107,7 +117,11 @@ export async function handleCollectionCommand(interaction) {
     embed.setFooter({ text: footerParts.join(" \u00B7 ") });
 
     const lines = items.map((item, i) => {
-      const status = item.available ? "\u2705" : "\u274C";
+      let status;
+      if (item.available) status = "\u2705";
+      else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "\u23F3"; // pending / processing
+      else if (item.seerrStatus === 4) status = "\uD83D\uDCE5"; // partial
+      else status = "\u274C";
       const ratingStr = item.rating ? ` \u2B50 ${item.rating}` : "";
       const yearPart = item.year ? ` (${item.year})` : "";
       return `**${i + 1}. ${item.title}${yearPart}**${ratingStr} ${status}`;
@@ -117,29 +131,42 @@ export async function handleCollectionCommand(interaction) {
       `${t("recommend_legend")}\n\n${lines.join("\n")}`
     );
 
-    // Watch buttons for available items
-    const buttons = [];
+    // Per-item buttons: Watch (if available) OR Request (if missing & not pending)
+    const watchButtons = [];
+    const requestButtons = [];
     const _show = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
 
     for (const item of items) {
       if (item.available && item.jellyfinItemId && _show("watch")) {
         const watchUrl = buildJellyfinUrl(item.jellyfinItemId);
         if (watchUrl && isValidUrl(watchUrl)) {
-          const label = `\u25B6 ${item.title.substring(0, 70)}`;
-          buttons.push(
+          watchButtons.push(
             new ButtonBuilder()
               .setStyle(ButtonStyle.Link)
-              .setLabel(label)
+              .setLabel(`\u25B6 ${item.title.substring(0, 60)}`)
               .setURL(watchUrl)
           );
         }
+      } else if (!item.available && (item.seerrStatus === null || item.seerrStatus === 1)) {
+        requestButtons.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId(`request_random_${item.id}_movie`)
+            .setLabel(`\uD83D\uDCE5 ${item.title.substring(0, 60)}`)
+        );
       }
     }
 
+    // Discord limit: 5 ActionRows \u00D7 5 buttons each. We use 2 rows max to keep it tidy.
     const replyOpts = { embeds: [embed] };
-    if (buttons.length > 0) {
-      replyOpts.components = [new ActionRowBuilder().addComponents(buttons.slice(0, 5))];
+    const rows = [];
+    if (watchButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(watchButtons.slice(0, 5)));
     }
+    if (requestButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(requestButtons.slice(0, 5)));
+    }
+    if (rows.length > 0) replyOpts.components = rows;
 
     return interaction.editReply(replyOpts);
   } catch (err) {

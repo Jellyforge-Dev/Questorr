@@ -4977,11 +4977,13 @@ document.addEventListener("DOMContentLoaded", () => {
           showToast(data.message || "Failed to post help wizard.");
         }
       } catch (err) {
+        const detail = err?.message ? `: ${err.message}` : "";
         if (postHelpStatus) {
-          postHelpStatus.textContent = "❌ Connection error";
+          postHelpStatus.textContent = "❌ " + (t("config.post_help_failed") || "Failed") + detail;
           postHelpStatus.style.color = "var(--red)";
         }
-        showToast("Connection error.");
+        console.error("[post-help] fetch failed:", err);
+        showToast((t("config.post_help_failed") || "Failed to post help wizard") + detail);
       } finally {
         postHelpBtn.disabled = false;
         setTimeout(() => { if (postHelpStatus) postHelpStatus.textContent = ""; }, 4000);

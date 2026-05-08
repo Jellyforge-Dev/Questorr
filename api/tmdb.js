@@ -152,6 +152,37 @@ export async function tmdbGetSimilar(id, mediaType, apiKey) {
 }
 
 /**
+ * Get genre/keyword-based "similar titles" — distinct from the
+ * personalised "recommendations" endpoint above. Used by /similar.
+ *
+ * TMDB exposes a separate `/similar` endpoint that performs cluster
+ * analysis on shared keywords/genres, which yields different (and
+ * usually broader) results than `/recommendations`.
+ */
+export async function tmdbGetSimilarTitles(id, mediaType, apiKey) {
+  const endpoint = mediaType === "movie"
+    ? `https://api.themoviedb.org/3/movie/${id}/similar`
+    : `https://api.themoviedb.org/3/tv/${id}/similar`;
+  try {
+    const res = await withRetry(
+      () => axios.get(endpoint, {
+        params: {
+          api_key: apiKey,
+          language: getTmdbLanguage(),
+          page: 1,
+        },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB similar ${mediaType}/${id}` }
+    );
+    return res.data?.results || [];
+  } catch (err) {
+    logger.error(`TMDB similar fetch failed for ${mediaType} ${id}: ${err.message}`);
+    return [];
+  }
+}
+
+/**
  * Get external IDs (IMDb) for a movie or TV show
  * @param {number} id - TMDB ID
  * @param {string} mediaType - 'movie' or 'tv'

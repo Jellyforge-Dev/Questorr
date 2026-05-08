@@ -15,7 +15,6 @@ export function buildHelpDescription() {
     "",
     `**${t("wizard_section_browse")}**`,
     `📋 \`/watchlist\` — ${t("wizard_desc_watchlist")}`,
-    `📚 \`/history\` — ${t("wizard_desc_history")}`,
     `📅 \`/upcoming\` — ${t("wizard_desc_upcoming")}`,
     `📈 \`/trending\` — ${t("wizard_desc_trending")}`,
     "",
@@ -71,11 +70,6 @@ export function buildHelpComponents() {
       .setStyle(ButtonStyle.Secondary)
       .setLabel(t("wizard_btn_watchlist"))
       .setEmoji("📋"),
-    new ButtonBuilder()
-      .setCustomId("wizard_history")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_history"))
-      .setEmoji("📚"),
     new ButtonBuilder()
       .setCustomId("wizard_upcoming")
       .setStyle(ButtonStyle.Secondary)

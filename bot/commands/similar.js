@@ -45,8 +45,9 @@ export async function handleSimilarCommand(interaction) {
     }
     const sourceTitle = sourceDetails.title || sourceDetails.name || "Unknown";
 
-    // Fetch similar titles (keyword/genre-based, different from /recommend)
-    const similar = await tmdbApi.tmdbGetSimilar(tmdbId, mediaType, apiKey);
+    // Fetch genre/keyword-based similar titles via TMDB's /similar endpoint
+    // (distinct from /recommendations — that one is used by /recommend).
+    const similar = await tmdbApi.tmdbGetSimilarTitles(tmdbId, mediaType, apiKey);
     if (!similar || similar.length === 0) {
       return interaction.editReply({ content: t("similar_no_results").replace("{{title}}", sourceTitle) });
     }
@@ -118,29 +119,43 @@ export async function handleSimilarCommand(interaction) {
       return line;
     });
 
-    embed.setDescription(lines.join("\n\n"));
+    embed.setDescription(`${t("recommend_legend")}\n\n${lines.join("\n\n")}`);
 
-    // Watch Now buttons for available items
-    const components = [];
+    // Per-item buttons: Watch (if available) OR Request (if missing & not pending)
+    const watchButtons = [];
+    const requestButtons = [];
     const _show = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
     for (const item of items) {
       if (item.available && item.jellyfinItemId && _show("watch")) {
         const watchUrl = buildJellyfinUrl(item.jellyfinItemId);
         if (watchUrl && isValidUrl(watchUrl)) {
-          components.push(
+          watchButtons.push(
             new ButtonBuilder()
               .setStyle(ButtonStyle.Link)
-              .setLabel(`\u25B6 ${item.title.substring(0, 70)}`)
+              .setLabel(`\u25B6 ${item.title.substring(0, 60)}`)
               .setURL(watchUrl)
           );
         }
+      } else if (!item.available && (item.seerrStatus === null || item.seerrStatus === 1)) {
+        // Not in library AND not yet requested \u2192 offer a Request button
+        requestButtons.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId(`request_random_${item.id}_${mediaType}`)
+            .setLabel(`\uD83D\uDCE5 ${item.title.substring(0, 60)}`)
+        );
       }
     }
 
     const replyOpts = { embeds: [embed] };
-    if (components.length > 0) {
-      replyOpts.components = [new ActionRowBuilder().addComponents(components.slice(0, 5))];
+    const rows = [];
+    if (watchButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(watchButtons.slice(0, 5)));
     }
+    if (requestButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(requestButtons.slice(0, 5)));
+    }
+    if (rows.length > 0) replyOpts.components = rows;
 
     return interaction.editReply(replyOpts);
   } catch (err) {

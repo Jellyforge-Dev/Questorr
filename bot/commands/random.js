@@ -78,6 +78,18 @@ export async function handleRandomCommand(interaction) {
     if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
       components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
     }
+    // Trailer (YouTube link from TMDB) — best-effort, swallowed on failure
+    if (_showRandom("trailer") && tmdbIdFromJf) {
+      try {
+        const tmdbType = itemType === "Movie" ? "movie" : "tv";
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        if (trailerUrl && isValidUrl(trailerUrl)) {
+          components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_trailer")).setURL(trailerUrl));
+        }
+      } catch (err) {
+        logger.debug("[random] trailer lookup failed:", err.message);
+      }
+    }
     const seerrBaseR = (process.env.SEERR_URL || "").replace(/\/$/, "");
     const tmdbIdForSeerr = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
     if (_showRandom("seerr") && seerrBaseR && tmdbIdForSeerr) {

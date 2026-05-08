@@ -88,19 +88,44 @@ export async function handleWizardModalSubmit(interaction) {
       let results = (await tmdbApi.tmdbSearch(value, getTmdbApiKey()))
         .filter(r => r.media_type === "movie" || r.media_type === "tv");
 
-      // Fallback: if the full query returned nothing (likely a typo in a
-      // trailing word, e.g. "Pulp Fiktion"), retry with progressively
-      // shorter prefixes. The DYM check then catches the rest.
+      // Fallback: if the full query returned nothing the user probably
+      // typo'd a word. Try leave-one-out variants — drop each word in turn
+      // ("Man om Fire" → ["om Fire", "Man Fire", "Man om"]) so a typo in
+      // a middle word still finds the canonical title. Then progressively
+      // shorter prefixes as a last resort. DYM catches the rest.
       if (results.length === 0) {
         const words = value.split(/\s+/).filter(Boolean);
-        for (let n = words.length - 1; n >= 1; n--) {
-          const partial = words.slice(0, n).join(" ");
-          const partialResults = (await tmdbApi.tmdbSearch(partial, getTmdbApiKey()))
-            .filter(r => r.media_type === "movie" || r.media_type === "tv");
-          if (partialResults.length > 0) {
-            logger.info(`[wizard-modal] tmdb fallback: "${value}" → "${partial}" (${partialResults.length} hits)`);
-            results = partialResults;
-            break;
+
+        const tryQuery = async (q) => {
+          const r = (await tmdbApi.tmdbSearch(q, getTmdbApiKey()))
+            .filter(x => x.media_type === "movie" || x.media_type === "tv");
+          return r;
+        };
+
+        // Phase 1 — drop each word in turn (only worth it for ≥ 3 words,
+        // since 2-word leave-one-out collapses to single-word prefixes).
+        if (words.length >= 3) {
+          for (let i = 0; i < words.length; i++) {
+            const variant = words.filter((_, idx) => idx !== i).join(" ");
+            const r = await tryQuery(variant);
+            if (r.length > 0) {
+              logger.info(`[wizard-modal] tmdb leave-one-out: "${value}" → "${variant}" (${r.length} hits)`);
+              results = r;
+              break;
+            }
+          }
+        }
+
+        // Phase 2 — progressively shorter prefixes if leave-one-out failed
+        if (results.length === 0) {
+          for (let n = words.length - 1; n >= 1; n--) {
+            const partial = words.slice(0, n).join(" ");
+            const r = await tryQuery(partial);
+            if (r.length > 0) {
+              logger.info(`[wizard-modal] tmdb prefix-fallback: "${value}" → "${partial}" (${r.length} hits)`);
+              results = r;
+              break;
+            }
           }
         }
       }
