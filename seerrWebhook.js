@@ -240,26 +240,9 @@ export function resolveMediaTypeChannel(mediaType) {
   return null;
 }
 
-async function resolveChannel(rootFolder, tmdbId, mediaType, eventType) {
-  // For MEDIA_AVAILABLE, try Jellyfin library lookup FIRST.
-  // When a file is actually available in Jellyfin, the library it landed in is
-  // the ground truth — more accurate than Seerr's rootFolder, which can be
-  // stale, absent, or wrong for manually-marked items that were never requested
-  // through Seerr.
-  if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
-    try {
-      const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
-      if (channelId) {
-        logger.info(`[SEERR WEBHOOK] ✅ Jellyfin library lookup (MEDIA_AVAILABLE primary) → channel ${channelId}`);
-        return channelId;
-      }
-      logger.debug("[SEERR WEBHOOK] Jellyfin library lookup returned no channel — falling back to root folder");
-    } catch (e) {
-      logger.debug("[SEERR WEBHOOK] Jellyfin library lookup failed:", e.message);
-    }
-  }
-
-  // 1. Root-folder mapping
+async function resolveChannel(rootFolder, tmdbId, mediaType) {
+  // 1. Root-folder mapping (only used when rootFolder came from the webhook payload
+  //    directly — not from the Seerr API lookup, which can be stale/wrong)
   if (rootFolder) {
     try {
       const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
@@ -281,8 +264,8 @@ async function resolveChannel(rootFolder, tmdbId, mediaType, eventType) {
     }
   }
 
-  // 2. Jellyfin library mapping via TMDB ID (for non-MEDIA_AVAILABLE events)
-  if (eventType !== "MEDIA_AVAILABLE" && tmdbId && mediaType) {
+  // 2. Jellyfin library mapping via TMDB ID
+  if (tmdbId && mediaType) {
     try {
       const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
       if (channelId) return channelId;
@@ -543,12 +526,13 @@ async function processEvent(data, eventType, cfg, client) {
 
   const mediaType = media?.media_type || null;
   const tmdbId = media?.tmdbId || null;
-  let rootFolder = request?.rootFolder || null;
-
-  // If rootFolder missing (common for MEDIA_AVAILABLE), look it up from Seerr API
-  if (!rootFolder && tmdbId && mediaType && eventType === "MEDIA_AVAILABLE") {
-    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType);
-  }
+  // Only use the rootFolder that Seerr included in the webhook payload.
+  // A Seerr API lookup for the root folder (fetchRootFolderFromSeerr) can
+  // return stale or wrong data for items that were never formally requested
+  // (e.g. manually marked as available), causing messages to land in the
+  // wrong channel. If rootFolder is absent from the webhook, the Jellyfin
+  // library lookup in resolveChannel handles routing instead.
+  const rootFolder = request?.rootFolder || null;
 
   logger.info(
     `[SEERR WEBHOOK] Processing ${eventType} | Media: "${subject}" | Type: ${mediaType} | TMDB: ${tmdbId} | RootFolder: ${rootFolder || "none"}`
@@ -561,7 +545,7 @@ async function processEvent(data, eventType, cfg, client) {
 
   // Step 2: Resolve channel + Jellyfin item ID in parallel (TMDB cache is now populated)
   const [channelIdResolved, jellyfinItemId] = await Promise.all([
-    cfg.adminOnly ? Promise.resolve(resolveAdminChannel()) : resolveChannel(rootFolder, tmdbId, mediaType, eventType),
+    cfg.adminOnly ? Promise.resolve(resolveAdminChannel()) : resolveChannel(rootFolder, tmdbId, mediaType),
     findJellyfinItemId(tmdbId, mediaType),
   ]);
 
