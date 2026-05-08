@@ -112,6 +112,7 @@ export async function handleSimilarCommand(interaction) {
       if (item.seerrStatus === 5 || item.available) status = "\u2705";
       else if (item.seerrStatus === 4) status = "\uD83D\uDCE5";
       else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "\u23F3";
+      else status = "\uD83D\uDD0D"; // \uD83D\uDD0D not yet in library
       const ratingStr = item.rating ? ` \u2B50 ${item.rating}` : "";
       const yearStr = item.year ? ` (${item.year})` : "";
       let line = `**${i + 1}. ${item.title}${yearStr}**${ratingStr} ${status}`;

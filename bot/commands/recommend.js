@@ -119,7 +119,7 @@ export async function handleRecommendCommand(interaction) {
       if (rec.seerrStatus === 5 || rec.available) status = "✅";
       else if (rec.seerrStatus === 4) status = "📥";
       else if (rec.seerrStatus === 2 || rec.seerrStatus === 3) status = "⏳";
-      else status = "";
+      else status = "🔍"; // 🔍 not yet in library
       const ratingStr = rec.rating ? ` ⭐ ${rec.rating}` : "";
       const yearStr = rec.year ? ` (${rec.year})` : "";
       let line = `**${i + 1}. ${rec.title}${yearStr}**${ratingStr} ${status}`;
