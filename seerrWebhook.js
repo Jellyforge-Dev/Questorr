@@ -616,6 +616,16 @@ async function processEvent(data, eventType, cfg, client) {
     return;
   }
 
+  // MEDIA_APPROVED / MEDIA_AUTO_APPROVED — DM-only when flag is set (default true)
+  if (
+    (eventType === "MEDIA_APPROVED" || eventType === "MEDIA_AUTO_APPROVED") &&
+    process.env.APPROVAL_DM_ONLY !== "false"
+  ) {
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
+    logger.info(`[SEERR WEBHOOK] ✉️ ${eventType} sent as DM-only (APPROVAL_DM_ONLY=true) for "${subject}"`);
+    return;
+  }
+
   // Send to Discord channel
   let channel;
   try {

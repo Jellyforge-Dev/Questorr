@@ -325,6 +325,8 @@
     "misc_ephemeral_desc": "Wenn aktiviert, sind die Antworten des <code>/search</code>-Befehls nur für den Benutzer sichtbar. <em>Hinweis: Diese Option betrifft nur die Suche — Anfragen via <code>/request</code> und Webhook-Benachrichtigungen sind davon nicht beeinflusst.</em>",
     "misc_autoapprove": "Seerr Anfragen automatisch genehmigen",
     "misc_autoapprove_desc": "Wenn aktiviert, werden Anfragen automatisch in Seerr genehmigt. Wenn deaktiviert, bleiben Anfragen 'Ausstehend'.",
+    "approval_dm_only": "Approval-Benachrichtigungen nur per DM",
+    "approval_dm_only_desc": "Wenn aktiviert, werden MEDIA_APPROVED- und MEDIA_AUTO_APPROVED-Events nur als DM an den Anfrager gesendet – kein öffentlicher Channel-Post. Empfohlen, um Kanal-Spam zu reduzieren.",
     "misc_status_polling": "Seerr Status-Polling für Approve-DMs",
     "misc_status_polling_desc": "Sicherheitsnetz: pollt Seerr-Anfragen periodisch und sendet eine DM, wenn eine Anfrage in der Seerr-UI genehmigt/abgelehnt wurde — auch wenn Seerr keinen MEDIA_APPROVED-Webhook gesendet hat. Erhöht die API-Last leicht. Aktiviere dies, wenn Genehmigungen direkt in Seerr keine DMs auslösen.",
     "misc_status_polling_interval": "Status-Poller Intervall (Sekunden)",

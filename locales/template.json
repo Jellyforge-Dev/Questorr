@@ -253,6 +253,8 @@
     "misc_ephemeral_desc": "",
     "misc_autoapprove": "",
     "misc_autoapprove_desc": "",
+    "approval_dm_only": "",
+    "approval_dm_only_desc": "",
     "misc_status_polling": "",
     "misc_status_polling_desc": "",
     "misc_status_polling_interval": "",

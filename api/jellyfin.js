@@ -860,26 +860,48 @@ export async function resolveJellyfinUserId(discordId, userMappings, seerrUrl, s
  *   DateCreated, UserData: { PlayCount, LastPlayedDate }, MediaSources: [{ Size }] }
  */
 export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
-  const limit = opts.limit ?? 2000;
+  const maxTotal = opts.limit ?? 5000;
+  const pageSize  = 500; // safe per-page size — avoids per-request timeouts
+  const allItems  = [];
+
   try {
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
-    const response = await withRetry(
-      () => axios.get(safeBase.href, {
+
+    let startIndex = 0;
+    let totalRecordCount = null;
+
+    while (allItems.length < maxTotal) {
+      const response = await axios.get(safeBase.href, {
         headers: { "X-MediaBrowser-Token": apiKey },
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie",
           SortBy: "DateCreated",
           SortOrder: "Ascending",
-          Limit: limit,
+          StartIndex: startIndex,
+          Limit: Math.min(pageSize, maxTotal - allItems.length),
           Fields: "DateCreated,UserData,MediaSources,ProductionYear",
         },
-        timeout: 30000,
-      }),
-      { label: "Jellyfin cleanup-advisor items" }
-    );
-    return response.data?.Items || [];
+        timeout: 15000,
+      });
+
+      const page = response.data?.Items || [];
+      allItems.push(...page);
+
+      // Capture total on first page
+      if (totalRecordCount === null) {
+        totalRecordCount = response.data?.TotalRecordCount ?? 0;
+      }
+
+      // Stop when we've read everything available
+      if (page.length === 0 || allItems.length >= totalRecordCount) break;
+
+      startIndex += page.length;
+    }
+
+    logger.debug(`[Jellyfin] fetchUnwatchedAggregateItems: fetched ${allItems.length} / ${totalRecordCount} items`);
+    return allItems;
   } catch (err) {
     logger.warn(`[Jellyfin] fetchUnwatchedAggregateItems error: ${err?.message || err}`);
     return [];

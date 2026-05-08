@@ -253,6 +253,8 @@
     "misc_ephemeral_desc": "When enabled, <code>/search</code> command responses are only visible to the user. <em>Note: This affects only search results — <code>/request</code> interactions and webhook notifications are not affected.</em>",
     "misc_autoapprove": "Seerr Auto-Approve Requests",
     "misc_autoapprove_desc": "When enabled, requests through the bot are automatically approved in Seerr. If disabled, requests remain 'Pending'.",
+    "approval_dm_only": "Send approval notifications as DM only",
+    "approval_dm_only_desc": "When enabled, MEDIA_APPROVED and MEDIA_AUTO_APPROVED events are sent as a DM to the requester only — no public channel post. Recommended to reduce channel noise.",
     "misc_status_polling": "Seerr Status Polling for Approve DMs",
     "misc_status_polling_desc": "Safety net: periodically polls Seerr requests and sends a DM when a request is approved/declined in the Seerr UI — even if Seerr did not fire a MEDIA_APPROVED webhook. Adds slight API load. Enable this if approvals via the Seerr UI don't trigger DMs.",
     "misc_status_polling_interval": "Status poller interval (seconds)",

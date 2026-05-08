@@ -87,11 +87,17 @@ export function registerInteractions(client) {
           interaction.customId.startsWith("action_cast|") ||
           interaction.customId.startsWith("action_recommend|")
         ) {
+          // Track action-button usage (e.g. "action:similar", "action:recommend")
+          const actionName = interaction.customId.split("|")[0].replace("action_", "action:");
+          trackCommand(actionName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
           return handleActionButton(interaction);
         }
 
         // /search & /request go straight to the modal
         if (WIZARD_DIRECT_MODAL_BUTTON_IDS.includes(interaction.customId)) {
+          // Track wizard modal triggers (wizard_search / wizard_request)
+          const wizKey = interaction.customId.replace("wizard_", "btn:");
+          trackCommand(wizKey, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
           return showWizardSearchModal(interaction);
         }
         // /recommend, /similar, /collection, /cast → contextual smart-picker
@@ -99,6 +105,9 @@ export function registerInteractions(client) {
           return showWizardSmartPicker(interaction);
         }
         if (interaction.customId.startsWith("wizard_")) {
+          // Track wizard shortcut buttons (foryou_all, foryou_avail, random_movie, etc.)
+          const btnKey = interaction.customId.replace("wizard_", "btn:");
+          trackCommand(btnKey, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
           return handleWizardButton(interaction);
         }
         if (interaction.customId.startsWith("status_request_btn|")) {

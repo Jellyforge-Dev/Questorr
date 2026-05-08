@@ -242,6 +242,21 @@ function toggleCollapsible(bodyId, btnEl) {
   }
 }
 
+// ─── Global toast helper ─────────────────────────────────────────────────────
+// Defined at module scope so both DOMContentLoaded blocks can call it.
+function showToast(message, duration = 3000) {
+  let toastEl = document.getElementById("toast");
+  if (!toastEl) {
+    toastEl = document.createElement("div");
+    toastEl.id = "toast";
+    toastEl.className = "toast";
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), duration);
+}
+
 // ─── Event delegation for collapsible buttons ────────────────────────────────
 document.addEventListener("click", function(e) {
   const btn = e.target.closest("[data-collapse-target]");
@@ -493,15 +508,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const insightsBtn = document.getElementById("stats-insights-load-btn");
   if (insightsBtn) insightsBtn.addEventListener("click", loadInsights);
-
-  function showToast(message, duration = 3000) {
-    toast.textContent = message;
-    toast.classList.add("show");
-    setTimeout(() => {
-      toast.classList.remove("show");
-    }, duration);
-  }
-
 
   // ─── Per-event notification buttons table ─────────────────────────────────
   const NOTIF_EVENTS = [
@@ -1476,9 +1482,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadRoles();
       }
 
-      // Load statistics when stats tab is opened
+      // Load statistics + insights when stats tab is opened
       if (targetId === "stats") {
         loadStatistics();
+        loadInsights();
       }
     });
   });
