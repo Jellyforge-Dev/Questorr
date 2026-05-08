@@ -176,6 +176,13 @@ const TMDB_CACHE_TTL = 6 * 60 * 60 * 1000;
 /**
  * Look up the root folder for a media item from Seerr API.
  * Seerr doesn't always include rootFolder in MEDIA_AVAILABLE webhooks.
+ *
+ * Strategy: use the targeted media endpoint (/movie/{id} or /tv/{id}) which
+ * returns all requests for that TMDB ID with their rootFolders — more reliable
+ * than the paginated /request list (which caps at 20 results and can miss older
+ * requests). Returns null if the media has no Seerr request (e.g. manually
+ * marked as available without a prior request), in which case the Jellyfin
+ * library lookup in resolveChannel handles routing instead.
  */
 async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
   const seerrUrl = process.env.SEERR_URL;
@@ -184,42 +191,22 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
 
   try {
     const base = seerrUrl.replace(/\/$/, "");
-    // Search requests for this media item
-    const res = await axios.get(`${base}/api/v1/request`, {
-      headers: { "X-Api-Key": seerrApiKey },
-      params: {
-        take: 20,
-        sort: "modified",
-        filter: "all",
-      },
-      timeout: 5000,
-    });
+    const endpoint = mediaType === "movie" ? "movie" : "tv";
 
-    const requests = res.data?.results || [];
-    const mediaTypeSeerr = mediaType === "movie" ? 1 : 2;
-
-    // Find most recent request for this TMDB ID
-    const match = requests.find(r =>
-      r.media?.tmdbId === Number(tmdbId) && r.media?.mediaType === (mediaType === "movie" ? "movie" : "tv")
-    );
-
-    if (match?.rootFolder) {
-      logger.info(`[SEERR WEBHOOK] 📁 Found root folder from Seerr API: ${match.rootFolder}`);
-      return match.rootFolder;
-    }
-
-    // Also check media.requests if nested
-    const res2 = await axios.get(`${base}/api/v1/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`, {
+    // Primary: media endpoint returns ALL requests for this TMDB ID
+    const res = await axios.get(`${base}/api/v1/${endpoint}/${tmdbId}`, {
       headers: { "X-Api-Key": seerrApiKey },
       timeout: 5000,
     }).catch(() => null);
 
-    const reqs = res2?.data?.requests || [];
+    const reqs = res?.data?.requests || [];
     const rootFolders = reqs.map(r => r.rootFolder).filter(Boolean);
     if (rootFolders.length > 0) {
-      logger.info(`[SEERR WEBHOOK] 📁 Found root folder from media endpoint: ${rootFolders[0]}`);
+      logger.info(`[SEERR WEBHOOK] 📁 Root folder from Seerr request: ${rootFolders[0]} (${reqs.length} request(s) found)`);
       return rootFolders[0];
     }
+
+    logger.debug(`[SEERR WEBHOOK] No Seerr request with rootFolder found for TMDB ${tmdbId} — will use Jellyfin library lookup`);
   } catch (e) {
     logger.debug(`[SEERR WEBHOOK] Could not fetch root folder from Seerr: ${e.message}`);
   }
@@ -526,13 +513,18 @@ async function processEvent(data, eventType, cfg, client) {
 
   const mediaType = media?.media_type || null;
   const tmdbId = media?.tmdbId || null;
-  // Only use the rootFolder that Seerr included in the webhook payload.
-  // A Seerr API lookup for the root folder (fetchRootFolderFromSeerr) can
-  // return stale or wrong data for items that were never formally requested
-  // (e.g. manually marked as available), causing messages to land in the
-  // wrong channel. If rootFolder is absent from the webhook, the Jellyfin
-  // library lookup in resolveChannel handles routing instead.
-  const rootFolder = request?.rootFolder || null;
+  let rootFolder = request?.rootFolder || null;
+
+  // If rootFolder is not in the webhook payload (common for MEDIA_AVAILABLE),
+  // fetch it from the Seerr API. The media endpoint returns all requests for
+  // this TMDB ID including their rootFolders — this is the most reliable
+  // source and takes priority over the Jellyfin item's current library
+  // (which may be stale, e.g. a duplicate in the wrong library).
+  // For manually-marked items with no Seerr request, this returns null and
+  // routing falls through to the Jellyfin library lookup.
+  if (!rootFolder && tmdbId && mediaType && eventType === "MEDIA_AVAILABLE") {
+    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType);
+  }
 
   logger.info(
     `[SEERR WEBHOOK] Processing ${eventType} | Media: "${subject}" | Type: ${mediaType} | TMDB: ${tmdbId} | RootFolder: ${rootFolder || "none"}`
