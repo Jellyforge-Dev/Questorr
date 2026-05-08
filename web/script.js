@@ -4968,12 +4968,24 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const data = await response.json();
         if (data.success) {
-          const msg = pin
-            ? (t("config.post_help_success_pinned") || "✅ Posted and pinned!")
-            : (t("config.post_help_success") || "✅ Posted!");
+          // Three outcomes:
+          //  - pin requested + worked → green "Posted and pinned!"
+          //  - pin requested + failed (e.g. Missing Permissions) → yellow warning, post still succeeded
+          //  - pin not requested → green "Posted!"
+          let msg, color;
+          if (pin && data.pinned === false && data.pinError) {
+            msg = (t("config.post_help_success_pin_failed") || "⚠️ Posted, but could not pin: ") + data.pinError;
+            color = "var(--yellow)";
+          } else if (pin) {
+            msg = (t("config.post_help_success_pinned") || "✅ Posted and pinned!");
+            color = "var(--green)";
+          } else {
+            msg = (t("config.post_help_success") || "✅ Posted!");
+            color = "var(--green)";
+          }
           if (postHelpStatus) {
             postHelpStatus.textContent = msg;
-            postHelpStatus.style.color = "var(--green)";
+            postHelpStatus.style.color = color;
           }
           showToast(msg);
         } else {

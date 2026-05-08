@@ -129,6 +129,7 @@
     "post_help_btn": "Post Help Wizard",
     "post_help_success": "✅ Posted!",
     "post_help_success_pinned": "✅ Posted and pinned!",
+    "post_help_success_pin_failed": "⚠️ Posted, but could not pin: ",
     "seerr_url": "Seerr URL",
     "seerr_url_help": "The full URL of your Seerr instance.",
     "seerr_api_key": "Seerr API Key",

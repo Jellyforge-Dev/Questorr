@@ -125,6 +125,7 @@
     "post_help_btn": "Help-Wizard posten",
     "post_help_success": "✅ Gepostet!",
     "post_help_success_pinned": "✅ Gepostet und angeheftet!",
+    "post_help_success_pin_failed": "⚠️ Gepostet, aber Anheften fehlgeschlagen: ",
     "seerr_url": "Seerr URL",
     "seerr_url_help": "Die vollständige URL deiner Seerr-Instanz.",
     "seerr_api_key": "Seerr API-Schlüssel",

@@ -447,8 +447,18 @@ router.post("/post-help", botControlLimiter, authenticateToken, async (req, res)
       embeds: [buildHelpEmbed()],
       components: buildHelpComponents(),
     });
+    // Pin in its own try/catch — a missing "Manage Messages" permission must
+    // not turn an otherwise-successful post into a hard error.
+    let pinned = false;
+    let pinError = null;
     if (pin) {
-      await message.pin();
+      try {
+        await message.pin();
+        pinned = true;
+      } catch (pinErr) {
+        pinError = pinErr.message;
+        logger.warn(`[post-help] Posted but could not pin: ${pinErr.message}`);
+      }
     }
     // Persist the chosen channel so it pre-fills the dropdown on next dashboard load
     try {
@@ -457,8 +467,8 @@ router.post("/post-help", botControlLimiter, authenticateToken, async (req, res)
     } catch (e) {
       logger.warn(`[post-help] Failed to persist POST_HELP_CHANNEL_ID: ${e.message}`);
     }
-    logger.info(`[post-help] Help wizard posted to #${channel.name} (${channelId})${pin ? " and pinned" : ""}`);
-    res.json({ success: true, messageId: message.id, channelId: channel.id });
+    logger.info(`[post-help] Help wizard posted to #${channel.name} (${channelId})${pinned ? " and pinned" : ""}`);
+    res.json({ success: true, messageId: message.id, channelId: channel.id, pinned, pinError });
   } catch (err) {
     logger.error("[post-help] Error:", err);
     res.status(500).json({ success: false, message: err.message });
