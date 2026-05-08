@@ -927,21 +927,26 @@ export async function fetchLibrarySummary(apiKey, baseUrl) {
     // call filtered locally on Type==="Series", which was off-by-one on some
     // libraries because Jellyfin sometimes returns container items the UI
     // counts but our filter dropped.
+    // _t param busts any HTTP-level ETag/conditional-GET caching by Jellyfin or
+    // intermediate proxies, ensuring we always get a fresh TotalRecordCount.
+    const cacheBuster = Date.now();
     const countParams = (type) => ({
       Recursive: true,
       IncludeItemTypes: type,
       Limit: 0,
       EnableTotalRecordCount: true,
+      _t: cacheBuster,
     });
+    const noCacheHeaders = { "X-MediaBrowser-Token": apiKey, "Cache-Control": "no-cache" };
 
     const [movieCountRes, seriesCountRes] = await Promise.all([
       axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: noCacheHeaders,
         params: countParams("Movie"),
         timeout: 15000,
       }),
       axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: noCacheHeaders,
         params: countParams("Series"),
         timeout: 15000,
       }),
