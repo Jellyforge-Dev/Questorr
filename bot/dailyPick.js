@@ -8,6 +8,7 @@ import {
 import * as tmdbApi from "../api/tmdb.js";
 import { isValidUrl } from "../utils/url.js";
 import { parseButtonConfig } from "./helpers.js";
+import { normalizeSeerrUrl } from "../utils/seerrUrl.js";
 import logger from "../utils/logger.js";
 
 let dailyRandomPickTimer = null;
@@ -147,6 +148,37 @@ export async function sendDailyRandomPick(client) {
       imdbId = details.external_ids.imdb_id;
     }
 
+    // Seerr media page (button comes BEFORE letterboxd/imdb to match other notifications)
+    const seerrBase = normalizeSeerrUrl(process.env.SEERR_URL || "");
+    if (_showDR("seerr") && seerrBase && randomMedia.id) {
+      const seerrPageUrl = `${seerrBase}/${mediaType}/${randomMedia.id}`;
+      if (isValidUrl(seerrPageUrl)) {
+        buttonComponents.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(t("btn_view_seerr"))
+            .setURL(seerrPageUrl)
+        );
+      }
+    }
+
+    // YouTube trailer (best-effort fetch from TMDB)
+    if (_showDR("trailer") && randomMedia.id && process.env.TMDB_API_KEY) {
+      try {
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(randomMedia.id, mediaType, process.env.TMDB_API_KEY);
+        if (trailerUrl && isValidUrl(trailerUrl)) {
+          buttonComponents.push(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel(t("btn_trailer"))
+              .setURL(trailerUrl)
+          );
+        }
+      } catch (err) {
+        logger.debug(`[Daily Random] trailer fetch failed: ${err.message}`);
+      }
+    }
+
     if (_showDR("letterboxd") && isMovie && imdbId) {
       const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}/`;
       if (isValidUrl(letterboxdUrl)) {
@@ -178,7 +210,9 @@ export async function sendDailyRandomPick(client) {
         .setCustomId(`request_random_${randomMedia.id}_${mediaType}`)
     );
 
-    const button = new ActionRowBuilder().addComponents(buttonComponents);
+    // Discord caps an action row at 5 buttons. Trim and warn rather than crash.
+    const trimmed = buttonComponents.slice(0, 5);
+    const button = new ActionRowBuilder().addComponents(trimmed);
 
     await channel.send({ embeds: [embed], components: [button] });
 
@@ -375,6 +409,37 @@ export async function sendDailyRecommendation(client) {
       );
     }
 
+    // Seerr media page
+    const seerrBase = normalizeSeerrUrl(process.env.SEERR_URL || "");
+    if (_showRec("seerr") && seerrBase && tmdbId) {
+      const seerrPageUrl = `${seerrBase}/${isMovie ? "movie" : "tv"}/${tmdbId}`;
+      if (isValidUrl(seerrPageUrl)) {
+        buttonComponents.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(t("btn_view_seerr"))
+            .setURL(seerrPageUrl)
+        );
+      }
+    }
+
+    // YouTube trailer (best-effort)
+    if (_showRec("trailer") && tmdbId && tmdbApiKey) {
+      try {
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbId, isMovie ? "movie" : "tv", tmdbApiKey);
+        if (trailerUrl && isValidUrl(trailerUrl)) {
+          buttonComponents.push(
+            new ButtonBuilder()
+              .setStyle(ButtonStyle.Link)
+              .setLabel(t("btn_trailer"))
+              .setURL(trailerUrl)
+          );
+        }
+      } catch (err) {
+        logger.debug(`[Daily Recommendation] trailer fetch failed: ${err.message}`);
+      }
+    }
+
     if (_showRec("imdb") && imdbId) {
       const imdbUrl = `https://www.imdb.com/title/${imdbId}/`;
       if (isValidUrl(imdbUrl)) {
@@ -399,8 +464,10 @@ export async function sendDailyRecommendation(client) {
       }
     }
 
-    const components = buttonComponents.length > 0
-      ? [new ActionRowBuilder().addComponents(buttonComponents)]
+    // Discord caps an action row at 5 buttons.
+    const trimmed = buttonComponents.slice(0, 5);
+    const components = trimmed.length > 0
+      ? [new ActionRowBuilder().addComponents(trimmed)]
       : [];
 
     await channel.send({ embeds: [embed], components });
