@@ -188,7 +188,45 @@ router.get("/stats/insights", authenticateToken, async (_req, res) => {
 });
 
 // ─── Widget Stats (JSON, protected by API key) ─────────────────────────────
-router.get("/widget/stats", authenticateWidget, (req, res) => {
+//
+// In-memory cache for the heavier insights data. Library/Lifecycle/Genres
+// involve external API calls (Jellyfin + Seerr + TMDB) so we cache them for
+// 5 minutes. The cheap data (uptime, command stats, memory) is always fresh.
+const _insightsCache = { data: null, ts: 0 };
+const INSIGHTS_TTL_MS = 5 * 60 * 1000;
+
+async function getInsightsForWidget() {
+  if (_insightsCache.data && Date.now() - _insightsCache.ts < INSIGHTS_TTL_MS) {
+    return _insightsCache.data;
+  }
+  const out = { library: null, lifecycle: null, requestGenres: null };
+  try {
+    const { fetchLibrarySummary } = await import("../api/jellyfin.js");
+    const jfBase = process.env.JELLYFIN_BASE_URL;
+    const jfKey  = process.env.JELLYFIN_API_KEY;
+    if (jfBase && jfKey) out.library = await fetchLibrarySummary(jfKey, jfBase);
+  } catch (e) { logger.warn(`[widget/stats] library failed: ${e.message}`); }
+  try {
+    const { fetchRequestLifecycleStats } = await import("../api/seerr.js");
+    if (process.env.SEERR_URL && process.env.SEERR_API_KEY) {
+      out.lifecycle = await fetchRequestLifecycleStats(process.env.SEERR_URL, process.env.SEERR_API_KEY);
+    }
+  } catch (e) { logger.warn(`[widget/stats] lifecycle failed: ${e.message}`); }
+  try {
+    const { fetchTopRequestGenres } = await import("../api/seerr.js");
+    const { tmdbGetDetails } = await import("../api/tmdb.js");
+    if (process.env.SEERR_URL && process.env.SEERR_API_KEY && process.env.TMDB_API_KEY) {
+      const detailsFn = (id, type) => tmdbGetDetails(id, type, process.env.TMDB_API_KEY);
+      out.requestGenres = await fetchTopRequestGenres(process.env.SEERR_URL, process.env.SEERR_API_KEY, detailsFn, 200);
+    }
+  } catch (e) { logger.warn(`[widget/stats] requestGenres failed: ${e.message}`); }
+
+  _insightsCache.data = out;
+  _insightsCache.ts = Date.now();
+  return out;
+}
+
+router.get("/widget/stats", authenticateWidget, async (req, res) => {
   const botUptime = getBotUptime();
   const cacheStats = cache.getStats();
   const cmdStats = getCommandStats();
@@ -203,6 +241,10 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
     }));
   }
 
+  // Fetch insights (cached 5 min). If unavailable / not configured, fields
+  // are null and the widget renders "—" placeholders.
+  const insights = await getInsightsForWidget();
+
   res.json({
     status: botState.isBotRunning ? "online" : "offline",
     botUsername: botState.isBotRunning && botState.discordClient?.user ? botState.discordClient.user.tag : null,
@@ -213,6 +255,9 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
     memoryMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
     version: APP_VERSION,
     commandStats: cmdStats,
+    library: insights.library,
+    lifecycle: insights.lifecycle,
+    requestGenres: insights.requestGenres,
     timestamp: new Date().toISOString(),
   });
 });
@@ -287,11 +332,23 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 .user-cmd-tags{display:flex;flex-wrap:wrap;gap:3px;margin-left:26px}
 .user-cmd-tag{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(30,200,160,0.08);color:#8b949e;white-space:nowrap}
 .user-cmd-tag b{color:#1ec8a0;font-weight:600}
-.tabs{display:flex;gap:3px;margin-bottom:8px;flex-shrink:0}
-.tab{padding:4px 8px;border:1px solid rgba(30,200,160,0.15);border-radius:5px;background:transparent;color:#8b949e;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.tabs{display:flex;gap:3px;margin-bottom:8px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:4px 8px;border:1px solid rgba(30,200,160,0.15);border-radius:5px;background:transparent;color:#8b949e;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
 .tab.active{background:rgba(30,200,160,0.12);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
 .tab-content{display:none;flex:1;min-height:0;overflow:hidden}
 .tab-content.active{display:flex;flex-direction:column}
+.lib-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;flex-shrink:0}
+.lib-card{background:rgba(30,200,160,0.06);border:1px solid rgba(30,200,160,0.1);border-radius:8px;padding:8px 6px;text-align:center}
+.lib-card .v{font-size:16px;font-weight:700;color:#1ec8a0}
+.lib-card .l{font-size:9px;color:#8b949e;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.lc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0}
+.bar-row{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0}
+.bar-name{flex:0 0 90px;color:#c9d1d9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:10px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#cba6f7,#b388ff);border-radius:3px}
+.bar-fill.peach{background:linear-gradient(90deg,#fab387,#f9a04a)}
+.bar-count{flex:0 0 30px;text-align:right;color:#8b949e;font-size:11px}
 </style>
 </head>
 <body>
@@ -314,12 +371,33 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 <div class="tabs">
 <button class="tab active" onclick="switchTab('commands',this)">Commands</button>
 <button class="tab" onclick="switchTab('users',this)">Top Users</button>
+<button class="tab" onclick="switchTab('library',this)">Library</button>
+<button class="tab" onclick="switchTab('lifecycle',this)">Lifecycle</button>
+<button class="tab" onclick="switchTab('genres',this)">Req. Genres</button>
 </div>
 <div class="tab-content active" id="tab-commands">
 <div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
 </div>
 <div class="tab-content" id="tab-users">
 <div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+</div>
+<div class="tab-content" id="tab-library">
+<div class="lib-grid" id="libGrid">
+<div class="lib-card"><div class="v" id="libMovies">--</div><div class="l">Movies</div></div>
+<div class="lib-card"><div class="v" id="libSeries">--</div><div class="l">Series</div></div>
+<div class="lib-card"><div class="v" id="libHours">--</div><div class="l">Hours</div></div>
+</div>
+<div class="cmd-list" id="libGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+</div>
+<div class="tab-content" id="tab-lifecycle">
+<div class="lc-grid">
+<div class="lib-card"><div class="v" id="lcPending">--</div><div class="l">Pend → Apprv (h)</div></div>
+<div class="lib-card"><div class="v" id="lcAvail">--</div><div class="l">Apprv → Avail (h)</div></div>
+</div>
+<div style="color:#484f58;font-size:10px;text-align:center;padding:10px 6px">Average wait time across all requests.</div>
+</div>
+<div class="tab-content" id="tab-genres">
+<div class="cmd-list" id="reqGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
 </div>
 </div>
 <div class="btn-row">
@@ -391,6 +469,39 @@ h+='<div class="user-card"><div class="user-header"><span class="user-rank">'+(i
 });
 document.getElementById("userList").innerHTML=h;
 }else{document.getElementById("userList").innerHTML=emptyMsg;}
+// Library tab
+if(d.library){
+document.getElementById("libMovies").textContent=d.library.movies||0;
+document.getElementById("libSeries").textContent=d.library.series||0;
+document.getElementById("libHours").textContent=d.library.totalRuntimeMinutes?Math.round(d.library.totalRuntimeMinutes/60):0;
+const tg=d.library.topGenres||[];
+if(tg.length>0){
+const max=Math.max(...tg.map(g=>g.count));
+let h="";
+tg.forEach(g=>{const pct=max>0?Math.round(g.count/max*100):0;
+h+='<div class="bar-row"><span class="bar-name">'+esc(g.name)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div><span class="bar-count">'+g.count+'</span></div>';});
+document.getElementById("libGenres").innerHTML=h;
+}else{document.getElementById("libGenres").innerHTML=emptyMsg;}
+}else{
+document.getElementById("libMovies").textContent="—";document.getElementById("libSeries").textContent="—";document.getElementById("libHours").textContent="—";
+document.getElementById("libGenres").innerHTML=emptyMsg;
+}
+// Lifecycle tab
+if(d.lifecycle){
+document.getElementById("lcPending").textContent=d.lifecycle.pendingToApprovedAvgHours??"—";
+document.getElementById("lcAvail").textContent=d.lifecycle.approvedToAvailableAvgHours??"—";
+}else{
+document.getElementById("lcPending").textContent="—";document.getElementById("lcAvail").textContent="—";
+}
+// Request genres tab
+const rg=d.requestGenres||[];
+if(rg.length>0){
+const max=Math.max(...rg.map(g=>g.count));
+let h="";
+rg.forEach(g=>{const pct=max>0?Math.round(g.count/max*100):0;
+h+='<div class="bar-row"><span class="bar-name">'+esc(g.name)+'</span><div class="bar-track"><div class="bar-fill peach" style="width:'+pct+'%"></div></div><span class="bar-count">'+g.count+'</span></div>';});
+document.getElementById("reqGenres").innerHTML=h;
+}else{document.getElementById("reqGenres").innerHTML=emptyMsg;}
 }catch(e){document.getElementById("err").textContent="Connection failed"}}
 
 async function toggle(){
