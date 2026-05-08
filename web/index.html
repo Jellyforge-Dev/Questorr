@@ -658,76 +658,76 @@
                         </div>
                       </div>
 
-                      <!-- Jellyfin Auto-Erkennung neuer Inhalte -->
+                      <!-- Jellyfin Auto-Detection of new content -->
                       <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
-                        <p style="margin: 0 0 0.75rem; font-weight: 700; color: var(--green);">🔍 Automatische Erkennung neuer Inhalte</p>
-                        <p style="margin: 0 0 1rem; font-size: 0.88rem; color: var(--subtext0);">
+                        <p style="margin: 0 0 0.75rem; font-weight: 700; color: var(--green);" data-i18n="config.jellyfin_autodetect_title">🔍 Automatische Erkennung neuer Inhalte</p>
+                        <p style="margin: 0 0 1rem; font-size: 0.88rem; color: var(--subtext0);" data-i18n="config.jellyfin_autodetect_desc">
                           Questorr prüft selbstständig in regelmäßigen Abständen, ob neue Filme oder Serien zu Jellyfin hinzugefügt wurden – auch wenn sie <strong>nicht</strong> über Seerr angefragt wurden. Beim ersten Start werden alle vorhandenen Inhalte still erfasst; Benachrichtigungen werden nur für danach hinzugefügte Inhalte gesendet.
                         </p>
                         <div class="form-group">
-                          <label for="JELLYFIN_POLL_INTERVAL_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;">Prüf-Intervall (Sekunden)</label>
+                          <label for="JELLYFIN_POLL_INTERVAL_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_interval_label">Prüf-Intervall (Sekunden)</label>
                           <input type="number" id="JELLYFIN_POLL_INTERVAL_SECONDS" name="JELLYFIN_POLL_INTERVAL_SECONDS"
                             placeholder="300" min="0" max="86400" step="30"
                             style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
-                          <div class="form-text" style="margin-top:0.5rem;">
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_interval_help">
                             Wie oft Jellyfin auf neue Inhalte geprüft wird. Standard: 300 (= 5 Minuten). <strong>0 = deaktiviert.</strong>
                           </div>
                         </div>
                         <div class="form-group" style="margin-top:1rem;">
-                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Benachrichtigungstypen</label>
+                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_types_label">Benachrichtigungstypen</label>
                           <div style="display:flex;flex-wrap:wrap;gap:1rem;">
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_NOTIFY_MOVIES" name="JELLYFIN_NOTIFY_MOVIES" value="true" checked style="width:1.1rem;height:1.1rem;" />
-                              🎬 Filme
+                              <span data-i18n="config.jellyfin_autodetect_movies">🎬 Filme</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_NOTIFY_SERIES" name="JELLYFIN_NOTIFY_SERIES" value="true" checked style="width:1.1rem;height:1.1rem;" />
-                              📺 Serien
+                              <span data-i18n="config.jellyfin_autodetect_series">📺 Serien</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_NOTIFY_SEASONS" name="JELLYFIN_NOTIFY_SEASONS" value="true" style="width:1.1rem;height:1.1rem;" />
-                              📀 Staffeln
+                              <span data-i18n="config.jellyfin_autodetect_seasons">📀 Staffeln</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_NOTIFY_EPISODES" name="JELLYFIN_NOTIFY_EPISODES" value="true" style="width:1.1rem;height:1.1rem;" />
-                              ▶️ Episoden
+                              <span data-i18n="config.jellyfin_autodetect_episodes">▶️ Episoden</span>
                             </label>
                           </div>
-                          <div class="form-text" style="margin-top:0.5rem;">Für welche Inhaltstypen Benachrichtigungen gesendet werden sollen.</div>
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_types_help">Für welche Inhaltstypen Benachrichtigungen gesendet werden sollen.</div>
                         </div>
 
                         <!-- Poller Button Configuration -->
                         <div class="form-group" style="margin-top:1rem;">
-                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Buttons in Benachrichtigung</label>
+                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_buttons_label">Buttons in Benachrichtigung</label>
                           <div style="display:flex;flex-wrap:wrap;gap:1rem;">
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" name="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" value="true" checked style="width:1.1rem;height:1.1rem;" />
-                              ▶️ Jetzt ansehen
+                              <span data-i18n="config.jellyfin_autodetect_btn_watch">▶️ Jetzt ansehen</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" name="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" value="true" checked style="width:1.1rem;height:1.1rem;" />
-                              🎬 IMDb
+                              <span data-i18n="config.jellyfin_autodetect_btn_imdb">🎬 IMDb</span>
                             </label>
                             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
                               <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" name="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" value="true" checked style="width:1.1rem;height:1.1rem;" />
-                              📝 Letterboxd
+                              <span data-i18n="config.jellyfin_autodetect_btn_letterboxd">📝 Letterboxd</span>
                             </label>
                           </div>
-                          <div class="form-text" style="margin-top:0.5rem;">Welche Buttons in automatischen Jellyfin-Benachrichtigungen angezeigt werden.</div>
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_buttons_help">Welche Buttons in automatischen Jellyfin-Benachrichtigungen angezeigt werden.</div>
                         </div>
 
                         <!-- Metadata Delay -->
                         <div class="form-group" style="margin-top:1rem;">
-                          <label for="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;">Metadaten-Verzögerung (Sekunden)</label>
+                          <label for="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_metadata_delay_label">Metadaten-Verzögerung (Sekunden)</label>
                           <input type="number" id="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" name="JELLYFIN_POLLER_METADATA_DELAY_SECONDS"
                             placeholder="60" min="0" max="600" step="10"
                             style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
-                          <div class="form-text" style="margin-top:0.5rem;">
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_metadata_delay_help">
                             Wartezeit bevor eine Benachrichtigung gesendet wird, wenn Jellyfin noch keinen TMDB-Link gefunden hat (z. B. bei frisch importierten Inhalten). Standard: 60s. <strong>0 = sofort senden.</strong>
                           </div>
                         </div>
 
-                        <p style="margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--subtext0);">
+                        <p style="margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.jellyfin_autodetect_routing_note">
                           Die Bibliothek-→-Kanal-Zuordnung oben gilt auch für diese Benachrichtigungen. Der Fallback-Kanal (links oben) wird verwendet, wenn keine Bibliothek passt.
                         </p>
                       </div>
@@ -1038,9 +1038,9 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RANDOM_PICK_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Uhrzeit (HH:MM)</label>
+                          <label for="DAILY_RANDOM_PICK_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_time_label">Uhrzeit (HH:MM)</label>
                           <input type="time" id="DAILY_RANDOM_PICK_TIME" name="DAILY_RANDOM_PICK_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
-                          <div class="form-text" style="margin-top: 0.5rem;">
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_random_time_help">
                             Genaue Uhrzeit für den täglichen Versand (z.B. 08:00). Wenn gesetzt, wird der Interval ignoriert.
                           </div>
                         </div>
@@ -1086,17 +1086,17 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RECOMMENDATION_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Uhrzeit (HH:MM)</label>
+                          <label for="DAILY_RECOMMENDATION_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_time_label">Uhrzeit (HH:MM)</label>
                           <input type="time" id="DAILY_RECOMMENDATION_TIME" name="DAILY_RECOMMENDATION_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
-                          <div class="form-text" style="margin-top: 0.5rem;">
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_time_help">
                             Genaue Uhrzeit für den täglichen Versand (z.B. 20:00). Wenn gesetzt, wird der Interval ignoriert.
                           </div>
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
+                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
                           <input type="number" id="DAILY_RECOMMENDATION_INTERVAL" name="DAILY_RECOMMENDATION_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
-                          <div class="form-text" style="margin-top: 0.5rem;">
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_interval_help">
                             Intervall in Minuten (Standard: 1440 = 24h)
                           </div>
                         </div>
