@@ -146,22 +146,26 @@ async function runCleanupAdvisorInner(client) {
 
   logger.info(`[Cleanup Advisor] Running (minAge=${minAgeDays}d, maxPlay=${maxPlayCount}, sincePlayed=${minDaysSincePlayed}d, max=${maxResults})`);
 
-  const items = await fetchUnwatchedAggregateItems(apiKey, baseUrl, { limit: 2000 });
+  const items = await fetchUnwatchedAggregateItems(apiKey, baseUrl, { limit: 5000 });
   logger.info(`[Cleanup Advisor] Fetched ${items.length} candidate items from Jellyfin`);
+
+  // Diagnostic counters — surface in logs why the funnel may collapse
+  let skipNoCreated = 0, skipTooYoung = 0, skipPlayCount = 0, skipPlayedRecently = 0;
 
   // Filter
   const candidates = [];
   for (const item of items) {
     const created = item.DateCreated ? new Date(item.DateCreated).getTime() : 0;
-    if (!created || now - created < minAgeMs) continue;
+    if (!created) { skipNoCreated++; continue; }
+    if (now - created < minAgeMs) { skipTooYoung++; continue; }
 
     const playCount = item.UserData?.PlayCount ?? 0;
-    if (playCount > maxPlayCount) continue;
+    if (playCount > maxPlayCount) { skipPlayCount++; continue; }
 
     const lastPlayed = item.UserData?.LastPlayedDate
       ? new Date(item.UserData.LastPlayedDate).getTime()
       : null;
-    if (lastPlayed && now - lastPlayed < minSincePlayedMs) continue;
+    if (lastPlayed && now - lastPlayed < minSincePlayedMs) { skipPlayedRecently++; continue; }
 
     const sizeBytes = item.MediaSources?.[0]?.Size ?? null;
 
@@ -175,6 +179,12 @@ async function runCleanupAdvisorInner(client) {
       sizeBytes,
     });
   }
+
+  logger.info(
+    `[Cleanup Advisor] Filter funnel: ${items.length} fetched → ${candidates.length} candidates ` +
+    `(skipped: no-DateCreated=${skipNoCreated}, too-young=${skipTooYoung}, ` +
+    `playCount>${maxPlayCount}=${skipPlayCount}, played<${minDaysSincePlayed}d=${skipPlayedRecently})`
+  );
 
   // Sort: never-played first, then oldest-played, then largest size as tiebreak
   candidates.sort((a, b) => {

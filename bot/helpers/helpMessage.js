@@ -83,7 +83,10 @@ export function buildHelpComponents() {
       .setEmoji("📅"),
   );
 
-  // Modal-triggering buttons for search-style commands. Click → text-input popup.
+  // Modal-triggering buttons for the two generic search flows. Discovery
+  // commands (Recommend / Similar / Collection / Cast) now appear as
+  // contextual action buttons on each search result instead of as blind
+  // wizard buttons — that removes the "what do I type?" UX pothole.
   const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("wizard_search")
@@ -95,30 +98,7 @@ export function buildHelpComponents() {
       .setStyle(ButtonStyle.Secondary)
       .setLabel(t("wizard_btn_request"))
       .setEmoji("📥"),
-    new ButtonBuilder()
-      .setCustomId("wizard_recommend")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_recommend"))
-      .setEmoji("⭐"),
-    new ButtonBuilder()
-      .setCustomId("wizard_similar")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_similar"))
-      .setEmoji("🔗"),
   );
 
-  const row4 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("wizard_collection")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_collection"))
-      .setEmoji("📦"),
-    new ButtonBuilder()
-      .setCustomId("wizard_cast")
-      .setStyle(ButtonStyle.Secondary)
-      .setLabel(t("wizard_btn_cast"))
-      .setEmoji("🎭"),
-  );
-
-  return [row1, row2, row3, row4];
+  return [row1, row2, row3];
 }

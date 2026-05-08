@@ -424,6 +424,76 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // ── Library / Lifecycle / Request-Genre Insights ───────────────────────────
+  function renderInsightBars(containerId, items, color) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!items || items.length === 0) {
+      el.innerHTML = `<div style="font-size:0.85rem;color:var(--subtext0);">${t("config.stats_insights_empty") || "No data."}</div>`;
+      return;
+    }
+    const max = Math.max(...items.map(i => i.count));
+    el.innerHTML = items.map(it => {
+      const pct = Math.round((it.count / max) * 100);
+      return `
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;">
+          <div style="flex:0 0 130px;color:var(--text);">${it.name}</div>
+          <div style="flex:1;background:var(--surface0);border-radius:4px;height:18px;position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;width:${pct}%;background:${color};border-radius:4px;"></div>
+          </div>
+          <div style="flex:0 0 40px;text-align:right;color:var(--subtext0);">${it.count}</div>
+        </div>`;
+    }).join("");
+  }
+
+  async function loadInsights() {
+    const statusEl = document.getElementById("stats-insights-status");
+    const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    if (statusEl) { statusEl.textContent = t("config.stats_insights_loading") || "Loading…"; statusEl.style.color = "var(--subtext0)"; }
+    try {
+      const token = localStorage.getItem("questorr_token") || "";
+      const res = await fetch("/api/stats/insights", { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      // Library cards
+      if (data.library) {
+        setText("stats-lib-movies", data.library.movies ?? 0);
+        setText("stats-lib-series", data.library.series ?? 0);
+        const hours = data.library.totalRuntimeMinutes
+          ? Math.round(data.library.totalRuntimeMinutes / 60)
+          : 0;
+        setText("stats-lib-runtime", hours);
+        renderInsightBars("stats-lib-genres", data.library.topGenres || [], "var(--mauve)");
+      } else {
+        setText("stats-lib-movies", "–");
+        setText("stats-lib-series", "–");
+        setText("stats-lib-runtime", "–");
+        renderInsightBars("stats-lib-genres", [], "var(--mauve)");
+      }
+
+      // Lifecycle
+      if (data.lifecycle) {
+        setText("stats-lc-pending",   data.lifecycle.pendingToApprovedAvgHours   ?? "–");
+        setText("stats-lc-available", data.lifecycle.approvedToAvailableAvgHours ?? "–");
+      } else {
+        setText("stats-lc-pending", "–");
+        setText("stats-lc-available", "–");
+      }
+
+      // Request genres
+      renderInsightBars("stats-req-genres", data.requestGenres || [], "var(--peach)");
+
+      if (statusEl) { statusEl.textContent = "✓ " + (t("config.stats_insights_ok") || "Loaded"); statusEl.style.color = "var(--green)"; }
+      setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000);
+    } catch (err) {
+      if (statusEl) { statusEl.textContent = "✗ " + err.message; statusEl.style.color = "var(--red)"; }
+    }
+  }
+
+  const insightsBtn = document.getElementById("stats-insights-load-btn");
+  if (insightsBtn) insightsBtn.addEventListener("click", loadInsights);
+
   function showToast(message, duration = 3000) {
     toast.textContent = message;
     toast.classList.add("show");
@@ -2043,6 +2113,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     channelSel.className = "root-folder-channel-select";
     channelSel.style.cssText = "flex:1;background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.9rem;";
     channelSel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Select a channel'} —</option>`;
+    // Stash the saved channelId on the element itself so a late channel-load
+    // can still restore the correct selection (closure capture wasn't enough
+    // when populateChannels was called with stale/empty data).
+    if (channelId) channelSel.dataset.savedValue = String(channelId);
 
     // Remove button
     const removeBtn = document.createElement("button");
@@ -2058,11 +2132,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Populate channels - use passed channels, cache, or fetch
     const populateChannels = (chs) => {
+      // Always read the desired channelId from the element so that even
+      // late/duplicate population calls preserve the correct selection.
+      const desired = channelSel.dataset.savedValue || channelId || "";
+      // If options were already populated (e.g. by an earlier call),
+      // clear them first so we don't end up with duplicates.
+      while (channelSel.options.length > 1) channelSel.remove(1);
       chs.forEach(ch => {
         const opt = document.createElement("option");
         opt.value = ch.id;
         opt.textContent = `#${ch.name}`;
-        if (ch.id === channelId) opt.selected = true;
+        if (String(ch.id) === String(desired)) opt.selected = true;
         channelSel.appendChild(opt);
       });
     };
@@ -2860,7 +2940,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         cleanupChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
-      const postHelpChanSelEmpty = document.getElementById("post-help-channel-id");
+      const postHelpChanSelEmpty = document.getElementById("POST_HELP_CHANNEL_ID");
       if (postHelpChanSelEmpty) postHelpChanSelEmpty.innerHTML = `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       return;
     }
@@ -2885,7 +2965,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
     if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
-    const postHelpChanSelLoading = document.getElementById("post-help-channel-id");
+    const postHelpChanSelLoading = document.getElementById("POST_HELP_CHANNEL_ID");
     if (postHelpChanSelLoading) postHelpChanSelLoading.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
@@ -3006,8 +3086,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         populateSeerrSelect(cleanupChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "CLEANUP_ADVISOR_CHANNEL_ID");
 
         // Populate Post Help Wizard channel select
-        const postHelpChanSel = document.getElementById("post-help-channel-id");
-        populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "post-help-channel-id");
+        const postHelpChanSel = document.getElementById("POST_HELP_CHANNEL_ID");
+        populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "POST_HELP_CHANNEL_ID");
 
         // Generic fallback: populate any [data-channel-select="true"] elements not yet handled above
         document.querySelectorAll("[data-channel-select='true']").forEach(sel => {
@@ -4847,37 +4927,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Post Help Wizard — copy options from JELLYFIN_CHANNEL_ID (same pane, always
-  // populated by loadDiscordChannels). Synchronous clone: no network, no async.
-  (function initPostHelpChannelLoader() {
-    const loadBtn = document.getElementById("post-help-load-channels-btn");
-    const sel = document.getElementById("post-help-channel-id");
-    if (!loadBtn || !sel) return;
-
-    function cloneFromJellyfinSelect() {
-      const source = document.getElementById("JELLYFIN_CHANNEL_ID");
-      if (!source || source.options.length <= 1) return false;
-      sel.innerHTML = '<option value="">— Kanal auswählen —</option>';
-      Array.from(source.options).forEach(opt => {
-        if (!opt.value) return; // skip placeholder
-        sel.appendChild(opt.cloneNode(true));
-      });
-      return true;
-    }
-
-    loadBtn.addEventListener("click", cloneFromJellyfinSelect);
-
-    // Auto-sync after guild + channels finish loading (JELLYFIN_CHANNEL_ID fills ~1-2s in)
-    setTimeout(cloneFromJellyfinSelect, 1500);
-    setTimeout(cloneFromJellyfinSelect, 3000);
-  })();
+  // The Post-Help channel-select now carries data-channel-select="true",
+  // so it's populated by the standard channel loader (loadDiscordChannels)
+  // and its value is restored on reload via dataset.savedValue.
 
   // Post Help Wizard button
   const postHelpBtn = document.getElementById("post-help-btn");
   const postHelpStatus = document.getElementById("post-help-status");
   if (postHelpBtn) {
     postHelpBtn.addEventListener("click", async () => {
-      const channelId = document.getElementById("post-help-channel-id")?.value;
+      const channelId = document.getElementById("POST_HELP_CHANNEL_ID")?.value;
       const pin = document.getElementById("post-help-pin")?.checked;
       if (!channelId) {
         if (postHelpStatus) {

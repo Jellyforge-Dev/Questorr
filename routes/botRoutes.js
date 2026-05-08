@@ -6,6 +6,7 @@ import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
+import { updateConfig } from "../utils/configFile.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
 
@@ -139,6 +140,51 @@ router.get("/health", async (_req, res) => {
 // Authenticated health check — full details for dashboard/admins
 router.get("/health/details", authenticateToken, async (_req, res) => {
   res.json(await collectHealthData());
+});
+
+// ─── Insights for Dashboard Step 8 ─────────────────────────────────────────
+// Aggregates Library / Request-Lifecycle / Top-Request-Genres in one call.
+// Each block fails independently — partial data is preferable to a 500.
+router.get("/stats/insights", authenticateToken, async (_req, res) => {
+  const out = { library: null, lifecycle: null, requestGenres: null };
+
+  try {
+    const { fetchLibrarySummary } = await import("../api/jellyfin.js");
+    const jfBase = process.env.JELLYFIN_BASE_URL;
+    const jfKey  = process.env.JELLYFIN_API_KEY;
+    if (jfBase && jfKey) {
+      out.library = await fetchLibrarySummary(jfKey, jfBase);
+    }
+  } catch (e) {
+    logger.warn(`[stats/insights] library failed: ${e.message}`);
+  }
+
+  try {
+    const { fetchRequestLifecycleStats } = await import("../api/seerr.js");
+    const seerrUrl = process.env.SEERR_URL;
+    const seerrKey = process.env.SEERR_API_KEY;
+    if (seerrUrl && seerrKey) {
+      out.lifecycle = await fetchRequestLifecycleStats(seerrUrl, seerrKey);
+    }
+  } catch (e) {
+    logger.warn(`[stats/insights] lifecycle failed: ${e.message}`);
+  }
+
+  try {
+    const { fetchTopRequestGenres } = await import("../api/seerr.js");
+    const { tmdbGetDetails } = await import("../api/tmdb.js");
+    const seerrUrl = process.env.SEERR_URL;
+    const seerrKey = process.env.SEERR_API_KEY;
+    const tmdbKey  = process.env.TMDB_API_KEY;
+    if (seerrUrl && seerrKey && tmdbKey) {
+      const detailsFn = (id, type) => tmdbGetDetails(id, type, tmdbKey);
+      out.requestGenres = await fetchTopRequestGenres(seerrUrl, seerrKey, detailsFn, 200);
+    }
+  } catch (e) {
+    logger.warn(`[stats/insights] requestGenres failed: ${e.message}`);
+  }
+
+  res.json(out);
 });
 
 // ─── Widget Stats (JSON, protected by API key) ─────────────────────────────
@@ -403,6 +449,13 @@ router.post("/post-help", botControlLimiter, authenticateToken, async (req, res)
     });
     if (pin) {
       await message.pin();
+    }
+    // Persist the chosen channel so it pre-fills the dropdown on next dashboard load
+    try {
+      updateConfig({ POST_HELP_CHANNEL_ID: String(channelId) });
+      process.env.POST_HELP_CHANNEL_ID = String(channelId);
+    } catch (e) {
+      logger.warn(`[post-help] Failed to persist POST_HELP_CHANNEL_ID: ${e.message}`);
     }
     logger.info(`[post-help] Help wizard posted to #${channel.name} (${channelId})${pin ? " and pinned" : ""}`);
     res.json({ success: true, messageId: message.id, channelId: channel.id });

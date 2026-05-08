@@ -99,7 +99,17 @@ export async function handleRandomCommand(interaction) {
       if (isValidUrl(imdbUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbUrlR));
     }
     const replyOptsR = { embeds: [embed] };
-    if (components.length > 0) replyOptsR.components = [new ActionRowBuilder().addComponents(components)];
+    const allRows = [];
+    if (components.length > 0) {
+      allRows.push(new ActionRowBuilder().addComponents(components));
+    }
+    // Append the contextual action buttons (🔗 Similar | 📦 Collection | 🎭 Cast | ⭐ Recommend)
+    if (tmdbIdForSeerr) {
+      const { buildActionButtons } = await import("../embeds.js");
+      const actionRow = buildActionButtons(tmdbIdForSeerr, item.Type === "Series" ? "tv" : "movie");
+      if (actionRow) allRows.push(actionRow);
+    }
+    if (allRows.length > 0) replyOptsR.components = allRows;
     return interaction.editReply(replyOptsR);
   } catch (err) {
     logger.error("Random command error:", err);

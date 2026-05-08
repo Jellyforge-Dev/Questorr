@@ -11,6 +11,7 @@ import { handleWizardButton } from "./handlers/wizardButton.js";
 import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_DIRECT_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
 import { handleDymYes, handleDymNo, handleDymPick } from "./handlers/didYouMean.js";
 import { showWizardSmartPicker, handleSmartPickerSelect, PICKER_BUTTON_IDS } from "./handlers/wizardSmartPicker.js";
+import { handleActionButton, handleActionCastPick } from "./handlers/actionButton.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
 import { handleCollectionCommand } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
@@ -79,6 +80,16 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("dym_no|"))   return handleDymNo(interaction);
         if (interaction.customId.startsWith("dym_pick|")) return handleDymPick(interaction);
 
+        // Contextual action buttons (Similar / Collection / Cast / Recommend) on result embeds
+        if (
+          interaction.customId.startsWith("action_similar|") ||
+          interaction.customId.startsWith("action_collection|") ||
+          interaction.customId.startsWith("action_cast|") ||
+          interaction.customId.startsWith("action_recommend|")
+        ) {
+          return handleActionButton(interaction);
+        }
+
         // /search & /request go straight to the modal
         if (WIZARD_DIRECT_MODAL_BUTTON_IDS.includes(interaction.customId)) {
           return showWizardSearchModal(interaction);
@@ -126,6 +137,9 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("smartpick|")) {
           return handleSmartPickerSelect(interaction);
+        }
+        if (interaction.customId.startsWith("action_cast_pick|")) {
+          return handleActionCastPick(interaction);
         }
       }
 

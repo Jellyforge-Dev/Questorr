@@ -504,6 +504,125 @@ export async function fetchSeerrUserRequests(userId, seerrUrl, apiKey, limit = 2
 }
 
 /**
+ * Aggregate all Seerr requests (paginated, up to a sane cap) and compute
+ * the average lifecycle durations for the dashboard "Insights" panel.
+ *
+ * Pending → Approved : difference between request.createdAt (=Pending) and
+ *                      request.updatedAt when status flipped to Approved (2).
+ * Approved → Available: difference between request.updatedAt and the moment
+ *                       the media became fully available (status 5) — we use
+ *                       the media's mediaAddedAt or updatedAt as proxy.
+ *
+ * @returns {Promise<{
+ *   totalRequests: number,
+ *   pendingToApprovedAvgHours: number | null,
+ *   approvedToAvailableAvgHours: number | null,
+ *   approvedSampleCount: number,
+ *   availableSampleCount: number,
+ * }>}
+ */
+export async function fetchRequestLifecycleStats(seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = 10; // hard cap → 1000 requests max
+  const all = [];
+
+  try {
+    for (let skip = 0, page = 0; page < MAX_PAGES; skip += PAGE_SIZE, page++) {
+      const res = await withRetry(
+        () => axios.get(`${apiUrl}/request`, {
+          headers: { "X-Api-Key": apiKey },
+          params: { take: PAGE_SIZE, skip, sort: "added" },
+          timeout: TIMEOUTS.SEERR_API,
+        }),
+        { label: `Seerr lifecycle page=${page}` }
+      );
+      const results = res.data?.results || [];
+      all.push(...results);
+      if (results.length < PAGE_SIZE) break;
+    }
+  } catch (err) {
+    logger.warn(`[Seerr] fetchRequestLifecycleStats failed: ${err?.message || err}`);
+  }
+
+  let pendingMs = 0, pendingN = 0;
+  let availableMs = 0, availableN = 0;
+
+  for (const r of all) {
+    const created = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+    const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+    const status  = r.status; // 1 = Pending, 2 = Approved, 3 = Declined
+    const mediaStatus = r.media?.status; // 4 = Partial, 5 = Available
+    const mediaAdded  = r.media?.mediaAddedAt
+      ? new Date(r.media.mediaAddedAt).getTime() : 0;
+
+    // Pending → Approved (only when we know the request was actually approved)
+    if (status === 2 && created && updated && updated > created) {
+      pendingMs += (updated - created);
+      pendingN++;
+    }
+
+    // Approved → Available — use mediaAddedAt as the Available signal,
+    // and request updatedAt as the Approval timestamp (best available proxy).
+    if (mediaStatus === 5 && mediaAdded && updated && mediaAdded > updated) {
+      availableMs += (mediaAdded - updated);
+      availableN++;
+    }
+  }
+
+  const HOUR = 3_600_000;
+  return {
+    totalRequests: all.length,
+    pendingToApprovedAvgHours:   pendingN ? +(pendingMs / pendingN / HOUR).toFixed(1) : null,
+    approvedToAvailableAvgHours: availableN ? +(availableMs / availableN / HOUR).toFixed(1) : null,
+    approvedSampleCount:  pendingN,
+    availableSampleCount: availableN,
+  };
+}
+
+/**
+ * Aggregate the top-10 genres from the most-recent N Seerr requests.
+ * Joins each request's TMDB id with `tmdbGetDetails` to read genre tags.
+ *
+ * @param {string} seerrUrl
+ * @param {string} apiKey
+ * @param {(tmdbId, mediaType) => Promise<{genres?: Array<{name: string}>}>} tmdbGetDetailsFn
+ *   Inject the TMDB-details fetcher so this module stays free of hard deps.
+ * @param {number} take - max number of recent requests to inspect (default 200)
+ * @returns {Promise<Array<{name: string, count: number}>>}
+ */
+export async function fetchTopRequestGenres(seerrUrl, apiKey, tmdbGetDetailsFn, take = 200) {
+  let requests = [];
+  try {
+    const data = await fetchRequests(seerrUrl, apiKey, take, "all");
+    requests = data?.results || [];
+  } catch (err) {
+    logger.warn(`[Seerr] fetchTopRequestGenres → fetchRequests failed: ${err?.message || err}`);
+    return [];
+  }
+
+  const genreCount = new Map();
+  await Promise.all(requests.map(async (r) => {
+    const tmdbId = r.media?.tmdbId;
+    const mediaType = r.media?.mediaType || r.type;
+    if (!tmdbId || !mediaType) return;
+    try {
+      const details = await tmdbGetDetailsFn(tmdbId, mediaType);
+      const genres = details?.genres || [];
+      for (const g of genres) {
+        if (!g?.name) continue;
+        genreCount.set(g.name, (genreCount.get(g.name) || 0) + 1);
+      }
+    } catch (_) { /* skip individual lookup failures */ }
+  }));
+
+  return [...genreCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+}
+
+/**
  * Fetch a single Seerr request by ID.
  * @param {number|string} requestId - Seerr request ID
  * @param {string} seerrUrl - Seerr base URL

@@ -300,16 +300,14 @@
                         </div>
                         <div class="form-group" style="margin-bottom: 0.75rem;">
                           <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.post_help_channel">Channel</label>
-                          <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <select
-                              id="post-help-channel-id"
-                              style="flex: 1; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                              <option value="">— Kanal auswählen —</option>
-                            </select>
-                            <button type="button" id="post-help-load-channels-btn" title="Kanäle laden" style="padding: 0.75rem; background: var(--surface1); border: 1px solid var(--surface2); border-radius: 8px; color: var(--text); cursor: pointer; font-size: 1rem; flex-shrink: 0;">
-                              <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                          </div>
+                          <select
+                            id="POST_HELP_CHANNEL_ID"
+                            name="POST_HELP_CHANNEL_ID"
+                            class="form-select channel-select"
+                            data-channel-select="true"
+                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
+                          </select>
                         </div>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
                           <input type="checkbox" id="post-help-pin" />
@@ -919,7 +917,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label for="EMBED_FOOTER_TEXT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.embed_footer_label">Embed Footer Text</label>
                         <input type="text" id="EMBED_FOOTER_TEXT" name="EMBED_FOOTER_TEXT" placeholder="Powered by Questorr" maxlength="200"
-                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                         <div class="form-text" style="margin-top: 0.4rem;">
                           <span data-i18n="config.embed_footer_desc">Custom footer text shown on all Discord embeds. Leave empty for no footer.</span>
                         </div>
@@ -1126,7 +1124,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_ADVISOR_DAY" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_day">Day of week</label>
-                            <select id="CLEANUP_ADVISOR_DAY" name="CLEANUP_ADVISOR_DAY" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;">
+                            <select id="CLEANUP_ADVISOR_DAY" name="CLEANUP_ADVISOR_DAY" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;">
                               <option value="monday">Monday</option>
                               <option value="tuesday">Tuesday</option>
                               <option value="wednesday">Wednesday</option>
@@ -1138,29 +1136,29 @@
                           </div>
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_ADVISOR_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_time">Time (HH:MM)</label>
-                            <input type="time" id="CLEANUP_ADVISOR_TIME" name="CLEANUP_ADVISOR_TIME" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                            <input type="time" id="CLEANUP_ADVISOR_TIME" name="CLEANUP_ADVISOR_TIME" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                           </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_MIN_AGE_DAYS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_min_age">Min. age in library (days)</label>
-                            <input type="number" id="CLEANUP_MIN_AGE_DAYS" name="CLEANUP_MIN_AGE_DAYS" placeholder="365" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                            <input type="number" id="CLEANUP_MIN_AGE_DAYS" name="CLEANUP_MIN_AGE_DAYS" placeholder="365" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                           </div>
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_MAX_PLAYCOUNT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_play">Max. play count</label>
-                            <input type="number" id="CLEANUP_MAX_PLAYCOUNT" name="CLEANUP_MAX_PLAYCOUNT" placeholder="1" min="0" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                            <input type="number" id="CLEANUP_MAX_PLAYCOUNT" name="CLEANUP_MAX_PLAYCOUNT" placeholder="1" min="0" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                           </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_MIN_DAYS_SINCE_PLAYED" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_since_played">Min. days since last play</label>
-                            <input type="number" id="CLEANUP_MIN_DAYS_SINCE_PLAYED" name="CLEANUP_MIN_DAYS_SINCE_PLAYED" placeholder="180" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                            <input type="number" id="CLEANUP_MIN_DAYS_SINCE_PLAYED" name="CLEANUP_MIN_DAYS_SINCE_PLAYED" placeholder="180" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                           </div>
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_MAX_RESULTS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_results">Max. results per post</label>
-                            <input type="number" id="CLEANUP_MAX_RESULTS" name="CLEANUP_MAX_RESULTS" placeholder="25" min="1" max="50" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                            <input type="number" id="CLEANUP_MAX_RESULTS" name="CLEANUP_MAX_RESULTS" placeholder="25" min="1" max="50" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                           </div>
                         </div>
 
@@ -1352,6 +1350,61 @@
                     <div style="margin-bottom: 1.5rem;">
                       <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_users_title">Top Users</h4>
                       <div id="stats-top-users" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                    </div>
+
+                    <!-- Library & Request Insights -->
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--surface1);">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_insights_title">Library &amp; Request Insights</h4>
+                      <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                        <button type="button" id="stats-insights-load-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
+                          <i class="bi bi-graph-up"></i> <span data-i18n="config.stats_insights_load">Load Insights</span>
+                        </button>
+                        <span id="stats-insights-status" style="font-size: 0.85rem; color: var(--subtext0);"></span>
+                      </div>
+
+                      <!-- Library cards -->
+                      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-movies">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_movies">Movies</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-series">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_series">Series</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-runtime">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_runtime">Total runtime (h)</div>
+                        </div>
+                      </div>
+
+                      <!-- Top library genres -->
+                      <div style="margin-bottom: 1.25rem;">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text);" data-i18n="config.stats_lib_top_genres">Top genres in library</div>
+                        <div id="stats-lib-genres" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                          <div style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.stats_insights_no_data">No data yet — click "Load Insights".</div>
+                        </div>
+                      </div>
+
+                      <!-- Lifecycle -->
+                      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--yellow);" id="stats-lc-pending">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lc_pending">⌀ Pending → Approved (h)</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--yellow);" id="stats-lc-available">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lc_available">⌀ Approved → Available (h)</div>
+                        </div>
+                      </div>
+
+                      <!-- Top genres in requests -->
+                      <div>
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text);" data-i18n="config.stats_req_top_genres">Top genres in requests</div>
+                        <div id="stats-req-genres" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                          <div style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.stats_insights_no_data">No data yet — click "Load Insights".</div>
+                        </div>
+                      </div>
                     </div>
 
                     <!-- Reset Button -->

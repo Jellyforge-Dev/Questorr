@@ -885,3 +885,64 @@ export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
     return [];
   }
 }
+
+/**
+ * Fetch a high-level library summary for the Stats dashboard.
+ * Returns counts per IncludeItemType and a top-10 genre histogram.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @returns {Promise<{movies: number, series: number, totalRuntimeMinutes: number, topGenres: Array<{name: string, count: number}>}>}
+ */
+export async function fetchLibrarySummary(apiKey, baseUrl) {
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series",
+          Fields: "Genres,RunTimeTicks",
+          // Use a generous cap; Jellyfin libraries above ~10k are rare and
+          // would saturate any single dashboard call anyway.
+          Limit: 10000,
+        },
+        timeout: 30000,
+      }),
+      { label: "Jellyfin library-summary" }
+    );
+
+    const items = response.data?.Items || [];
+    let movies = 0, series = 0, totalRuntimeTicks = 0;
+    const genreCount = new Map();
+
+    for (const it of items) {
+      if (it.Type === "Movie") movies++;
+      else if (it.Type === "Series") series++;
+      if (typeof it.RunTimeTicks === "number") totalRuntimeTicks += it.RunTimeTicks;
+      if (Array.isArray(it.Genres)) {
+        for (const g of it.Genres) {
+          if (!g) continue;
+          genreCount.set(g, (genreCount.get(g) || 0) + 1);
+        }
+      }
+    }
+
+    const topGenres = [...genreCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
+
+    return {
+      movies,
+      series,
+      totalRuntimeMinutes: Math.round(totalRuntimeTicks / 600_000_000), // ticks=100ns
+      topGenres,
+    };
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchLibrarySummary error: ${err?.message || err}`);
+    return { movies: 0, series: 0, totalRuntimeMinutes: 0, topGenres: [] };
+  }
+}

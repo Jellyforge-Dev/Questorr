@@ -85,8 +85,25 @@ export async function handleWizardModalSubmit(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      const results = (await tmdbApi.tmdbSearch(value, getTmdbApiKey()))
+      let results = (await tmdbApi.tmdbSearch(value, getTmdbApiKey()))
         .filter(r => r.media_type === "movie" || r.media_type === "tv");
+
+      // Fallback: if the full query returned nothing (likely a typo in a
+      // trailing word, e.g. "Pulp Fiktion"), retry with progressively
+      // shorter prefixes. The DYM check then catches the rest.
+      if (results.length === 0) {
+        const words = value.split(/\s+/).filter(Boolean);
+        for (let n = words.length - 1; n >= 1; n--) {
+          const partial = words.slice(0, n).join(" ");
+          const partialResults = (await tmdbApi.tmdbSearch(partial, getTmdbApiKey()))
+            .filter(r => r.media_type === "movie" || r.media_type === "tv");
+          if (partialResults.length > 0) {
+            logger.info(`[wizard-modal] tmdb fallback: "${value}" → "${partial}" (${partialResults.length} hits)`);
+            results = partialResults;
+            break;
+          }
+        }
+      }
 
       if (results.length > 0) {
         const topTitle = results[0].title || results[0].name || "";

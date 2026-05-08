@@ -3,7 +3,7 @@ import { ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
-import { buildNotificationEmbed, buildButtons } from "../embeds.js";
+import { buildNotificationEmbed, buildButtons, buildActionButtons } from "../embeds.js";
 import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
 import { getUserMappings } from "../../utils/configFile.js";
@@ -198,6 +198,10 @@ export async function handleSearchOrRequest(
       [],
       trailerUrl
     );
+
+    // Append the contextual action buttons (🔗 Similar | 📦 Collection | 🎭 Cast | ⭐ Recommend)
+    const actionRow = buildActionButtons(tmdbId, mediaType);
+    if (actionRow) components.push(actionRow);
 
     const showTagSelection = process.env.SHOW_TAG_SELECTION !== "false";
     if (mediaType === "movie" && mode === "search" && showTagSelection) {

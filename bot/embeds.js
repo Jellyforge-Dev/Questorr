@@ -384,3 +384,42 @@ export function buildButtons(
 
   return rows;
 }
+
+/**
+ * Build a context action row for a single media item: Similar / Collection /
+ * Cast / Recommend. Each button dispatches the corresponding command flow
+ * with the tmdbId pre-resolved (no second TMDB lookup, no typing required).
+ *
+ * Returns null when no tmdbId is provided. Caller appends the row to its
+ * existing components array.
+ */
+export function buildActionButtons(tmdbId, mediaType) {
+  if (!tmdbId) return null;
+
+  const safeId = String(tmdbId);
+  const safeType = mediaType === "tv" ? "tv" : "movie";
+
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`action_similar|${safeId}|${safeType}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("action_btn_similar"))
+      .setEmoji("🔗"),
+    new ButtonBuilder()
+      .setCustomId(`action_collection|${safeId}|${safeType}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("action_btn_collection"))
+      .setEmoji("📦")
+      .setDisabled(safeType !== "movie"),
+    new ButtonBuilder()
+      .setCustomId(`action_cast|${safeId}|${safeType}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("action_btn_cast"))
+      .setEmoji("🎭"),
+    new ButtonBuilder()
+      .setCustomId(`action_recommend|${safeId}|${safeType}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setLabel(t("action_btn_recommend"))
+      .setEmoji("⭐"),
+  );
+}
