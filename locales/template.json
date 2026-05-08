@@ -606,5 +606,32 @@
     "available_description": "",
     "field_type": "",
     "field_reason": ""
+  },
+  "widget": {
+    "tab_commands": "",
+    "tab_users": "",
+    "tab_library": "",
+    "tab_lifecycle": "",
+    "tab_genres": "",
+    "uptime": "",
+    "commands": "",
+    "ram_mb": "",
+    "movies": "",
+    "series": "",
+    "hours": "",
+    "pend_appr": "",
+    "appr_avail": "",
+    "avg_wait": "",
+    "no_data": "",
+    "start_bot": "",
+    "stop_bot": "",
+    "bot_offline": "",
+    "loading": "",
+    "reset": "",
+    "confirm": "",
+    "done": "",
+    "connection_failed": "",
+    "action_failed": "",
+    "reset_failed": ""
   }
 }

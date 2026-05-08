@@ -2,6 +2,9 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { createRequire } from "module";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { botState, pendingRequests } from "../bot/botState.js";
@@ -12,6 +15,35 @@ import logger from "../utils/logger.js";
 
 const require = createRequire(import.meta.url);
 const { version: APP_VERSION } = require("../package.json");
+
+// ── Widget locale helpers ────────────────────────────────────────────────────
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let _widgetLocale = null;
+function getWidgetLocale() {
+  if (_widgetLocale) return _widgetLocale;
+  const lang = process.env.LANGUAGE || process.env.BOT_LANGUAGE || "en";
+  try {
+    _widgetLocale = JSON.parse(readFileSync(path.join(__dirname, `../locales/${lang}.json`), "utf8"));
+  } catch {
+    try {
+      _widgetLocale = JSON.parse(readFileSync(path.join(__dirname, "../locales/en.json"), "utf8"));
+    } catch {
+      _widgetLocale = {};
+    }
+  }
+  return _widgetLocale;
+}
+/** Translate a dot-notation key from the widget locale, e.g. "widget.uptime" */
+function wt(key, fallback = "") {
+  const locale = getWidgetLocale();
+  const parts = key.split(".");
+  let val = locale;
+  for (const p of parts) {
+    if (!val || typeof val !== "object") return fallback;
+    val = val[p];
+  }
+  return typeof val === "string" ? val : fallback;
+}
 
 const router = Router();
 
@@ -359,52 +391,52 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 <span class="dot offline" id="dot"></span>
 </div>
 <div class="bot-info">
-<span id="bn">Loading...</span>
+<span id="bn">${wt("widget.loading","Loading…")}</span>
 <span id="ver"></span>
 </div>
 <div class="stats">
-<div class="stat"><div class="v" id="up">--</div><div class="l">Uptime</div></div>
-<div class="stat"><div class="v" id="cmds">--</div><div class="l">Commands</div></div>
-<div class="stat"><div class="v" id="mem">--</div><div class="l">RAM MB</div></div>
+<div class="stat"><div class="v" id="up">--</div><div class="l">${wt("widget.uptime","Uptime")}</div></div>
+<div class="stat"><div class="v" id="cmds">--</div><div class="l">${wt("widget.commands","Commands")}</div></div>
+<div class="stat"><div class="v" id="mem">--</div><div class="l">${wt("widget.ram_mb","RAM MB")}</div></div>
 </div>
 <div class="section">
 <div class="tabs">
-<button class="tab active" onclick="switchTab('commands',this)">Commands</button>
-<button class="tab" onclick="switchTab('users',this)">Top Users</button>
-<button class="tab" onclick="switchTab('library',this)">Library</button>
-<button class="tab" onclick="switchTab('lifecycle',this)">Lifecycle</button>
-<button class="tab" onclick="switchTab('genres',this)">Req. Genres</button>
+<button class="tab active" onclick="switchTab('commands',this)">${wt("widget.tab_commands","Commands")}</button>
+<button class="tab" onclick="switchTab('users',this)">${wt("widget.tab_users","Top Users")}</button>
+<button class="tab" onclick="switchTab('library',this)">${wt("widget.tab_library","Library")}</button>
+<button class="tab" onclick="switchTab('lifecycle',this)">${wt("widget.tab_lifecycle","Lifecycle")}</button>
+<button class="tab" onclick="switchTab('genres',this)">${wt("widget.tab_genres","Req. Genres")}</button>
 </div>
 <div class="tab-content active" id="tab-commands">
-<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 <div class="tab-content" id="tab-users">
-<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 <div class="tab-content" id="tab-library">
 <div class="lib-grid" id="libGrid">
-<div class="lib-card"><div class="v" id="libMovies">--</div><div class="l">Movies</div></div>
-<div class="lib-card"><div class="v" id="libSeries">--</div><div class="l">Series</div></div>
-<div class="lib-card"><div class="v" id="libHours">--</div><div class="l">Hours</div></div>
+<div class="lib-card"><div class="v" id="libMovies">--</div><div class="l">${wt("widget.movies","Movies")}</div></div>
+<div class="lib-card"><div class="v" id="libSeries">--</div><div class="l">${wt("widget.series","Series")}</div></div>
+<div class="lib-card"><div class="v" id="libHours">--</div><div class="l">${wt("widget.hours","Hours")}</div></div>
 </div>
-<div class="cmd-list" id="libGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="libGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 <div class="tab-content" id="tab-lifecycle">
 <div class="lc-grid">
-<div class="lib-card"><div class="v" id="lcPending">--</div><div class="l">Pend → Apprv (h)</div></div>
-<div class="lib-card"><div class="v" id="lcAvail">--</div><div class="l">Apprv → Avail (h)</div></div>
+<div class="lib-card"><div class="v" id="lcPending">--</div><div class="l">${wt("widget.pend_appr","Pend → Apprv (h)")}</div></div>
+<div class="lib-card"><div class="v" id="lcAvail">--</div><div class="l">${wt("widget.appr_avail","Apprv → Avail (h)")}</div></div>
 </div>
-<div style="color:#484f58;font-size:10px;text-align:center;padding:10px 6px">Average wait time across all requests.</div>
+<div style="color:#484f58;font-size:10px;text-align:center;padding:10px 6px">${wt("widget.avg_wait","Average wait time across all requests.")}</div>
 </div>
 <div class="tab-content" id="tab-genres">
-<div class="cmd-list" id="reqGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="reqGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 </div>
 <div class="btn-row">
 <button class="toggle-btn start" id="tb" onclick="toggle()" disabled>
-<span id="tbIcon">&#9654;</span> <span id="tbText">Start Bot</span>
+<span id="tbIcon">&#9654;</span> <span id="tbText">${wt("widget.start_bot","Start Bot")}</span>
 </button>
-<button class="reset-btn" id="rb" onclick="resetStats()" title="Reset command statistics">&#x21BA; Reset</button>
+<button class="reset-btn" id="rb" onclick="resetStats()" title="Reset command statistics">&#x21BA; ${wt("widget.reset","Reset")}</button>
 </div>
 <div class="err" id="err"></div>
 <div class="ver" id="verFull"></div>
@@ -413,6 +445,19 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 const A="${baseUrl}/api";
 const WK="${apiKey}";
 const H=WK?{"x-widget-key":WK}:{};
+const L=${JSON.stringify({
+  noData:    wt("widget.no_data","No data yet"),
+  offline:   wt("widget.bot_offline","Bot offline"),
+  loading:   wt("widget.loading","Loading…"),
+  startBot:  wt("widget.start_bot","Start Bot"),
+  stopBot:   wt("widget.stop_bot","Stop Bot"),
+  connFail:  wt("widget.connection_failed","Connection failed"),
+  actFail:   wt("widget.action_failed","Action failed"),
+  resetFail: wt("widget.reset_failed","Reset failed"),
+  confirm:   wt("widget.confirm","Confirm?"),
+  reset:     wt("widget.reset","Reset"),
+  done:      wt("widget.done","Done"),
+})};
 let isOnline=false;
 
 function switchTab(name,el){
@@ -430,7 +475,7 @@ const d=await(await fetch(A+"/widget/stats",{headers:H})).json();
 if(d.error){document.getElementById("err").textContent=d.error;return;}
 isOnline=d.status==="online";
 document.getElementById("dot").className="dot "+d.status;
-document.getElementById("bn").textContent=d.botUsername||"Bot offline";
+document.getElementById("bn").textContent=d.botUsername||L.offline;
 document.getElementById("up").textContent=d.uptimeFormatted||"0h 00m 00s";
 document.getElementById("cmds").textContent=d.commandStats?.totalCommands||0;
 document.getElementById("mem").textContent=d.memoryMB;
@@ -439,10 +484,10 @@ document.getElementById("verFull").textContent="Questorr v"+d.version;
 document.getElementById("tb").disabled=false;
 document.getElementById("tb").className="toggle-btn "+(isOnline?"stop":"start");
 document.getElementById("tbIcon").innerHTML=isOnline?"&#9632;":"&#9654;";
-document.getElementById("tbText").textContent=isOnline?"Stop Bot":"Start Bot";
+document.getElementById("tbText").textContent=isOnline?L.stopBot:L.startBot;
 document.getElementById("err").textContent="";
 const cs=d.commandStats;
-const emptyMsg='<div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div>';
+const emptyMsg='<div style="color:#484f58;font-size:11px;text-align:center;padding:8px">'+L.noData+'</div>';
 if(cs&&cs.commands&&Object.keys(cs.commands).length>0){
 const max=Math.max(...Object.values(cs.commands));
 let h="";
@@ -502,7 +547,7 @@ rg.forEach(g=>{const pct=max>0?Math.round(g.count/max*100):0;
 h+='<div class="bar-row"><span class="bar-name">'+esc(g.name)+'</span><div class="bar-track"><div class="bar-fill peach" style="width:'+pct+'%"></div></div><span class="bar-count">'+g.count+'</span></div>';});
 document.getElementById("reqGenres").innerHTML=h;
 }else{document.getElementById("reqGenres").innerHTML=emptyMsg;}
-}catch(e){document.getElementById("err").textContent="Connection failed"}}
+}catch(e){document.getElementById("err").textContent=L.connFail}}
 
 async function toggle(){
 const action=isOnline?"stop":"start";
@@ -514,22 +559,22 @@ const d=await res.json();
 if(!res.ok)document.getElementById("err").textContent=d.message||d.error;
 setTimeout(r,1500);
 }catch(e){
-document.getElementById("err").textContent="Action failed";
+document.getElementById("err").textContent=L.actFail;
 document.getElementById("tb").disabled=false;
 }}
 
 let resetPending=false;
 async function resetStats(){
 const rb=document.getElementById("rb");
-if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; Confirm?";rb.style.color="#f38ba8";rb.style.borderColor="rgba(243,139,168,0.4)";setTimeout(()=>{if(resetPending){resetPending=false;rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";}},3000);return;}
+if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; "+L.confirm;rb.style.color="#f38ba8";rb.style.borderColor="rgba(243,139,168,0.4)";setTimeout(()=>{if(resetPending){resetPending=false;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";}},3000);return;}
 resetPending=false;
 try{
 rb.disabled=true;rb.innerHTML="...";
 const res=await fetch(A+"/widget/reset-stats",{method:"POST",headers:H});
 const d=await res.json();
-if(d.success){rb.innerHTML="&#x2705; Done";rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.disabled=false;r();},1500);}
-else{document.getElementById("err").textContent=d.message||"Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
-}catch(e){document.getElementById("err").textContent="Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}}
+if(d.success){rb.innerHTML="&#x2705; "+L.done;rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.disabled=false;r();},1500);}
+else{document.getElementById("err").textContent=d.message||L.resetFail;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
+}catch(e){document.getElementById("err").textContent=L.resetFail;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";rb.disabled=false;}}
 
 r();setInterval(r,15000);
 </script>
