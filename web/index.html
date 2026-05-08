@@ -1172,6 +1172,23 @@
                           </div>
                         </div>
 
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_FETCH_TIMEOUT_PRESET" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_timeout_label">Fetch timeout</label>
+                            <select id="CLEANUP_FETCH_TIMEOUT_PRESET" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;">
+                              <option value="30" data-i18n="config.cleanup_timeout_preset_small">Small library (~500 titles) — 30s</option>
+                              <option value="60" selected data-i18n="config.cleanup_timeout_preset_medium">Medium library (~2000 titles) — 60s</option>
+                              <option value="120" data-i18n="config.cleanup_timeout_preset_large">Large library (~6000 titles) — 120s</option>
+                              <option value="custom" data-i18n="config.cleanup_timeout_preset_custom">Custom…</option>
+                            </select>
+                            <small style="display: block; margin-top: 0.4rem; color: var(--subtext0); font-size: 0.85em;" data-i18n="config.cleanup_timeout_help">Higher values prevent timeouts on large libraries but may delay the run.</small>
+                          </div>
+                          <div class="form-group" id="CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP" style="margin: 0; display: none;">
+                            <label for="CLEANUP_FETCH_TIMEOUT_SECONDS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_timeout_custom_label">Custom timeout (seconds)</label>
+                            <input type="number" id="CLEANUP_FETCH_TIMEOUT_SECONDS" name="CLEANUP_FETCH_TIMEOUT_SECONDS" placeholder="60" min="5" max="600" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                        </div>
+
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-cleanup-advisor-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <i class="bi bi-trash"></i> <span data-i18n="config.cleanup_test">Cleanup-Vorschlag jetzt senden</span>

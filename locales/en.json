@@ -421,7 +421,14 @@
     "mapping_added": "Mapping added successfully!",
     "importing": "Importing...",
     "imported": "Imported!",
-    "loading_channels": "Loading channels..."
+    "loading_channels": "Loading channels...",
+    "cleanup_timeout_label": "Fetch timeout",
+    "cleanup_timeout_help": "Higher values prevent timeouts on large libraries but may delay the run.",
+    "cleanup_timeout_preset_small": "Small library (~500 titles) — 30s",
+    "cleanup_timeout_preset_medium": "Medium library (~2000 titles) — 60s",
+    "cleanup_timeout_preset_large": "Large library (~6000 titles) — 120s",
+    "cleanup_timeout_preset_custom": "Custom…",
+    "cleanup_timeout_custom_label": "Custom timeout (seconds)"
   },
   "ui": {
     "hide_header": "Hide header",

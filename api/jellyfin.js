@@ -862,17 +862,25 @@ export async function resolveJellyfinUserId(discordId, userMappings, seerrUrl, s
 export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
   const maxTotal = opts.limit ?? 5000;
   const pageSize  = 500; // safe per-page size — avoids per-request timeouts
+  // Per-page timeout: configurable via opts.timeoutMs OR env CLEANUP_FETCH_TIMEOUT_SECONDS
+  const envTimeout = parseInt(process.env.CLEANUP_FETCH_TIMEOUT_SECONDS || "60", 10);
+  const timeoutMs  = opts.timeoutMs ?? (envTimeout > 0 ? envTimeout * 1000 : 60000);
   const allItems  = [];
 
-  try {
-    const safeBase = new URL(baseUrl);
-    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+  const safeBase = new URL(baseUrl);
+  safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
 
-    let startIndex = 0;
-    let totalRecordCount = null;
+  let startIndex = 0;
+  let totalRecordCount = null;
 
-    while (allItems.length < maxTotal) {
-      const response = await axios.get(safeBase.href, {
+  // NOTE: We deliberately do NOT swallow errors here. Earlier behavior of
+  // returning `[]` on timeout caused cleanupAdvisor.js to post a misleading
+  // "✅ No cleanup candidates" message. Callers must catch and surface a
+  // visible warning to the user.
+  while (allItems.length < maxTotal) {
+    let response;
+    try {
+      response = await axios.get(safeBase.href, {
         headers: { "X-MediaBrowser-Token": apiKey },
         params: {
           Recursive: true,
@@ -883,29 +891,34 @@ export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
           Limit: Math.min(pageSize, maxTotal - allItems.length),
           Fields: "DateCreated,UserData,MediaSources,ProductionYear",
         },
-        timeout: 15000,
+        timeout: timeoutMs,
       });
-
-      const page = response.data?.Items || [];
-      allItems.push(...page);
-
-      // Capture total on first page
-      if (totalRecordCount === null) {
-        totalRecordCount = response.data?.TotalRecordCount ?? 0;
-      }
-
-      // Stop when we've read everything available
-      if (page.length === 0 || allItems.length >= totalRecordCount) break;
-
-      startIndex += page.length;
+    } catch (err) {
+      const baseMsg = err?.message || String(err);
+      const detail = `(fetched ${allItems.length}${totalRecordCount != null ? ` of ${totalRecordCount}` : ""} so far, timeout ${Math.round(timeoutMs/1000)}s)`;
+      logger.warn(`[Jellyfin] fetchUnwatchedAggregateItems error: ${baseMsg} ${detail}`);
+      const wrapped = new Error(`${baseMsg} ${detail}`);
+      wrapped.cause = err;
+      wrapped.partialCount = allItems.length;
+      throw wrapped;
     }
 
-    logger.debug(`[Jellyfin] fetchUnwatchedAggregateItems: fetched ${allItems.length} / ${totalRecordCount} items`);
-    return allItems;
-  } catch (err) {
-    logger.warn(`[Jellyfin] fetchUnwatchedAggregateItems error: ${err?.message || err}`);
-    return [];
+    const page = response.data?.Items || [];
+    allItems.push(...page);
+
+    // Capture total on first page
+    if (totalRecordCount === null) {
+      totalRecordCount = response.data?.TotalRecordCount ?? 0;
+    }
+
+    // Stop when we've read everything available
+    if (page.length === 0 || allItems.length >= totalRecordCount) break;
+
+    startIndex += page.length;
   }
+
+  logger.debug(`[Jellyfin] fetchUnwatchedAggregateItems: fetched ${allItems.length} / ${totalRecordCount} items`);
+  return allItems;
 }
 
 /**

@@ -421,7 +421,14 @@
     "mapping_added": "",
     "importing": "",
     "imported": "",
-    "loading_channels": ""
+    "loading_channels": "",
+    "cleanup_timeout_label": "",
+    "cleanup_timeout_help": "",
+    "cleanup_timeout_preset_small": "",
+    "cleanup_timeout_preset_medium": "",
+    "cleanup_timeout_preset_large": "",
+    "cleanup_timeout_preset_custom": "",
+    "cleanup_timeout_custom_label": ""
   },
   "ui": {
     "hide_header": "",

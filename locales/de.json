@@ -490,7 +490,14 @@
     "mapping_removed": "Zuordnung erfolgreich entfernt!",
     "mapping_added": "Zuordnung erfolgreich hinzugefügt!",
     "importing": "Importiere...",
-    "imported": "Importiert!"
+    "imported": "Importiert!",
+    "cleanup_timeout_label": "Abruf-Timeout",
+    "cleanup_timeout_help": "Höhere Werte verhindern Timeouts bei großen Bibliotheken, verzögern aber die Ausführung.",
+    "cleanup_timeout_preset_small": "Kleine Bibliothek (~500 Titel) — 30s",
+    "cleanup_timeout_preset_medium": "Mittlere Bibliothek (~2000 Titel) — 60s",
+    "cleanup_timeout_preset_large": "Große Bibliothek (~6000 Titel) — 120s",
+    "cleanup_timeout_preset_custom": "Benutzerdefiniert…",
+    "cleanup_timeout_custom_label": "Benutzerdefinierter Timeout (Sekunden)"
   },
   "ui": {
     "hide_header": "Header ausblenden",

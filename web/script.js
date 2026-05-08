@@ -1644,6 +1644,37 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   // Test Cleanup Advisor button
+  // Cleanup-fetch-timeout preset toggle: shows custom number input when "custom"
+  const cleanupTimeoutPreset = document.getElementById("CLEANUP_FETCH_TIMEOUT_PRESET");
+  const cleanupTimeoutCustomWrap = document.getElementById("CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP");
+  const cleanupTimeoutInput = document.getElementById("CLEANUP_FETCH_TIMEOUT_SECONDS");
+  if (cleanupTimeoutPreset && cleanupTimeoutCustomWrap && cleanupTimeoutInput) {
+    const PRESETS = ["30", "60", "120"];
+    // On load: pick preset if value matches, else "custom"
+    const applyValueToUI = () => {
+      const val = (cleanupTimeoutInput.value || "60").toString();
+      if (PRESETS.includes(val)) {
+        cleanupTimeoutPreset.value = val;
+        cleanupTimeoutCustomWrap.style.display = "none";
+      } else {
+        cleanupTimeoutPreset.value = "custom";
+        cleanupTimeoutCustomWrap.style.display = "";
+      }
+    };
+    // Run after config has loaded; also wire change event
+    setTimeout(applyValueToUI, 500);
+    cleanupTimeoutPreset.addEventListener("change", () => {
+      const v = cleanupTimeoutPreset.value;
+      if (v === "custom") {
+        cleanupTimeoutCustomWrap.style.display = "";
+        if (!cleanupTimeoutInput.value) cleanupTimeoutInput.value = "60";
+      } else {
+        cleanupTimeoutCustomWrap.style.display = "none";
+        cleanupTimeoutInput.value = v;
+      }
+    });
+  }
+
   const testCleanupBtn = document.getElementById("test-cleanup-advisor-btn");
   const testCleanupStatus = document.getElementById("test-cleanup-advisor-status");
   if (testCleanupBtn) {

@@ -278,8 +278,36 @@ async function runCleanupAdvisorInner(client) {
 
   logger.info(`[Cleanup Advisor] Running (minAge=${minAgeDays}d, maxPlay=${maxPlayCount}, sincePlayed=${minDaysSincePlayed}d, pageSize=${pageSize})`);
 
-  const items = await fetchUnwatchedAggregateItems(apiKey, baseUrl, { limit: 5000 });
-  logger.info(`[Cleanup Advisor] Fetched ${items.length} candidate items from Jellyfin`);
+  let items;
+  try {
+    items = await fetchUnwatchedAggregateItems(apiKey, baseUrl, { limit: 5000 });
+    logger.info(`[Cleanup Advisor] Fetched ${items.length} candidate items from Jellyfin`);
+  } catch (err) {
+    // Fetch failed — most often a timeout on a large library. Surface a
+    // visible warning embed to Discord instead of the misleading "all healthy"
+    // message that the caller would otherwise produce.
+    logger.warn(`[Cleanup Advisor] Fetch failed: ${err?.message || err}`);
+    let warnChannel;
+    try {
+      warnChannel = await client.channels.fetch(channelId);
+    } catch (chErr) {
+      logger.error(`[Cleanup Advisor] Cannot fetch channel ${channelId}: ${chErr.message}`);
+      return { posted: false, count: 0, message: `Channel fetch failed: ${chErr.message}` };
+    }
+    const warnEmbed = new EmbedBuilder()
+      .setColor("#f9a04a")
+      .setAuthor({ name: t("cleanup_title") })
+      .setTitle("⚠️ " + t("cleanup_fetch_failed_title"))
+      .setDescription(
+        t("cleanup_fetch_failed", { error: err?.message || String(err) }) +
+        "\n\n" +
+        t("cleanup_fetch_failed_hint")
+      )
+      .setTimestamp();
+    try { await warnChannel.send({ embeds: [warnEmbed] }); }
+    catch (sendErr) { logger.error(`[Cleanup Advisor] Could not post warning: ${sendErr.message}`); }
+    return { posted: true, count: 0, error: err?.message || String(err) };
+  }
 
   // Diagnostic counters — surface in logs why the funnel may collapse
   let skipNoCreated = 0, skipTooYoung = 0, skipPlayCount = 0, skipPlayedRecently = 0;
