@@ -931,52 +931,93 @@ export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
  */
 export async function fetchLibrarySummary(apiKey, baseUrl) {
   try {
-    const safeBase = new URL(baseUrl);
-    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const rootUrl = new URL(baseUrl);
+    rootUrl.pathname = rootUrl.pathname.replace(/\/$/, "") + "/Items";
+    const mediaFoldersUrl = new URL(baseUrl);
+    mediaFoldersUrl.pathname = mediaFoldersUrl.pathname.replace(/\/$/, "") + "/Library/MediaFolders";
 
-    // Strategy: use TotalRecordCount for the *exact* counts (matches Jellyfin's
-    // own library-page numbers), and a separate paginated call for genres +
-    // runtime aggregates. The previous combined IncludeItemTypes=Movie,Series
-    // call filtered locally on Type==="Series", which was off-by-one on some
-    // libraries because Jellyfin sometimes returns container items the UI
-    // counts but our filter dropped.
-    // _t param busts any HTTP-level ETag/conditional-GET caching by Jellyfin or
-    // intermediate proxies, ensuring we always get a fresh TotalRecordCount.
+    // Strategy: enumerate Library/MediaFolders and sum TotalRecordCount per
+    // movie/tvshows library individually. This matches Jellyfin's own library-
+    // page numbers exactly — a single global IncludeItemTypes=Movie call can
+    // drift by a few items when Jellyfin's UI picks up library-scoped
+    // collection containers that the global query filters out.
     const cacheBuster = Date.now();
-    const countParams = (type) => ({
-      Recursive: true,
-      IncludeItemTypes: type,
-      Limit: 0,
-      EnableTotalRecordCount: true,
-      _t: cacheBuster,
-    });
     const noCacheHeaders = { "X-MediaBrowser-Token": apiKey, "Cache-Control": "no-cache" };
 
-    const [movieCountRes, seriesCountRes] = await Promise.all([
-      axios.get(safeBase.href, {
+    let movies = 0;
+    let series = 0;
+    try {
+      const foldersRes = await axios.get(mediaFoldersUrl.href, {
         headers: noCacheHeaders,
-        params: countParams("Movie"),
+        params: { _t: cacheBuster },
         timeout: 15000,
-      }),
-      axios.get(safeBase.href, {
-        headers: noCacheHeaders,
-        params: countParams("Series"),
-        timeout: 15000,
-      }),
-    ]);
+      });
+      const folders = foldersRes.data?.Items || [];
 
-    const movies = movieCountRes.data?.TotalRecordCount ?? 0;
-    const series = seriesCountRes.data?.TotalRecordCount ?? 0;
+      const counts = await Promise.all(
+        folders
+          .filter((f) => f.CollectionType === "movies" || f.CollectionType === "tvshows")
+          .map(async (folder) => {
+            const itemType = folder.CollectionType === "movies" ? "Movie" : "Series";
+            try {
+              const res = await axios.get(rootUrl.href, {
+                headers: noCacheHeaders,
+                params: {
+                  ParentId: folder.Id,
+                  Recursive: true,
+                  IncludeItemTypes: itemType,
+                  Limit: 0,
+                  EnableTotalRecordCount: true,
+                  _t: cacheBuster,
+                },
+                timeout: 15000,
+              });
+              return { type: itemType, count: res.data?.TotalRecordCount ?? 0 };
+            } catch (e) {
+              logger.warn(`[Jellyfin] count failed for library "${folder.Name}": ${e.message}`);
+              return { type: itemType, count: 0 };
+            }
+          })
+      );
 
-    // Aggregate genres + runtime. We need the actual items for these — do it in
-    // one bounded call (Jellyfin libraries above ~10k items are rare).
+      for (const c of counts) {
+        if (c.type === "Movie") movies += c.count;
+        else if (c.type === "Series") series += c.count;
+      }
+    } catch (folderErr) {
+      // Fallback: global counts (older Jellyfin versions or restricted API key
+      // may not expose /Library/MediaFolders).
+      logger.warn(`[Jellyfin] MediaFolders enumeration failed (${folderErr.message}) — falling back to global counts`);
+      const countParams = (type) => ({
+        Recursive: true,
+        IncludeItemTypes: type,
+        Limit: 0,
+        EnableTotalRecordCount: true,
+        _t: cacheBuster,
+      });
+      const [movieCountRes, seriesCountRes] = await Promise.all([
+        axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Movie"), timeout: 15000 }),
+        axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Series"), timeout: 15000 }),
+      ]);
+      movies = movieCountRes.data?.TotalRecordCount ?? 0;
+      series = seriesCountRes.data?.TotalRecordCount ?? 0;
+    }
+
+    // safeBase still used by the runtime/genre aggregate call below
+    const safeBase = rootUrl;
+
+    // Aggregate genres + runtime across Movies AND Series. We need the actual
+    // items for these — do it in one bounded call (Jellyfin libraries above
+    // ~10k items are rare). Cache-busting param ensures recently-added items
+    // are reflected once Jellyfin has scanned them.
     const aggResponse = await axios.get(safeBase.href, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: noCacheHeaders,
       params: {
         Recursive: true,
         IncludeItemTypes: "Movie,Series",
         Fields: "Genres,RunTimeTicks",
         Limit: 10000,
+        _t: cacheBuster,
       },
       timeout: 30000,
     });
