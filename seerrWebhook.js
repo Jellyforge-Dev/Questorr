@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import path from "path";
 import { t, tNotif } from "./utils/botStrings.js";
-import { markNotified } from "./utils/notifyDedup.js";
+import { markNotified, wasRecentlyNotified } from "./utils/notifyDedup.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -972,6 +972,17 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
 
     await user.send(dmOptions);
     logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);
+
+    // Cross-source dedup: mark approval/decline DMs so the status poller and
+    // the Discord approve/decline button handler skip duplicates.
+    if (
+      eventType === "MEDIA_APPROVED" ||
+      eventType === "MEDIA_AUTO_APPROVED" ||
+      eventType === "MEDIA_DECLINED"
+    ) {
+      const reqId = data.request?.request_id ?? tmdbId;
+      if (reqId) markNotified("approval", `${eventType}-${reqId}`);
+    }
   } catch (err) {
     logger.warn(`[SEERR WEBHOOK] Could not send DM to ${discordId}: ${err.message}`);
   }

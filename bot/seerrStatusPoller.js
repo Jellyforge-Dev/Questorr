@@ -117,7 +117,9 @@ async function poll(seedOnly) {
       const tmdbId = req.media?.tmdbId;
       const mediaType = req.media?.mediaType || req.type;
       const eventType = status === STATUS_APPROVED ? "MEDIA_APPROVED" : "MEDIA_DECLINED";
-      const dedupKey = `${eventType.toLowerCase()}-poller-${reqId}`;
+      // Shared key with seerrWebhook.js + seerrApproveDecline.js so the three
+      // sources don't fire duplicate DMs for the same approval/decline.
+      const dedupKey = `${eventType}-${reqId}`;
 
       // ── Edit admin embed to show disabled status button ──────────────────
       if (botState.discordClient) {
@@ -171,10 +173,23 @@ async function poll(seedOnly) {
           `[SEERR Status Poller] Skipping ${eventType} DM for request ${reqId} (recently notified)`
         );
       } else if (botState.discordClient) {
+        // Skip if we have no real title — the webhook + button-click handlers
+        // produce richer DMs with proper titles. A bare "TMDB 12345" DM is
+        // worse than no DM, so we abort instead.
+        const realTitle = req.media?.title;
+        if (!realTitle) {
+          logger.debug(
+            `[SEERR Status Poller] Skipping ${eventType} DM for request ${reqId} — no title resolved (webhook/button-click should cover this)`
+          );
+          markNotified("approval", dedupKey); // mark anyway so we don't loop
+          lastSeenStatus.set(reqId, status);
+          continue;
+        }
         const synth = {
-          subject: req.media?.title || `TMDB ${tmdbId}`,
+          subject: realTitle,
           media: { media_type: mediaType, tmdbId },
           request: {
+            request_id: reqId,
             requestedBy_settings_discordId: req.requestedBy?.settings?.discordId,
             requestedBy_username:
               req.requestedBy?.username || req.requestedBy?.displayName,

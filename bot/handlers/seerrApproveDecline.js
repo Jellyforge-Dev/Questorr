@@ -5,6 +5,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../../utils/logger.js";
 import { botState } from "../botState.js";
 import { sendRequesterDm, removeAdminPendingMsg } from "../../seerrWebhook.js";
+import { markNotified, wasRecentlyNotified } from "../../utils/notifyDedup.js";
 
 /**
  * Handle approve/decline button clicks on MEDIA_PENDING admin notifications.
@@ -73,27 +74,40 @@ export async function handleSeerrApproveDecline(interaction) {
 
     // DM the requester via the central sendRequesterDm() so texts/buttons stay
     // consistent with webhook-driven DMs (same i18n keys, same embed shape).
+    // Cross-source dedup: if Seerr's webhook already fired the DM for this
+    // request, skip — the webhook's payload has richer data (poster image,
+    // proper title) than our synthetic one here.
     try {
       const discordClient = botState.discordClient;
       if (discordClient && apiResult) {
-        const synth = {
-          subject: interaction.message.embeds[0]?.title || "Unknown",
-          media: { media_type: apiResult?.type || apiResult?.media?.mediaType },
-          request: {
-            requestedBy_settings_discordId: apiResult?.requestedBy?.settings?.discordId,
-            requestedBy_username: apiResult?.requestedBy?.username || apiResult?.requestedBy?.displayName,
-            comment: null,
-          },
-        };
-        await sendRequesterDm(
-          synth,
-          isApprove ? "MEDIA_APPROVED" : "MEDIA_DECLINED",
-          {},
-          discordClient,
-          null,
-          null,
-          { tmdbId: apiResult?.media?.tmdbId }
-        );
+        const eventType = isApprove ? "MEDIA_APPROVED" : "MEDIA_DECLINED";
+        const reqId = apiResult?.id ?? requestId;
+        if (reqId && wasRecentlyNotified("approval", `${eventType}-${reqId}`)) {
+          logger.debug(`[SEERR] Skipping button-click DM — webhook already sent ${eventType} for request ${reqId}`);
+        } else {
+          const synth = {
+            subject: interaction.message.embeds[0]?.title || "Unknown",
+            media: { media_type: apiResult?.type || apiResult?.media?.mediaType },
+            request: {
+              request_id: reqId,
+              requestedBy_settings_discordId: apiResult?.requestedBy?.settings?.discordId,
+              requestedBy_username: apiResult?.requestedBy?.username || apiResult?.requestedBy?.displayName,
+              comment: null,
+            },
+          };
+          await sendRequesterDm(
+            synth,
+            eventType,
+            {},
+            discordClient,
+            null,
+            null,
+            { tmdbId: apiResult?.media?.tmdbId }
+          );
+          // sendRequesterDm marks notified internally, but for safety mark here
+          // too in case the user fetch fails inside sendRequesterDm.
+          if (reqId) markNotified("approval", `${eventType}-${reqId}`);
+        }
       }
     } catch (dmErr) {
       logger.warn(`[SEERR] Could not send DM after ${isApprove ? "approve" : "decline"}: ${dmErr.message}`);
