@@ -1644,6 +1644,78 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   // Test Cleanup Advisor button
+  // ── Jellyfin Poller status panel + manual "Poll now" button ──────────────
+  const pollerStatusEl = document.getElementById("POLLER_STATUS_TEXT");
+  const pollerNowBtn = document.getElementById("BTN_POLL_NOW");
+  if (pollerStatusEl) {
+    const fmtAgo = (sec) => {
+      if (sec == null) return "—";
+      if (sec < 60) return `${sec}s`;
+      if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+      return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+    };
+    const renderStatus = (s) => {
+      if (!s || s.enabled === false) {
+        pollerStatusEl.textContent = (t("config.poller_status_disabled") || "Status: deaktiviert");
+        return;
+      }
+      const last = s.lastPollAt ? fmtAgo(s.lastPollAgoSeconds) + " ago" : "—";
+      const tracked = s.totalItemsTracked ?? 0;
+      const newCnt = s.lastPollNewCount ?? 0;
+      const tpl = (t("config.poller_status_text")
+        || "Last poll: {{last}} · Tracked: {{tracked}} · New (last): {{new}}");
+      pollerStatusEl.textContent = tpl
+        .replace("{{last}}", last)
+        .replace("{{tracked}}", tracked)
+        .replace("{{new}}", newCnt);
+    };
+    const fetchStatus = async () => {
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/jellyfin/poller-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        renderStatus(data);
+      } catch (err) {
+        pollerStatusEl.textContent = (t("config.poller_status_error") || "Status: Fehler") + ": " + err.message;
+      }
+    };
+    // Initial + 30s refresh; clear interval on page nav
+    fetchStatus();
+    const statusInterval = setInterval(fetchStatus, 30000);
+    window.addEventListener("beforeunload", () => clearInterval(statusInterval));
+
+    if (pollerNowBtn) {
+      pollerNowBtn.addEventListener("click", async () => {
+        pollerNowBtn.disabled = true;
+        const origHTML = pollerNowBtn.innerHTML;
+        pollerNowBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.poller_polling") || "Prüfe…");
+        try {
+          const token = localStorage.getItem("questorr_token") || "";
+          const res = await fetch("/api/jellyfin/poll-now", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (data.success) {
+            const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
+            showToast(tpl.replace("{{fetched}}", data.fetched ?? 0).replace("{{new}}", data.new ?? 0));
+            await fetchStatus();
+          } else {
+            showToast((t("common.error") || "Fehler") + ": " + (data.error || "unknown"));
+          }
+        } catch (err) {
+          showToast((t("common.error") || "Fehler") + ": " + err.message);
+        } finally {
+          pollerNowBtn.disabled = false;
+          pollerNowBtn.innerHTML = origHTML;
+        }
+      });
+    }
+  }
+
   // Cleanup-fetch-timeout preset toggle: shows custom number input when "custom"
   const cleanupTimeoutPreset = document.getElementById("CLEANUP_FETCH_TIMEOUT_PRESET");
   const cleanupTimeoutCustomWrap = document.getElementById("CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP");

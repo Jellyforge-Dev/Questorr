@@ -428,7 +428,14 @@
     "cleanup_timeout_preset_medium": "Medium library (~2000 titles) — 60s",
     "cleanup_timeout_preset_large": "Large library (~6000 titles) — 120s",
     "cleanup_timeout_preset_custom": "Custom…",
-    "cleanup_timeout_custom_label": "Custom timeout (seconds)"
+    "cleanup_timeout_custom_label": "Custom timeout (seconds)",
+    "btn_poll_now": "Poll now",
+    "poller_status_loading": "Status: loading…",
+    "poller_status_disabled": "Status: disabled",
+    "poller_status_error": "Status: error",
+    "poller_status_text": "Last poll: {{last}} · Tracked: {{tracked}} · New (last): {{new}}",
+    "poller_polling": "Polling…",
+    "poller_polled_msg": "Polled: {{fetched}} fetched, {{new}} new"
   },
   "ui": {
     "hide_header": "Hide header",

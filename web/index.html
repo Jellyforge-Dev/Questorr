@@ -670,7 +670,15 @@
                             placeholder="300" min="0" max="86400" step="30"
                             style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
                           <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_interval_help">
-                            Wie oft Jellyfin auf neue Inhalte geprüft wird. Standard: 300 (= 5 Minuten). <strong>0 = deaktiviert.</strong>
+                            Wie oft Jellyfin auf neue Inhalte geprüft wird. Empfohlen: 60 (sehr aktive Bibliothek), 300 (Standard, 5 Minuten), 900 (große ruhige Bibliothek, 15 Minuten). <strong>0 = deaktiviert.</strong>
+                          </div>
+                          <div id="POLLER_STATUS_BLOCK" style="margin-top:0.75rem;padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);font-size:0.85em;color:var(--subtext1);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                              <span id="POLLER_STATUS_TEXT" data-i18n="config.poller_status_loading">Status: lädt…</span>
+                              <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
+                                <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <div class="form-group" style="margin-top:1rem;">

@@ -50,6 +50,19 @@ import { CONFIG_PATH } from "../utils/configFile.js";
 
 let pollerTimer = null;
 let initialized = false;
+let savedClient = null;
+let savedApiKey = null;
+let savedBaseUrl = null;
+
+// Stats exposed via getPollerStatus() for the dashboard.
+const pollerStats = {
+  lastPollAt: null,            // ISO string
+  lastPollDurationMs: null,
+  lastPollFetchedCount: 0,     // items fetched in most-recent poll
+  lastPollNewCount: 0,         // truly-new items in most-recent poll
+  totalPolls: 0,
+  totalNewItemsAllTime: 0,
+};
 
 // ─── Seen-set persistence ─────────────────────────────────────────────────────
 
@@ -120,6 +133,11 @@ export function startJellyfinPoller(client) {
     return;
   }
 
+  // Save for manual trigger via getPollerStatus()/triggerManualPoll()
+  savedClient = client;
+  savedApiKey = apiKey;
+  savedBaseUrl = baseUrl;
+
   logger.info(`[Jellyfin Poller] Starting – polling every ${intervalSec}s`);
 
   seedPoll(apiKey, baseUrl).then(() => {
@@ -184,6 +202,7 @@ async function poll(client, apiKey, baseUrl) {
     return;
   }
 
+  const pollStartedAt = Date.now();
   try {
     const items = await fetchItemsAddedSince(apiKey, baseUrl);
 
@@ -198,10 +217,18 @@ async function poll(client, apiKey, baseUrl) {
 
     logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (top 200 by DateCreated), ${newItems.length} new`);
 
+    // Update stats for the dashboard
+    pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();
+    pollerStats.lastPollDurationMs = Date.now() - pollStartedAt;
+    pollerStats.lastPollFetchedCount = items.length;
+    pollerStats.lastPollNewCount = newItems.length;
+    pollerStats.totalPolls += 1;
+    pollerStats.totalNewItemsAllTime += newItems.length;
+
     deduplicator.cleanup();
     saveSeenItems();
 
-    if (newItems.length === 0) return;
+    if (newItems.length === 0) return { fetched: items.length, new: 0 };
 
     logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
 
@@ -219,9 +246,51 @@ async function poll(client, apiKey, baseUrl) {
         logger.error(`[Jellyfin Poller] Error notifying "${item.Name}": ${err.message}`)
       );
     }
+    return { fetched: items.length, new: newItems.length };
   } catch (err) {
     logger.error("[Jellyfin Poller] Poll error:", err.message);
+    pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();
+    pollerStats.lastPollDurationMs = Date.now() - pollStartedAt;
+    throw err;
   }
+}
+
+// ─── Status / manual trigger (used by /api/jellyfin/poller-* endpoints) ────────
+
+/** Snapshot of the poller's current state for the dashboard. */
+export function getPollerStatus() {
+  const intervalSec = parseInt(process.env.JELLYFIN_POLL_INTERVAL_SECONDS ?? "300", 10);
+  const enabled = !isNaN(intervalSec) && intervalSec > 0;
+  const running = !!pollerTimer;
+  const lastPollAgoSeconds = pollerStats.lastPollAt
+    ? Math.floor((Date.now() - new Date(pollerStats.lastPollAt).getTime()) / 1000)
+    : null;
+  return {
+    enabled,
+    running,
+    initialized,
+    intervalSeconds: enabled ? intervalSec : 0,
+    lastPollAt: pollerStats.lastPollAt,
+    lastPollAgoSeconds,
+    lastPollDurationMs: pollerStats.lastPollDurationMs,
+    lastPollFetchedCount: pollerStats.lastPollFetchedCount,
+    lastPollNewCount: pollerStats.lastPollNewCount,
+    totalPolls: pollerStats.totalPolls,
+    totalNewItemsAllTime: pollerStats.totalNewItemsAllTime,
+    totalItemsTracked: deduplicator?.seenItems?.size ?? 0,
+  };
+}
+
+/** Manually trigger a poll cycle. Returns { fetched, new } or throws. */
+export async function triggerManualPoll() {
+  if (!savedClient || !savedApiKey || !savedBaseUrl) {
+    throw new Error("Poller not initialized — start the bot and ensure Jellyfin is configured.");
+  }
+  if (!initialized) {
+    throw new Error("Seed poll has not completed yet — please wait a moment and try again.");
+  }
+  const result = await poll(savedClient, savedApiKey, savedBaseUrl);
+  return result || { fetched: 0, new: 0 };
 }
 
 // ─── Item Notification ────────────────────────────────────────────────────────

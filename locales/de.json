@@ -497,7 +497,14 @@
     "cleanup_timeout_preset_medium": "Mittlere Bibliothek (~2000 Titel) — 60s",
     "cleanup_timeout_preset_large": "Große Bibliothek (~6000 Titel) — 120s",
     "cleanup_timeout_preset_custom": "Benutzerdefiniert…",
-    "cleanup_timeout_custom_label": "Benutzerdefinierter Timeout (Sekunden)"
+    "cleanup_timeout_custom_label": "Benutzerdefinierter Timeout (Sekunden)",
+    "btn_poll_now": "Jetzt prüfen",
+    "poller_status_loading": "Status: lädt…",
+    "poller_status_disabled": "Status: deaktiviert",
+    "poller_status_error": "Status: Fehler",
+    "poller_status_text": "Letzter Check: vor {{last}} · Erfasst: {{tracked}} · Neu (zuletzt): {{new}}",
+    "poller_polling": "Prüfe…",
+    "poller_polled_msg": "Geprüft: {{fetched}} abgerufen, {{new}} neu"
   },
   "ui": {
     "hide_header": "Header ausblenden",

@@ -3,9 +3,29 @@ import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { isMaskedValue } from "../utils/configSanitize.js";
 import { TIMEOUTS } from "../lib/constants.js";
+import { getPollerStatus, triggerManualPoll } from "../bot/jellyfinPoller.js";
 import logger from "../utils/logger.js";
 
 const router = Router();
+
+// ─── Jellyfin Poller status & manual trigger (dashboard UI) ────────────────────
+
+router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
+  try {
+    res.json(getPollerStatus());
+  } catch (err) {
+    res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
+router.post("/jellyfin/poll-now", authenticateToken, async (req, res) => {
+  try {
+    const result = await triggerManualPoll();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || String(err) });
+  }
+});
 
 // Simple in-memory library cache (replaces the one from jellyfinWebhook.js)
 const libraryCache = {

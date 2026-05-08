@@ -428,7 +428,14 @@
     "cleanup_timeout_preset_medium": "",
     "cleanup_timeout_preset_large": "",
     "cleanup_timeout_preset_custom": "",
-    "cleanup_timeout_custom_label": ""
+    "cleanup_timeout_custom_label": "",
+    "btn_poll_now": "",
+    "poller_status_loading": "",
+    "poller_status_disabled": "",
+    "poller_status_error": "",
+    "poller_status_text": "",
+    "poller_polling": "",
+    "poller_polled_msg": ""
   },
   "ui": {
     "hide_header": "",
