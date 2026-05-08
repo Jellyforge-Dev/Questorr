@@ -463,8 +463,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadInsights() {
     const statusEl = document.getElementById("stats-insights-status");
+    const btn = document.getElementById("stats-insights-load-btn");
     const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-    if (statusEl) { statusEl.textContent = t("config.stats_insights_loading") || "Loading…"; statusEl.style.color = "var(--subtext0)"; }
+    // Visible feedback so users see something happen before the fetch resolves.
+    if (btn) { btn.disabled = true; }
+    if (statusEl) { statusEl.textContent = "⏳ " + (t("config.stats_insights_loading") || "Loading…"); statusEl.style.color = "var(--subtext0)"; }
     try {
       const token = localStorage.getItem("questorr_token") || "";
       const res = await fetch("/api/stats/insights", { headers: { Authorization: `Bearer ${token}` } });
@@ -503,6 +506,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000);
     } catch (err) {
       if (statusEl) { statusEl.textContent = "✗ " + err.message; statusEl.style.color = "var(--red)"; }
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 

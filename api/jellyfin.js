@@ -920,29 +920,54 @@ export async function fetchLibrarySummary(apiKey, baseUrl) {
   try {
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
-    const response = await withRetry(
-      () => axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
-        params: {
-          Recursive: true,
-          IncludeItemTypes: "Movie,Series",
-          Fields: "Genres,RunTimeTicks",
-          // Use a generous cap; Jellyfin libraries above ~10k are rare and
-          // would saturate any single dashboard call anyway.
-          Limit: 10000,
-        },
-        timeout: 30000,
-      }),
-      { label: "Jellyfin library-summary" }
-    );
 
-    const items = response.data?.Items || [];
-    let movies = 0, series = 0, totalRuntimeTicks = 0;
+    // Strategy: use TotalRecordCount for the *exact* counts (matches Jellyfin's
+    // own library-page numbers), and a separate paginated call for genres +
+    // runtime aggregates. The previous combined IncludeItemTypes=Movie,Series
+    // call filtered locally on Type==="Series", which was off-by-one on some
+    // libraries because Jellyfin sometimes returns container items the UI
+    // counts but our filter dropped.
+    const countParams = (type) => ({
+      Recursive: true,
+      IncludeItemTypes: type,
+      Limit: 0,
+      EnableTotalRecordCount: true,
+    });
+
+    const [movieCountRes, seriesCountRes] = await Promise.all([
+      axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: countParams("Movie"),
+        timeout: 15000,
+      }),
+      axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: countParams("Series"),
+        timeout: 15000,
+      }),
+    ]);
+
+    const movies = movieCountRes.data?.TotalRecordCount ?? 0;
+    const series = seriesCountRes.data?.TotalRecordCount ?? 0;
+
+    // Aggregate genres + runtime. We need the actual items for these — do it in
+    // one bounded call (Jellyfin libraries above ~10k items are rare).
+    const aggResponse = await axios.get(safeBase.href, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        IncludeItemTypes: "Movie,Series",
+        Fields: "Genres,RunTimeTicks",
+        Limit: 10000,
+      },
+      timeout: 30000,
+    });
+
+    const items = aggResponse.data?.Items || [];
+    let totalRuntimeTicks = 0;
     const genreCount = new Map();
 
     for (const it of items) {
-      if (it.Type === "Movie") movies++;
-      else if (it.Type === "Series") series++;
       if (typeof it.RunTimeTicks === "number") totalRuntimeTicks += it.RunTimeTicks;
       if (Array.isArray(it.Genres)) {
         for (const g of it.Genres) {
