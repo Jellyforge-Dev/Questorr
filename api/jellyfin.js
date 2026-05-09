@@ -125,7 +125,23 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
       { label: `Jellyfin findByTmdb ${tmdbId}` }
     );
     const items = response.data?.Items || [];
-    return items.length > 0 ? items[0].Id : null;
+    if (items.length === 0) return null;
+
+    // Verify the returned item actually matches the queried TMDB ID. Some Jellyfin
+    // versions silently ignore AnyProviderIdEquals and return an arbitrary first
+    // item (Recursive=true + Limit=1), which would route every notification to the
+    // same wrong library. If the verification fails, return null so the caller's
+    // title-search fallback can take over.
+    const item = items[0];
+    const itemTmdbId =
+      item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    if (String(itemTmdbId) !== String(tmdbId)) {
+      logger.warn(
+        `[findItemByTmdbId] Jellyfin returned item ${item.Id} with TMDB=${itemTmdbId ?? "none"} for query TMDB=${tmdbId} – AnyProviderIdEquals filter appears to be ignored, falling back to title search`
+      );
+      return null;
+    }
+    return item.Id;
   } catch (err) {
     const status = err?.response?.status;
     if (status === 401 || status === 403) {
