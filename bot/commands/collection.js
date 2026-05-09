@@ -7,63 +7,61 @@ import { buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey, parseButt
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
-export async function handleCollectionCommand(interaction) {
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply({ flags: 64 });
-  }
-
+/**
+ * Build the reply payload (embed + components) for a movie's TMDB collection.
+ * Returns either:
+ *   - { embeds, components? }  — render the collection
+ *   - { content }              — error/edge case (not found / no collection / movies-only)
+ *
+ * Shared between the /collection slash command and the "Sammlung anzeigen"
+ * button on Seerr-webhook embeds. Either tmdbId+mediaType OR a freeform query
+ * may be passed; the function resolves a TMDB ID itself when needed.
+ */
+export async function buildCollectionReply({ tmdbId, mediaType, query } = {}) {
   const apiKey = getTmdbApiKey();
-  if (!apiKey) {
-    return interaction.editReply({ content: t("command_config_missing") });
-  }
-
-  const raw = interaction.options.getString("title");
-  if (!raw) {
-    return interaction.editReply({ content: t("title_invalid") });
-  }
+  if (!apiKey) return { content: t("command_config_missing") };
 
   try {
-    // Parse from autocomplete (format: "tmdbId|mediaType") or search
-    let tmdbId, mediaType;
-    if (raw.includes("|")) {
-      const parts = raw.split("|");
-      tmdbId = parts[0];
-      mediaType = parts[1] || "movie";
-    } else {
-      const results = await tmdbApi.tmdbSearch(raw, apiKey);
-      if (!results || results.length === 0) {
-        return interaction.editReply({ content: t("collection_not_found") });
+    let resolvedTmdbId = tmdbId;
+    let resolvedMediaType = mediaType || "movie";
+    if (!resolvedTmdbId) {
+      if (!query) return { content: t("title_invalid") };
+      if (query.includes("|")) {
+        const parts = query.split("|");
+        resolvedTmdbId = parts[0];
+        resolvedMediaType = parts[1] || "movie";
+      } else {
+        const results = await tmdbApi.tmdbSearch(query, apiKey);
+        if (!results || results.length === 0) {
+          return { content: t("collection_not_found") };
+        }
+        const best = results.find(r => r.media_type === "movie") || results[0];
+        resolvedTmdbId = best.id;
+        resolvedMediaType = best.media_type || "movie";
       }
-      const best = results.find(r => r.media_type === "movie") || results[0];
-      tmdbId = best.id;
-      mediaType = best.media_type || "movie";
     }
 
-    // Only movies have collections
-    if (mediaType !== "movie") {
-      return interaction.editReply({ content: t("collection_movies_only") });
+    if (resolvedMediaType !== "movie") {
+      return { content: t("collection_movies_only") };
     }
 
-    // Get movie details to find collection ID
-    const details = await tmdbApi.tmdbGetDetails(tmdbId, "movie", apiKey);
+    const details = await tmdbApi.tmdbGetDetails(resolvedTmdbId, "movie", apiKey);
     if (!details || !details.belongs_to_collection) {
-      return interaction.editReply({ content: t("collection_none") });
+      return { content: t("collection_none") };
     }
 
     const collectionId = details.belongs_to_collection.id;
     const collection = await tmdbApi.tmdbGetCollection(collectionId, apiKey);
     if (!collection || !collection.parts || collection.parts.length === 0) {
-      return interaction.editReply({ content: t("collection_none") });
+      return { content: t("collection_none") };
     }
 
-    // Sort by release date
     const parts = collection.parts.sort((a, b) => {
       const dateA = a.release_date || "";
       const dateB = b.release_date || "";
       return dateA.localeCompare(dateB);
     });
 
-    // Check Jellyfin availability for each part
     const jellyfinApiKey = process.env.JELLYFIN_API_KEY;
     const jellyfinBaseUrl = process.env.JELLYFIN_BASE_URL;
 
@@ -86,7 +84,6 @@ export async function handleCollectionCommand(interaction) {
           }
         }
 
-        // Seerr request status — used to suppress request-button on already-requested items
         let seerrStatus = null;
         try {
           const sr = await seerrApi.checkMediaStatus(part.id, "movie", [], getSeerrUrl(), getSeerrApiKey());
@@ -104,7 +101,7 @@ export async function handleCollectionCommand(interaction) {
     const embed = new EmbedBuilder()
       .setColor(process.env.EMBED_COLOR_SEARCH || "#f0a05a")
       .setAuthor({ name: t("collection_title") })
-      .setTitle(`\uD83C\uDFAC ${collection.name}`)
+      .setTitle(`🎬 ${collection.name}`)
       .setTimestamp();
 
     if (collection.poster_path) {
@@ -114,15 +111,15 @@ export async function handleCollectionCommand(interaction) {
     const footerText = process.env.EMBED_FOOTER_TEXT;
     const footerParts = [`${availableCount}/${items.length} ${t("collection_available")}`];
     if (footerText) footerParts.push(footerText);
-    embed.setFooter({ text: footerParts.join(" \u00B7 ") });
+    embed.setFooter({ text: footerParts.join(" · ") });
 
     const lines = items.map((item, i) => {
       let status;
-      if (item.available) status = "\u2705";
-      else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "\u23F3"; // pending / processing
-      else if (item.seerrStatus === 4) status = "\uD83D\uDCE5"; // partial
-      else status = "\u274C";
-      const ratingStr = item.rating ? ` \u2B50 ${item.rating}` : "";
+      if (item.available) status = "✅";
+      else if (item.seerrStatus === 2 || item.seerrStatus === 3) status = "⏳";
+      else if (item.seerrStatus === 4) status = "📥";
+      else status = "❌";
+      const ratingStr = item.rating ? ` ⭐ ${item.rating}` : "";
       const yearPart = item.year ? ` (${item.year})` : "";
       return `**${i + 1}. ${item.title}${yearPart}**${ratingStr} ${status}`;
     });
@@ -131,7 +128,6 @@ export async function handleCollectionCommand(interaction) {
       `${t("recommend_legend")}\n\n${lines.join("\n")}`
     );
 
-    // Per-item buttons: Watch (if available) OR Request (if missing & not pending)
     const watchButtons = [];
     const requestButtons = [];
     const _show = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
@@ -143,7 +139,7 @@ export async function handleCollectionCommand(interaction) {
           watchButtons.push(
             new ButtonBuilder()
               .setStyle(ButtonStyle.Link)
-              .setLabel(`\u25B6 ${item.title.substring(0, 60)}`)
+              .setLabel(`▶ ${item.title.substring(0, 60)}`)
               .setURL(watchUrl)
           );
         }
@@ -152,13 +148,12 @@ export async function handleCollectionCommand(interaction) {
           new ButtonBuilder()
             .setStyle(ButtonStyle.Primary)
             .setCustomId(`request_random_${item.id}_movie`)
-            .setLabel(`\uD83D\uDCE5 ${item.title.substring(0, 60)}`)
+            .setLabel(`📥 ${item.title.substring(0, 60)}`)
         );
       }
     }
 
-    // Discord limit: 5 ActionRows \u00D7 5 buttons each. We use 2 rows max to keep it tidy.
-    const replyOpts = { embeds: [embed] };
+    const reply = { embeds: [embed] };
     const rows = [];
     if (watchButtons.length > 0) {
       rows.push(new ActionRowBuilder().addComponents(watchButtons.slice(0, 5)));
@@ -166,11 +161,19 @@ export async function handleCollectionCommand(interaction) {
     if (requestButtons.length > 0) {
       rows.push(new ActionRowBuilder().addComponents(requestButtons.slice(0, 5)));
     }
-    if (rows.length > 0) replyOpts.components = rows;
-
-    return interaction.editReply(replyOpts);
+    if (rows.length > 0) reply.components = rows;
+    return reply;
   } catch (err) {
-    logger.error("Collection command error:", err);
-    return interaction.editReply({ content: t("collection_error") });
+    logger.error("Collection build error:", err);
+    return { content: t("collection_error") };
   }
+}
+
+export async function handleCollectionCommand(interaction) {
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ flags: 64 });
+  }
+  const raw = interaction.options.getString("title");
+  const reply = await buildCollectionReply({ query: raw });
+  return interaction.editReply(reply);
 }

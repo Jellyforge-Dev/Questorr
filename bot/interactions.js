@@ -13,7 +13,7 @@ import { handleDymYes, handleDymNo, handleDymPick } from "./handlers/didYouMean.
 import { showWizardSmartPicker, handleSmartPickerSelect, PICKER_BUTTON_IDS } from "./handlers/wizardSmartPicker.js";
 import { handleActionButton, handleActionCastPick } from "./handlers/actionButton.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
-import { handleCollectionCommand } from "./commands/collection.js";
+import { handleCollectionCommand, buildCollectionReply } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
 import { handleSimilarCommand } from "./commands/similar.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
@@ -125,6 +125,17 @@ export function registerInteractions(client) {
         }
         if (interaction.customId.startsWith("seerr_approve|") || interaction.customId.startsWith("seerr_decline|")) {
           return handleSeerrApproveDecline(interaction);
+        }
+        if (interaction.customId.startsWith("collection_show|")) {
+          // "Sammlung anzeigen" button on Seerr-webhook embeds — reuses the
+          // /collection command's reply builder, scoped to the originating
+          // movie's TMDB ID. Reply is ephemeral so it doesn't clutter the channel.
+          if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply({ flags: 64 });
+          }
+          const tmdbIdRaw = interaction.customId.split("|")[1];
+          const reply = await buildCollectionReply({ tmdbId: tmdbIdRaw, mediaType: "movie" });
+          return interaction.editReply(reply);
         }
         if (interaction.customId.startsWith("watchlist_prev|") || interaction.customId.startsWith("watchlist_next|")) {
           return handleWatchlistPagination(interaction);

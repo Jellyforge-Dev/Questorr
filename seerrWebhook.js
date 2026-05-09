@@ -30,7 +30,7 @@ import {
 import axios from "axios";
 import logger from "./utils/logger.js";
 import { isValidUrl } from "./utils/url.js";
-import { findBestBackdrop } from "./api/tmdb.js";
+import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
 
 // ─── Admin Pending Messages persistence ──────────────────────────────────────
@@ -306,66 +306,84 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   }
 
   // ── Pass 2: title search with TMDB-ID verification ────────────────────────
+  // Try multiple title variants — Jellyfin may have the localized title (e.g. "Der
+  // Medicus II") while TMDB's localized lookup returned the original/English title,
+  // or vice versa. Each candidate is searched separately and verified against the
+  // TMDB ID, so we never accidentally accept a wrong title with the same name.
   const cached = tmdbCache.get(`${mediaType}-${tmdbId}`);
-  const title = cached?.data?.title || cached?.data?.name
-             || cached?.data?.original_title || cached?.data?.original_name;
+  const candidates = [
+    cached?.data?.title,           // localized (e.g. de-DE)
+    cached?.data?.name,            // TV localized
+    cached?.data?.original_title,  // production original (Movies)
+    cached?.data?.original_name,   // production original (TV)
+  ].filter(Boolean).filter((t, i, a) => a.indexOf(t) === i);
 
-  if (!title) {
+  if (candidates.length === 0) {
     logger.warn(`[SEERR WEBHOOK] No TMDB title in cache for ${mediaType}/${tmdbId} – cannot do title-search fallback`);
     return null;
   }
 
   const base = baseUrl.replace(/\/$/, "");
   const itemType = mediaType === "movie" ? "Movie" : "Series";
+  const year = cached?.data?.release_date?.substring(0, 4)
+            || cached?.data?.first_air_date?.substring(0, 4);
 
-  logger.info(`[SEERR WEBHOOK] Title-search fallback: "${title}" (TMDB ${tmdbId})`);
+  let yearMatchFallback = null; // remember first year-only match across all candidates
 
-  try {
-    const res = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        searchTerm: title,
-        IncludeItemTypes: itemType,
-        Fields: "ProviderIds,Name,ProductionYear",
-        Limit: 20,
-      },
-      timeout: 8000,
-    });
+  for (const title of candidates) {
+    logger.info(`[SEERR WEBHOOK] Title-search fallback: "${title}" (TMDB ${tmdbId})`);
 
-    const items = res.data?.Items || [];
-    logger.info(`[SEERR WEBHOOK] Title search returned ${items.length} results`);
+    let items;
+    try {
+      const res = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          searchTerm: title,
+          IncludeItemTypes: itemType,
+          Fields: "ProviderIds,Name,ProductionYear",
+          Limit: 20,
+        },
+        timeout: 8000,
+      });
+      items = res.data?.Items || [];
+    } catch (e) {
+      logger.warn(`[SEERR WEBHOOK] Title-search error for "${title}": ${e.message}`);
+      continue;
+    }
 
-    // Try exact TMDB ID match first
+    logger.info(`[SEERR WEBHOOK] Title search "${title}" returned ${items.length} results`);
+
+    // Exact TMDB-ID match wins immediately
     for (const item of items) {
       const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
       logger.debug(`[SEERR WEBHOOK] Candidate: "${item.Name}" (${item.ProductionYear}) TMDB=${itemTmdbId}`);
       if (String(itemTmdbId) === String(tmdbId)) {
-        logger.info(`[SEERR WEBHOOK] ✅ Title-search verified: "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
+        logger.info(`[SEERR WEBHOOK] ✅ Title-search verified via "${title}": "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
         return item.Id;
       }
     }
 
-    // Year-based fallback for freshly-added items whose TMDB ID is not yet indexed
-    const year = cached?.data?.release_date?.substring(0, 4)
-              || cached?.data?.first_air_date?.substring(0, 4);
-
-    if (year) {
+    // Stash a year-only match as last-resort fallback (only if TMDB ID is missing)
+    if (!yearMatchFallback && year) {
       for (const item of items) {
         const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
         if (!itemTmdbId && String(item.ProductionYear) === String(year)) {
-          logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback: "${item.Name}" (${year}) ID=${item.Id} – TMDB ID not yet indexed`);
-          return item.Id;
+          yearMatchFallback = { item, viaTitle: title };
+          break;
         }
       }
     }
-
-    logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} ("${title}") after both passes`);
-    return null;
-  } catch (e) {
-    logger.warn(`[SEERR WEBHOOK] Title-search error for "${title}": ${e.message}`);
-    return null;
   }
+
+  if (yearMatchFallback) {
+    const { item, viaTitle } = yearMatchFallback;
+    logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback via "${viaTitle}": "${item.Name}" (${item.ProductionYear}) ID=${item.Id} – TMDB ID not yet indexed`);
+    return item.Id;
+  }
+
+  logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} after trying ${candidates.length} title variant(s): ${candidates.map(c => `"${c}"`).join(", ")}`);
+  return null;
 }
 
 /**
@@ -445,7 +463,11 @@ async function fetchTmdbDetails(tmdbId, mediaType) {
       ? `https://api.themoviedb.org/3/movie/${tmdbId}`
       : `https://api.themoviedb.org/3/tv/${tmdbId}`;
     const res = await axios.get(endpoint, {
-      params: { api_key: process.env.TMDB_API_KEY, append_to_response: "images,external_ids" },
+      params: {
+        api_key: process.env.TMDB_API_KEY,
+        language: getTmdbLanguage(),
+        append_to_response: "images,external_ids",
+      },
       timeout: 8000,
     });
     tmdbCache.set(cacheKey, { data: res.data, timestamp: Date.now() });
@@ -558,7 +580,8 @@ async function processEvent(data, eventType, cfg, client) {
 
   // Build embed and buttons
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
-  const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+  const tmdbCollectionId = tmdbDetails?.belongs_to_collection?.id || null;
+  const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
 
   // MEDIA_PENDING: send to admin channel with approve/decline buttons, THEN DM requester
   // MEDIA_DECLINED: DM only
@@ -584,12 +607,15 @@ async function processEvent(data, eventType, cfg, client) {
           );
         }
         if (buttons) {
-          // Add any link buttons (Seerr, IMDb etc.) from the standard button builder
-          const linkBtns = buttons.components.filter(c => c.data.style === ButtonStyle.Link);
-          adminButtons.push(...linkBtns);
+          // Pull every component from buildButtons (link buttons + Collection button if any).
+          // No filter by style: buildButtons does not emit approve/decline, so duplication
+          // is not a concern. Anything it returns belongs on the admin row.
+          const rows = Array.isArray(buttons) ? buttons : [buttons];
+          for (const row of rows) adminButtons.push(...row.components);
         }
         if (adminButtons.length > 0) {
-          adminOptions.components = [new ActionRowBuilder().addComponents(adminButtons)];
+          const adminRows = chunkButtonsIntoRows(adminButtons);
+          adminOptions.components = Array.isArray(adminRows) ? adminRows : [adminRows];
         }
         const adminMsg = await adminChannel.send(adminOptions);
         // Persist message reference so the status poller can edit it later
@@ -630,7 +656,7 @@ async function processEvent(data, eventType, cfg, client) {
   }
 
   const messageOptions = { embeds: [embed] };
-  if (buttons) messageOptions.components = [buttons];
+  if (buttons) messageOptions.components = Array.isArray(buttons) ? buttons : [buttons];
 
   const sentMessage = await channel.send(messageOptions);
   logger.info(`[SEERR WEBHOOK] ✅ Sent ${eventType} notification for "${subject}" to channel ${channelId}`);
@@ -655,7 +681,7 @@ async function processEvent(data, eventType, cfg, client) {
     (needsRelocate || needsEditForWatchButton)
   ) {
     scheduleJellyfinRetry({
-      data, eventType, cfg, client, tmdbDetails, imdbId,
+      data, eventType, cfg, client, tmdbDetails, imdbId, tmdbCollectionId,
       rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
       retryDelay,
       mode: needsRelocate ? "relocate" : "edit",
@@ -830,7 +856,7 @@ export function getEventButtons(eventType, variant = "CHANNEL") {
   };
 }
 
-function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, variant = "CHANNEL") {
+function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, variant = "CHANNEL", tmdbCollectionId = null) {
   const components = [];
 
   const { showSeerr, showWatch, showImdb, showLetterboxd } = getEventButtons(eventType, variant);
@@ -887,8 +913,36 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, vari
     }
   }
 
+  // Collection button — movies that belong to a TMDB collection. Skipped in DMs
+  // (the channel post already exposes it; the DM-receiving user is also the
+  // requester and can use the channel button).
+  if (tmdbCollectionId && mediaType === "movie" && variant !== "DM") {
+    components.push(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Secondary)
+        .setCustomId(`collection_show|${tmdbId}`)
+        .setLabel(t("btn_collection"))
+    );
+  }
+
   if (components.length === 0) return null;
-  return new ActionRowBuilder().addComponents(components);
+  return chunkButtonsIntoRows(components);
+}
+
+/**
+ * Split a flat list of ButtonBuilders into ActionRows of max 5 buttons each.
+ * Returns either a single ActionRowBuilder (if ≤5) or an array of rows.
+ * Callers should normalize via `Array.isArray(result) ? result : [result]`.
+ */
+function chunkButtonsIntoRows(components) {
+  if (components.length <= 5) {
+    return new ActionRowBuilder().addComponents(components);
+  }
+  const rows = [];
+  for (let i = 0; i < components.length; i += 5) {
+    rows.push(new ActionRowBuilder().addComponents(components.slice(i, i + 5)));
+  }
+  return rows;
 }
 
 // ─── DM Requester ────────────────────────────────────────────────────────────
@@ -962,7 +1016,7 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
     const dmButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "DM");
 
     const dmOptions = { embeds: [dmEmbed] };
-    if (dmButtons) dmOptions.components = [dmButtons];
+    if (dmButtons) dmOptions.components = Array.isArray(dmButtons) ? dmButtons : [dmButtons];
 
     await user.send(dmOptions);
     logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);
@@ -1034,7 +1088,7 @@ async function findDiscordIdForSeerrUser(data) {
  */
 function scheduleJellyfinRetry(ctx) {
   const {
-    data, eventType, cfg, client, tmdbDetails, imdbId,
+    data, eventType, cfg, client, tmdbDetails, imdbId, tmdbCollectionId,
     rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
     retryDelay, mode = "relocate",
     fallbackChannelId, fallbackMessageId, fallbackChannel,
@@ -1083,8 +1137,11 @@ function scheduleJellyfinRetry(ctx) {
         try {
           // Verify the message still exists (mod could have deleted it)
           const fresh = await sentChannel.messages.fetch(sentMessage.id);
-          const newButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
-          await fresh.edit({ components: newButtons ? [newButtons] : [] });
+          const newButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
+          const newComponents = newButtons
+            ? (Array.isArray(newButtons) ? newButtons : [newButtons])
+            : [];
+          await fresh.edit({ components: newComponents });
           logger.info(`[SEERR WEBHOOK] ✏️ Watch-Now button added to "${subject}" after retry ${attempt}`);
         } catch (editErr) {
           logger.debug(`[SEERR WEBHOOK] Could not edit message for "${subject}": ${editErr.message}`);
@@ -1109,11 +1166,11 @@ function scheduleJellyfinRetry(ctx) {
 
         // Build and send the corrected notification to the right channel
         const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
-        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
 
         const channel = await client.channels.fetch(channelId);
         const messageOptions = { embeds: [embed] };
-        if (buttons) messageOptions.components = [buttons];
+        if (buttons) messageOptions.components = Array.isArray(buttons) ? buttons : [buttons];
         await channel.send(messageOptions);
         logger.info(`[SEERR WEBHOOK] ✅ Sent corrected ${eventType} notification for "${subject}" to channel ${channelId}`);
         return;

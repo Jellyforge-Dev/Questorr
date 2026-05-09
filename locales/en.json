@@ -356,6 +356,8 @@
     "btn_letterboxd_desc": "Link to the Letterboxd page (movies only)",
     "btn_imdb": "IMDb",
     "btn_imdb_desc": "Link to the IMDb page",
+    "btn_collection": "🎬 Show collection",
+    "btn_collection_desc": "Lists all movies in the TMDB collection with availability and request buttons",
     "command_toggles_desc": "Enable or disable individual Discord slash commands.",
     "test_notification_buttons": "Test Buttons",
     "notif_titles_title": "Notification Titles",
