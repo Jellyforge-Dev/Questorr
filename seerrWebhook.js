@@ -214,31 +214,58 @@ function isDuplicateWebhookEvent(eventType, mediaType, tmdbId) {
  * marked as available without a prior request), in which case the Jellyfin
  * library lookup in resolveChannel handles routing instead.
  */
-async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
+async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
   const seerrUrl = process.env.SEERR_URL;
   const seerrApiKey = process.env.SEERR_API_KEY;
   if (!seerrUrl || !seerrApiKey) return null;
 
+  const base = seerrUrl.replace(/\/$/, "");
+  const headers = { "X-Api-Key": seerrApiKey };
+
   try {
-    const base = seerrUrl.replace(/\/$/, "");
+    // Primary: use the specific request endpoint if we have a request_id from the
+    // webhook payload. This returns the full MediaRequest object — including the
+    // rootFolder that Jellyseerr assigns when forwarding the request to Radarr/Sonarr
+    // during admin approval (even if Questorr originally omitted it).
+    if (requestId) {
+      const reqRes = await axios
+        .get(`${base}/api/v1/request/${requestId}`, { headers, timeout: 5000 })
+        .catch(() => null);
+      const directRootFolder = reqRes?.data?.rootFolder;
+      logger.debug(
+        `[SEERR WEBHOOK] Direct request lookup (id=${requestId}): rootFolder=${directRootFolder ?? "null"}`
+      );
+      if (directRootFolder) {
+        logger.info(
+          `[SEERR WEBHOOK] 📁 Root folder from direct request ${requestId}: ${directRootFolder}`
+        );
+        return directRootFolder;
+      }
+    }
+
+    // Fallback: query all requests via the TMDB media endpoint. Used when no
+    // request_id is available, or when the direct lookup returned null (e.g.
+    // Jellyseerr didn't update rootFolder in the request record on approval).
     const endpoint = mediaType === "movie" ? "movie" : "tv";
+    const res = await axios
+      .get(`${base}/api/v1/${endpoint}/${tmdbId}`, { headers, timeout: 5000 })
+      .catch(() => null);
 
-    // Primary: media endpoint returns ALL requests for this TMDB ID
-    const res = await axios.get(`${base}/api/v1/${endpoint}/${tmdbId}`, {
-      headers: { "X-Api-Key": seerrApiKey },
-      timeout: 5000,
-    }).catch(() => null);
-
-    // Jellyseerr's /api/v1/movie/{id} and /api/v1/tv/{id} return requests under
-    // `mediaInfo.requests` — top-level `requests` is always undefined here.
     const reqs = res?.data?.mediaInfo?.requests || [];
-    const rootFolders = reqs.map(r => r.rootFolder).filter(Boolean);
+    logger.debug(
+      `[SEERR WEBHOOK] Media endpoint TMDB ${tmdbId}: mediaInfo.requests has ${reqs.length} item(s), rootFolders=[${reqs.map((r) => r.rootFolder ?? "null").join(", ")}]`
+    );
+    const rootFolders = reqs.map((r) => r.rootFolder).filter(Boolean);
     if (rootFolders.length > 0) {
-      logger.info(`[SEERR WEBHOOK] 📁 Root folder from Seerr request: ${rootFolders[0]} (${reqs.length} request(s) found)`);
+      logger.info(
+        `[SEERR WEBHOOK] 📁 Root folder from mediaInfo.requests for TMDB ${tmdbId}: ${rootFolders[0]} (${reqs.length} request(s))`
+      );
       return rootFolders[0];
     }
 
-    logger.debug(`[SEERR WEBHOOK] No Seerr request with rootFolder found for TMDB ${tmdbId} — will use Jellyfin library lookup`);
+    logger.debug(
+      `[SEERR WEBHOOK] No rootFolder found for TMDB ${tmdbId} (requestId=${requestId ?? "none"}) — will use Jellyfin library lookup`
+    );
   } catch (e) {
     logger.debug(`[SEERR WEBHOOK] Could not fetch root folder from Seerr: ${e.message}`);
   }
@@ -608,7 +635,10 @@ async function processEvent(data, eventType, cfg, client) {
   // For manually-marked items with no Seerr request, the API returns no requests
   // and routing falls through to the Jellyfin library lookup.
   if (!rootFolder && tmdbId && mediaType && ROOTFOLDER_RELEVANT_EVENTS.has(eventType)) {
-    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType);
+    // Pass the webhook's request_id so we can fetch the specific request directly —
+    // more reliable than scanning mediaInfo.requests on the movie endpoint.
+    const requestId = request?.request_id || null;
+    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType, requestId);
   }
 
   logger.info(
