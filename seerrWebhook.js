@@ -162,6 +162,26 @@ const EVENT_CONFIG = {
 const tmdbCache = new Map();
 const TMDB_CACHE_TTL = 6 * 60 * 60 * 1000;
 
+// Webhook deduplication — Seerr occasionally fires retries or duplicate webhooks
+// for the same event within milliseconds (observed: two MEDIA_AVAILABLE for the
+// same TMDB ID in the same second). Without dedup, the bot posts the embed twice.
+const recentWebhookEvents = new Map(); // key = `${eventType}|${mediaType}|${tmdbId}` → expiresAt
+const WEBHOOK_DEDUP_WINDOW_MS = 30_000;
+
+function isDuplicateWebhookEvent(eventType, mediaType, tmdbId) {
+  if (!eventType || !tmdbId) return false; // payload without identity → never dedup (e.g. TEST_NOTIFICATION)
+  const now = Date.now();
+  // Lazy cleanup of expired entries
+  for (const [k, exp] of recentWebhookEvents) {
+    if (exp < now) recentWebhookEvents.delete(k);
+  }
+  const key = `${eventType}|${mediaType || "?"}|${tmdbId}`;
+  const expiresAt = recentWebhookEvents.get(key);
+  if (expiresAt && expiresAt > now) return true;
+  recentWebhookEvents.set(key, now + WEBHOOK_DEDUP_WINDOW_MS);
+  return false;
+}
+
 // ─── Channel Resolution ───────────────────────────────────────────────────────
 
 /**
@@ -364,12 +384,16 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
       }
     }
 
-    // Stash a year-only match as last-resort fallback (only if TMDB ID is missing)
+    // Stash a year match as last-resort fallback. We accept matches even when Jellyfin
+    // has a wrong (or no) TMDB ID, because title-search already filtered to plausible
+    // candidates and the year is a strong discriminator (e.g. "Mary Poppins" 1964
+    // vs. "Mary Poppins Returns" 2018). For channel-routing purposes the library
+    // assignment is what matters, not the TMDB metadata accuracy.
     if (!yearMatchFallback && year) {
       for (const item of items) {
-        const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
-        if (!itemTmdbId && String(item.ProductionYear) === String(year)) {
-          yearMatchFallback = { item, viaTitle: title };
+        if (String(item.ProductionYear) === String(year)) {
+          const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+          yearMatchFallback = { item, viaTitle: title, wrongTmdbId: itemTmdbId || null };
           break;
         }
       }
@@ -377,8 +401,11 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   }
 
   if (yearMatchFallback) {
-    const { item, viaTitle } = yearMatchFallback;
-    logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback via "${viaTitle}": "${item.Name}" (${item.ProductionYear}) ID=${item.Id} – TMDB ID not yet indexed`);
+    const { item, viaTitle, wrongTmdbId } = yearMatchFallback;
+    const note = wrongTmdbId
+      ? `– Jellyfin has wrong TMDB ID (${wrongTmdbId} ≠ ${tmdbId})`
+      : `– TMDB ID not yet indexed`;
+    logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback via "${viaTitle}": "${item.Name}" (${item.ProductionYear}) ID=${item.Id} ${note}`);
     return item.Id;
   }
 
@@ -536,6 +563,17 @@ async function processEvent(data, eventType, cfg, client) {
   const mediaType = media?.media_type || null;
   const tmdbId = media?.tmdbId || null;
   let rootFolder = request?.rootFolder || null;
+
+  // Drop identical webhooks fired within the dedup window. Seerr sometimes sends
+  // the same MEDIA_* event twice in quick succession (observed in production logs
+  // — see "Nürnberg (2025)" double-post). The key includes eventType so legitimate
+  // event progression (PENDING → APPROVED → AVAILABLE) is not affected.
+  if (isDuplicateWebhookEvent(eventType, mediaType, tmdbId)) {
+    logger.info(
+      `[SEERR WEBHOOK] 🔁 Duplicate ${eventType} for "${subject}" (TMDB ${tmdbId}) within ${WEBHOOK_DEDUP_WINDOW_MS / 1000}s – skipping`
+    );
+    return;
+  }
 
   // If rootFolder is not in the webhook payload (common for MEDIA_AVAILABLE),
   // fetch it from the Seerr API. The media endpoint returns all requests for
