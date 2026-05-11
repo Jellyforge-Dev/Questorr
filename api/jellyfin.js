@@ -558,27 +558,44 @@ export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
 
 /**
  * Fetch the most recently added items from Jellyfin (by DateCreated, descending).
- * Returns up to 200 items. The caller's deduplicator identifies truly new ones —
- * no date filter is applied here because Jellyfin updates DateLastSaved on ALL
- * items during routine metadata refreshes, which would return the entire library
- * on every poll cycle.
+ * Walks through `maxPages` pages of `pageSize` items each — for libraries large
+ * enough that a single 200-item page can be exhausted by Season/Episode rescans,
+ * the caller can opt into deeper scanning by passing { maxPages: 5 }. Stops
+ * early if a page returns fewer items than `pageSize` (end of library reached).
+ *
+ * No date filter is applied because Jellyfin updates DateLastSaved on ALL items
+ * during routine metadata refreshes, which would return the entire library
+ * on every poll cycle. The caller's deduplicator identifies truly new ones.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {{ maxPages?: number, pageSize?: number }} [opts] - defaults: maxPages=1, pageSize=200 (backward-compatible: one 200-item page like before)
  */
-export async function fetchItemsAddedSince(apiKey, baseUrl) {
+export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
+  const { maxPages = 1, pageSize = 200 } = opts;
   try {
     const base = baseUrl.replace(/\/$/, "");
-    const response = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        IncludeItemTypes: "Movie,Series,Season,Episode",
-        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
-        SortBy: "DateCreated",
-        SortOrder: "Descending",
-        Limit: 200,
-      },
-      timeout: 15000,
-    });
-    return response.data?.Items || [];
+    const all = [];
+    for (let page = 0; page < maxPages; page++) {
+      const response = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series,Season,Episode",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          StartIndex: page * pageSize,
+          Limit: pageSize,
+        },
+        timeout: 15000,
+      });
+      const pageItems = response.data?.Items || [];
+      all.push(...pageItems);
+      // End of library reached — Jellyfin returned fewer items than we asked for.
+      if (pageItems.length < pageSize) break;
+    }
+    return all;
   } catch (err) {
     const status = err?.response?.status;
     const msg = err?.message || String(err);
