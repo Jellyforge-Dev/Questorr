@@ -11,6 +11,7 @@ import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPic
 import { scheduleCleanupAdvisor, stopCleanupAdvisor } from "./cleanupAdvisor.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
+import { startLibraryHeartbeat, stopLibraryHeartbeat } from "../lib/libraryHeartbeat.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -77,6 +78,7 @@ export async function startBot() {
       scheduleCleanupAdvisor(client);
       startJellyfinPoller(client);
       startSeerrStatusPoller();
+      startLibraryHeartbeat();
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

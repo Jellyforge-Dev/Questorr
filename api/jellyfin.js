@@ -557,22 +557,30 @@ export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
 }
 
 /**
- * Fetch the most recently added items from Jellyfin (by DateCreated, descending).
- * Walks through `maxPages` pages of `pageSize` items each — for libraries large
- * enough that a single 200-item page can be exhausted by Season/Episode rescans,
- * the caller can opt into deeper scanning by passing { maxPages: 5 }. Stops
- * early if a page returns fewer items than `pageSize` (end of library reached).
+ * Fetch the most recently added items from Jellyfin (by DateLastSaved, descending).
  *
- * No date filter is applied because Jellyfin updates DateLastSaved on ALL items
- * during routine metadata refreshes, which would return the entire library
- * on every poll cycle. The caller's deduplicator identifies truly new ones.
+ * WHY DateLastSaved instead of DateCreated:
+ *   Jellyfin's DateCreated reflects the file's mtime on disk. A movie file from 2010
+ *   imported today would have DateCreated=2010, landing at position ~30,000 in a large
+ *   library and never appearing in the top-200 (or even top-1000) results. DateLastSaved
+ *   is updated whenever Jellyfin writes the item to its DB — including first-time indexing.
+ *   A newly-added file therefore always sorts to the top regardless of file mtime.
+ *
+ * DEDUP NOTE: Metadata refreshes also bump DateLastSaved on existing items, so the poller
+ *   may see already-known items near the top after a refresh. The caller's deduplicator
+ *   (seen-items.json) handles this safely — already-seen IDs are skipped with no side-effects.
+ *
+ * FILTER: Optional `minDateLastSaved` (ISO string) lets the caller bound the search window
+ *   to items saved since the previous poll (minus a 1-hour safety margin), reducing the
+ *   response payload. When null (first poll / fallback), no filter is applied.
  *
  * @param {string} apiKey
  * @param {string} baseUrl
- * @param {{ maxPages?: number, pageSize?: number }} [opts] - defaults: maxPages=1, pageSize=200 (backward-compatible: one 200-item page like before)
+ * @param {{ maxPages?: number, pageSize?: number, minDateLastSaved?: string|null }} [opts]
+ *   defaults: maxPages=1, pageSize=200, minDateLastSaved=null (backward-compatible)
  */
 export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
-  const { maxPages = 1, pageSize = 200 } = opts;
+  const { maxPages = 1, pageSize = 200, minDateLastSaved = null } = opts;
   try {
     const base = baseUrl.replace(/\/$/, "");
     const all = [];
@@ -582,11 +590,14 @@ export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie,Series,Season,Episode",
-          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
-          SortBy: "DateCreated",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,DateLastSaved,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateLastSaved",
           SortOrder: "Descending",
           StartIndex: page * pageSize,
           Limit: pageSize,
+          // Only include when we have a previous poll timestamp — reduces payload size
+          // by filtering server-side to items saved in the recent window.
+          ...(minDateLastSaved ? { MinDateLastSaved: minDateLastSaved } : {}),
         },
         timeout: 15000,
       });
@@ -801,6 +812,83 @@ export async function fetchUserRecentlyPlayed(jellyfinUserId, apiKey, baseUrl, l
     return response.data?.Items || [];
   } catch (err) {
     logger.warn(`[Jellyfin] fetchUserRecentlyPlayed error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Derive Series watch seeds from a user's recently-played Episodes.
+ *
+ * Background: Jellyfin's `Filters=IsPlayed` on Series only returns series where
+ * every single episode has been watched. For the /foryou command we want seeds
+ * from series the user is *currently watching* — i.e. partially watched.
+ *
+ * Approach:
+ *   1. Fetch up to 50 recently played Episodes for the user.
+ *   2. Collect unique SeriesIds (up to `limit`).
+ *   3. Batch-fetch the actual Series items (one /Items call) to get ProviderIds.
+ *
+ * @param {string} jellyfinUserId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} [limit=10]  max number of unique series to return
+ * @returns {Promise<Array>}   Series items with { Id, Name, Type, ProviderIds }
+ */
+export async function fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, apiKey, baseUrl, limit = 10) {
+  try {
+    const safeBase = new URL(baseUrl);
+    const basePath = safeBase.origin + safeBase.pathname.replace(/\/$/, "");
+
+    // Step 1: get recently played episodes
+    const epResponse = await withRetry(
+      () => axios.get(`${basePath}/Users/${jellyfinUserId}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "DatePlayed",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Episode",
+          Filters: "IsPlayed",
+          Limit: 50,
+          Fields: "SeriesId,SeriesName",
+          EnableTotalRecordCount: false,
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin user episodes-played ${jellyfinUserId}` }
+    );
+
+    const episodes = epResponse.data?.Items || [];
+
+    // Step 2: collect unique SeriesIds in recency order
+    const seen = new Set();
+    const seriesIds = [];
+    for (const ep of episodes) {
+      if (ep.SeriesId && !seen.has(ep.SeriesId)) {
+        seen.add(ep.SeriesId);
+        seriesIds.push(ep.SeriesId);
+        if (seriesIds.length >= limit) break;
+      }
+    }
+    if (seriesIds.length === 0) return [];
+
+    // Step 3: batch-fetch Series items to get ProviderIds
+    const seriesResponse = await withRetry(
+      () => axios.get(`${basePath}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Ids: seriesIds.join(","),
+          Fields: "ProviderIds",
+          EnableTotalRecordCount: false,
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin series batch-fetch (${seriesIds.length} ids)` }
+    );
+
+    return seriesResponse.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchUserRecentlyPlayedSeriesViaEpisodes error: ${err?.message || err}`);
     return [];
   }
 }

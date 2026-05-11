@@ -54,6 +54,11 @@ let savedClient = null;
 let savedApiKey = null;
 let savedBaseUrl = null;
 
+// Timestamp of the last poll that completed without errors, used to compute
+// the MinDateLastSaved filter window passed to fetchItemsAddedSince.
+// null means "first poll since start" → no date filter applied.
+let lastSuccessfulPollAt = null;
+
 // Stats exposed via getPollerStatus() for the dashboard.
 const pollerStats = {
   lastPollAt: null,            // ISO string
@@ -204,27 +209,36 @@ async function poll(client, apiKey, baseUrl) {
 
   const pollStartedAt = Date.now();
   try {
-    // Paginate up to 5×200 = 1000 items to catch new items that get pushed past the
-    // top 200 by mass-imports (e.g. a freshly scanned series with hundreds of episodes)
-    // or by older files indexed with a backdated DateCreated.
-    const items = await fetchItemsAddedSince(apiKey, baseUrl, { maxPages: 5 });
+    // Build the date-filter window: look back to 1 hour before the last successful poll
+    // so a brief outage or slow poll never causes missed items. On the first poll after
+    // startup (lastSuccessfulPollAt=null) no filter is applied and we fetch the full
+    // top-1000 by DateLastSaved descending (deduplicator handles already-seen items).
+    const minDateLastSaved = lastSuccessfulPollAt
+      ? new Date(lastSuccessfulPollAt - 60 * 60 * 1000).toISOString()
+      : null;
+
+    // Paginate up to 5×200 = 1000 items.
+    // SortBy=DateLastSaved ensures items added with old file mtimes (e.g. a movie
+    // ripped years ago) appear at the top — Jellyfin sets DateLastSaved to NOW when
+    // it first indexes an item, regardless of file creation date.
+    const items = await fetchItemsAddedSince(apiKey, baseUrl, { maxPages: 5, minDateLastSaved });
 
     // Diagnostic: log fetch summary so we can see WHY new items might not appear.
     if (items.length > 0) {
       const oldest = items[items.length - 1];
-      const oldestDate = oldest.DateCreated || "n/a";
+      const oldestSaved = oldest.DateLastSaved || oldest.DateCreated || "n/a";
       const typeCount = items.reduce((acc, it) => {
         acc[it.Type] = (acc[it.Type] || 0) + 1;
         return acc;
       }, {});
       const typeStr = Object.entries(typeCount).map(([t, n]) => `${t}=${n}`).join(", ");
       logger.debug(
-        `[Jellyfin Poller] Fetch summary: ${items.length} items (${typeStr}); oldest DateCreated in batch: ${oldestDate} ("${oldest.Name}")`
+        `[Jellyfin Poller] Fetch summary: ${items.length} items (${typeStr}); oldest DateLastSaved in batch: ${oldestSaved} ("${oldest.Name}")`
       );
       // Log the top 3 freshest items so we can spot what's actually at the head of the queue.
       for (const item of items.slice(0, 3)) {
         logger.debug(
-          `[Jellyfin Poller] Top: "${item.Name}" (${item.Type}, DateCreated=${item.DateCreated || "n/a"}, Id=${item.Id})`
+          `[Jellyfin Poller] Top: "${item.Name}" (${item.Type}, DateLastSaved=${item.DateLastSaved || "n/a"}, Id=${item.Id})`
         );
       }
     }
@@ -238,7 +252,10 @@ async function poll(client, apiKey, baseUrl) {
       newItems.push(item);
     }
 
-    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (paginated up to 1000 by DateCreated), ${newItems.length} new`);
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (paginated up to 1000 by DateLastSaved), ${newItems.length} new`);
+
+    // Mark this poll as successful so the next poll uses a narrowed date window.
+    lastSuccessfulPollAt = pollStartedAt;
 
     // Update stats for the dashboard
     pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();

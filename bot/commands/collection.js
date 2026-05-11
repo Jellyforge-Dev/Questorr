@@ -92,7 +92,10 @@ export async function buildCollectionReply({ tmdbId, mediaType, query } = {}) {
           logger.debug("[collection] Seerr status check failed for %s: %s", part.id, err.message);
         }
 
-        return { id: part.id, title, year, rating, available, jellyfinItemId, seerrStatus };
+        // seerrStatus=5 means AVAILABLE in Seerr — treat it as available even when
+        // findJellyfinItemByTmdbId couldn't resolve the item (TMDB-ID lookup quirk).
+        const seerrConfirmedAvailable = seerrStatus === 5;
+        return { id: part.id, title, year, rating, available: !!jellyfinItemId || seerrConfirmedAvailable, jellyfinItemId, seerrStatus };
       })
     );
 

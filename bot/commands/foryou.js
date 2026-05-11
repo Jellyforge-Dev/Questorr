@@ -31,6 +31,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import {
   fetchUserRecentlyPlayed,
+  fetchUserRecentlyPlayedSeriesViaEpisodes,
   resolveJellyfinUserId,
   findJellyfinItemByTmdbId,
 } from "../../api/jellyfin.js";
@@ -95,19 +96,36 @@ export async function handleForYouCommand(interaction) {
       return interaction.editReply({ content: t("foryou_no_jellyfin_user") });
     }
 
-    // Step 1: read watch history
-    const watched = await fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 20);
-    logger.info(`[foryou] Jellyfin watch history: ${watched.length} items`);
+    // Step 1: read watch history — two sources in parallel:
+    //   A) Fully-played Movies + Series (IsPlayed filter works well for movies)
+    //   B) Series derived from recently-played Episodes — catches series the user is
+    //      currently watching but hasn't finished (IsPlayed on Series requires every
+    //      episode to be watched, so in-progress series never appear in source A)
+    const [watched, seriesViaEpisodes] = await Promise.all([
+      fetchUserRecentlyPlayed(jellyfinUserId, jfKey, jfBase, 20),
+      fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, jfKey, jfBase, 10),
+    ]);
 
-    if (watched.length === 0) {
+    // Merge, deduplicate by Jellyfin Item ID (a fully-watched series might appear in both)
+    const watchedMap = new Map();
+    for (const item of [...watched, ...seriesViaEpisodes]) {
+      if (item.Id && !watchedMap.has(item.Id)) watchedMap.set(item.Id, item);
+    }
+    const allWatched = [...watchedMap.values()];
+
+    logger.info(
+      `[foryou] Jellyfin watch history: ${watched.length} played + ${seriesViaEpisodes.length} series-via-episodes = ${allWatched.length} unique`
+    );
+
+    if (allWatched.length === 0) {
       return interaction.editReply({ content: t("foryou_no_history") });
     }
 
-    // Step 2: pick up to 5 random seeds with TMDB IDs (random = different
-    // recommendations each call, not just the same recently-played 5)
+    // Step 2: pick up to 5 random seeds with TMDB IDs — aim for a mix of
+    // movies and series so recommendations span both content types.
     const watchedTmdbIds = new Set();
     const allSeeds = [];
-    for (const item of watched) {
+    for (const item of allWatched) {
       const seed = jfToSeed(item);
       if (!seed) continue;
       watchedTmdbIds.add(seed.tmdbId);
@@ -116,7 +134,7 @@ export async function handleForYouCommand(interaction) {
     const seeds = [...allSeeds].sort(() => Math.random() - 0.5).slice(0, 5);
 
     if (seeds.length === 0) {
-      logger.warn(`[foryou] None of ${watched.length} watched items have TMDB IDs`);
+      logger.warn(`[foryou] None of ${allWatched.length} watched items have TMDB IDs`);
       return interaction.editReply({ content: t("foryou_no_recommendations") });
     }
 
