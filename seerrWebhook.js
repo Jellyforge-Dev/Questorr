@@ -168,6 +168,16 @@ const TMDB_CACHE_TTL = 6 * 60 * 60 * 1000;
 const recentWebhookEvents = new Map(); // key = `${eventType}|${mediaType}|${tmdbId}` → expiresAt
 const WEBHOOK_DEDUP_WINDOW_MS = 30_000;
 
+// Events for which we fetch rootFolder from the Seerr API when the webhook payload
+// doesn't carry it. MEDIA_PENDING is excluded — it goes to the admin channel via a
+// separate path, and Seerr hasn't assigned a rootFolder before approval anyway.
+const ROOTFOLDER_RELEVANT_EVENTS = new Set([
+  "MEDIA_APPROVED",
+  "MEDIA_AUTO_APPROVED",
+  "MEDIA_AVAILABLE",
+  "MEDIA_FAILED",
+]);
+
 function isDuplicateWebhookEvent(eventType, mediaType, tmdbId) {
   if (!eventType || !tmdbId) return false; // payload without identity → never dedup (e.g. TEST_NOTIFICATION)
   const now = Date.now();
@@ -219,7 +229,9 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
       timeout: 5000,
     }).catch(() => null);
 
-    const reqs = res?.data?.requests || [];
+    // Jellyseerr's /api/v1/movie/{id} and /api/v1/tv/{id} return requests under
+    // `mediaInfo.requests` — top-level `requests` is always undefined here.
+    const reqs = res?.data?.mediaInfo?.requests || [];
     const rootFolders = reqs.map(r => r.rootFolder).filter(Boolean);
     if (rootFolders.length > 0) {
       logger.info(`[SEERR WEBHOOK] 📁 Root folder from Seerr request: ${rootFolders[0]} (${reqs.length} request(s) found)`);
@@ -248,8 +260,8 @@ export function resolveMediaTypeChannel(mediaType) {
 }
 
 async function resolveChannel(rootFolder, tmdbId, mediaType) {
-  // 1. Root-folder mapping (only used when rootFolder came from the webhook payload
-  //    directly — not from the Seerr API lookup, which can be stale/wrong)
+  // 1. Root-folder mapping. rootFolder may come from the webhook payload directly
+  //    OR from the Seerr API fallback in processEvent — both are authoritative.
   if (rootFolder) {
     try {
       const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
@@ -389,13 +401,26 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
     // candidates and the year is a strong discriminator (e.g. "Mary Poppins" 1964
     // vs. "Mary Poppins Returns" 2018). For channel-routing purposes the library
     // assignment is what matters, not the TMDB metadata accuracy.
+    //
+    // Sanity filter: Jellyfin's fuzzy search occasionally returns wildly unrelated
+    // items for short/common titles (observed: searchTerm="Oben" returned "Toy Story 2",
+    // "Scream 2", "Bärenbrüder 2" — letter-overlap matches). Reject items whose name
+    // shares no normalized substring with the search term before accepting a year-match.
     if (!yearMatchFallback && year) {
+      const normTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const titleTokens = normTitle.split(/\s+/).filter(t => t.length >= 3);
+      const nameMatches = (itemName) => {
+        if (!itemName) return false;
+        const n = itemName.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        if (n.includes(normTitle)) return true;
+        return titleTokens.length > 0 && titleTokens.some(t => n.includes(t));
+      };
       for (const item of items) {
-        if (String(item.ProductionYear) === String(year)) {
-          const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
-          yearMatchFallback = { item, viaTitle: title, wrongTmdbId: itemTmdbId || null };
-          break;
-        }
+        if (String(item.ProductionYear) !== String(year)) continue;
+        if (!nameMatches(item.Name)) continue;
+        const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+        yearMatchFallback = { item, viaTitle: title, wrongTmdbId: itemTmdbId || null };
+        break;
       }
     }
   }
@@ -575,14 +600,14 @@ async function processEvent(data, eventType, cfg, client) {
     return;
   }
 
-  // If rootFolder is not in the webhook payload (common for MEDIA_AVAILABLE),
-  // fetch it from the Seerr API. The media endpoint returns all requests for
-  // this TMDB ID including their rootFolders — this is the most reliable
-  // source and takes priority over the Jellyfin item's current library
-  // (which may be stale, e.g. a duplicate in the wrong library).
-  // For manually-marked items with no Seerr request, this returns null and
-  // routing falls through to the Jellyfin library lookup.
-  if (!rootFolder && tmdbId && mediaType && eventType === "MEDIA_AVAILABLE") {
+  // Webhook payloads never carry request.rootFolder (Seerr's notification template
+  // simply doesn't include it), so we always fetch it from the Seerr API for the
+  // events where channel-routing matters. Skipped for MEDIA_PENDING because those
+  // go to the admin channel via a separate path, and rootFolder isn't reliably
+  // populated until Seerr forwards the request to Radarr/Sonarr anyway.
+  // For manually-marked items with no Seerr request, the API returns no requests
+  // and routing falls through to the Jellyfin library lookup.
+  if (!rootFolder && tmdbId && mediaType && ROOTFOLDER_RELEVANT_EVENTS.has(eventType)) {
     rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType);
   }
 
