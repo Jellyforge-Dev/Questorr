@@ -502,7 +502,7 @@
     "cleanup_timeout_preset_custom": "Benutzerdefiniert…",
     "cleanup_timeout_custom_label": "Benutzerdefinierter Timeout (Sekunden)",
     "btn_poll_now": "Jetzt prüfen",
-    "btn_rescan_now": "Verpasste Items finden",
+    "btn_poll_now_tooltip": "Sucht nach kürzlich hinzugefügten Items (letzte 7 Tage) und sendet Notifications für noch nicht gemeldete. Ältere Library-Inhalte werden NICHT benachrichtigt.",
     "poller_status_loading": "Status: lädt…",
     "poller_status_disabled": "Status: deaktiviert",
     "poller_status_error": "Status: Fehler",

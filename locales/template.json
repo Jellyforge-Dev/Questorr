@@ -431,7 +431,7 @@
     "cleanup_timeout_preset_custom": "",
     "cleanup_timeout_custom_label": "",
     "btn_poll_now": "",
-    "btn_rescan_now": "",
+    "btn_poll_now_tooltip": "",
     "poller_status_loading": "",
     "poller_status_disabled": "",
     "poller_status_error": "",

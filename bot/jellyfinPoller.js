@@ -117,6 +117,34 @@ function getTmdbLanguage() {
   return map[lang] || "en-US";
 }
 
+function getDateLocale() {
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase().split("-")[0];
+  const map = { de: "de-DE", en: "en-US", sv: "sv-SE", fr: "fr-FR", es: "es-ES", pt: "pt-BR", nl: "nl-NL", it: "it-IT", pl: "pl-PL", ru: "ru-RU" };
+  return map[lang] || "en-US";
+}
+
+/**
+ * Round 10: Returns true if the item's DateCreated is within the configured
+ * "Recently Added" window (default 7 days, env JELLYFIN_RECENT_ADDED_DAYS).
+ *
+ * This is the SAFETY NET that prevents accidentally spamming Discord with
+ * notifications for old library content — even if the seen-items.json is
+ * deleted or corrupted, or if a full-scan finds items the seed never tracked,
+ * items with DateCreated older than the window are NEVER notified.
+ *
+ * Set JELLYFIN_RECENT_ADDED_DAYS=0 to disable this filter entirely
+ * (power-user mode for one-shot rescans of older content).
+ */
+function isWithinRecentlyAddedWindow(item) {
+  const days = parseInt(process.env.JELLYFIN_RECENT_ADDED_DAYS ?? "7", 10);
+  if (!Number.isFinite(days) || days <= 0) return true;  // 0 = no filter (disabled)
+  if (!item || !item.DateCreated) return false;          // no date → can't verify → safer to skip
+  const itemTs = new Date(item.DateCreated).getTime();
+  if (Number.isNaN(itemTs)) return false;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  return itemTs >= cutoff;
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function startJellyfinPoller(client) {
@@ -270,15 +298,25 @@ async function poll(client, apiKey, baseUrl) {
     }
 
     const newItems = [];
+    let outsideWindowCount = 0;
     for (const item of items) {
       if (deduplicator.checkAndRecord(item.Id)) {
         logger.debug(`[Jellyfin Poller] Already seen: "${item.Name}" (${item.Id})`);
         continue;
       }
+      // Round 10: only notify items in Jellyfin's "Recently Added" window.
+      // Items older than JELLYFIN_RECENT_ADDED_DAYS (default 7) are silently
+      // skipped — prevents legacy library content from being notified.
+      if (!isWithinRecentlyAddedWindow(item)) {
+        outsideWindowCount++;
+        logger.debug(`[Jellyfin Poller] Outside Recently-Added window: "${item.Name}" (DateCreated=${item.DateCreated})`);
+        continue;
+      }
       newItems.push(item);
     }
 
-    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (paginated up to 1000 by DateCreated), ${newItems.length} new`);
+    const windowDays = process.env.JELLYFIN_RECENT_ADDED_DAYS ?? "7";
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched, ${newItems.length} new, ${outsideWindowCount} outside Recently-Added window (${windowDays} days)`);
 
     // Update stats for the dashboard
     pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();
@@ -345,19 +383,21 @@ export function getPollerStatus() {
 /**
  * Manually trigger a poll cycle.
  *
- * @param {{ mode?: "fast"|"full"|"rescan", limit?: number }} [opts]
+ * @param {{ mode?: "fast"|"full", limit?: number }} [opts]
  *   - "fast" (default): same top-1000-by-DateCreated as the periodic poll. Sync — returns { fetched, new }.
- *   - "full": exhaustive library scan, skips items already in seenIds. Fire-and-forget. Catches recently-added
- *     items that fall outside the top-1000 (e.g. files with old mtimes).
- *   - "rescan" (Round 9): exhaustive library scan that IGNORES the SEED_MARKER entries — so items the user
- *     never got a notification for (because they were already in Jellyfin at first bot start) can finally
- *     be discovered and notified. Fire-and-forget. Caller can use `limit` to cap notifications per run
- *     (default 50). Repeated runs find further items batch-by-batch.
+ *   - "full" (dashboard "Jetzt prüfen"): exhaustive library scan, skips items already in seenIds.
+ *     Fire-and-forget. Catches recently-added items that fall outside the top-1000 (e.g. files with
+ *     old mtimes). Returns { started: true } immediately; progress in getPollerStatus().fullScanProgress.
  *
- *   For full/rescan: returns { started: true } immediately; progress in getPollerStatus().fullScanProgress.
+ *   Round 10 NOTE: the legacy "rescan" mode (re-evaluating SEED_MARKER items) has been REMOVED.
+ *   Instead, all notification paths now filter by the JELLYFIN_RECENT_ADDED_DAYS window — so old
+ *   library content can never be accidentally notified, regardless of seenIds state. The
+ *   `mode === "rescan"` input is silently mapped to "full" for backward compatibility with old
+ *   UI builds; users who genuinely want to rescan pre-existing items can set
+ *   JELLYFIN_RECENT_ADDED_DAYS=0 (env) and click "Jetzt prüfen" — that's the power-user path.
  */
 export async function triggerManualPoll(opts = {}) {
-  const { mode = "fast", limit = 50 } = opts;
+  let { mode = "fast", limit = 50 } = opts;
   if (!savedClient || !savedApiKey || !savedBaseUrl) {
     throw new Error("Poller not initialized — start the bot and ensure Jellyfin is configured.");
   }
@@ -365,57 +405,77 @@ export async function triggerManualPoll(opts = {}) {
     throw new Error("Seed poll has not completed yet — please wait a moment and try again.");
   }
 
-  if (mode === "full" || mode === "rescan") {
+  // Round 10: legacy "rescan" → silently map to "full" so old UI builds don't break.
+  if (mode === "rescan") {
+    logger.info(`[Jellyfin Poller] Rescan mode is deprecated — using full scan with Recently-Added filter (set JELLYFIN_RECENT_ADDED_DAYS=0 to scan older items)`);
+    mode = "full";
+  }
+
+  if (mode === "full") {
     if (_fullScanInProgress) {
-      return { started: false, reason: `${mode} scan already in progress`, progress: _fullScanProgress };
+      return { started: false, reason: "full scan already in progress", progress: _fullScanProgress };
     }
     _fullScanInProgress = true;
     _fullScanProgress = { mode, scanned: 0, newFound: 0, startedAt: Date.now(), hitCap: false, finishedAt: null };
 
-    // Build the "skip set" — what counts as already-known.
-    // - full:   ALL entries in seenItems (including SEED_MARKER) are skipped
-    // - rescan: only TRULY notified entries (timestamp != SEED_MARKER) are skipped
+    // Build the "skip set" — all entries already known (SEED_MARKER + truly notified).
+    // Round 10: we no longer differentiate; all seen-IDs are skipped equally. The
+    // Recently-Added window filter (applied later) is what guarantees we don't spam.
     const skipIds = new Set();
     let seedCount = 0;
     let trulySeenCount = 0;
     for (const [id, ts] of deduplicator.seenItems) {
-      if (ts === SEED_MARKER) {
-        seedCount++;
-        if (mode === "full") skipIds.add(id);
-      } else {
-        trulySeenCount++;
-        skipIds.add(id);
-      }
+      if (ts === SEED_MARKER) seedCount++; else trulySeenCount++;
+      skipIds.add(id);
     }
 
-    if (mode === "rescan") {
-      logger.info(`[Jellyfin Poller] Rescan mode: scanning library, skipping ${trulySeenCount} truly-notified items but RE-EVALUATING ${seedCount} seed-marked items (limit=${limit})`);
-    } else {
-      logger.info(`[Jellyfin Poller] Manual trigger: full library scan starting (skipping ${skipIds.size} known items)`);
-    }
+    logger.info(`[Jellyfin Poller] Manual trigger: full library scan starting — skipping ${skipIds.size} known items (${trulySeenCount} truly-notified, ${seedCount} seed-marked). Recently-Added window: ${process.env.JELLYFIN_RECENT_ADDED_DAYS ?? "7"} days.`);
 
     // Fire-and-forget — HTTP response returns immediately so the dashboard can poll progress.
     (async () => {
       try {
-        const { newItems, totalScanned, hitCap } = await scanAllItemsForUnseen(
+        // Round 10: pass minDateCreated so scanAllItemsForUnseen can early-stop once
+        // it hits items older than the Recently-Added window (items sorted DESC by DateCreated).
+        const recentDays = parseInt(process.env.JELLYFIN_RECENT_ADDED_DAYS ?? "7", 10);
+        const minDateCreated = (Number.isFinite(recentDays) && recentDays > 0)
+          ? Date.now() - recentDays * 24 * 60 * 60 * 1000
+          : null;
+
+        const { newItems: rawNew, totalScanned, hitCap, hitDateCutoff } = await scanAllItemsForUnseen(
           savedApiKey, savedBaseUrl, skipIds, limit,
           (scanned, newCount) => {
             _fullScanProgress.scanned = scanned;
             _fullScanProgress.newFound = newCount;
-          }
-        );
-        _fullScanProgress.scanned = totalScanned;
-        _fullScanProgress.newFound = newItems.length;
-        _fullScanProgress.hitCap = hitCap;
-        logger.info(
-          `[Jellyfin Poller] ${mode === "rescan" ? "Rescan" : "Full scan"} complete: ${totalScanned} scanned, ${newItems.length} new${hitCap ? ` (CAPPED at ${limit})` : ""}`
+          },
+          { minDateCreated }
         );
 
-        // Upgrade items from SEED_MARKER to truly-seen + notify
-        for (const item of newItems) deduplicator.markNotified(item.Id);
+        // Round 10: split into kept (within window) and dropped (too old).
+        // - Kept items: notified + marked seen.
+        // - Dropped items: ALSO marked seen so they don't keep showing up on subsequent
+        //   "Jetzt prüfen" clicks (wasteful re-scans). They're silently absorbed —
+        //   user can re-trigger notifications later by setting JELLYFIN_RECENT_ADDED_DAYS=0
+        //   and deleting seen-items.json (power-user path).
+        const filtered = [];
+        const dropped = [];
+        for (const item of rawNew) {
+          if (isWithinRecentlyAddedWindow(item)) filtered.push(item);
+          else dropped.push(item);
+        }
+        const windowDays = process.env.JELLYFIN_RECENT_ADDED_DAYS ?? "7";
+
+        _fullScanProgress.scanned = totalScanned;
+        _fullScanProgress.newFound = filtered.length;
+        _fullScanProgress.hitCap = hitCap;
+        logger.info(
+          `[Jellyfin Poller] Full scan complete: ${totalScanned} scanned, ${rawNew.length} unseen, ${filtered.length} within Recently-Added window (${dropped.length} dropped as too old, ${windowDays} days)${hitCap ? ` — CAPPED at ${limit}` : ""}${hitDateCutoff ? " — early-stopped at DateCreated cutoff" : ""}`
+        );
+
+        for (const item of filtered) deduplicator.markNotified(item.Id);
+        for (const item of dropped) deduplicator.markNotified(item.Id);
         saveSeenItems();
-        if (newItems.length > 0) {
-          await notifyBatch(savedClient, newItems, savedApiKey, savedBaseUrl);
+        if (filtered.length > 0) {
+          await notifyBatch(savedClient, filtered, savedApiKey, savedBaseUrl);
           // Round 9: invalidate library stats cache so the dashboard shows updated counts
           try {
             const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
@@ -423,7 +483,7 @@ export async function triggerManualPoll(opts = {}) {
           } catch { /* not critical */ }
         }
       } catch (e) {
-        logger.error(`[Jellyfin Poller] ${mode === "rescan" ? "Rescan" : "Full scan"} failed: ${e?.message || e}`);
+        logger.error(`[Jellyfin Poller] Full scan failed: ${e?.message || e}`);
       } finally {
         _fullScanProgress.finishedAt = Date.now();
         _fullScanInProgress = false;
@@ -487,6 +547,9 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB ID yet – waiting ${delaySec}s for metadata scan`);
     setTimeout(async () => {
       const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
+      // Round 10 SAFETY: if the re-fetch somehow stripped the Id (shouldn't happen
+      // with the Fields-explicit call, but defensive), preserve it from the original.
+      if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
       await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
         logger.error(`[Jellyfin Poller] Delayed notify failed for "${item.Name}": ${err.message}`)
       );
@@ -556,7 +619,12 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   const year = item.ProductionYear || null;
 
   let title = item.Name || "Unbekannter Titel";
-  if (year) title += ` (${year})`;
+  // Round 10: Some Jellyfin items have the year baked into the Name itself
+  // (e.g. "Avengers - Endgame (2019)" because the filename had it). If we
+  // append ProductionYear blindly we get duplicates like "(2019) (2018)".
+  // Skip appending when the title already contains a 4-digit year in parens.
+  const yearAlreadyInName = /\(\d{4}\)/.test(title);
+  if (year && !yearAlreadyInName) title += ` (${year})`;
 
   // For Episodes/Seasons: prefix with series name
   if (itemType === "Season" && item.SeriesName) {
@@ -602,6 +670,22 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   }
 
   let overview = tmdbData?.overview || item.Overview || null;
+  if (!overview) {
+    // Round 10: ensure the embed always has SOMETHING to show — even when
+    // Jellyfin's metadata-scan failed to populate Overview/Genres/etc. (poor
+    // filename, missing IMDb/TMDB id). Build a minimal description from
+    // whatever fields we *do* have.
+    const parts = [];
+    if (Array.isArray(item.Genres) && item.Genres.length > 0) {
+      parts.push(item.Genres.slice(0, 3).join(", "));
+    }
+    if (item.DateCreated) {
+      try {
+        parts.push(`Hinzugefügt: ${new Date(item.DateCreated).toLocaleDateString(getDateLocale())}`);
+      } catch { /* invalid date — skip */ }
+    }
+    if (parts.length > 0) overview = parts.join(" · ");
+  }
   if (overview) {
     if (overview.length > 350) overview = overview.substring(0, 347) + "...";
     embed.setDescription(overview);

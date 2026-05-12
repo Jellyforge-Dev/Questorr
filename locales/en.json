@@ -433,7 +433,7 @@
     "cleanup_timeout_preset_custom": "Custom…",
     "cleanup_timeout_custom_label": "Custom timeout (seconds)",
     "btn_poll_now": "Poll now",
-    "btn_rescan_now": "Find missed items",
+    "btn_poll_now_tooltip": "Searches for recently added items (last 7 days) and sends notifications for those not yet announced. Older library content is NOT notified.",
     "poller_status_loading": "Status: loading…",
     "poller_status_disabled": "Status: disabled",
     "poller_status_error": "Status: error",

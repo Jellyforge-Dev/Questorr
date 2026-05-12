@@ -1696,7 +1696,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const statusInterval = setInterval(fetchStatus, 30000);
     window.addEventListener("beforeunload", () => clearInterval(statusInterval));
 
-    // Shared scan-runner used by both "Jetzt prüfen" (full) and "Verpasste Items finden" (rescan)
+    // Scan-runner for the "Jetzt prüfen" button (Round 10: single mode "full",
+    // server-side Recently-Added window filter prevents notifying old content).
     async function runLibraryScan(btn, mode, limit) {
       btn.disabled = true;
       const origHTML = btn.innerHTML;
@@ -1768,13 +1769,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (pollerNowBtn) {
-      // "Jetzt prüfen" → full library scan, skips items already in seenIds (incl. seed-marked)
+      // Round 10: SINGLE button "Jetzt prüfen" — full library scan filtered by Recently-Added window.
+      // Items older than JELLYFIN_RECENT_ADDED_DAYS (default 7) are silently dropped server-side
+      // so this button is safe to click without spamming old library content.
       pollerNowBtn.addEventListener("click", () => runLibraryScan(pollerNowBtn, "full"));
-    }
-    // Round 9: "Verpasste Items finden" → rescan that ALSO re-evaluates seed-marked items
-    const pollerRescanBtn = document.getElementById("BTN_RESCAN_NOW");
-    if (pollerRescanBtn) {
-      pollerRescanBtn.addEventListener("click", () => runLibraryScan(pollerRescanBtn, "rescan", 50));
     }
   }
 

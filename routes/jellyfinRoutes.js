@@ -20,10 +20,12 @@ router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
 
 router.post("/jellyfin/poll-now", authenticateToken, async (req, res) => {
   try {
-    // Three modes:
-    //   "fast"   — top-1000 by DateCreated, sync, same as periodic poll
-    //   "full"   — exhaustive scan, skips seenItems, fire-and-forget (default)
-    //   "rescan" — like "full" but also notifies items the user never saw (SEED_MARKER items)
+    // Round 10: two modes (rescan removed — see jellyfinPoller.js triggerManualPoll docs):
+    //   "fast" — top-1000 by DateCreated, sync, same as periodic poll
+    //   "full" — exhaustive scan (default), skips seenItems, fire-and-forget. Items outside the
+    //            JELLYFIN_RECENT_ADDED_DAYS window are silently filtered out — so the dashboard
+    //            "Jetzt prüfen" button is safe to click without spamming old library content.
+    //   "rescan" is accepted but silently mapped to "full" for backward compat with old UI builds.
     const reqMode = req.body?.mode;
     const mode = ["fast", "full", "rescan"].includes(reqMode) ? reqMode : "full";
     const reqLimit = parseInt(req.body?.limit, 10);

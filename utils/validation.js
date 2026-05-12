@@ -154,6 +154,11 @@ export const configSchema = Joi.object({
     Joi.string().allow(""),
     Joi.number().integer().min(0).max(600)
   ).optional(),
+  // Round 10: Recently-Added window in days (0 = disabled, default 7)
+  JELLYFIN_RECENT_ADDED_DAYS: Joi.alternatives(
+    Joi.string().allow(""),
+    Joi.number().integer().min(0).max(365)
+  ).optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_WATCH: Joi.string().valid("true", "false").optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_IMDB: Joi.string().valid("true", "false").optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD: Joi.string().valid("true", "false").optional(),

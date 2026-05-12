@@ -79,10 +79,14 @@ export function resolveTargetChannel(configLibraryId, libraryChannels) {
  * detected by both within 24 hours is only notified once.
  */
 // Round 9: timestamp=0 marks an item as "seed-only" — recorded during the
-// silent bulk-seed at first bot start, but never notified. The dashboard
-// "Verpasste Items finden" (rescan) button uses this marker to find items
-// that were added to Jellyfin BEFORE Questorr was running, so the user can
-// retroactively receive notifications for them.
+// silent bulk-seed at first bot start, but never notified.
+//
+// Round 10 NOTE: the SEED_MARKER is preserved for diagnostic purposes (the
+// poll log distinguishes truly-notified vs. seed-marked counts), but it is
+// NO LONGER differentiated by the manual-scan path. All seenIds entries are
+// treated equally as "skip". The Recently-Added window filter in
+// jellyfinPoller.js (JELLYFIN_RECENT_ADDED_DAYS) is what guarantees old
+// library content is never notified — regardless of seenIds state.
 export const SEED_MARKER = 0;
 
 export class ItemDeduplicator {
@@ -123,7 +127,8 @@ export class ItemDeduplicator {
 
   /** Remove entries older than 90 days to prevent unbounded growth.
    *  SEED_MARKER (0) entries are NEVER cleaned up — they represent the
-   *  full pre-existing library and must persist for the rescan feature.
+   *  full pre-existing library and must persist so we don't accidentally
+   *  re-discover and re-notify them later.
    */
   cleanup() {
     const cutoff = Date.now() - CLEANUP_AGE_MS;

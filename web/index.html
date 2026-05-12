@@ -676,11 +676,8 @@
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                               <span id="POLLER_STATUS_TEXT" data-i18n="config.poller_status_loading">Status: lädt…</span>
                               <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Vollständiger Bibliotheks-Scan — findet kürzlich hinzugefügte Items die der periodische Poll verpasst hat">
+                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Sucht nach kürzlich hinzugefügten Items (letzte 7 Tage) und sendet Notifications für noch nicht gemeldete. Ältere Library-Inhalte werden NICHT benachrichtigt." data-i18n="config.btn_poll_now_tooltip" data-i18n-attr="title">
                                   <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
-                                </button>
-                                <button type="button" id="BTN_RESCAN_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Findet Items die zu Jellyfin hinzugefügt wurden BEVOR Questorr lief — sendet bis zu 50 Notifications pro Klick.">
-                                  <i class="bi bi-search"></i> <span data-i18n="config.btn_rescan_now">Verpasste Items finden</span>
                                 </button>
                               </div>
                             </div>

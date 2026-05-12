@@ -624,15 +624,22 @@ export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
  * @param {Function} [onProgress] called as (scanned, newFound) after each page
  * @returns {Promise<{ newItems: Array, totalScanned: number, hitCap: boolean }>}
  */
-export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 50, onProgress = null) {
+export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 50, onProgress = null, opts = {}) {
   const base = baseUrl.replace(/\/$/, "");
   const pageSize = 500;
   const newItems = [];
   let startIndex = 0;
   let totalScanned = 0;
   let hitCap = false;
+  let hitDateCutoff = false;
 
-  while (true) {
+  // Round 10: optional DateCreated cutoff. Items below this timestamp are
+  // skipped, AND because results are sorted by DateCreated DESC, the scan
+  // stops as soon as we encounter an item below the cutoff (every subsequent
+  // item is older). Massive performance win for users with 30k+ libraries.
+  const minDateCreated = Number.isFinite(opts.minDateCreated) ? opts.minDateCreated : null;
+
+  outer: while (true) {
     let response;
     try {
       response = await axios.get(`${base}/Items`, {
@@ -659,6 +666,17 @@ export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 5
 
     for (const item of pageItems) {
       totalScanned++;
+
+      // Round 10: early-stop on date cutoff (items are sorted DESC, so once we
+      // see something older than the cutoff, everything else is older too).
+      if (minDateCreated !== null && item.DateCreated) {
+        const itemTs = new Date(item.DateCreated).getTime();
+        if (!Number.isNaN(itemTs) && itemTs < minDateCreated) {
+          hitDateCutoff = true;
+          break outer;
+        }
+      }
+
       if (!seenIds.has(item.Id)) {
         newItems.push(item);
         if (newItems.length >= maxNew) {
@@ -678,7 +696,7 @@ export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 5
     startIndex += pageItems.length;
   }
 
-  return { newItems, totalScanned, hitCap };
+  return { newItems, totalScanned, hitCap, hitDateCutoff };
 }
 
 /**
@@ -693,6 +711,13 @@ export async function fetchItemDetails(itemId, apiKey, baseUrl) {
     const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
     const response = await axios.get(url, {
       headers: { "X-MediaBrowser-Token": apiKey },
+      // Round 10: explicitly request the fields needed for rich embeds.
+      // Without this, Jellyfin's /Items/{id} returns only the default field set
+      // (no ProviderIds, Overview, Genres) — which would strip metadata from
+      // the freshItem used for the delayed-notification path in jellyfinPoller.
+      params: {
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber,Path",
+      },
       timeout: 5000,
     });
 
