@@ -42,7 +42,7 @@ import {
   resolveConfigLibraryId,
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
-import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, seedAllItemIds, fetchItemDetails } from "../api/jellyfin.js";
+import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, scanAllItemsForUnseen, seedAllItemIds, fetchItemDetails } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
 import { CONFIG_PATH } from "../utils/configFile.js";
 
@@ -54,10 +54,11 @@ let savedClient = null;
 let savedApiKey = null;
 let savedBaseUrl = null;
 
-// Timestamp of the last poll that completed without errors, used to compute
-// the MinDateLastSaved filter window passed to fetchItemsAddedSince.
-// null means "first poll since start" → no date filter applied.
-let lastSuccessfulPollAt = null;
+// Round 8: full-library-scan state for the dashboard "Jetzt prüfen" button.
+// The scan runs async (fire-and-forget) so the HTTP request returns immediately;
+// the dashboard polls /jellyfin/poller-status to watch the progress counters.
+let _fullScanInProgress = false;
+let _fullScanProgress = null;  // { scanned, newFound, startedAt, hitCap, finishedAt? }
 
 // Stats exposed via getPollerStatus() for the dashboard.
 const pollerStats = {
@@ -209,36 +210,27 @@ async function poll(client, apiKey, baseUrl) {
 
   const pollStartedAt = Date.now();
   try {
-    // Build the date-filter window: look back to 1 hour before the last successful poll
-    // so a brief outage or slow poll never causes missed items. On the first poll after
-    // startup (lastSuccessfulPollAt=null) no filter is applied and we fetch the full
-    // top-1000 by DateLastSaved descending (deduplicator handles already-seen items).
-    const minDateLastSaved = lastSuccessfulPollAt
-      ? new Date(lastSuccessfulPollAt - 60 * 60 * 1000).toISOString()
-      : null;
-
-    // Paginate up to 5×200 = 1000 items.
-    // SortBy=DateLastSaved ensures items added with old file mtimes (e.g. a movie
-    // ripped years ago) appear at the top — Jellyfin sets DateLastSaved to NOW when
-    // it first indexes an item, regardless of file creation date.
-    const items = await fetchItemsAddedSince(apiKey, baseUrl, { maxPages: 5, minDateLastSaved });
+    // Paginate up to 5×200 = 1000 items by DateCreated descending. Catches new items
+    // pushed past the top 200 by mass-imports (e.g. a freshly scanned series with
+    // hundreds of episodes). Files imported with old mtimes are NOT caught here —
+    // those are found by the dashboard "Jetzt prüfen" full-scan path instead.
+    const items = await fetchItemsAddedSince(apiKey, baseUrl, { maxPages: 5 });
 
     // Diagnostic: log fetch summary so we can see WHY new items might not appear.
     if (items.length > 0) {
       const oldest = items[items.length - 1];
-      const oldestSaved = oldest.DateLastSaved || oldest.DateCreated || "n/a";
+      const oldestDate = oldest.DateCreated || "n/a";
       const typeCount = items.reduce((acc, it) => {
         acc[it.Type] = (acc[it.Type] || 0) + 1;
         return acc;
       }, {});
       const typeStr = Object.entries(typeCount).map(([t, n]) => `${t}=${n}`).join(", ");
       logger.debug(
-        `[Jellyfin Poller] Fetch summary: ${items.length} items (${typeStr}); oldest DateLastSaved in batch: ${oldestSaved} ("${oldest.Name}")`
+        `[Jellyfin Poller] Fetch summary: ${items.length} items (${typeStr}); oldest DateCreated in batch: ${oldestDate} ("${oldest.Name}")`
       );
-      // Log the top 3 freshest items so we can spot what's actually at the head of the queue.
       for (const item of items.slice(0, 3)) {
         logger.debug(
-          `[Jellyfin Poller] Top: "${item.Name}" (${item.Type}, DateLastSaved=${item.DateLastSaved || "n/a"}, Id=${item.Id})`
+          `[Jellyfin Poller] Top: "${item.Name}" (${item.Type}, DateCreated=${item.DateCreated || "n/a"}, Id=${item.Id})`
         );
       }
     }
@@ -252,10 +244,7 @@ async function poll(client, apiKey, baseUrl) {
       newItems.push(item);
     }
 
-    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (paginated up to 1000 by DateLastSaved), ${newItems.length} new`);
-
-    // Mark this poll as successful so the next poll uses a narrowed date window.
-    lastSuccessfulPollAt = pollStartedAt;
+    logger.debug(`[Jellyfin Poller] Poll: ${items.length} fetched (paginated up to 1000 by DateCreated), ${newItems.length} new`);
 
     // Update stats for the dashboard
     pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();
@@ -271,21 +260,7 @@ async function poll(client, apiKey, baseUrl) {
     if (newItems.length === 0) return { fetched: items.length, new: 0 };
 
     logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
-
-    // Load library map once for all new items
-    const { libraries, libraryIdMap } = await fetchLibraryMap().catch(() => ({ libraries: [], libraryIdMap: new Map() }));
-    const libraryMap = new Map();
-    for (const lib of libraries) {
-      libraryMap.set(lib.CollectionId, lib);
-      if (lib.ItemId !== lib.CollectionId) libraryMap.set(lib.ItemId, lib);
-    }
-    const libraryChannels = getLibraryChannels();
-
-    for (const item of newItems) {
-      await notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
-        logger.error(`[Jellyfin Poller] Error notifying "${item.Name}": ${err.message}`)
-      );
-    }
+    await notifyBatch(client, newItems, apiKey, baseUrl);
     return { fetched: items.length, new: newItems.length };
   } catch (err) {
     logger.error("[Jellyfin Poller] Poll error:", err.message);
@@ -318,19 +293,97 @@ export function getPollerStatus() {
     totalPolls: pollerStats.totalPolls,
     totalNewItemsAllTime: pollerStats.totalNewItemsAllTime,
     totalItemsTracked: deduplicator?.seenItems?.size ?? 0,
+    // Round 8: live progress info for the dashboard "Jetzt prüfen" full-scan
+    fullScanInProgress: _fullScanInProgress,
+    fullScanProgress: _fullScanProgress,
   };
 }
 
-/** Manually trigger a poll cycle. Returns { fetched, new } or throws. */
-export async function triggerManualPoll() {
+/**
+ * Manually trigger a poll cycle.
+ *
+ * @param {{ mode?: "fast"|"full" }} [opts]
+ *   - "fast" (default): same top-1000-by-DateCreated as the periodic poll. Sync — returns { fetched, new }.
+ *   - "full": exhaustive library scan. Fire-and-forget — returns { started: true } immediately.
+ *     The scan runs in the background; progress is exposed via getPollerStatus().fullScanProgress.
+ *     Notifications fire to Discord as items are found.
+ */
+export async function triggerManualPoll(opts = {}) {
+  const { mode = "fast" } = opts;
   if (!savedClient || !savedApiKey || !savedBaseUrl) {
     throw new Error("Poller not initialized — start the bot and ensure Jellyfin is configured.");
   }
   if (!initialized) {
     throw new Error("Seed poll has not completed yet — please wait a moment and try again.");
   }
+
+  if (mode === "full") {
+    if (_fullScanInProgress) {
+      return { started: false, reason: "Full scan already in progress", progress: _fullScanProgress };
+    }
+    _fullScanInProgress = true;
+    _fullScanProgress = { scanned: 0, newFound: 0, startedAt: Date.now(), hitCap: false, finishedAt: null };
+    logger.info("[Jellyfin Poller] Manual trigger: full library scan starting");
+
+    // Fire-and-forget — HTTP response returns immediately so the dashboard can poll progress.
+    (async () => {
+      try {
+        const seenIds = new Set(deduplicator.seenItems.keys());
+        const { newItems, totalScanned, hitCap } = await scanAllItemsForUnseen(
+          savedApiKey, savedBaseUrl, seenIds, 50,
+          (scanned, newCount) => {
+            _fullScanProgress.scanned = scanned;
+            _fullScanProgress.newFound = newCount;
+          }
+        );
+        _fullScanProgress.scanned = totalScanned;
+        _fullScanProgress.newFound = newItems.length;
+        _fullScanProgress.hitCap = hitCap;
+        logger.info(
+          `[Jellyfin Poller] Full scan complete: ${totalScanned} scanned, ${newItems.length} new${hitCap ? " (CAPPED at 50)" : ""}`
+        );
+
+        // Mark new items as seen + notify in Discord
+        for (const item of newItems) deduplicator.checkAndRecord(item.Id);
+        saveSeenItems();
+        if (newItems.length > 0) {
+          await notifyBatch(savedClient, newItems, savedApiKey, savedBaseUrl);
+        }
+      } catch (e) {
+        logger.error(`[Jellyfin Poller] Full scan failed: ${e?.message || e}`);
+      } finally {
+        _fullScanProgress.finishedAt = Date.now();
+        _fullScanInProgress = false;
+      }
+    })();
+
+    return { started: true, mode: "full" };
+  }
+
+  // Default "fast" mode: same path as periodic poll, blocking.
   const result = await poll(savedClient, savedApiKey, savedBaseUrl);
   return result || { fetched: 0, new: 0 };
+}
+
+/**
+ * Shared notification dispatcher — loads the library map once and notifies each item.
+ * Used by both the periodic poll and the manual full-scan.
+ */
+async function notifyBatch(client, items, apiKey, baseUrl) {
+  if (!items || items.length === 0) return;
+  const { libraries, libraryIdMap } = await fetchLibraryMap().catch(() => ({ libraries: [], libraryIdMap: new Map() }));
+  const libraryMap = new Map();
+  for (const lib of libraries) {
+    libraryMap.set(lib.CollectionId, lib);
+    if (lib.ItemId !== lib.CollectionId) libraryMap.set(lib.ItemId, lib);
+  }
+  const libraryChannels = getLibraryChannels();
+
+  for (const item of items) {
+    await notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
+      logger.error(`[Jellyfin Poller] Error notifying "${item.Name}": ${err.message}`)
+    );
+  }
 }
 
 // ─── Item Notification ────────────────────────────────────────────────────────

@@ -1692,23 +1692,70 @@ document.addEventListener("DOMContentLoaded", async () => {
         pollerNowBtn.disabled = true;
         const origHTML = pollerNowBtn.innerHTML;
         pollerNowBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.poller_polling") || "Prüfe…");
+        let scanPollTimer = null;
         try {
           const token = localStorage.getItem("questorr_token") || "";
+          // POST starts the FULL library scan async on the backend; response is { started: true }.
+          // We then poll /poller-status every 3s until fullScanInProgress flips back to false.
           const res = await fetch("/api/jellyfin/poll-now", {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "full" }),
           });
           const data = await res.json();
-          if (data.success) {
-            const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
-            showToast(tpl.replace("{{fetched}}", data.fetched ?? 0).replace("{{new}}", data.new ?? 0));
-            await fetchStatus();
-          } else {
+          if (!data.success) {
             showToast((t("common.error") || "Fehler") + ": " + (data.error || "unknown"));
+            return;
           }
+          if (data.started === false) {
+            // Already running — fall through to progress polling.
+            showToast(t("config.poller_scan_inprogress") || "Scan läuft bereits …");
+          } else {
+            showToast(t("config.poller_scan_started") || "Scan gestartet — Ergebnisse erscheinen in Discord");
+          }
+          // Poll progress until done
+          await new Promise((resolve) => {
+            scanPollTimer = setInterval(async () => {
+              try {
+                const sRes = await fetch("/api/jellyfin/poller-status", {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!sRes.ok) throw new Error("HTTP " + sRes.status);
+                const status = await sRes.json();
+                renderStatus(status);
+                const prog = status.fullScanProgress;
+                if (prog && status.fullScanInProgress) {
+                  pollerNowBtn.innerHTML =
+                    '<i class="bi bi-arrow-repeat"></i> ' +
+                    `${prog.scanned ?? 0} / ? · ${prog.newFound ?? 0} neu`;
+                } else {
+                  // Scan finished
+                  if (prog) {
+                    const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
+                    let msg = tpl
+                      .replace("{{fetched}}", prog.scanned ?? 0)
+                      .replace("{{new}}", prog.newFound ?? 0);
+                    if (prog.hitCap) {
+                      msg += " — " + (t("config.poller_scan_cap_hit") || "Limit erreicht, ggf. erneut klicken");
+                    }
+                    showToast(msg);
+                  }
+                  clearInterval(scanPollTimer);
+                  scanPollTimer = null;
+                  resolve();
+                }
+              } catch (err) {
+                clearInterval(scanPollTimer);
+                scanPollTimer = null;
+                showToast((t("common.error") || "Fehler") + ": " + err.message);
+                resolve();
+              }
+            }, 3000);
+          });
         } catch (err) {
           showToast((t("common.error") || "Fehler") + ": " + err.message);
         } finally {
+          if (scanPollTimer) clearInterval(scanPollTimer);
           pollerNowBtn.disabled = false;
           pollerNowBtn.innerHTML = origHTML;
         }

@@ -177,25 +177,32 @@ router.get("/health/details", authenticateToken, async (_req, res) => {
 // ─── Insights for Dashboard Step 8 ─────────────────────────────────────────
 // Aggregates Library / Request-Lifecycle / Top-Request-Genres in one call.
 // Each block fails independently — partial data is preferable to a 500.
+//
+// Library counts are cached in-memory for 5 min — fetchLibrarySummary is the
+// slow part (round-trip to Jellyfin for genre/runtime aggregation). The cache
+// is shared between this endpoint and getInsightsForWidget() below.
+const _statsLibraryCache = { data: null, ts: 0 };
+const LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedLibrarySummary() {
+  const jfBase = process.env.JELLYFIN_BASE_URL;
+  const jfKey  = process.env.JELLYFIN_API_KEY;
+  if (!jfBase || !jfKey) return null;
+  if (_statsLibraryCache.data && Date.now() - _statsLibraryCache.ts < LIBRARY_CACHE_TTL_MS) {
+    return _statsLibraryCache.data;
+  }
+  const { fetchLibrarySummary } = await import("../api/jellyfin.js");
+  const summary = await fetchLibrarySummary(jfKey, jfBase);
+  _statsLibraryCache.data = summary;
+  _statsLibraryCache.ts = Date.now();
+  return summary;
+}
+
 router.get("/stats/insights", authenticateToken, async (_req, res) => {
   const out = { library: null, lifecycle: null, requestGenres: null };
 
   try {
-    const jfBase = process.env.JELLYFIN_BASE_URL;
-    const jfKey  = process.env.JELLYFIN_API_KEY;
-    if (jfBase && jfKey) {
-      // Prefer the heartbeat cache (written every 15 min by startLibraryHeartbeat).
-      // Falls back to a live API call so the endpoint works even before the first
-      // heartbeat cycle completes.
-      const { getLibraryCounts } = await import("../lib/libraryHeartbeat.js");
-      const cached = getLibraryCounts();
-      if (cached) {
-        out.library = cached;
-      } else {
-        const { fetchLibrarySummary } = await import("../api/jellyfin.js");
-        out.library = await fetchLibrarySummary(jfKey, jfBase);
-      }
-    }
+    out.library = await getCachedLibrarySummary();
   } catch (e) {
     logger.warn(`[stats/insights] library failed: ${e.message}`);
   }
@@ -242,18 +249,7 @@ async function getInsightsForWidget() {
   }
   const out = { library: null, lifecycle: null, requestGenres: null };
   try {
-    const jfBase = process.env.JELLYFIN_BASE_URL;
-    const jfKey  = process.env.JELLYFIN_API_KEY;
-    if (jfBase && jfKey) {
-      const { getLibraryCounts } = await import("../lib/libraryHeartbeat.js");
-      const cached = getLibraryCounts();
-      if (cached) {
-        out.library = cached;
-      } else {
-        const { fetchLibrarySummary } = await import("../api/jellyfin.js");
-        out.library = await fetchLibrarySummary(jfKey, jfBase);
-      }
-    }
+    out.library = await getCachedLibrarySummary();
   } catch (e) { logger.warn(`[widget/stats] library failed: ${e.message}`); }
   try {
     const { fetchRequestLifecycleStats } = await import("../api/seerr.js");

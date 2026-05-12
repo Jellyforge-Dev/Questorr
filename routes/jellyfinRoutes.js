@@ -20,7 +20,10 @@ router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
 
 router.post("/jellyfin/poll-now", authenticateToken, async (req, res) => {
   try {
-    const result = await triggerManualPoll();
+    // Default to "full" mode (exhaustive library scan) when triggered from the dashboard.
+    // Caller can pass { mode: "fast" } to do a quick top-1000-by-DateCreated check instead.
+    const mode = req.body?.mode === "fast" ? "fast" : "full";
+    const result = await triggerManualPoll({ mode });
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message || String(err) });

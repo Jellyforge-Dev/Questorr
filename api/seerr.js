@@ -124,6 +124,132 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
   return results;
 }
 
+// ─── Direct Radarr/Sonarr lookup (Round 8: rootFolder fallback) ──────────────
+//
+// Jellyseerr does not reliably populate `rootFolder` in its Request record when
+// the admin approves with the default profile. The downstream Radarr/Sonarr
+// server DOES know the path however — it's where the actual download lands.
+// We pull the connection details for each configured server from Jellyseerr
+// (`/api/v1/service/{type}/{id}` returns hostname + apiKey + useSsl), then call
+// the Arr's v3 API directly: `/api/v3/movie?tmdbId=X` or `/api/v3/series?tvdbId=Y`.
+//
+// Cached 5 min — server configs change rarely; the cache prevents hammering
+// Jellyseerr on every webhook event.
+
+let _arrConnectionsCache = { radarr: null, sonarr: null, ts: 0 };
+const ARR_CONNECTIONS_TTL_MS = 5 * 60 * 1000;
+
+function buildArrBaseUrl(server) {
+  const protocol = server.useSsl ? "https" : "http";
+  const baseUrlSuffix = server.baseUrl ? `/${String(server.baseUrl).replace(/^\/+|\/+$/g, "")}` : "";
+  return `${protocol}://${server.hostname}:${server.port}${baseUrlSuffix}`;
+}
+
+/**
+ * Fetch all configured Radarr/Sonarr server connections from Jellyseerr.
+ * Each result includes the credentials needed to call the Arr's API directly.
+ * Cached 5 min.
+ *
+ * @returns {Promise<{ radarr: Array, sonarr: Array }>}
+ */
+export async function fetchArrConnections(seerrUrl, apiKey) {
+  if (_arrConnectionsCache.radarr && _arrConnectionsCache.sonarr &&
+      Date.now() - _arrConnectionsCache.ts < ARR_CONNECTIONS_TTL_MS) {
+    return { radarr: _arrConnectionsCache.radarr, sonarr: _arrConnectionsCache.sonarr };
+  }
+
+  const safeApiUrl = new URL(normalizeApiUrl(seerrUrl));
+  const basePath = safeApiUrl.pathname.replace(/\/$/, "");
+  const buildUrl = (suffix) => {
+    const u = new URL(safeApiUrl.href);
+    u.pathname = basePath + suffix;
+    return u.href;
+  };
+
+  const fetchType = async (type) => {
+    const list = [];
+    try {
+      const listRes = await axios.get(buildUrl(`/service/${type}`), {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      });
+      for (const summary of listRes.data || []) {
+        try {
+          const detailsRes = await axios.get(buildUrl(`/service/${type}/${summary.id}`), {
+            headers: { "X-Api-Key": apiKey },
+            timeout: TIMEOUTS.SEERR_API,
+          });
+          const d = detailsRes.data || {};
+          if (d.hostname && d.port && d.apiKey) {
+            list.push({
+              id: d.id ?? summary.id,
+              name: d.name || summary.name || `${type} ${summary.id}`,
+              hostname: d.hostname,
+              port: d.port,
+              apiKey: d.apiKey,
+              useSsl: !!d.useSsl,
+              baseUrl: d.baseUrl || "",
+            });
+          }
+        } catch (err) {
+          logger.debug(`[Seerr] ${type} ${summary.id} details fetch failed: ${err?.message}`);
+        }
+      }
+    } catch (err) {
+      logger.debug(`[Seerr] ${type} server list fetch failed: ${err?.message}`);
+    }
+    return list;
+  };
+
+  const [radarr, sonarr] = await Promise.all([fetchType("radarr"), fetchType("sonarr")]);
+  _arrConnectionsCache = { radarr, sonarr, ts: Date.now() };
+  return { radarr, sonarr };
+}
+
+/**
+ * Query a Radarr v3 server directly for a movie by TMDB ID.
+ * Returns `{ path, rootFolderPath }` or null if Radarr doesn't have the movie.
+ */
+export async function fetchMoviePathFromRadarr(server, tmdbId) {
+  try {
+    const url = `${buildArrBaseUrl(server)}/api/v3/movie`;
+    const res = await axios.get(url, {
+      headers: { "X-Api-Key": server.apiKey },
+      params: { tmdbId },
+      timeout: TIMEOUTS.SEERR_API,
+    });
+    const movies = Array.isArray(res.data) ? res.data : [];
+    if (movies.length === 0) return null;
+    const m = movies[0];
+    return { path: m.path || null, rootFolderPath: m.rootFolderPath || null };
+  } catch (err) {
+    logger.debug(`[Radarr] movie lookup failed for tmdbId=${tmdbId} on ${server.name}: ${err?.message}`);
+    return null;
+  }
+}
+
+/**
+ * Query a Sonarr v3 server directly for a series by TVDB ID.
+ * Returns `{ path, rootFolderPath }` or null if Sonarr doesn't have the series.
+ */
+export async function fetchSeriesPathFromSonarr(server, tvdbId) {
+  try {
+    const url = `${buildArrBaseUrl(server)}/api/v3/series`;
+    const res = await axios.get(url, {
+      headers: { "X-Api-Key": server.apiKey },
+      params: { tvdbId },
+      timeout: TIMEOUTS.SEERR_API,
+    });
+    const series = Array.isArray(res.data) ? res.data : [];
+    if (series.length === 0) return null;
+    const s = series[0];
+    return { path: s.path || null, rootFolderPath: s.rootFolderPath || null };
+  } catch (err) {
+    logger.debug(`[Sonarr] series lookup failed for tvdbId=${tvdbId} on ${server.name}: ${err?.message}`);
+    return null;
+  }
+}
+
 /**
  * Check if media exists and is available in Seerr
  * @param {number} tmdbId - TMDB ID

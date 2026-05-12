@@ -557,30 +557,25 @@ export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
 }
 
 /**
- * Fetch the most recently added items from Jellyfin (by DateLastSaved, descending).
+ * Fetch the most recently added items from Jellyfin (by DateCreated, descending).
  *
- * WHY DateLastSaved instead of DateCreated:
- *   Jellyfin's DateCreated reflects the file's mtime on disk. A movie file from 2010
- *   imported today would have DateCreated=2010, landing at position ~30,000 in a large
- *   library and never appearing in the top-200 (or even top-1000) results. DateLastSaved
- *   is updated whenever Jellyfin writes the item to its DB — including first-time indexing.
- *   A newly-added file therefore always sorts to the top regardless of file mtime.
+ * Round 8 NOTE: Round 7 attempted to switch to DateLastSaved to catch files with old
+ * mtimes — but on this Jellyfin instance DateLastSaved is sparsely populated and the
+ * sort silently falls back to alphabetical, returning only Movies (no Series/Episodes).
+ * Reverted to DateCreated for stable behavior. Files with old mtimes (e.g. Senna 2010
+ * imported today) are caught by the separate `scanAllItemsForUnseen` full-library scan
+ * which the dashboard "Jetzt prüfen" button triggers.
  *
- * DEDUP NOTE: Metadata refreshes also bump DateLastSaved on existing items, so the poller
- *   may see already-known items near the top after a refresh. The caller's deduplicator
- *   (seen-items.json) handles this safely — already-seen IDs are skipped with no side-effects.
- *
- * FILTER: Optional `minDateLastSaved` (ISO string) lets the caller bound the search window
- *   to items saved since the previous poll (minus a 1-hour safety margin), reducing the
- *   response payload. When null (first poll / fallback), no filter is applied.
+ * Walks through `maxPages` pages of `pageSize` items each; stops early if a page
+ * returns fewer items than `pageSize` (end of library reached).
  *
  * @param {string} apiKey
  * @param {string} baseUrl
- * @param {{ maxPages?: number, pageSize?: number, minDateLastSaved?: string|null }} [opts]
- *   defaults: maxPages=1, pageSize=200, minDateLastSaved=null (backward-compatible)
+ * @param {{ maxPages?: number, pageSize?: number }} [opts]
+ *   defaults: maxPages=1, pageSize=200 (backward-compatible)
  */
 export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
-  const { maxPages = 1, pageSize = 200, minDateLastSaved = null } = opts;
+  const { maxPages = 1, pageSize = 200 } = opts;
   try {
     const base = baseUrl.replace(/\/$/, "");
     const all = [];
@@ -590,14 +585,11 @@ export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie,Series,Season,Episode",
-          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,DateLastSaved,SeriesName,ParentIndexNumber,IndexNumber",
-          SortBy: "DateLastSaved",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateCreated",
           SortOrder: "Descending",
           StartIndex: page * pageSize,
           Limit: pageSize,
-          // Only include when we have a previous poll timestamp — reduces payload size
-          // by filtering server-side to items saved in the recent window.
-          ...(minDateLastSaved ? { MinDateLastSaved: minDateLastSaved } : {}),
         },
         timeout: 15000,
       });
@@ -613,6 +605,80 @@ export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
     logger.error(`Failed to fetch recent items from Jellyfin: ${status ? `HTTP ${status} — ` : ""}${msg}`);
     return [];
   }
+}
+
+/**
+ * Full library scan — paginates through ALL items and returns those whose Jellyfin ID
+ * is not in `seenIds`. Used by the dashboard "Jetzt prüfen" button to catch items
+ * that the periodic top-1000-by-DateCreated poll would miss (e.g. files imported
+ * with old file mtimes that land deep in the DateCreated-sorted list).
+ *
+ * Hard-caps at `maxNew` new items to prevent notification floods. When the cap is
+ * hit the scan stops early and `hitCap=true` is returned — the caller can show a
+ * warning and let the user re-run to find more.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {Set<string>} seenIds  Jellyfin Item IDs the caller already knows about
+ * @param {number} [maxNew=50]   abort scan once this many new items are found
+ * @param {Function} [onProgress] called as (scanned, newFound) after each page
+ * @returns {Promise<{ newItems: Array, totalScanned: number, hitCap: boolean }>}
+ */
+export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 50, onProgress = null) {
+  const base = baseUrl.replace(/\/$/, "");
+  const pageSize = 500;
+  const newItems = [];
+  let startIndex = 0;
+  let totalScanned = 0;
+  let hitCap = false;
+
+  while (true) {
+    let response;
+    try {
+      response = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series,Season,Episode",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          StartIndex: startIndex,
+          Limit: pageSize,
+        },
+        timeout: 30000,
+      });
+    } catch (err) {
+      logger.error(`[Jellyfin] scanAllItemsForUnseen page ${startIndex} failed: ${err?.message || err}`);
+      break;
+    }
+
+    const pageItems = response.data?.Items || [];
+    const total = response.data?.TotalRecordCount ?? Infinity;
+    if (pageItems.length === 0) break;
+
+    for (const item of pageItems) {
+      totalScanned++;
+      if (!seenIds.has(item.Id)) {
+        newItems.push(item);
+        if (newItems.length >= maxNew) {
+          hitCap = true;
+          break;
+        }
+      }
+    }
+
+    if (typeof onProgress === "function") {
+      try { onProgress(totalScanned, newItems.length); } catch { /* ignore */ }
+    }
+
+    if (hitCap) break;
+    if (pageItems.length < pageSize) break;        // last page
+    if (totalScanned >= total) break;
+    startIndex += pageItems.length;
+  }
+
+  return { newItems, totalScanned, hitCap };
 }
 
 /**

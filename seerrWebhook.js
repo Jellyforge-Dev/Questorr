@@ -263,6 +263,54 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
       return rootFolders[0];
     }
 
+    // Tier 3 (Round 8): Jellyseerr's request record can be missing rootFolder
+    // when the admin approves without explicitly selecting a path. The downstream
+    // Radarr/Sonarr server always knows the actual path though — query it directly.
+    try {
+      const { fetchArrConnections, fetchMoviePathFromRadarr, fetchSeriesPathFromSonarr } =
+        await import("./api/seerr.js");
+      const { radarr, sonarr } = await fetchArrConnections(seerrUrl, seerrApiKey);
+
+      if (mediaType === "movie" && radarr.length > 0) {
+        for (const srv of radarr) {
+          const movie = await fetchMoviePathFromRadarr(srv, tmdbId);
+          const folder = movie?.rootFolderPath || movie?.path;
+          if (folder) {
+            logger.info(
+              `[SEERR WEBHOOK] 📁 Root folder from Radarr "${srv.name}" for TMDB ${tmdbId}: ${folder}`
+            );
+            return folder;
+          }
+        }
+      } else if (mediaType === "tv" && sonarr.length > 0) {
+        // Sonarr indexes by TVDB ID — resolve via TMDB external_ids first.
+        const tmdbApiKey = process.env.TMDB_API_KEY;
+        let tvdbId = null;
+        if (tmdbApiKey) {
+          const { tmdbGetExternalTvdb } = await import("./api/tmdb.js");
+          tvdbId = await tmdbGetExternalTvdb(tmdbId, tmdbApiKey);
+        }
+        if (tvdbId) {
+          for (const srv of sonarr) {
+            const series = await fetchSeriesPathFromSonarr(srv, tvdbId);
+            const folder = series?.rootFolderPath || series?.path;
+            if (folder) {
+              logger.info(
+                `[SEERR WEBHOOK] 📁 Root folder from Sonarr "${srv.name}" for TVDB ${tvdbId} (TMDB ${tmdbId}): ${folder}`
+              );
+              return folder;
+            }
+          }
+        } else {
+          logger.debug(
+            `[SEERR WEBHOOK] Could not resolve TVDB ID for TMDB ${tmdbId} — Sonarr lookup skipped`
+          );
+        }
+      }
+    } catch (e) {
+      logger.debug(`[SEERR WEBHOOK] Radarr/Sonarr fallback failed: ${e.message}`);
+    }
+
     logger.debug(
       `[SEERR WEBHOOK] No rootFolder found for TMDB ${tmdbId} (requestId=${requestId ?? "none"}) — will use Jellyfin library lookup`
     );

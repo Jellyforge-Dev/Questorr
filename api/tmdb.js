@@ -219,6 +219,31 @@ export async function tmdbGetExternalImdb(id, mediaType, apiKey) {
 }
 
 /**
+ * Get the TVDB ID for a TV show from TMDB external IDs.
+ * Sonarr indexes series by TVDB ID, not TMDB — this resolver lets us bridge
+ * the gap when looking up a series rootFolder from Sonarr directly.
+ *
+ * @param {number} tmdbId - TMDB ID of a TV series
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<number|null>} TVDB ID or null if not available
+ */
+export async function tmdbGetExternalTvdb(tmdbId, apiKey) {
+  try {
+    const res = await withRetry(
+      () => axios.get(`https://api.themoviedb.org/3/tv/${tmdbId}/external_ids`, {
+        params: { api_key: apiKey },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB external TVDB tv/${tmdbId}` }
+    );
+    return res.data?.tvdb_id || null;
+  } catch (err) {
+    logger.warn(`TMDB external TVDB fetch failed for tv/${tmdbId}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * Find the best backdrop image for a media item
  * @param {Object} details - Media details object
  * @returns {string|null} Backdrop path
