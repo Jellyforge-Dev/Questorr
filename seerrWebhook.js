@@ -266,53 +266,66 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
     // Tier 3 (Round 8): Jellyseerr's request record can be missing rootFolder
     // when the admin approves without explicitly selecting a path. The downstream
     // Radarr/Sonarr server always knows the actual path though — query it directly.
+    // Round 9: Logs upgraded from debug→info so the failure mode is visible.
     try {
       const { fetchArrConnections, fetchMoviePathFromRadarr, fetchSeriesPathFromSonarr } =
         await import("./api/seerr.js");
       const { radarr, sonarr } = await fetchArrConnections(seerrUrl, seerrApiKey);
 
-      if (mediaType === "movie" && radarr.length > 0) {
-        for (const srv of radarr) {
-          const movie = await fetchMoviePathFromRadarr(srv, tmdbId);
-          const folder = movie?.rootFolderPath || movie?.path;
-          if (folder) {
-            logger.info(
-              `[SEERR WEBHOOK] 📁 Root folder from Radarr "${srv.name}" for TMDB ${tmdbId}: ${folder}`
-            );
-            return folder;
-          }
-        }
-      } else if (mediaType === "tv" && sonarr.length > 0) {
-        // Sonarr indexes by TVDB ID — resolve via TMDB external_ids first.
-        const tmdbApiKey = process.env.TMDB_API_KEY;
-        let tvdbId = null;
-        if (tmdbApiKey) {
-          const { tmdbGetExternalTvdb } = await import("./api/tmdb.js");
-          tvdbId = await tmdbGetExternalTvdb(tmdbId, tmdbApiKey);
-        }
-        if (tvdbId) {
-          for (const srv of sonarr) {
-            const series = await fetchSeriesPathFromSonarr(srv, tvdbId);
-            const folder = series?.rootFolderPath || series?.path;
+      if (mediaType === "movie") {
+        if (radarr.length === 0) {
+          logger.info(`[SEERR WEBHOOK] Tier-3 skipped for TMDB ${tmdbId}: no Radarr servers configured in Jellyseerr`);
+        } else {
+          logger.info(`[SEERR WEBHOOK] Tier-3: querying ${radarr.length} Radarr server(s) for TMDB ${tmdbId}`);
+          for (const srv of radarr) {
+            const movie = await fetchMoviePathFromRadarr(srv, tmdbId);
+            const folder = movie?.rootFolderPath || movie?.path;
             if (folder) {
               logger.info(
-                `[SEERR WEBHOOK] 📁 Root folder from Sonarr "${srv.name}" for TVDB ${tvdbId} (TMDB ${tmdbId}): ${folder}`
+                `[SEERR WEBHOOK] 📁 Root folder from Radarr "${srv.name}" for TMDB ${tmdbId}: ${folder}`
               );
               return folder;
             }
           }
+          logger.info(`[SEERR WEBHOOK] Tier-3: TMDB ${tmdbId} not found in any of ${radarr.length} Radarr server(s) — falling through`);
+        }
+      } else if (mediaType === "tv") {
+        if (sonarr.length === 0) {
+          logger.info(`[SEERR WEBHOOK] Tier-3 skipped for TMDB ${tmdbId}: no Sonarr servers configured in Jellyseerr`);
         } else {
-          logger.debug(
-            `[SEERR WEBHOOK] Could not resolve TVDB ID for TMDB ${tmdbId} — Sonarr lookup skipped`
-          );
+          // Sonarr indexes by TVDB ID — resolve via TMDB external_ids first.
+          const tmdbApiKey = process.env.TMDB_API_KEY;
+          let tvdbId = null;
+          if (tmdbApiKey) {
+            const { tmdbGetExternalTvdb } = await import("./api/tmdb.js");
+            tvdbId = await tmdbGetExternalTvdb(tmdbId, tmdbApiKey);
+          }
+          if (tvdbId) {
+            logger.info(`[SEERR WEBHOOK] Tier-3: querying ${sonarr.length} Sonarr server(s) for TVDB ${tvdbId} (TMDB ${tmdbId})`);
+            for (const srv of sonarr) {
+              const series = await fetchSeriesPathFromSonarr(srv, tvdbId);
+              const folder = series?.rootFolderPath || series?.path;
+              if (folder) {
+                logger.info(
+                  `[SEERR WEBHOOK] 📁 Root folder from Sonarr "${srv.name}" for TVDB ${tvdbId} (TMDB ${tmdbId}): ${folder}`
+                );
+                return folder;
+              }
+            }
+            logger.info(`[SEERR WEBHOOK] Tier-3: TVDB ${tvdbId} not found in any of ${sonarr.length} Sonarr server(s) — falling through`);
+          } else {
+            logger.info(
+              `[SEERR WEBHOOK] Tier-3 Sonarr skipped: could not resolve TVDB ID for TMDB ${tmdbId} (TMDB_API_KEY missing or external_ids empty)`
+            );
+          }
         }
       }
     } catch (e) {
-      logger.debug(`[SEERR WEBHOOK] Radarr/Sonarr fallback failed: ${e.message}`);
+      logger.warn(`[SEERR WEBHOOK] Tier-3 Radarr/Sonarr fallback errored: ${e.message}`);
     }
 
-    logger.debug(
-      `[SEERR WEBHOOK] No rootFolder found for TMDB ${tmdbId} (requestId=${requestId ?? "none"}) — will use Jellyfin library lookup`
+    logger.info(
+      `[SEERR WEBHOOK] No rootFolder from Seerr/Radarr/Sonarr for TMDB ${tmdbId} (requestId=${requestId ?? "none"}) — falling back to Jellyfin item path / library lookup`
     );
   } catch (e) {
     logger.debug(`[SEERR WEBHOOK] Could not fetch root folder from Seerr: ${e.message}`);
@@ -334,28 +347,44 @@ export function resolveMediaTypeChannel(mediaType) {
   return null;
 }
 
+/**
+ * Match a filesystem path against the configured `SEERR_ROOT_FOLDER_CHANNELS`
+ * mapping. Returns the matching channel ID or null.
+ *
+ * Exported so the Tier-3.5 Jellyfin-item-path fallback in `processEvent` can
+ * re-use the exact same matching logic without duplicating normalization.
+ */
+export function matchRootFolderToChannel(rootFolder) {
+  if (!rootFolder) return null;
+  try {
+    const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
+    const mappings = typeof raw === "object" && raw !== null
+      ? raw
+      : JSON.parse(raw || "{}");
+
+    const normalizedRoot = String(rootFolder).replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
+    for (const [folder, channelId] of Object.entries(mappings)) {
+      const normalizedFolder = String(folder).replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
+      if (normalizedRoot === normalizedFolder || normalizedRoot.startsWith(normalizedFolder + "/")) {
+        return channelId;
+      }
+    }
+  } catch (e) {
+    logger.warn("[SEERR WEBHOOK] Failed to parse SEERR_ROOT_FOLDER_CHANNELS:", e.message);
+  }
+  return null;
+}
+
 async function resolveChannel(rootFolder, tmdbId, mediaType) {
   // 1. Root-folder mapping. rootFolder may come from the webhook payload directly
   //    OR from the Seerr API fallback in processEvent — both are authoritative.
   if (rootFolder) {
-    try {
-      const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
-      const mappings = typeof raw === "object" && raw !== null
-        ? raw
-        : JSON.parse(raw || "{}");
-
-      const normalizedRoot = rootFolder.replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
-      for (const [folder, channelId] of Object.entries(mappings)) {
-        const normalizedFolder = folder.replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
-        if (normalizedRoot === normalizedFolder || normalizedRoot.startsWith(normalizedFolder + "/")) {
-          logger.info(`[SEERR WEBHOOK] ✅ Root folder "${rootFolder}" → channel ${channelId}`);
-          return channelId;
-        }
-      }
-      logger.debug(`[SEERR WEBHOOK] No root folder match for "${rootFolder}"`);
-    } catch (e) {
-      logger.warn("[SEERR WEBHOOK] Failed to parse SEERR_ROOT_FOLDER_CHANNELS:", e.message);
+    const channelId = matchRootFolderToChannel(rootFolder);
+    if (channelId) {
+      logger.info(`[SEERR WEBHOOK] ✅ Root folder "${rootFolder}" → channel ${channelId}`);
+      return channelId;
     }
+    logger.debug(`[SEERR WEBHOOK] No root folder match for "${rootFolder}"`);
   }
 
   // 2. Jellyfin library mapping via TMDB ID
@@ -705,11 +734,40 @@ async function processEvent(data, eventType, cfg, client) {
   ]);
 
   let channelId = channelIdResolved;
+  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
+
+  // Step 2a (Round 9 — Tier 3.5): If the channel resolved to the fallback AND we
+  // found the item in Jellyfin, retry the root-folder match using the Jellyfin
+  // item's filesystem path. Covers the Avengers case: Jellyseerr writes
+  // rootFolder=null, Radarr doesn't have the movie (manually added to Jellyfin),
+  // but the Jellyfin item itself has a Path like `/Jellyfin_ext/.../Filme/...`
+  // which directly matches a SEERR_ROOT_FOLDER_CHANNELS entry.
+  if (!cfg.adminOnly && jellyfinItemId && (!channelId || channelId === fallback)) {
+    try {
+      const { fetchItemPath } = await import("./api/jellyfin.js");
+      const jfApiKey = process.env.JELLYFIN_API_KEY;
+      const jfBase = process.env.JELLYFIN_BASE_URL;
+      if (jfApiKey && jfBase) {
+        const itemPath = await fetchItemPath(jellyfinItemId, jfApiKey, jfBase);
+        if (itemPath) {
+          const matched = matchRootFolderToChannel(itemPath);
+          if (matched) {
+            logger.info(`[SEERR WEBHOOK] 📁 Tier-3.5: root folder from Jellyfin item path "${itemPath}" → channel ${matched}`);
+            channelId = matched;
+            rootFolder = rootFolder || itemPath;  // record for downstream embed/retry
+          } else {
+            logger.info(`[SEERR WEBHOOK] Tier-3.5: Jellyfin item path "${itemPath}" did not match any SEERR_ROOT_FOLDER_CHANNELS entry`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.debug(`[SEERR WEBHOOK] Tier-3.5 item-path lookup failed: ${e.message}`);
+    }
+  }
 
   // Step 2b: Retry Jellyfin library lookup for MEDIA_AVAILABLE if item wasn't found
   // (Race condition: Seerr fires MEDIA_AVAILABLE before Jellyfin has scanned the file)
   const retryDelay = parseInt(process.env.JELLYFIN_RETRY_DELAY_SECONDS || "30", 10);
-  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
   const usedFallback = channelId === fallback;
 
   if (!channelId) {

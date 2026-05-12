@@ -20,10 +20,15 @@ router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
 
 router.post("/jellyfin/poll-now", authenticateToken, async (req, res) => {
   try {
-    // Default to "full" mode (exhaustive library scan) when triggered from the dashboard.
-    // Caller can pass { mode: "fast" } to do a quick top-1000-by-DateCreated check instead.
-    const mode = req.body?.mode === "fast" ? "fast" : "full";
-    const result = await triggerManualPoll({ mode });
+    // Three modes:
+    //   "fast"   — top-1000 by DateCreated, sync, same as periodic poll
+    //   "full"   — exhaustive scan, skips seenItems, fire-and-forget (default)
+    //   "rescan" — like "full" but also notifies items the user never saw (SEED_MARKER items)
+    const reqMode = req.body?.mode;
+    const mode = ["fast", "full", "rescan"].includes(reqMode) ? reqMode : "full";
+    const reqLimit = parseInt(req.body?.limit, 10);
+    const limit = Number.isFinite(reqLimit) && reqLimit > 0 && reqLimit <= 500 ? reqLimit : 50;
+    const result = await triggerManualPoll({ mode, limit });
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message || String(err) });

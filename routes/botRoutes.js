@@ -198,8 +198,27 @@ async function getCachedLibrarySummary() {
   return summary;
 }
 
-router.get("/stats/insights", authenticateToken, async (_req, res) => {
+/**
+ * Invalidate the library + widget caches.
+ * Called by the Jellyfin poller after new items are detected, so the
+ * dashboard reflects updated counts without waiting for the 5-min TTL.
+ */
+export function invalidateLibraryCache() {
+  _statsLibraryCache.ts = 0;
+  _insightsCache.ts = 0;
+  logger.debug("[stats] library + insights cache invalidated");
+}
+
+router.get("/stats/insights", authenticateToken, async (req, res) => {
   const out = { library: null, lifecycle: null, requestGenres: null };
+
+  // Round 9: ?refresh=true bypasses the 5-min cache for an immediate live fetch.
+  // Used by the dashboard "Refresh" button so the user can force fresh data
+  // without waiting for the TTL.
+  if (req.query.refresh === "true") {
+    _statsLibraryCache.ts = 0;
+    logger.info("[stats/insights] cache bypassed via ?refresh=true");
+  }
 
   try {
     out.library = await getCachedLibrarySummary();

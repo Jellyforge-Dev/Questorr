@@ -707,6 +707,39 @@ export async function fetchItemDetails(itemId, apiKey, baseUrl) {
 }
 
 /**
+ * Fetch ONLY the filesystem path for a Jellyfin item.
+ *
+ * Used by the Tier-3.5 channel-routing fallback in seerrWebhook.js when:
+ *   - Jellyseerr didn't populate rootFolder (Tier 1+2 null)
+ *   - Radarr/Sonarr don't have the movie/series (Tier 3 empty — typical when
+ *     the file was manually added to Jellyfin without going through the
+ *     download workflow)
+ * The item's Path then matches against SEERR_ROOT_FOLDER_CHANNELS directly.
+ *
+ * Lightweight version of fetchItemDetails — requests only the Path field.
+ *
+ * @param {string} itemId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @returns {Promise<string|null>}
+ */
+export async function fetchItemPath(itemId, apiKey, baseUrl) {
+  if (!itemId || !apiKey || !baseUrl) return null;
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
+    const response = await axios.get(url, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: { Fields: "Path" },
+      timeout: 10000,
+    });
+    return response.data?.Path || null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchItemPath(${itemId}) failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
  * Transform Jellyfin item to webhook-compatible format
  * @param {Object} item - Jellyfin item object
  * @param {string} baseUrl - Jellyfin base URL

@@ -78,30 +78,57 @@ export function resolveTargetChannel(configLibraryId, libraryChannels) {
  * Shared between the poller and WebSocket client so that an item
  * detected by both within 24 hours is only notified once.
  */
+// Round 9: timestamp=0 marks an item as "seed-only" — recorded during the
+// silent bulk-seed at first bot start, but never notified. The dashboard
+// "Verpasste Items finden" (rescan) button uses this marker to find items
+// that were added to Jellyfin BEFORE Questorr was running, so the user can
+// retroactively receive notifications for them.
+export const SEED_MARKER = 0;
+
 export class ItemDeduplicator {
   constructor() {
-    this.seenItems = new Map(); // itemId → timestamp
+    this.seenItems = new Map(); // itemId → timestamp (0 = seed-only)
   }
 
   /**
    * Returns true if the item has ever been seen (persistent dedup).
-   * On a hit, refreshes the timestamp so the item is not evicted by cleanup.
-   * On a miss, records it and returns false.
+   * On a hit, refreshes the timestamp so the item is not evicted by cleanup —
+   * unless `seedMode` is set, in which case the marker is preserved.
+   * On a miss, records it (with SEED_MARKER if seedMode, else Date.now()) and
+   * returns false.
+   *
+   * @param {string} itemId
+   * @param {{ seedMode?: boolean }} [opts]
    */
-  checkAndRecord(itemId) {
+  checkAndRecord(itemId, opts = {}) {
+    const seedMode = !!opts.seedMode;
     if (this.seenItems.has(itemId)) {
-      // Refresh timestamp so frequently-visible items don't age out of cleanup
-      this.seenItems.set(itemId, Date.now());
+      // Only refresh timestamp for real discoveries — preserve SEED_MARKER otherwise
+      if (!seedMode) this.seenItems.set(itemId, Date.now());
       return true; // already seen — do NOT post again
     }
-    this.seenItems.set(itemId, Date.now());
+    this.seenItems.set(itemId, seedMode ? SEED_MARKER : Date.now());
     return false;
   }
 
-  /** Remove entries older than 90 days to prevent unbounded growth. */
+  /** True if the item was recorded via seed (never notified). */
+  isSeeded(itemId) {
+    return this.seenItems.get(itemId) === SEED_MARKER;
+  }
+
+  /** Upgrade a seed-marked item to "truly seen" (after a real notification). */
+  markNotified(itemId) {
+    this.seenItems.set(itemId, Date.now());
+  }
+
+  /** Remove entries older than 90 days to prevent unbounded growth.
+   *  SEED_MARKER (0) entries are NEVER cleaned up — they represent the
+   *  full pre-existing library and must persist for the rescan feature.
+   */
   cleanup() {
     const cutoff = Date.now() - CLEANUP_AGE_MS;
     for (const [id, ts] of this.seenItems) {
+      if (ts === SEED_MARKER) continue;
       if (ts < cutoff) this.seenItems.delete(id);
     }
   }

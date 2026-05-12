@@ -79,6 +79,7 @@
     "stats_reset_success": "Statistiken erfolgreich zurückgesetzt.",
     "stats_insights_title": "Bibliothek & Anfragen-Insights",
     "stats_insights_load": "Insights laden",
+    "stats_insights_refresh": "Aktualisieren",
     "stats_insights_loading": "Lade…",
     "stats_insights_ok": "Geladen",
     "stats_insights_no_data": "Noch keine Daten — klicke auf \"Insights laden\".",
@@ -501,12 +502,16 @@
     "cleanup_timeout_preset_custom": "Benutzerdefiniert…",
     "cleanup_timeout_custom_label": "Benutzerdefinierter Timeout (Sekunden)",
     "btn_poll_now": "Jetzt prüfen",
+    "btn_rescan_now": "Verpasste Items finden",
     "poller_status_loading": "Status: lädt…",
     "poller_status_disabled": "Status: deaktiviert",
     "poller_status_error": "Status: Fehler",
     "poller_status_text": "Letzter Check: vor {{last}} · Erfasst: {{tracked}} · Neu (zuletzt): {{new}}",
     "poller_polling": "Prüfe…",
-    "poller_polled_msg": "Geprüft: {{fetched}} abgerufen, {{new}} neu"
+    "poller_polled_msg": "Geprüft: {{fetched}} abgerufen, {{new}} neu",
+    "poller_scan_started": "Scan gestartet — Ergebnisse erscheinen in Discord",
+    "poller_scan_inprogress": "Scan läuft bereits …",
+    "poller_scan_cap_hit": "Limit erreicht, ggf. erneut klicken"
   },
   "ui": {
     "hide_header": "Header ausblenden",

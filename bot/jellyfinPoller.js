@@ -35,7 +35,7 @@ import {
 import logger from "../utils/logger.js";
 import { isValidUrl } from "../utils/url.js";
 import { wasRecentlyNotified } from "../utils/notifyDedup.js";
-import { deduplicator } from "../jellyfin/libraryResolver.js";
+import { deduplicator, SEED_MARKER } from "../jellyfin/libraryResolver.js";
 import {
   fetchLibraryMap,
   getLibraryChannels,
@@ -180,19 +180,53 @@ async function seedPoll(apiKey, baseUrl) {
   if (stored) {
     for (const [id, ts] of stored) deduplicator.seenItems.set(id, ts);
     logger.info(`[Jellyfin Poller] Restored ${stored.size} seen items from disk (skipping reseed)`);
+
+    // Round 9 migration: a pre-Round-9 seen-items.json has NO SEED_MARKER (all
+    // timestamps are real Date.now() from when the seed ran). Detect this and
+    // re-mark the bulk-seeded entries so the "Verpasste Items finden" rescan
+    // button can find pre-existing items the user never got notifications for.
+    //
+    // Heuristic: if >90% of entries share the same minute-bucket (i.e. they
+    // were all written within one minute = clearly a bulk seed), assume the
+    // whole file is a seed and re-mark every entry to SEED_MARKER.
+    try {
+      const total = deduplicator.seenItems.size;
+      if (total > 100) {  // skip for tiny histories where heuristic is noisy
+        const bucketCounts = new Map();
+        let alreadyHasSeedMarker = false;
+        for (const ts of deduplicator.seenItems.values()) {
+          if (ts === SEED_MARKER) { alreadyHasSeedMarker = true; break; }
+          const bucket = Math.floor(ts / 60_000);  // minute bucket
+          bucketCounts.set(bucket, (bucketCounts.get(bucket) || 0) + 1);
+        }
+        if (!alreadyHasSeedMarker) {
+          const maxBucket = Math.max(...bucketCounts.values());
+          if (maxBucket / total > 0.9) {
+            logger.info(`[Jellyfin Poller] Migration: ${maxBucket}/${total} (${Math.round(maxBucket / total * 100)}%) entries in one minute-bucket — treating as bulk seed, re-marking all as SEED_MARKER`);
+            for (const id of deduplicator.seenItems.keys()) {
+              deduplicator.seenItems.set(id, SEED_MARKER);
+            }
+            saveSeenItems();
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn(`[Jellyfin Poller] Seed-marker migration check failed: ${e.message}`);
+    }
+
     return;
   }
 
   try {
     const total = await seedAllItemIds(apiKey, baseUrl, (items) => {
-      for (const item of items) deduplicator.checkAndRecord(item.Id);
+      for (const item of items) deduplicator.checkAndRecord(item.Id, { seedMode: true });
     });
-    logger.info(`[Jellyfin Poller] Seeded ${total} items as already seen (no notifications)`);
+    logger.info(`[Jellyfin Poller] Seeded ${total} items as already seen (no notifications, marked as SEED for future rescan)`);
   } catch (err) {
     logger.warn(`[Jellyfin Poller] Full seed failed (${err.message}) – falling back to top-100 seed`);
     const items = await fetchLatestAdditions(apiKey, baseUrl, 100, "all");
-    for (const item of items) deduplicator.checkAndRecord(item.Id);
-    logger.info(`[Jellyfin Poller] Seeded ${items.length} items (fallback, no notifications)`);
+    for (const item of items) deduplicator.checkAndRecord(item.Id, { seedMode: true });
+    logger.info(`[Jellyfin Poller] Seeded ${items.length} items (fallback, no notifications, marked as SEED)`);
   }
 
   saveSeenItems();
@@ -261,6 +295,15 @@ async function poll(client, apiKey, baseUrl) {
 
     logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
     await notifyBatch(client, newItems, apiKey, baseUrl);
+
+    // Round 9: new items mean the library counts changed — invalidate the
+    // dashboard's library stats cache so the next /stats/insights call fetches
+    // live data instead of stale 5-min cache.
+    try {
+      const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
+      invalidateLibraryCache();
+    } catch { /* not critical — the cache will refresh on its own TTL */ }
+
     return { fetched: items.length, new: newItems.length };
   } catch (err) {
     logger.error("[Jellyfin Poller] Poll error:", err.message);
@@ -302,14 +345,19 @@ export function getPollerStatus() {
 /**
  * Manually trigger a poll cycle.
  *
- * @param {{ mode?: "fast"|"full" }} [opts]
+ * @param {{ mode?: "fast"|"full"|"rescan", limit?: number }} [opts]
  *   - "fast" (default): same top-1000-by-DateCreated as the periodic poll. Sync — returns { fetched, new }.
- *   - "full": exhaustive library scan. Fire-and-forget — returns { started: true } immediately.
- *     The scan runs in the background; progress is exposed via getPollerStatus().fullScanProgress.
- *     Notifications fire to Discord as items are found.
+ *   - "full": exhaustive library scan, skips items already in seenIds. Fire-and-forget. Catches recently-added
+ *     items that fall outside the top-1000 (e.g. files with old mtimes).
+ *   - "rescan" (Round 9): exhaustive library scan that IGNORES the SEED_MARKER entries — so items the user
+ *     never got a notification for (because they were already in Jellyfin at first bot start) can finally
+ *     be discovered and notified. Fire-and-forget. Caller can use `limit` to cap notifications per run
+ *     (default 50). Repeated runs find further items batch-by-batch.
+ *
+ *   For full/rescan: returns { started: true } immediately; progress in getPollerStatus().fullScanProgress.
  */
 export async function triggerManualPoll(opts = {}) {
-  const { mode = "fast" } = opts;
+  const { mode = "fast", limit = 50 } = opts;
   if (!savedClient || !savedApiKey || !savedBaseUrl) {
     throw new Error("Poller not initialized — start the bot and ensure Jellyfin is configured.");
   }
@@ -317,20 +365,40 @@ export async function triggerManualPoll(opts = {}) {
     throw new Error("Seed poll has not completed yet — please wait a moment and try again.");
   }
 
-  if (mode === "full") {
+  if (mode === "full" || mode === "rescan") {
     if (_fullScanInProgress) {
-      return { started: false, reason: "Full scan already in progress", progress: _fullScanProgress };
+      return { started: false, reason: `${mode} scan already in progress`, progress: _fullScanProgress };
     }
     _fullScanInProgress = true;
-    _fullScanProgress = { scanned: 0, newFound: 0, startedAt: Date.now(), hitCap: false, finishedAt: null };
-    logger.info("[Jellyfin Poller] Manual trigger: full library scan starting");
+    _fullScanProgress = { mode, scanned: 0, newFound: 0, startedAt: Date.now(), hitCap: false, finishedAt: null };
+
+    // Build the "skip set" — what counts as already-known.
+    // - full:   ALL entries in seenItems (including SEED_MARKER) are skipped
+    // - rescan: only TRULY notified entries (timestamp != SEED_MARKER) are skipped
+    const skipIds = new Set();
+    let seedCount = 0;
+    let trulySeenCount = 0;
+    for (const [id, ts] of deduplicator.seenItems) {
+      if (ts === SEED_MARKER) {
+        seedCount++;
+        if (mode === "full") skipIds.add(id);
+      } else {
+        trulySeenCount++;
+        skipIds.add(id);
+      }
+    }
+
+    if (mode === "rescan") {
+      logger.info(`[Jellyfin Poller] Rescan mode: scanning library, skipping ${trulySeenCount} truly-notified items but RE-EVALUATING ${seedCount} seed-marked items (limit=${limit})`);
+    } else {
+      logger.info(`[Jellyfin Poller] Manual trigger: full library scan starting (skipping ${skipIds.size} known items)`);
+    }
 
     // Fire-and-forget — HTTP response returns immediately so the dashboard can poll progress.
     (async () => {
       try {
-        const seenIds = new Set(deduplicator.seenItems.keys());
         const { newItems, totalScanned, hitCap } = await scanAllItemsForUnseen(
-          savedApiKey, savedBaseUrl, seenIds, 50,
+          savedApiKey, savedBaseUrl, skipIds, limit,
           (scanned, newCount) => {
             _fullScanProgress.scanned = scanned;
             _fullScanProgress.newFound = newCount;
@@ -340,24 +408,29 @@ export async function triggerManualPoll(opts = {}) {
         _fullScanProgress.newFound = newItems.length;
         _fullScanProgress.hitCap = hitCap;
         logger.info(
-          `[Jellyfin Poller] Full scan complete: ${totalScanned} scanned, ${newItems.length} new${hitCap ? " (CAPPED at 50)" : ""}`
+          `[Jellyfin Poller] ${mode === "rescan" ? "Rescan" : "Full scan"} complete: ${totalScanned} scanned, ${newItems.length} new${hitCap ? ` (CAPPED at ${limit})` : ""}`
         );
 
-        // Mark new items as seen + notify in Discord
-        for (const item of newItems) deduplicator.checkAndRecord(item.Id);
+        // Upgrade items from SEED_MARKER to truly-seen + notify
+        for (const item of newItems) deduplicator.markNotified(item.Id);
         saveSeenItems();
         if (newItems.length > 0) {
           await notifyBatch(savedClient, newItems, savedApiKey, savedBaseUrl);
+          // Round 9: invalidate library stats cache so the dashboard shows updated counts
+          try {
+            const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
+            invalidateLibraryCache();
+          } catch { /* not critical */ }
         }
       } catch (e) {
-        logger.error(`[Jellyfin Poller] Full scan failed: ${e?.message || e}`);
+        logger.error(`[Jellyfin Poller] ${mode === "rescan" ? "Rescan" : "Full scan"} failed: ${e?.message || e}`);
       } finally {
         _fullScanProgress.finishedAt = Date.now();
         _fullScanInProgress = false;
       }
     })();
 
-    return { started: true, mode: "full" };
+    return { started: true, mode, limit };
   }
 
   // Default "fast" mode: same path as periodic poll, blocking.

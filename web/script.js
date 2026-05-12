@@ -461,16 +461,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }).join("");
   }
 
-  async function loadInsights() {
+  async function loadInsights({ refresh = false } = {}) {
     const statusEl = document.getElementById("stats-insights-status");
     const btn = document.getElementById("stats-insights-load-btn");
+    const refreshBtn = document.getElementById("stats-insights-refresh-btn");
     const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
     // Visible feedback so users see something happen before the fetch resolves.
     if (btn) { btn.disabled = true; }
+    if (refreshBtn) { refreshBtn.disabled = true; }
     if (statusEl) { statusEl.textContent = "⏳ " + (t("config.stats_insights_loading") || "Loading…"); statusEl.style.color = "var(--subtext0)"; }
     try {
       const token = localStorage.getItem("questorr_token") || "";
-      const res = await fetch("/api/stats/insights", { headers: { Authorization: `Bearer ${token}` } });
+      // Round 9: ?refresh=true bypasses the 5-min server cache for an immediate live fetch.
+      const url = refresh ? "/api/stats/insights?refresh=true" : "/api/stats/insights";
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
 
@@ -508,11 +512,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (statusEl) { statusEl.textContent = "✗ " + err.message; statusEl.style.color = "var(--red)"; }
     } finally {
       if (btn) btn.disabled = false;
+      if (refreshBtn) refreshBtn.disabled = false;
     }
   }
 
   const insightsBtn = document.getElementById("stats-insights-load-btn");
-  if (insightsBtn) insightsBtn.addEventListener("click", loadInsights);
+  if (insightsBtn) insightsBtn.addEventListener("click", () => loadInsights({ refresh: false }));
+
+  // Round 9: dedicated refresh button bypasses the 5-min cache.
+  const insightsRefreshBtn = document.getElementById("stats-insights-refresh-btn");
+  if (insightsRefreshBtn) insightsRefreshBtn.addEventListener("click", () => loadInsights({ refresh: true }));
 
   // ─── Per-event notification buttons table ─────────────────────────────────
   const NOTIF_EVENTS = [
@@ -1687,79 +1696,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     const statusInterval = setInterval(fetchStatus, 30000);
     window.addEventListener("beforeunload", () => clearInterval(statusInterval));
 
-    if (pollerNowBtn) {
-      pollerNowBtn.addEventListener("click", async () => {
-        pollerNowBtn.disabled = true;
-        const origHTML = pollerNowBtn.innerHTML;
-        pollerNowBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.poller_polling") || "Prüfe…");
-        let scanPollTimer = null;
-        try {
-          const token = localStorage.getItem("questorr_token") || "";
-          // POST starts the FULL library scan async on the backend; response is { started: true }.
-          // We then poll /poller-status every 3s until fullScanInProgress flips back to false.
-          const res = await fetch("/api/jellyfin/poll-now", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ mode: "full" }),
-          });
-          const data = await res.json();
-          if (!data.success) {
-            showToast((t("common.error") || "Fehler") + ": " + (data.error || "unknown"));
-            return;
-          }
-          if (data.started === false) {
-            // Already running — fall through to progress polling.
-            showToast(t("config.poller_scan_inprogress") || "Scan läuft bereits …");
-          } else {
-            showToast(t("config.poller_scan_started") || "Scan gestartet — Ergebnisse erscheinen in Discord");
-          }
-          // Poll progress until done
-          await new Promise((resolve) => {
-            scanPollTimer = setInterval(async () => {
-              try {
-                const sRes = await fetch("/api/jellyfin/poller-status", {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!sRes.ok) throw new Error("HTTP " + sRes.status);
-                const status = await sRes.json();
-                renderStatus(status);
-                const prog = status.fullScanProgress;
-                if (prog && status.fullScanInProgress) {
-                  pollerNowBtn.innerHTML =
-                    '<i class="bi bi-arrow-repeat"></i> ' +
-                    `${prog.scanned ?? 0} / ? · ${prog.newFound ?? 0} neu`;
-                } else {
-                  // Scan finished
-                  if (prog) {
-                    const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
-                    let msg = tpl
-                      .replace("{{fetched}}", prog.scanned ?? 0)
-                      .replace("{{new}}", prog.newFound ?? 0);
-                    if (prog.hitCap) {
-                      msg += " — " + (t("config.poller_scan_cap_hit") || "Limit erreicht, ggf. erneut klicken");
-                    }
-                    showToast(msg);
+    // Shared scan-runner used by both "Jetzt prüfen" (full) and "Verpasste Items finden" (rescan)
+    async function runLibraryScan(btn, mode, limit) {
+      btn.disabled = true;
+      const origHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.poller_polling") || "Prüfe…");
+      let scanPollTimer = null;
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const body = { mode };
+        if (limit) body.limit = limit;
+        const res = await fetch("/api/jellyfin/poll-now", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          showToast((t("common.error") || "Fehler") + ": " + (data.error || "unknown"));
+          return;
+        }
+        if (data.started === false) {
+          showToast(t("config.poller_scan_inprogress") || "Scan läuft bereits …");
+        } else {
+          showToast(t("config.poller_scan_started") || "Scan gestartet — Ergebnisse erscheinen in Discord");
+        }
+        await new Promise((resolve) => {
+          scanPollTimer = setInterval(async () => {
+            try {
+              const sRes = await fetch("/api/jellyfin/poller-status", {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!sRes.ok) throw new Error("HTTP " + sRes.status);
+              const status = await sRes.json();
+              renderStatus(status);
+              const prog = status.fullScanProgress;
+              if (prog && status.fullScanInProgress) {
+                btn.innerHTML =
+                  '<i class="bi bi-arrow-repeat"></i> ' +
+                  `${prog.scanned ?? 0} / ? · ${prog.newFound ?? 0} neu`;
+              } else {
+                if (prog) {
+                  const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
+                  let msg = tpl
+                    .replace("{{fetched}}", prog.scanned ?? 0)
+                    .replace("{{new}}", prog.newFound ?? 0);
+                  if (prog.hitCap) {
+                    msg += " — " + (t("config.poller_scan_cap_hit") || "Limit erreicht, ggf. erneut klicken");
                   }
-                  clearInterval(scanPollTimer);
-                  scanPollTimer = null;
-                  resolve();
+                  showToast(msg);
                 }
-              } catch (err) {
                 clearInterval(scanPollTimer);
                 scanPollTimer = null;
-                showToast((t("common.error") || "Fehler") + ": " + err.message);
                 resolve();
               }
-            }, 3000);
-          });
-        } catch (err) {
-          showToast((t("common.error") || "Fehler") + ": " + err.message);
-        } finally {
-          if (scanPollTimer) clearInterval(scanPollTimer);
-          pollerNowBtn.disabled = false;
-          pollerNowBtn.innerHTML = origHTML;
-        }
-      });
+            } catch (err) {
+              clearInterval(scanPollTimer);
+              scanPollTimer = null;
+              showToast((t("common.error") || "Fehler") + ": " + err.message);
+              resolve();
+            }
+          }, 3000);
+        });
+      } catch (err) {
+        showToast((t("common.error") || "Fehler") + ": " + err.message);
+      } finally {
+        if (scanPollTimer) clearInterval(scanPollTimer);
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+      }
+    }
+
+    if (pollerNowBtn) {
+      // "Jetzt prüfen" → full library scan, skips items already in seenIds (incl. seed-marked)
+      pollerNowBtn.addEventListener("click", () => runLibraryScan(pollerNowBtn, "full"));
+    }
+    // Round 9: "Verpasste Items finden" → rescan that ALSO re-evaluates seed-marked items
+    const pollerRescanBtn = document.getElementById("BTN_RESCAN_NOW");
+    if (pollerRescanBtn) {
+      pollerRescanBtn.addEventListener("click", () => runLibraryScan(pollerRescanBtn, "rescan", 50));
     }
   }
 

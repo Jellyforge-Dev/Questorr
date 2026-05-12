@@ -79,6 +79,7 @@
     "stats_reset_success": "",
     "stats_insights_title": "",
     "stats_insights_load": "",
+    "stats_insights_refresh": "",
     "stats_insights_loading": "",
     "stats_insights_ok": "",
     "stats_insights_no_data": "",
@@ -430,12 +431,16 @@
     "cleanup_timeout_preset_custom": "",
     "cleanup_timeout_custom_label": "",
     "btn_poll_now": "",
+    "btn_rescan_now": "",
     "poller_status_loading": "",
     "poller_status_disabled": "",
     "poller_status_error": "",
     "poller_status_text": "",
     "poller_polling": "",
-    "poller_polled_msg": ""
+    "poller_polled_msg": "",
+    "poller_scan_started": "",
+    "poller_scan_inprogress": "",
+    "poller_scan_cap_hit": ""
   },
   "ui": {
     "hide_header": "",

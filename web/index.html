@@ -675,9 +675,14 @@
                           <div id="POLLER_STATUS_BLOCK" style="margin-top:0.75rem;padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);font-size:0.85em;color:var(--subtext1);">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                               <span id="POLLER_STATUS_TEXT" data-i18n="config.poller_status_loading">Status: lädt…</span>
-                              <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
-                                <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
-                              </button>
+                              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Vollständiger Bibliotheks-Scan — findet kürzlich hinzugefügte Items die der periodische Poll verpasst hat">
+                                  <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
+                                </button>
+                                <button type="button" id="BTN_RESCAN_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Findet Items die zu Jellyfin hinzugefügt wurden BEVOR Questorr lief — sendet bis zu 50 Notifications pro Klick.">
+                                  <i class="bi bi-search"></i> <span data-i18n="config.btn_rescan_now">Verpasste Items finden</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1405,6 +1410,9 @@
                       <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
                         <button type="button" id="stats-insights-load-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
                           <i class="bi bi-graph-up"></i> <span data-i18n="config.stats_insights_load">Load Insights</span>
+                        </button>
+                        <button type="button" id="stats-insights-refresh-btn" class="btn btn-secondary" style="font-size: 0.85rem;" title="Umgeht den 5-Min-Cache und holt frische Daten direkt von Jellyfin/Seerr">
+                          <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.stats_insights_refresh">Refresh</span>
                         </button>
                         <span id="stats-insights-status" style="font-size: 0.85rem; color: var(--subtext0);"></span>
                       </div>

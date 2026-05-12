@@ -168,11 +168,13 @@ export async function fetchArrConnections(seerrUrl, apiKey) {
 
   const fetchType = async (type) => {
     const list = [];
+    let listSucceeded = false;
     try {
       const listRes = await axios.get(buildUrl(`/service/${type}`), {
         headers: { "X-Api-Key": apiKey },
         timeout: TIMEOUTS.SEERR_API,
       });
+      listSucceeded = true;
       for (const summary of listRes.data || []) {
         try {
           const detailsRes = await axios.get(buildUrl(`/service/${type}/${summary.id}`), {
@@ -190,19 +192,25 @@ export async function fetchArrConnections(seerrUrl, apiKey) {
               useSsl: !!d.useSsl,
               baseUrl: d.baseUrl || "",
             });
+          } else {
+            logger.info(`[SEERR WEBHOOK] Tier-3 ${type} "${summary.name || summary.id}": incomplete connection details (missing hostname/port/apiKey)`);
           }
         } catch (err) {
-          logger.debug(`[Seerr] ${type} ${summary.id} details fetch failed: ${err?.message}`);
+          logger.warn(`[SEERR WEBHOOK] Tier-3 ${type} ${summary.id} details fetch failed: ${err?.message}`);
         }
       }
     } catch (err) {
-      logger.debug(`[Seerr] ${type} server list fetch failed: ${err?.message}`);
+      logger.warn(`[SEERR WEBHOOK] Tier-3 ${type} server list fetch failed: ${err?.message}`);
+    }
+    if (listSucceeded && list.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3: no ${type} servers configured in Jellyseerr`);
     }
     return list;
   };
 
   const [radarr, sonarr] = await Promise.all([fetchType("radarr"), fetchType("sonarr")]);
   _arrConnectionsCache = { radarr, sonarr, ts: Date.now() };
+  logger.info(`[SEERR WEBHOOK] Tier-3 connections cached: ${radarr.length} Radarr, ${sonarr.length} Sonarr server(s) configured`);
   return { radarr, sonarr };
 }
 
@@ -219,11 +227,14 @@ export async function fetchMoviePathFromRadarr(server, tmdbId) {
       timeout: TIMEOUTS.SEERR_API,
     });
     const movies = Array.isArray(res.data) ? res.data : [];
-    if (movies.length === 0) return null;
+    if (movies.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3 Radarr "${server.name}": no movie with TMDB ${tmdbId}`);
+      return null;
+    }
     const m = movies[0];
     return { path: m.path || null, rootFolderPath: m.rootFolderPath || null };
   } catch (err) {
-    logger.debug(`[Radarr] movie lookup failed for tmdbId=${tmdbId} on ${server.name}: ${err?.message}`);
+    logger.warn(`[SEERR WEBHOOK] Tier-3 Radarr "${server.name}" lookup failed for TMDB ${tmdbId}: ${err?.message}`);
     return null;
   }
 }
@@ -241,11 +252,14 @@ export async function fetchSeriesPathFromSonarr(server, tvdbId) {
       timeout: TIMEOUTS.SEERR_API,
     });
     const series = Array.isArray(res.data) ? res.data : [];
-    if (series.length === 0) return null;
+    if (series.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3 Sonarr "${server.name}": no series with TVDB ${tvdbId}`);
+      return null;
+    }
     const s = series[0];
     return { path: s.path || null, rootFolderPath: s.rootFolderPath || null };
   } catch (err) {
-    logger.debug(`[Sonarr] series lookup failed for tvdbId=${tvdbId} on ${server.name}: ${err?.message}`);
+    logger.warn(`[SEERR WEBHOOK] Tier-3 Sonarr "${server.name}" lookup failed for TVDB ${tvdbId}: ${err?.message}`);
     return null;
   }
 }
