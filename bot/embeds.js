@@ -139,7 +139,7 @@ export function buildNotificationEmbed(
     else if (seerrStatus === 4) statusText = `\uD83D\uDCE5 ${t("status_partial")}`;
     else if (seerrStatus === 2 || seerrStatus === 3) statusText = `\u23F3 ${t("status_requested")}`;
     if (statusText) {
-      embed.addFields({ name: "Status", value: statusText, inline: true });
+      embed.addFields({ name: t("label_status"), value: statusText, inline: true });
     }
   }
 

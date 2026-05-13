@@ -44,6 +44,7 @@ function parseLogFile(filePath, limit = 1000) {
       }
     });
 
+    entries.reverse(); // Round 13: newest first
     return { entries, truncated };
   } catch (error) {
     logger.error("Error parsing log file:", error);

@@ -33,6 +33,7 @@ import {
   ActionRowBuilder,
 } from "discord.js";
 import logger from "../utils/logger.js";
+import { t } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
 import { wasRecentlyNotified } from "../utils/notifyDedup.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
@@ -704,7 +705,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
 
   const embed = new EmbedBuilder()
     .setColor(typeSettings.color)
-    .setAuthor({ name: `${typeSettings.emoji} Neu in Jellyfin` })
+    .setAuthor({ name: `${typeSettings.emoji} ${t("jellyfin_new_item")}` })
     .setTitle(title)
     .setTimestamp();
 
@@ -747,7 +748,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
     }
     if (item.DateCreated) {
       try {
-        parts.push(`Hinzugefügt: ${new Date(item.DateCreated).toLocaleDateString(getDateLocale())}`);
+        parts.push(`${t("label_added")}: ${new Date(item.DateCreated).toLocaleDateString(getDateLocale())}`);
       } catch { /* invalid date — skip */ }
     }
     if (parts.length > 0) overview = parts.join(" · ");
@@ -760,10 +761,10 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   const fields = [];
   const genres = tmdbData?.genres?.map((g) => g.name).join(", ")
               || (Array.isArray(item.Genres) ? item.Genres.join(", ") : null);
-  if (genres) fields.push({ name: "Genre", value: genres, inline: true });
+  if (genres) fields.push({ name: t("label_genre"), value: genres, inline: true });
 
   const rating = tmdbData?.vote_average ?? item.CommunityRating;
-  if (rating) fields.push({ name: "Bewertung", value: `⭐ ${Number(rating).toFixed(1)}/10`, inline: true });
+  if (rating) fields.push({ name: t("label_rating"), value: `⭐ ${Number(rating).toFixed(1)}/10`, inline: true });
 
   if (fields.length > 0) embed.addFields(...fields);
 
@@ -804,7 +805,7 @@ async function buildButtons(item, itemType, imdbId, baseUrl) {
     const watchUrl = `${jfBase}/web/index.html#!/details?id=${item.Id}&serverId=${serverId}`;
     if (isValidUrl(watchUrl)) {
       components.push(
-        new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel("Jetzt ansehen").setURL(watchUrl)
+        new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now_short")).setURL(watchUrl)
       );
     }
   }
