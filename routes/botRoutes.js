@@ -202,22 +202,45 @@ async function getCachedLibrarySummary() {
  * Invalidate the library + widget caches.
  * Called by the Jellyfin poller after new items are detected, so the
  * dashboard reflects updated counts without waiting for the 5-min TTL.
+ *
+ * Round 11: ALSO set .data = null defensively. Setting ts = 0 alone is
+ * semantically sufficient (the TTL check returns false when ts is 0), but
+ * a future change to the cache-hit logic could accidentally introduce a
+ * stale read if .data is still around. Nulling the payload makes the
+ * invalidation unambiguous and survives refactors.
  */
 export function invalidateLibraryCache() {
   _statsLibraryCache.ts = 0;
+  _statsLibraryCache.data = null;
   _insightsCache.ts = 0;
-  logger.debug("[stats] library + insights cache invalidated");
+  _insightsCache.data = null;
+  logger.debug("[stats] library + insights cache invalidated (ts=0, data=null)");
 }
 
 router.get("/stats/insights", authenticateToken, async (req, res) => {
   const out = { library: null, lifecycle: null, requestGenres: null };
 
+  // Round 11: send no-store headers so neither browser nor reverse-proxy
+  // can serve a stale response. The route is auth-protected and small, so
+  // there's no downside to disabling caching at the HTTP layer.
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
   // Round 9: ?refresh=true bypasses the 5-min cache for an immediate live fetch.
   // Used by the dashboard "Refresh" button so the user can force fresh data
   // without waiting for the TTL.
+  // Round 11: also invalidate _insightsCache (widget cache) and null out .data
+  // so the next read is a guaranteed miss.
   if (req.query.refresh === "true") {
     _statsLibraryCache.ts = 0;
-    logger.info("[stats/insights] cache bypassed via ?refresh=true");
+    _statsLibraryCache.data = null;
+    _insightsCache.ts = 0;
+    _insightsCache.data = null;
+    logger.info("[stats/insights] cache bypassed via ?refresh=true (library + insights nulled)");
+  } else {
+    const libAge = _statsLibraryCache.ts ? Date.now() - _statsLibraryCache.ts : null;
+    logger.debug(`[stats/insights] cache state — library: ${libAge === null ? "empty" : `${libAge}ms old`}`);
   }
 
   try {
@@ -252,6 +275,29 @@ router.get("/stats/insights", authenticateToken, async (req, res) => {
   }
 
   res.json(out);
+});
+
+// Round 11: diagnostic endpoint — returns the current state of both stats caches.
+// Useful when stale data appears on the dashboard: lets us tell at a glance
+// which layer (library cache, widget insights cache) is holding the old data.
+router.get("/stats/cache-state", authenticateToken, (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const now = Date.now();
+  res.json({
+    now,
+    statsLibraryCache: {
+      ts: _statsLibraryCache.ts,
+      ageMs: _statsLibraryCache.ts ? now - _statsLibraryCache.ts : null,
+      hasData: _statsLibraryCache.data !== null && _statsLibraryCache.data !== undefined,
+      ttlMs: LIBRARY_CACHE_TTL_MS,
+    },
+    insightsCache: {
+      ts: _insightsCache.ts,
+      ageMs: _insightsCache.ts ? now - _insightsCache.ts : null,
+      hasData: _insightsCache.data !== null && _insightsCache.data !== undefined,
+      ttlMs: INSIGHTS_TTL_MS,
+    },
+  });
 });
 
 // ─── Widget Stats (JSON, protected by API key) ─────────────────────────────

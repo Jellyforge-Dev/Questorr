@@ -473,8 +473,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const token = localStorage.getItem("questorr_token") || "";
       // Round 9: ?refresh=true bypasses the 5-min server cache for an immediate live fetch.
-      const url = refresh ? "/api/stats/insights?refresh=true" : "/api/stats/insights";
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      // Round 11: also append a cache-buster query parameter and disable client-side
+      // caching, so neither the browser nor any reverse-proxy/CDN can serve stale data.
+      const cacheBuster = `_=${Date.now()}`;
+      const base = refresh ? "/api/stats/insights?refresh=true" : "/api/stats/insights?";
+      const url = base + (base.endsWith("?") ? cacheBuster : `&${cacheBuster}`);
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
 
@@ -1245,15 +1256,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
     // Handle role allowlist/blocklist as arrays
-    const allowlistRoles = Array.from(
-      document.querySelectorAll('input[name="ROLE_ALLOWLIST"]:checked')
-    ).map((cb) => cb.value);
-    const blocklistRoles = Array.from(
-      document.querySelectorAll('input[name="ROLE_BLOCKLIST"]:checked')
-    ).map((cb) => cb.value);
+    // Round 11: only include the role arrays if the role-section was actually
+    // rendered with checkboxes. Otherwise (e.g. dashboard opened before Discord
+    // guild data loaded), the querySelectorAll returns an empty NodeList and
+    // we would send [] to the backend, overwriting the user's saved roles.
+    // We detect "section rendered" by checking for ANY ROLE_* checkbox in DOM
+    // (checked or not). If none exist, we omit the field — backend will then
+    // preserve the existing config.json value via its merge logic.
+    const anyAllowlistRoleCheckbox = document.querySelector('input[name="ROLE_ALLOWLIST"]');
+    const anyBlocklistRoleCheckbox = document.querySelector('input[name="ROLE_BLOCKLIST"]');
+    if (anyAllowlistRoleCheckbox) {
+      config.ROLE_ALLOWLIST = Array.from(
+        document.querySelectorAll('input[name="ROLE_ALLOWLIST"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      console.debug("[saveConfig] ROLE_ALLOWLIST checkboxes not in DOM — omitting from save to preserve server value");
+    }
+    if (anyBlocklistRoleCheckbox) {
+      config.ROLE_BLOCKLIST = Array.from(
+        document.querySelectorAll('input[name="ROLE_BLOCKLIST"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      console.debug("[saveConfig] ROLE_BLOCKLIST checkboxes not in DOM — omitting from save to preserve server value");
+    }
 
-    config.ROLE_ALLOWLIST = allowlistRoles;
-    config.ROLE_BLOCKLIST = blocklistRoles;
+    // Round 11: BOT_LANGUAGE — guard against empty value being sent.
+    // The form may include <select name="BOT_LANGUAGE"> with an empty initial
+    // value if the languages list hasn't loaded yet. Sending "" would overwrite
+    // the saved language on the server.
+    if (config.BOT_LANGUAGE === "" || config.BOT_LANGUAGE === null || config.BOT_LANGUAGE === undefined) {
+      delete config.BOT_LANGUAGE;
+      console.debug("[saveConfig] BOT_LANGUAGE empty — omitting from save to preserve server value");
+    }
 
     // Handle Jellyfin notification libraries (can be array or object)
     try {

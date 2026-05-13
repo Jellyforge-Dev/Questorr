@@ -819,6 +819,24 @@ function configureWebServer() {
         // Load existing config to preserve USER_MAPPINGS and other non-form fields
         const existingConfig = readConfig() || {};
 
+        // Round 11: defensively strip empty values that should never overwrite
+        // an existing saved value. Specifically:
+        //   - BOT_LANGUAGE: empty string is never a valid language. If the form
+        //     sent "" (e.g. select wasn't populated by frontend in time), we
+        //     drop the key so existingConfig.BOT_LANGUAGE survives the merge.
+        //   - ROLE_ALLOWLIST / ROLE_BLOCKLIST: the frontend now omits these
+        //     entirely if the role checkboxes aren't rendered. As a belt-and-
+        //     braces backup, also reject empty arrays only when the existing
+        //     config had non-empty arrays (user can still legitimately clear
+        //     all roles by clicking and unchecking them — that submits an
+        //     empty array AFTER the checkboxes were rendered).
+        //   Both bugs caused settings to be silently lost on container restart.
+        const _origBotLang = configData.BOT_LANGUAGE;
+        if (configData.BOT_LANGUAGE === "" || configData.BOT_LANGUAGE == null) {
+          delete configData.BOT_LANGUAGE;
+          logger.info(`[Config save] BOT_LANGUAGE incoming was empty — preserving existing value "${existingConfig.BOT_LANGUAGE || configTemplate.BOT_LANGUAGE}"`);
+        }
+
         // Merge: template defaults → existing values → new form values.
         // Template is the base so keys absent from the form and from existing
         // config still get their intended defaults (e.g. JELLYFIN_NOTIFY_MOVIES).
@@ -837,6 +855,26 @@ function configureWebServer() {
             existingConfig.JELLYFIN_NOTIFICATION_LIBRARIES ||
             {},
         };
+
+        // Round 11: log changes for BOT_LANGUAGE + role lists so users can
+        // trace persistence issues from the logs.
+        if (_origBotLang !== undefined && _origBotLang !== existingConfig.BOT_LANGUAGE) {
+          logger.info(`[Config save] BOT_LANGUAGE "${existingConfig.BOT_LANGUAGE || "(unset)"}" → "${finalConfig.BOT_LANGUAGE}"`);
+        }
+        if ("ROLE_ALLOWLIST" in configData) {
+          const before = JSON.stringify(existingConfig.ROLE_ALLOWLIST || []);
+          const after  = JSON.stringify(finalConfig.ROLE_ALLOWLIST || []);
+          if (before !== after) logger.info(`[Config save] ROLE_ALLOWLIST ${before} → ${after}`);
+        } else if (existingConfig.ROLE_ALLOWLIST?.length) {
+          logger.info(`[Config save] ROLE_ALLOWLIST not in submit — preserving ${existingConfig.ROLE_ALLOWLIST.length} existing entries`);
+        }
+        if ("ROLE_BLOCKLIST" in configData) {
+          const before = JSON.stringify(existingConfig.ROLE_BLOCKLIST || []);
+          const after  = JSON.stringify(finalConfig.ROLE_BLOCKLIST || []);
+          if (before !== after) logger.info(`[Config save] ROLE_BLOCKLIST ${before} → ${after}`);
+        } else if (existingConfig.ROLE_BLOCKLIST?.length) {
+          logger.info(`[Config save] ROLE_BLOCKLIST not in submit — preserving ${existingConfig.ROLE_BLOCKLIST.length} existing entries`);
+        }
 
         // Preserve sensitive fields only when the frontend sends a masked placeholder
         // or omits the field entirely — an explicit empty string intentionally clears the credential

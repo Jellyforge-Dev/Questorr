@@ -145,6 +145,45 @@ function isWithinRecentlyAddedWindow(item) {
   return itemTs >= cutoff;
 }
 
+// Round 11: track the last time we asked Jellyfin to refresh its library so
+// we don't hammer the endpoint when poll cycles run close together (e.g. user
+// triggers a manual poll right after a scheduled one).
+let _lastLibraryScanTrigger = 0;
+const LIBRARY_SCAN_THROTTLE_MS = 60 * 1000;
+
+/**
+ * Round 11: Ask Jellyfin to scan its library NOW.
+ *
+ * Without this, Jellyfin only indexes new files when its own scheduled task
+ * runs (typically hourly or nightly) — which means a file added at 16:00 may
+ * not appear in Jellyfin's API until 00:00, and Questorr's poller can't
+ * notify Discord for content Jellyfin doesn't know about yet.
+ *
+ * POST /Library/Refresh is built-in Jellyfin API — no plugin required. The
+ * call kicks off an async, differential scan; Jellyfin returns immediately
+ * and we don't block on it. Throttled to once per 60s to avoid spam if the
+ * caller invokes poll() repeatedly.
+ *
+ * Controlled by JELLYFIN_AUTO_REFRESH ("true"/"false", default true).
+ */
+async function triggerJellyfinLibraryScan(apiKey, baseUrl) {
+  if (process.env.JELLYFIN_AUTO_REFRESH === "false") return;
+  if (Date.now() - _lastLibraryScanTrigger < LIBRARY_SCAN_THROTTLE_MS) return;
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/Library/Refresh`;
+    await axios.post(url, null, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      timeout: 5000,
+    });
+    _lastLibraryScanTrigger = Date.now();
+    logger.debug("[Jellyfin Poller] Triggered Jellyfin library scan (POST /Library/Refresh)");
+  } catch (e) {
+    // Non-fatal: log at debug level so it doesn't spam error logs if Jellyfin
+    // is briefly unreachable. The next poll cycle retries.
+    logger.debug(`[Jellyfin Poller] Library scan trigger failed (non-fatal): ${e?.message || e}`);
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function startJellyfinPoller(client) {
@@ -272,6 +311,11 @@ async function poll(client, apiKey, baseUrl) {
 
   const pollStartedAt = Date.now();
   try {
+    // Trigger Jellyfin's own library scan before querying items, so newly added
+    // filesystem content is indexed before we ask for "recently added". This
+    // eliminates the need for a Jellyfin webhook plugin. Throttled to once per 60s.
+    await triggerJellyfinLibraryScan(apiKey, baseUrl);
+
     // Paginate up to 5×200 = 1000 items by DateCreated descending. Catches new items
     // pushed past the top 200 by mass-imports (e.g. a freshly scanned series with
     // hundreds of episodes). Files imported with old mtimes are NOT caught here —

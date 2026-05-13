@@ -33,7 +33,10 @@ function validateServerUrl(value, helpers) {
 // --- CONFIG VALIDATION ---
 export const configSchema = Joi.object({
   LANGUAGE: Joi.string().allow("").optional(), // Allow any language code from locales folder
-  BOT_LANGUAGE: Joi.string().allow("").optional(),
+  // Round 11: BOT_LANGUAGE default is "en". An empty string is tolerated (legacy)
+  // but the save handler in app.js strips empty values before merge to avoid
+  // overwriting the persisted language on container restart.
+  BOT_LANGUAGE: Joi.string().allow("").optional().default("en"),
   NOTIF_TITLE_MEDIA_PENDING: Joi.string().allow("").optional(),
   NOTIF_TITLE_MEDIA_APPROVED: Joi.string().allow("").optional(),
   NOTIF_TITLE_MEDIA_AUTO_APPROVED: Joi.string().allow("").optional(),
@@ -159,6 +162,10 @@ export const configSchema = Joi.object({
     Joi.string().allow(""),
     Joi.number().integer().min(0).max(365)
   ).optional(),
+  // Round 11: when true, every poll cycle triggers POST /Library/Refresh on
+  // Jellyfin so external file-system additions are indexed without waiting
+  // for Jellyfin's scheduled library scan.
+  JELLYFIN_AUTO_REFRESH: Joi.string().valid("true", "false").optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_WATCH: Joi.string().valid("true", "false").optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_IMDB: Joi.string().valid("true", "false").optional(),
   JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD: Joi.string().valid("true", "false").optional(),
