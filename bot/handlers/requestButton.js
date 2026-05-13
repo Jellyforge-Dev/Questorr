@@ -131,7 +131,12 @@ export async function handleRequestButton(interaction) {
       `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
     );
 
-    if (process.env.NOTIFY_ON_AVAILABLE === "true") {
+    // Round 12: ALWAYS record the request in pendingRequests (no longer gated
+    // on NOTIFY_ON_AVAILABLE). The map now also serves as the source-of-truth
+    // for the Jellyfin poller to recognize "this title was requested via
+    // Questorr/Seerr" and suppress the duplicate "Neu in Jellyfin" post.
+    // DM dispatch in seerrWebhook.js remains NOTIFY_ON_AVAILABLE-gated.
+    {
       const requestKey = `${tmdbId}-${mediaType}`;
       if (!pendingRequests.has(requestKey)) {
         pendingRequests.set(requestKey, new Set());

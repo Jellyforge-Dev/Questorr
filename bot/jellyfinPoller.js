@@ -35,6 +35,13 @@ import {
 import logger from "../utils/logger.js";
 import { isValidUrl } from "../utils/url.js";
 import { wasRecentlyNotified } from "../utils/notifyDedup.js";
+// Round 12: pendingRequests is populated by the Questorr/Seerr request paths
+// (requestButton.js, randomRequestButton.js, commands/search.js). The poller
+// reads it to recognize "this title was requested via Questorr" and skip the
+// duplicate "Neu in Jellyfin" post — the Seerr MEDIA_AVAILABLE webhook will
+// send the proper "Now Available!" notification with the "In Seerr ansehen"
+// button and DM the requester.
+import { pendingRequests } from "./botState.js";
 import { deduplicator, SEED_MARKER } from "../jellyfin/libraryResolver.js";
 import {
   fetchLibraryMap,
@@ -579,7 +586,22 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
-  // Cross-webhook dedup: skip if Seerr already sent MEDIA_AVAILABLE for this TMDB ID
+  // Round 12: PRIMARY dedup — if this TMDB ID was requested via Questorr/Seerr,
+  // skip the poller notification. The Seerr MEDIA_AVAILABLE webhook will send
+  // the proper "Now Available!" notification with the Seerr button + DM the
+  // requester. This prevents the double-post that became visible after Round 11
+  // (faster poll + library-refresh trigger made the poller outpace the webhook).
+  if (tmdbId) {
+    const requestKey = `${tmdbId}-${tmdbType}`;
+    if (pendingRequests.has(requestKey)) {
+      logger.info(`[Jellyfin Poller] Skipping "${item.Name}" — pendingRequest exists (requested via Questorr/Seerr; the Seerr MEDIA_AVAILABLE webhook will deliver the "Now Available!" notification)`);
+      return;
+    }
+  }
+
+  // SECONDARY dedup: skip if Seerr already sent MEDIA_AVAILABLE for this TMDB ID
+  // (catches the race where pendingRequests was cleared but the webhook just
+  // ran moments ago).
   if (tmdbId && wasRecentlyNotified(tmdbType, tmdbId)) {
     logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – already notified via Seerr webhook`);
     return;

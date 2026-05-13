@@ -736,7 +736,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       const config = await response.json();
       for (const key in config) {
-        const input = document.getElementById(key);
+        // Round 12: name-selector fallback. Some inputs use lowercase/hyphenated
+        // IDs (e.g. <select id="bot-language" name="BOT_LANGUAGE">), so a strict
+        // getElementById(key) lookup misses them and the dropdown is never
+        // populated — which then defaults to the first option ("English") on
+        // every page load, even after the user saved "Deutsch". Using name as a
+        // fallback covers these cases without renaming the existing DOM IDs.
+        const input = document.getElementById(key) || document.querySelector(`[name="${key}"]`);
         if (!input) continue;
         if (input.type === "checkbox") {
           const val = String(config[key]).trim().toLowerCase();
@@ -4429,16 +4435,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       // Re-use cached guild roles if already fetched (cheap), otherwise pull
       if (!rolesLoaded || guildRoles.length === 0) {
-        const response = await fetch("/api/discord-roles");
-        const data = await response.json();
+        // Round 12: explicit credentials so the cookie-based auth_token is sent
+        // even in browsers that default to "same-origin" but get tripped up by
+        // proxy rewrites (Nginx Proxy Manager etc.).
+        const response = await fetch("/api/discord-roles", { credentials: "include" });
+        const data = await response.json().catch(() => ({}));
         if (data.success && data.roles) {
           guildRoles = data.roles;
           rolesLoaded = true;
         } else {
-          document.getElementById("allowlist-roles").innerHTML =
-            `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
-          document.getElementById("blocklist-roles").innerHTML =
-            `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
+          // Round 12: surface the ACTUAL backend message instead of always
+          // showing the generic "bot must be running" placeholder. The backend
+          // now returns specific messages ("Bot is starting", "No guild
+          // selected", "Bot is not in the configured guild", etc.). This makes
+          // self-diagnosis far easier when something other than a stopped bot
+          // is the real cause.
+          const msg = (data && data.message) || t('errors.bot_must_be_running');
+          const html = `<p class="form-text" style="opacity: 0.7; font-style: italic;">${msg}</p>`;
+          document.getElementById("allowlist-roles").innerHTML = html;
+          document.getElementById("blocklist-roles").innerHTML = html;
+          console.warn("[loadRoles] /api/discord-roles failed:", { status: response.status, data });
           return;
         }
       }

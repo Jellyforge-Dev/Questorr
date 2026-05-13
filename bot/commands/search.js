@@ -157,7 +157,10 @@ export async function handleSearchOrRequest(
         `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
       );
 
-      if (process.env.NOTIFY_ON_AVAILABLE === "true") {
+      // Round 12: ALWAYS record the request in pendingRequests (see
+      // requestButton.js for the full rationale — used as dedup source for
+      // the Jellyfin poller).
+      {
         const requestKey = `${tmdbId}-${mediaType}`;
         if (!pendingRequests.has(requestKey)) {
           pendingRequests.set(requestKey, new Set());

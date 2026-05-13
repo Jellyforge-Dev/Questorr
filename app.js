@@ -605,22 +605,32 @@ function configureWebServer() {
   app.get("/api/discord-roles", authenticateToken, async (_req, res) => {
     try {
       logger.debug("[ROLES API] Request received");
+      // Round 12: explicit & granular bot-readiness check. Previously we only
+      // checked `discordClient.user`, which can be truthy during the brief
+      // window between `client.login()` and the `clientReady` event — leading
+      // to confusing "Bot not running" responses while the bot was actually
+      // starting. Now we report distinct states so the frontend can show the
+      // real reason to the user.
+      if (!botState.isBotRunning) {
+        logger.debug("[ROLES API] Bot is not running (isBotRunning=false)");
+        return res.json({ success: false, message: "Bot is not running" });
+      }
       if (!botState.discordClient || !botState.discordClient.user) {
-        logger.debug("[ROLES API] Bot not running");
-        return res.json({ success: false, message: "Bot not running" });
+        logger.debug("[ROLES API] Bot is starting (discordClient.user not ready yet)");
+        return res.json({ success: false, message: "Bot is starting — please retry in a few seconds" });
       }
 
       const guildId = process.env.GUILD_ID;
       logger.debug("[ROLES API] GUILD_ID from env:", guildId);
       if (!guildId) {
         logger.debug("[ROLES API] No guild selected");
-        return res.json({ success: false, message: "No guild selected" });
+        return res.json({ success: false, message: "No guild selected — configure GUILD_ID first" });
       }
 
       const guild = botState.discordClient.guilds.cache.get(guildId);
       if (!guild) {
         logger.debug("[ROLES API] Guild not found in cache");
-        return res.json({ success: false, message: "Guild not found" });
+        return res.json({ success: false, message: "Bot is not in the configured guild (check GUILD_ID and bot invite)" });
       }
 
       logger.debug("[ROLES API] Guild found:", guild.name);
