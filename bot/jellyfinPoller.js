@@ -35,7 +35,7 @@ import {
 import logger from "../utils/logger.js";
 import { t } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
-import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
+import { shouldPost, markPosted } from "../utils/notificationDispatcher.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
 // (requestButton.js, randomRequestButton.js, commands/search.js). The poller
 // reads it to recognize "this title was requested via Questorr" and skip the
@@ -600,12 +600,16 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     }
   }
 
-  // SECONDARY dedup: skip if Seerr already sent MEDIA_AVAILABLE for this TMDB ID
-  // (catches the race where pendingRequests was cleared but the webhook just
-  // ran moments ago).
-  if (tmdbId && wasRecentlyNotified(tmdbType, tmdbId)) {
-    logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – already notified via Seerr webhook`);
-    return;
+  // SECONDARY dedup via the central dispatcher: skip if Seerr already posted
+  // MEDIA_AVAILABLE for this TMDB ID (catches the race where pendingRequests was
+  // cleared but the webhook just ran moments ago). The skip is recorded in the
+  // audit trail.
+  if (tmdbId) {
+    const { post } = shouldPost({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name });
+    if (!post) {
+      logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – already notified via Seerr webhook`);
+      return;
+    }
   }
 
   // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish scanning metadata
@@ -679,10 +683,10 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
 
   logger.info(`[Jellyfin Poller] ✅ Sent notification for "${item.Name}" → channel ${channelId}`);
 
-  // Mark this TMDB ID so the Seerr MEDIA_AVAILABLE webhook skips the duplicate
-  // post. Mirrors seerrWebhook.js: both sources now check AND mark notifyDedup,
-  // making the cross-source dedup bidirectional regardless of which fires first.
-  if (tmdbId) markNotified(tmdbType, tmdbId);
+  // Mark via the central dispatcher so the Seerr MEDIA_AVAILABLE webhook skips
+  // the duplicate post, and record the post in the audit trail. Bidirectional:
+  // both sources check AND mark, regardless of which fires first.
+  markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name, channelId });
 }
 
 // ─── Embed Builder ────────────────────────────────────────────────────────────

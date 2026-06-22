@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const markNotified = vi.fn();
-const wasRecentlyNotified = vi.fn(() => false);
+const markPosted = vi.fn();
+const shouldPost = vi.fn(() => ({ post: true }));
 
-vi.mock("../utils/notifyDedup.js", () => ({ markNotified, wasRecentlyNotified }));
+vi.mock("../utils/notificationDispatcher.js", () => ({ markPosted, shouldPost }));
 // buildButtons dynamically imports seerrWebhook for the button matrix — stub it
 // so the heavy module (and its side effects) never load during the test.
 vi.mock("../seerrWebhook.js", () => ({
@@ -33,24 +33,29 @@ describe("jellyfinPoller doNotify → notifyDedup", () => {
     await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
 
     expect(send).toHaveBeenCalledTimes(1);
-    expect(markNotified).toHaveBeenCalledWith("movie", "693134");
+    expect(markPosted).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "jellyfin-poller", tmdbId: "693134", mediaType: "movie", title: "Dune" })
+    );
   });
 
-  it("uses the tv key for series", async () => {
+  it("uses the tv mediaType for series", async () => {
     const send = vi.fn(async () => ({ id: "msg-2" }));
     const item = { Type: "Series", Name: "Shogun", Id: "jf-2", ProviderIds: { Tmdb: "125988" } };
 
     await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
 
-    expect(markNotified).toHaveBeenCalledWith("tv", "125988");
+    expect(markPosted).toHaveBeenCalledWith(
+      expect.objectContaining({ tmdbId: "125988", mediaType: "tv" })
+    );
   });
 
-  it("does not mark when the item has no TMDB id", async () => {
+  it("delegates to the dispatcher (tmdbId null) when the item has no TMDB id", async () => {
     const send = vi.fn(async () => ({ id: "msg-3" }));
     const item = { Type: "Movie", Name: "Mystery", Id: "jf-3", ProviderIds: {} };
 
     await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
 
-    expect(markNotified).not.toHaveBeenCalled();
+    // markPosted still runs (audit), but with no tmdbId — dispatcher won't mark dedup.
+    expect(markPosted).toHaveBeenCalledWith(expect.objectContaining({ tmdbId: null }));
   });
 });

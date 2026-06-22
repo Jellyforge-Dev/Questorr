@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
+import { getRecentNotifications } from "../utils/notificationAudit.js";
 import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
 import { updateConfig } from "../utils/configFile.js";
@@ -172,6 +173,14 @@ router.get("/health", async (_req, res) => {
 // Authenticated health check — full details for dashboard/admins
 router.get("/health/details", authenticateToken, async (_req, res) => {
   res.json(await collectHealthData());
+});
+
+// Notification audit trail — what was posted/skipped, by which source, to which
+// channel, and why (dedup reason). Gives admins visibility into the otherwise
+// opaque 5-tier routing + cross-source dedup.
+router.get("/notifications/audit", authenticateToken, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+  res.json({ notifications: getRecentNotifications(limit) });
 });
 
 // ─── Insights for Dashboard Step 8 ─────────────────────────────────────────

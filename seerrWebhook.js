@@ -20,7 +20,8 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import path from "path";
 import { t, tNotif } from "./utils/botStrings.js";
-import { markNotified, wasRecentlyNotified } from "./utils/notifyDedup.js";
+import { markNotified } from "./utils/notifyDedup.js";
+import { shouldPost, markPosted } from "./utils/notificationDispatcher.js";
 // Round 12: clean up pendingRequests entries after MEDIA_AVAILABLE so the map
 // (which doubles as the poller's "via Questorr" dedup source) doesn't grow
 // unbounded over time.
@@ -708,14 +709,12 @@ async function processEvent(data, eventType, cfg, client) {
     return;
   }
 
-  // Round 12: Cross-source dedup for MEDIA_AVAILABLE. If the Jellyfin poller
-  // already posted the "Now Available!" notification for this TMDB ID (e.g.
-  // because Round 11's library-refresh + 2-min poll outpaced the webhook), skip
-  // this webhook to avoid the double-post. The poller now marks notifyDedup
-  // after its own posts too.
+  // Cross-source dedup for MEDIA_AVAILABLE via the central dispatcher. If the
+  // Jellyfin poller already posted "Now Available!" for this TMDB ID, skip the
+  // webhook to avoid the double-post (the skip is recorded in the audit trail).
   if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
-    const dedupType = mediaType === "movie" ? "movie" : "tv";
-    if (wasRecentlyNotified(dedupType, tmdbId)) {
+    const { post } = shouldPost({ eventType, tmdbId, mediaType, source: "seerr-webhook", title: subject });
+    if (!post) {
       logger.info(
         `[SEERR WEBHOOK] Skipping duplicate MEDIA_AVAILABLE for "${subject}" (TMDB ${tmdbId}) — already notified (likely by Jellyfin poller)`
       );
@@ -879,9 +878,10 @@ async function processEvent(data, eventType, cfg, client) {
   const sentMessage = await channel.send(messageOptions);
   logger.info(`[SEERR WEBHOOK] ✅ Sent ${eventType} notification for "${subject}" to channel ${channelId}`);
 
-  // Mark this TMDB ID as notified so the Jellyfin webhook skips the duplicate
+  // Mark this TMDB ID as notified (so the poller skips the duplicate) and record
+  // the post in the audit trail via the central dispatcher.
   if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
-    markNotified(mediaType === "movie" ? "movie" : "tv", tmdbId);
+    markPosted({ eventType, tmdbId, mediaType, source: "seerr-webhook", title: subject, channelId });
 
     // Round 12: clean up the pendingRequests entry for this title — the
     // notification has been delivered, so the poller no longer needs the
