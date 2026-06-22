@@ -275,7 +275,9 @@ async function handleStatusAutocomplete(interaction, focusedValue) {
 
 // ─── Default Search Autocomplete ──────────────────────────────────────────────
 async function handleSearchAutocomplete(interaction, focusedValue) {
-  if (!focusedValue) return interaction.respond([]);
+  // Min-length guard: Discord fires autocomplete on every keystroke. Querying
+  // TMDB for 1-char input wastes calls and returns noise — wait for 2+ chars.
+  if (!focusedValue || focusedValue.trim().length < 2) return interaction.respond([]);
 
   try {
     const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
