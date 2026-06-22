@@ -171,23 +171,29 @@ export function backfillFromSeerr(reqArray, discordUserId) {
  */
 export async function resolveMissingTitles(discordUserId, resolveTitle) {
   if (!discordUserId || typeof resolveTitle !== "function") return 0;
-  let resolved = 0;
 
-  for (const record of records.values()) {
-    if (record.discordUserId !== discordUserId) continue;
-    if (record.title) continue;
-    if (record.tmdbId == null) continue;
-    try {
-      const title = await resolveTitle(record.tmdbId, record.mediaType);
-      if (title) {
-        record.title = title;
-        resolved++;
+  const pending = [...records.values()].filter(
+    (r) => r.discordUserId === discordUserId && !r.title && r.tmdbId != null
+  );
+
+  // Resolve in parallel — TMDB lookups are independent and the result set is
+  // small (a user's open requests). Each lookup is best-effort and isolated.
+  const results = await Promise.all(
+    pending.map(async (record) => {
+      try {
+        const title = await resolveTitle(record.tmdbId, record.mediaType);
+        if (title) {
+          record.title = title;
+          return true;
+        }
+      } catch {
+        /* best-effort; embed falls back to "TMDB <id>" */
       }
-    } catch {
-      /* best-effort; embed falls back to "TMDB <id>" */
-    }
-  }
+      return false;
+    })
+  );
 
+  const resolved = results.filter(Boolean).length;
   if (resolved > 0) save();
   return resolved;
 }
