@@ -231,6 +231,26 @@ export const tmdbIdSchema = Joi.object({
   mediaType: Joi.string().valid("movie", "tv").required(),
 });
 
+// --- CONNECTION-TEST VALIDATION ---
+// Deliberately permissive on URL format (we don't want to reject valid but
+// unusual self-hosted URLs); the point is to reject missing / wrong-type /
+// oversized inputs before they reach the outbound fetch. apiKey may be a masked
+// placeholder echoed back by the dashboard, so any non-empty string is allowed.
+export const seerrConnectionSchema = Joi.object({
+  url: Joi.string().trim().min(1).max(2048).required(),
+  apiKey: Joi.string().trim().min(1).max(500).required(),
+});
+
+export const jellyfinConnectionSchema = Joi.object({
+  url: Joi.string().trim().min(1).max(2048).required(),
+  apiKey: Joi.string().trim().min(1).max(500).optional(),
+});
+
+export const pollNowSchema = Joi.object({
+  mode: Joi.string().max(40).optional(),
+  limit: Joi.number().integer().min(1).max(10000).optional(),
+});
+
 // --- VALIDATION MIDDLEWARE ---
 /**
  * Express middleware factory for validating request body

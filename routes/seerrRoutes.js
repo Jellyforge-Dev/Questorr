@@ -1,6 +1,7 @@
 import { Router } from "express";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
+import { validateBody, seerrConnectionSchema } from "../utils/validation.js";
 import { isMaskedValue } from "../utils/configSanitize.js";
 import { TIMEOUTS } from "../lib/constants.js";
 import { getSeerrApiUrl, normalizeSeerrUrl } from "../utils/seerrUrl.js";
@@ -95,7 +96,7 @@ router.get("/seerr-users", authenticateToken, async (req, res) => {
   }
 });
 
-router.post("/test-seerr", authenticateToken, async (req, res) => {
+router.post("/test-seerr", authenticateToken, validateBody(seerrConnectionSchema), async (req, res) => {
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
@@ -124,7 +125,7 @@ router.post("/test-seerr", authenticateToken, async (req, res) => {
   }
 });
 
-router.post("/seerr/quality-profiles", authenticateToken, async (req, res) => {
+router.post("/seerr/quality-profiles", authenticateToken, validateBody(seerrConnectionSchema), async (req, res) => {
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
@@ -145,7 +146,7 @@ router.post("/seerr/quality-profiles", authenticateToken, async (req, res) => {
   }
 });
 
-router.post("/seerr/servers", authenticateToken, async (req, res) => {
+router.post("/seerr/servers", authenticateToken, validateBody(seerrConnectionSchema), async (req, res) => {
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
@@ -168,7 +169,7 @@ router.post("/seerr/servers", authenticateToken, async (req, res) => {
 
 
 // Fetch root folders from Radarr/Sonarr via Seerr
-router.post("/seerr-root-folders", authenticateToken, async (req, res) => {
+router.post("/seerr-root-folders", authenticateToken, validateBody(seerrConnectionSchema), async (req, res) => {
   try {
     let { url, apiKey } = req.body;
     if (!url) url = process.env.SEERR_URL;

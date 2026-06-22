@@ -1,6 +1,7 @@
 import { Router } from "express";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
+import { validateBody, jellyfinConnectionSchema, pollNowSchema } from "../utils/validation.js";
 import { isMaskedValue } from "../utils/configSanitize.js";
 import { TIMEOUTS } from "../lib/constants.js";
 import { getPollerStatus, triggerManualPoll } from "../bot/jellyfinPoller.js";
@@ -18,7 +19,7 @@ router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
   }
 });
 
-router.post("/jellyfin/poll-now", authenticateToken, async (req, res) => {
+router.post("/jellyfin/poll-now", authenticateToken, validateBody(pollNowSchema), async (req, res) => {
   try {
     // Round 10: two modes (rescan removed — see jellyfinPoller.js triggerManualPoll docs):
     //   "fast" — top-1000 by DateCreated, sync, same as periodic poll
@@ -58,7 +59,7 @@ function isAllowedUrl(url) {
 }
 
 // Fetch Jellyfin libraries given a URL + API key (used by config UI before saving)
-router.post("/jellyfin-libraries", authenticateToken, async (req, res) => {
+router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConnectionSchema), async (req, res) => {
   try {
     const { url } = req.body;
     let { apiKey } = req.body;
@@ -100,7 +101,7 @@ router.post("/jellyfin-libraries", authenticateToken, async (req, res) => {
 });
 
 // Test Jellyfin connectivity
-router.post("/test-jellyfin", authenticateToken, async (req, res) => {
+router.post("/test-jellyfin", authenticateToken, validateBody(jellyfinConnectionSchema), async (req, res) => {
   const { url } = req.body;
   if (!url) {
     return res.status(400).json({ success: false, message: "Jellyfin URL is required." });
