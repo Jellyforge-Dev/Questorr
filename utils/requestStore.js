@@ -111,14 +111,13 @@ export function updateFromSeerr(reqArray) {
  * filter) — never with a global fetch, which mixes other users' requests.
  * Existing requestIds and requests without a TMDB id are skipped.
  *
- * Seerr's request `media` object frequently has no title/name, so an optional
- * async `resolveTitle(tmdbId, mediaType)` is invoked — only for records being
- * added that lack a local title — to fetch one (e.g. from TMDB). A null result
- * leaves title null; the /queue embed then shows "TMDB <id>" as a last resort.
+ * Seerr's request `media` object frequently has no title/name; such records are
+ * stored with title null and resolved later by resolveMissingTitles (the single
+ * TMDB-resolution path), which also covers records persisted before this existed.
  *
- * @returns {Promise<number>} how many records were added
+ * @returns {number} how many records were added
  */
-export async function backfillFromSeerr(reqArray, discordUserId, resolveTitle) {
+export function backfillFromSeerr(reqArray, discordUserId) {
   if (!Array.isArray(reqArray) || !discordUserId) return 0;
   const now = new Date().toISOString();
   let added = 0;
@@ -132,16 +131,8 @@ export async function backfillFromSeerr(reqArray, discordUserId, resolveTitle) {
     if (tmdbId == null) continue; // can't build a useful record without a TMDB id
 
     const mediaType = (req.media?.mediaType || req.type) === "tv" ? "tv" : "movie";
-
-    let title =
+    const title =
       req.media?.title || req.media?.name || req.media?.originalTitle || req.media?.originalName || null;
-    if (!title && typeof resolveTitle === "function") {
-      try {
-        title = (await resolveTitle(tmdbId, mediaType)) || null;
-      } catch {
-        title = null; // resolution is best-effort; embed falls back to "TMDB <id>"
-      }
-    }
 
     records.set(key, {
       requestId: req.id,
@@ -160,6 +151,38 @@ export async function backfillFromSeerr(reqArray, discordUserId, resolveTitle) {
 
   if (added > 0) save();
   return added;
+}
+
+/**
+ * Resolve titles for a user's already-stored records that still have none.
+ * updateFromSeerr never sets title and backfill skips existing requestIds, so
+ * records persisted before a title was available (e.g. backfilled with null)
+ * would otherwise stay title-less and render as "TMDB <id>" forever. Runs the
+ * injected async resolver only for those records and persists any results.
+ *
+ * @returns {Promise<number>} how many titles were resolved
+ */
+export async function resolveMissingTitles(discordUserId, resolveTitle) {
+  if (!discordUserId || typeof resolveTitle !== "function") return 0;
+  let resolved = 0;
+
+  for (const record of records.values()) {
+    if (record.discordUserId !== discordUserId) continue;
+    if (record.title) continue;
+    if (record.tmdbId == null) continue;
+    try {
+      const title = await resolveTitle(record.tmdbId, record.mediaType);
+      if (title) {
+        record.title = title;
+        resolved++;
+      }
+    } catch {
+      /* best-effort; embed falls back to "TMDB <id>" */
+    }
+  }
+
+  if (resolved > 0) save();
+  return resolved;
 }
 
 /** All records for a given Discord user (for the /queue view). */

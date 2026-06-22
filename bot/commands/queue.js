@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 import { t } from "../../utils/botStrings.js";
-import { getByUser, updateFromSeerr, backfillFromSeerr, STAGES } from "../../utils/requestStore.js";
+import { getByUser, updateFromSeerr, backfillFromSeerr, resolveMissingTitles, STAGES } from "../../utils/requestStore.js";
 import { fetchSeerrUserRequestsFull, fetchRequests } from "../../api/seerr.js";
 import { tmdbGetDetails } from "../../api/tmdb.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
@@ -84,7 +84,8 @@ export async function handleQueueCommand(interaction) {
         updateFromSeerr(results);
         // Backfill requests made before the store existed / via the Seerr UI.
         // Safe here because the requestedBy filter guarantees they're this user's.
-        await backfillFromSeerr(results, discordId, resolveTitleFromTmdb);
+        // Titles are filled in below by resolveMissingTitles.
+        backfillFromSeerr(results, discordId);
       } else {
         // Unmapped: reconcile against the global recent fetch. No backfill —
         // global results mix other users' requests and aren't attributable.
@@ -95,6 +96,11 @@ export async function handleQueueCommand(interaction) {
       logger.warn(`[queue] reconcile failed: ${err?.message || err}`);
     }
   }
+
+  // Resolve titles for records persisted before a title was available (e.g.
+  // backfilled with null before this resolver existed) — they'd otherwise stay
+  // as "TMDB <id>" since updateFromSeerr never sets title and backfill skips them.
+  await resolveMissingTitles(discordId, resolveTitleFromTmdb);
 
   const records = getByUser(discordId);
   if (records.length === 0) {

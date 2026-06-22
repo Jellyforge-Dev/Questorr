@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const getByUser = vi.fn();
 const updateFromSeerr = vi.fn();
 const backfillFromSeerr = vi.fn();
+const resolveMissingTitles = vi.fn();
 const fetchSeerrUserRequestsFull = vi.fn();
 const fetchRequests = vi.fn();
 
@@ -10,6 +11,7 @@ vi.mock("../utils/requestStore.js", () => ({
   getByUser,
   updateFromSeerr,
   backfillFromSeerr,
+  resolveMissingTitles,
   STAGES: {
     PENDING: "Pending",
     PROCESSING: "Processing",
@@ -109,9 +111,10 @@ describe("handleQueueCommand", () => {
     expect(fetchSeerrUserRequestsFull).toHaveBeenCalledWith(42, "http://seerr", "key", 100);
     expect(fetchRequests).not.toHaveBeenCalled();
     expect(updateFromSeerr).toHaveBeenCalledTimes(1);
-    // Backfill untracked requests for this (mapped, attributable) user, passing
-    // a title resolver for entries whose Seerr media object has no title.
-    expect(backfillFromSeerr).toHaveBeenCalledWith(mappedResults, "discord-user-1", expect.any(Function));
+    // Backfill untracked requests for this (mapped, attributable) user.
+    expect(backfillFromSeerr).toHaveBeenCalledWith(mappedResults, "discord-user-1");
+    // Resolve titles for stored records that still have none (single TMDB path).
+    expect(resolveMissingTitles).toHaveBeenCalledWith("discord-user-1", expect.any(Function));
     expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({ embeds: expect.any(Array) })
     );
@@ -127,7 +130,7 @@ describe("handleQueueCommand", () => {
 
     await handleQueueCommand(makeInteraction());
 
-    const resolver = backfillFromSeerr.mock.calls[0][2];
+    const resolver = resolveMissingTitles.mock.calls[0][1];
     const title = await resolver(693134, "movie");
 
     expect(tmdbGetDetails).toHaveBeenCalledWith(693134, "movie", "tmdb-key");
