@@ -5,6 +5,7 @@ import { fetchOMDbData } from "../../api/omdb.js";
 import { buildNotificationEmbed, buildButtons } from "../embeds.js";
 import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
+import { add as addToRequestStore } from "../../utils/requestStore.js";
 import { getUserMappings } from "../../utils/configFile.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
@@ -114,7 +115,7 @@ export async function handleRequestButton(interaction) {
       mediaType
     );
 
-    await seerrApi.sendRequest({
+    const createdRequest = await seerrApi.sendRequest({
       tmdbId,
       mediaType,
       seasons: seasonsToRequest,
@@ -130,6 +131,17 @@ export async function handleRequestButton(interaction) {
     logger.info(
       `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
     );
+
+    // Record the request in the lifecycle store keyed on the Seerr requestId so
+    // /queue can show its status. Falls back to a null requestId (pseudo-key) on
+    // older Seerr that doesn't return an id.
+    addToRequestStore({
+      requestId: createdRequest?.id ?? null,
+      tmdbId,
+      mediaType,
+      title: details.title || details.name,
+      discordUserId: interaction.user.id,
+    });
 
     // Round 12: ALWAYS record the request in pendingRequests (no longer gated
     // on NOTIFY_ON_AVAILABLE). The map now also serves as the source-of-truth

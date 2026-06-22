@@ -6,6 +6,7 @@ import {
 } from "discord.js";
 import { registerCommands } from "../discord/commands.js";
 import { botState, loadPendingRequests } from "./botState.js";
+import { load as loadRequestStore, prune as pruneRequestStore } from "../utils/requestStore.js";
 import { registerInteractions } from "./interactions.js";
 import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
 import { scheduleCleanupAdvisor, stopCleanupAdvisor } from "./cleanupAdvisor.js";
@@ -21,6 +22,8 @@ export async function startBot() {
   }
 
   loadPendingRequests();
+  loadRequestStore();
+  pruneRequestStore(); // drop completed entries older than 30 days on each start
 
   const configLoaded = loadConfigToEnv();
   if (!configLoaded) {

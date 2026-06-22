@@ -244,6 +244,9 @@ export function getCommands() {
             )
         ),
     ] : []),
+    new SlashCommandBuilder()
+      .setName("queue")
+      .setDescription("Show the status of your Questorr requests"),
   ].map((c) => c.toJSON());
 }
 

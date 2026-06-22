@@ -18,6 +18,7 @@
  */
 
 import { fetchRequests } from "../api/seerr.js";
+import { updateFromSeerr } from "../utils/requestStore.js";
 import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
 import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
 import logger from "../utils/logger.js";
@@ -81,13 +82,17 @@ export function stopSeerrStatusPoller() {
   logger.info("[SEERR Status Poller] Stopped");
 }
 
-async function poll(seedOnly) {
+export async function poll(seedOnly) {
   const seerrUrl = process.env.SEERR_URL;
   const apiKey = process.env.SEERR_API_KEY;
   if (!seerrUrl || !apiKey) return;
 
   const data = await fetchRequests(seerrUrl, apiKey, 100, "all");
   const results = data?.results || [];
+
+  // Keep the request lifecycle store warm. Reuses the already-fetched data — no
+  // extra HTTP call. Skipped during seed for parity with the DM-suppression logic.
+  if (!seedOnly) updateFromSeerr(results);
 
   for (const req of results) {
     const reqId = req.id;

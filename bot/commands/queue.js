@@ -1,0 +1,89 @@
+import { EmbedBuilder } from "discord.js";
+import { t } from "../../utils/botStrings.js";
+import { getByUser, updateFromSeerr, STAGES } from "../../utils/requestStore.js";
+import { fetchSeerrUserRequestsFull, fetchRequests } from "../../api/seerr.js";
+import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import logger from "../../utils/logger.js";
+
+// Render order of the user-facing pipeline (matches the spec's embed example).
+const STAGE_ORDER = [
+  [STAGES.PENDING, "queue_stage_pending"],
+  [STAGES.PROCESSING, "queue_stage_processing"],
+  [STAGES.PARTIALLY_AVAILABLE, "queue_stage_partial"],
+  [STAGES.AVAILABLE, "queue_stage_available"],
+  [STAGES.DECLINED, "queue_stage_declined"],
+];
+
+function typeLabel(mediaType) {
+  return mediaType === "tv" ? t("queue_label_series") : t("queue_label_movie");
+}
+
+/** Build the grouped /queue embed from a user's request-store records. */
+export function buildQueueEmbed(records) {
+  const lines = [];
+
+  for (const [stage, headerKey] of STAGE_ORDER) {
+    const inStage = records.filter((r) => r.stage === stage);
+    if (inStage.length === 0) continue;
+
+    lines.push(`**${t(headerKey)}**`);
+    for (const r of inStage) {
+      const title = r.title || `TMDB ${r.tmdbId}`;
+      lines.push(`• ${title} (${typeLabel(r.mediaType)})`);
+    }
+    lines.push("");
+  }
+
+  return new EmbedBuilder()
+    .setTitle(t("queue_title"))
+    .setDescription(lines.join("\n").trim());
+}
+
+function resolveSeerrUserId(discordId) {
+  try {
+    const raw = process.env.USER_MAPPINGS;
+    const mappings = typeof raw === "string" ? JSON.parse(raw) : raw || [];
+    if (Array.isArray(mappings)) {
+      const m = mappings.find((x) => String(x.discordUserId) === String(discordId));
+      return m ? m.seerrUserId : null;
+    }
+  } catch {
+    /* fall through to null */
+  }
+  return null;
+}
+
+export async function handleQueueCommand(interaction) {
+  await interaction.deferReply({ flags: 64 });
+
+  const discordId = interaction.user.id;
+  const seerrUrl = getSeerrUrl();
+  const seerrApiKey = getSeerrApiKey();
+
+  // On-demand reconcile so /queue works even when the poller is disabled.
+  // Best-effort: on failure we still serve the store's last-known state.
+  if (seerrUrl && seerrApiKey) {
+    try {
+      const seerrUserId = resolveSeerrUserId(discordId);
+      let results;
+      if (seerrUserId != null) {
+        // Mapped: requestedBy filter — not subject to the poller's 100-request window.
+        results = await fetchSeerrUserRequestsFull(seerrUserId, seerrUrl, seerrApiKey, 100);
+      } else {
+        // Unmapped: reconcile against the global recent fetch.
+        const data = await fetchRequests(seerrUrl, seerrApiKey, 100, "all");
+        results = data?.results || [];
+      }
+      updateFromSeerr(results);
+    } catch (err) {
+      logger.warn(`[queue] reconcile failed: ${err?.message || err}`);
+    }
+  }
+
+  const records = getByUser(discordId);
+  if (records.length === 0) {
+    return interaction.editReply({ content: t("queue_empty") });
+  }
+
+  return interaction.editReply({ embeds: [buildQueueEmbed(records)] });
+}

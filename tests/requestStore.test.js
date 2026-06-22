@@ -1,0 +1,204 @@
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import fs from "fs";
+import path from "path";
+import os from "os";
+
+// Isolate persistence into a throwaway tmp dir by pointing CONFIG_PATH there.
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "questorr-reqstore-"));
+const FAKE_CONFIG_PATH = path.join(TMP_DIR, "config.json");
+const STORE_PATH = path.join(TMP_DIR, "request-store.json");
+
+vi.mock("../utils/configFile.js", () => ({
+  CONFIG_PATH: FAKE_CONFIG_PATH,
+}));
+
+vi.mock("../utils/logger.js", () => ({
+  default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+const store = await import("../utils/requestStore.js");
+
+beforeEach(() => {
+  store.clear();
+  if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
+});
+
+afterAll(() => {
+  fs.rmSync(TMP_DIR, { recursive: true, force: true });
+});
+
+describe("requestStore.add / getByUser", () => {
+  it("stores a record and returns it for the requesting Discord user", () => {
+    store.add({
+      requestId: 42,
+      tmdbId: 1001,
+      mediaType: "movie",
+      title: "Dune: Part Two",
+      discordUserId: "user-A",
+    });
+
+    const records = store.getByUser("user-A");
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      requestId: 42,
+      tmdbId: 1001,
+      mediaType: "movie",
+      title: "Dune: Part Two",
+      discordUserId: "user-A",
+      stage: "Pending",
+    });
+    expect(records[0].requestedAt).toBeTypeOf("string");
+    expect(records[0].updatedAt).toBeTypeOf("string");
+  });
+
+  it("returns empty array for a user with no requests", () => {
+    expect(store.getByUser("nobody")).toEqual([]);
+  });
+
+  it("uses a tmdbId-mediaType pseudo-key when no requestId is returned", () => {
+    store.add({
+      requestId: null,
+      tmdbId: 2002,
+      mediaType: "tv",
+      title: "Shogun",
+      discordUserId: "user-B",
+    });
+
+    const records = store.getByUser("user-B");
+    expect(records).toHaveLength(1);
+    expect(records[0].stage).toBe("Pending");
+    expect(records[0].tmdbId).toBe(2002);
+  });
+});
+
+describe("requestStore.deriveStage", () => {
+  const cases = [
+    { status: 3, mediaStatus: 1, expected: "Declined" },
+    { status: 3, mediaStatus: 5, expected: "Declined" },
+    { status: 1, mediaStatus: 1, expected: "Pending" },
+    { status: 1, mediaStatus: 5, expected: "Pending" },
+    { status: 2, mediaStatus: 5, expected: "Available" },
+    { status: 2, mediaStatus: 4, expected: "PartiallyAvailable" },
+    { status: 2, mediaStatus: 3, expected: "Processing" },
+    { status: 2, mediaStatus: 1, expected: "Processing" },
+    { status: 2, mediaStatus: undefined, expected: "Processing" },
+  ];
+
+  for (const { status, mediaStatus, expected } of cases) {
+    it(`status=${status} mediaStatus=${mediaStatus} -> ${expected}`, () => {
+      expect(store.deriveStage({ status, media: { status: mediaStatus } })).toBe(expected);
+    });
+  }
+
+  it("handles a request with no media object", () => {
+    expect(store.deriveStage({ status: 1 })).toBe("Pending");
+  });
+});
+
+describe("requestStore.updateFromSeerr", () => {
+  it("matches by requestId and updates stage from Seerr statuses", () => {
+    store.add({
+      requestId: 7,
+      tmdbId: 3003,
+      mediaType: "tv",
+      title: "Fallout",
+      discordUserId: "user-C",
+    });
+
+    store.updateFromSeerr([
+      { id: 7, status: 2, media: { status: 5 } },
+      { id: 999, status: 1, media: { status: 1 } }, // unknown -> ignored
+    ]);
+
+    const [record] = store.getByUser("user-C");
+    expect(record.stage).toBe("Available");
+    expect(record.seerrStatus).toBe(2);
+    expect(record.mediaStatus).toBe(5);
+  });
+
+  it("does not create records for unknown requestIds", () => {
+    store.updateFromSeerr([{ id: 12345, status: 2, media: { status: 5 } }]);
+    expect(store.getByUser("user-C")).toEqual([]);
+  });
+});
+
+describe("requestStore persistence", () => {
+  it("round-trips records through save() and load()", () => {
+    store.add({
+      requestId: 88,
+      tmdbId: 4004,
+      mediaType: "movie",
+      title: "Madame Web",
+      discordUserId: "user-D",
+    });
+    store.save();
+
+    expect(fs.existsSync(STORE_PATH)).toBe(true);
+
+    store.clear();
+    expect(store.getByUser("user-D")).toEqual([]);
+
+    store.load();
+    const [record] = store.getByUser("user-D");
+    expect(record).toMatchObject({ requestId: 88, title: "Madame Web" });
+  });
+
+  it("writes the store file with 0600 permissions", () => {
+    store.add({
+      requestId: 1,
+      tmdbId: 1,
+      mediaType: "movie",
+      title: "X",
+      discordUserId: "u",
+    });
+    store.save();
+    const mode = fs.statSync(STORE_PATH).mode & 0o777;
+    // On POSIX this is exactly 0o600; on Windows mode bits are not enforced.
+    if (process.platform !== "win32") {
+      expect(mode).toBe(0o600);
+    }
+  });
+
+  it("starts empty when the store file is corrupt", () => {
+    fs.writeFileSync(STORE_PATH, "{ not valid json");
+    store.load();
+    expect(store.getByUser("anyone")).toEqual([]);
+  });
+
+  it("load() is a no-op when no file exists", () => {
+    expect(() => store.load()).not.toThrow();
+    expect(store.getByUser("anyone")).toEqual([]);
+  });
+});
+
+describe("requestStore.prune", () => {
+  it("drops completed entries older than maxAgeDays, keeps recent and open ones", () => {
+    const old = new Date(Date.now() - 40 * 86400_000).toISOString();
+    const recent = new Date().toISOString();
+
+    store.add({ requestId: 1, tmdbId: 1, mediaType: "movie", title: "Old Available", discordUserId: "u" });
+    store.add({ requestId: 2, tmdbId: 2, mediaType: "movie", title: "Old Pending", discordUserId: "u" });
+    store.add({ requestId: 3, tmdbId: 3, mediaType: "movie", title: "Recent Available", discordUserId: "u" });
+
+    store.updateFromSeerr([
+      { id: 1, status: 2, media: { status: 5 } }, // Available
+      { id: 3, status: 2, media: { status: 5 } }, // Available
+    ]);
+
+    // Age the records by editing the persisted file, then reloading — keeps
+    // timestamp control out of the production API.
+    store.save();
+    const onDisk = JSON.parse(fs.readFileSync(STORE_PATH, "utf-8"));
+    onDisk["1"].updatedAt = old;
+    onDisk["2"].updatedAt = old;
+    onDisk["3"].updatedAt = recent;
+    fs.writeFileSync(STORE_PATH, JSON.stringify(onDisk));
+    store.load();
+
+    store.prune(30);
+
+    const titles = store.getByUser("u").map((r) => r.title).sort();
+    // Old Available pruned; Old Pending kept (not completed); Recent Available kept.
+    expect(titles).toEqual(["Old Pending", "Recent Available"]);
+  });
+});

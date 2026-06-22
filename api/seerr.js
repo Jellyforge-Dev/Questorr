@@ -644,6 +644,37 @@ export async function fetchSeerrUserRequests(userId, seerrUrl, apiKey, limit = 2
 }
 
 /**
+ * Fetch the full Seerr request objects submitted by a specific Seerr user.
+ * Unlike fetchSeerrUserRequests (which strips down to TMDB seeds), this returns
+ * the raw request objects (`id`, `status`, `media.status`) so the request-status
+ * store can reconcile lifecycle stages for mapped users — not subject to the
+ * poller's global 100-request window.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} limit - Max number of requests to return (default 100)
+ * @returns {Promise<Array<Object>>} Raw Seerr request objects (empty array on error)
+ */
+export async function fetchSeerrUserRequestsFull(userId, seerrUrl, apiKey, limit = 100) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request`, {
+        headers: { "X-Api-Key": apiKey },
+        params: { take: limit, sort: "modified", requestedBy: userId },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr full user requests for ${userId}` }
+    );
+    return response.data?.results || [];
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserRequestsFull(${userId}) failed: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
  * Aggregate all Seerr requests (paginated, up to a sane cap) and compute
  * the average lifecycle durations for the dashboard "Insights" panel.
  *
