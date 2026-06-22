@@ -111,9 +111,14 @@ export function updateFromSeerr(reqArray) {
  * filter) — never with a global fetch, which mixes other users' requests.
  * Existing requestIds and requests without a TMDB id are skipped.
  *
- * @returns {number} how many records were added
+ * Seerr's request `media` object frequently has no title/name, so an optional
+ * async `resolveTitle(tmdbId, mediaType)` is invoked — only for records being
+ * added that lack a local title — to fetch one (e.g. from TMDB). A null result
+ * leaves title null; the /queue embed then shows "TMDB <id>" as a last resort.
+ *
+ * @returns {Promise<number>} how many records were added
  */
-export function backfillFromSeerr(reqArray, discordUserId) {
+export async function backfillFromSeerr(reqArray, discordUserId, resolveTitle) {
   if (!Array.isArray(reqArray) || !discordUserId) return 0;
   const now = new Date().toISOString();
   let added = 0;
@@ -127,11 +132,22 @@ export function backfillFromSeerr(reqArray, discordUserId) {
     if (tmdbId == null) continue; // can't build a useful record without a TMDB id
 
     const mediaType = (req.media?.mediaType || req.type) === "tv" ? "tv" : "movie";
+
+    let title =
+      req.media?.title || req.media?.name || req.media?.originalTitle || req.media?.originalName || null;
+    if (!title && typeof resolveTitle === "function") {
+      try {
+        title = (await resolveTitle(tmdbId, mediaType)) || null;
+      } catch {
+        title = null; // resolution is best-effort; embed falls back to "TMDB <id>"
+      }
+    }
+
     records.set(key, {
       requestId: req.id,
       tmdbId,
       mediaType,
-      title: req.media?.title || req.media?.name || null,
+      title,
       discordUserId,
       stage: deriveStage(req),
       seerrStatus: req.status ?? null,

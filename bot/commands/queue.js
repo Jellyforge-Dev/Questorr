@@ -2,7 +2,8 @@ import { EmbedBuilder } from "discord.js";
 import { t } from "../../utils/botStrings.js";
 import { getByUser, updateFromSeerr, backfillFromSeerr, STAGES } from "../../utils/requestStore.js";
 import { fetchSeerrUserRequestsFull, fetchRequests } from "../../api/seerr.js";
-import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import { tmdbGetDetails } from "../../api/tmdb.js";
+import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
 
 // Render order of the user-facing pipeline (matches the spec's embed example).
@@ -40,6 +41,17 @@ export function buildQueueEmbed(records) {
     .setDescription(lines.join("\n").trim());
 }
 
+// Seerr request `media` objects frequently lack a title, so backfill resolves it
+// from TMDB by id. title (movie) / name (tv) with original_* as a final fallback.
+async function resolveTitleFromTmdb(tmdbId, mediaType) {
+  try {
+    const d = await tmdbGetDetails(tmdbId, mediaType, getTmdbApiKey());
+    return d?.title || d?.name || d?.original_title || d?.original_name || null;
+  } catch {
+    return null;
+  }
+}
+
 function resolveSeerrUserId(discordId) {
   try {
     const raw = process.env.USER_MAPPINGS;
@@ -72,7 +84,7 @@ export async function handleQueueCommand(interaction) {
         updateFromSeerr(results);
         // Backfill requests made before the store existed / via the Seerr UI.
         // Safe here because the requestedBy filter guarantees they're this user's.
-        backfillFromSeerr(results, discordId);
+        await backfillFromSeerr(results, discordId, resolveTitleFromTmdb);
       } else {
         // Unmapped: reconcile against the global recent fetch. No backfill —
         // global results mix other users' requests and aren't attributable.

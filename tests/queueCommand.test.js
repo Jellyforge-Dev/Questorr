@@ -19,10 +19,13 @@ vi.mock("../utils/requestStore.js", () => ({
     FAILED: "Failed",
   },
 }));
+const tmdbGetDetails = vi.fn();
 vi.mock("../api/seerr.js", () => ({ fetchSeerrUserRequestsFull, fetchRequests }));
+vi.mock("../api/tmdb.js", () => ({ tmdbGetDetails }));
 vi.mock("../bot/helpers.js", () => ({
   getSeerrUrl: vi.fn(() => "http://seerr"),
   getSeerrApiKey: vi.fn(() => "key"),
+  getTmdbApiKey: vi.fn(() => "tmdb-key"),
 }));
 vi.mock("../utils/botStrings.js", () => ({ t: (k) => k }));
 vi.mock("../utils/logger.js", () => ({
@@ -106,11 +109,29 @@ describe("handleQueueCommand", () => {
     expect(fetchSeerrUserRequestsFull).toHaveBeenCalledWith(42, "http://seerr", "key", 100);
     expect(fetchRequests).not.toHaveBeenCalled();
     expect(updateFromSeerr).toHaveBeenCalledTimes(1);
-    // Backfill untracked requests for this (mapped, attributable) user.
-    expect(backfillFromSeerr).toHaveBeenCalledWith(mappedResults, "discord-user-1");
+    // Backfill untracked requests for this (mapped, attributable) user, passing
+    // a title resolver for entries whose Seerr media object has no title.
+    expect(backfillFromSeerr).toHaveBeenCalledWith(mappedResults, "discord-user-1", expect.any(Function));
     expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({ embeds: expect.any(Array) })
     );
+  });
+
+  it("passes a resolver that fetches the title from TMDB", async () => {
+    process.env.USER_MAPPINGS = JSON.stringify([
+      { discordUserId: "discord-user-1", seerrUserId: 42 },
+    ]);
+    fetchSeerrUserRequestsFull.mockResolvedValue([]);
+    getByUser.mockReturnValue([]);
+    tmdbGetDetails.mockResolvedValue({ title: "Dune: Part Two" });
+
+    await handleQueueCommand(makeInteraction());
+
+    const resolver = backfillFromSeerr.mock.calls[0][2];
+    const title = await resolver(693134, "movie");
+
+    expect(tmdbGetDetails).toHaveBeenCalledWith(693134, "movie", "tmdb-key");
+    expect(title).toBe("Dune: Part Two");
   });
 
   it("reconciles via the global recent fetch for unmapped users", async () => {

@@ -151,8 +151,8 @@ describe("requestStore.backfillFromSeerr", () => {
     { id: 11, type: "tv", status: 1, media: { tmdbId: 600, status: 1, name: "Old Series" } },
   ];
 
-  it("adds missing requests attributed to the given Discord user with derived stage", () => {
-    const added = store.backfillFromSeerr(seerrReqs, "user-F");
+  it("adds missing requests attributed to the given Discord user with derived stage", async () => {
+    const added = await store.backfillFromSeerr(seerrReqs, "user-F");
     expect(added).toBe(2);
 
     const records = store.getByUser("user-F");
@@ -172,21 +172,47 @@ describe("requestStore.backfillFromSeerr", () => {
     expect(series).toMatchObject({ mediaType: "tv", title: "Old Series", stage: "Pending" });
   });
 
-  it("does not duplicate requests already tracked by requestId", () => {
+  it("does not duplicate requests already tracked by requestId", async () => {
     store.add({ requestId: 10, tmdbId: 500, mediaType: "movie", title: "Old Movie", discordUserId: "user-F" });
-    const added = store.backfillFromSeerr(seerrReqs, "user-F");
+    const added = await store.backfillFromSeerr(seerrReqs, "user-F");
     expect(added).toBe(1); // only id 11 is new
     expect(store.getByUser("user-F").filter((r) => r.requestId === 10)).toHaveLength(1);
   });
 
-  it("skips requests without a TMDB id", () => {
-    const added = store.backfillFromSeerr([{ id: 99, status: 1, media: { status: 1 } }], "user-F");
+  it("skips requests without a TMDB id", async () => {
+    const added = await store.backfillFromSeerr([{ id: 99, status: 1, media: { status: 1 } }], "user-F");
     expect(added).toBe(0);
     expect(store.getByUser("user-F")).toEqual([]);
   });
 
-  it("is a no-op without a discordUserId", () => {
-    expect(store.backfillFromSeerr(seerrReqs, undefined)).toBe(0);
+  it("is a no-op without a discordUserId", async () => {
+    expect(await store.backfillFromSeerr(seerrReqs, undefined)).toBe(0);
+  });
+
+  it("falls back to the title resolver when media has no title/name", async () => {
+    const noTitle = [
+      { id: 20, type: "movie", status: 2, media: { tmdbId: 131033, status: 3 } },
+      { id: 21, type: "tv", status: 2, media: { tmdbId: 700, status: 3, title: "Has Title" } },
+    ];
+    const resolveTitle = vi.fn(async (tmdbId) => (tmdbId === 131033 ? "Resolved Movie" : "should-not-be-used"));
+
+    const added = await store.backfillFromSeerr(noTitle, "user-G", resolveTitle);
+    expect(added).toBe(2);
+
+    // Resolver invoked only for the entry lacking a title, with (tmdbId, mediaType).
+    expect(resolveTitle).toHaveBeenCalledTimes(1);
+    expect(resolveTitle).toHaveBeenCalledWith(131033, "movie");
+
+    const records = store.getByUser("user-G");
+    expect(records.find((r) => r.requestId === 20).title).toBe("Resolved Movie");
+    expect(records.find((r) => r.requestId === 21).title).toBe("Has Title");
+  });
+
+  it("leaves title null when the resolver also yields nothing", async () => {
+    const noTitle = [{ id: 30, type: "movie", status: 2, media: { tmdbId: 999, status: 3 } }];
+    const resolveTitle = vi.fn(async () => null);
+    await store.backfillFromSeerr(noTitle, "user-H", resolveTitle);
+    expect(store.getByUser("user-H")[0].title).toBeNull();
   });
 });
 
