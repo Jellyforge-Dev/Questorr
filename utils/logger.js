@@ -7,6 +7,15 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
 import fs from "fs";
+import { redactSecrets } from "./redact.js";
+
+// Scrub secrets (API keys, bearer tokens, passwords) from message + stack before
+// anything is written to disk or surfaced via the dashboard /api/logs endpoints.
+const redactFormat = winston.format((info) => {
+  if (typeof info.message === "string") info.message = redactSecrets(info.message);
+  if (typeof info.stack === "string") info.stack = redactSecrets(info.stack);
+  return info;
+});
 
 // Create logs directory if it doesn't exist
 const logsDir = path.join(process.cwd(), "logs");
@@ -46,14 +55,17 @@ const level = () => {
 
 // Define log format
 const format = winston.format.combine(
-  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
+  redactFormat(),
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   winston.format.json()
 );
 
 // Define console format (more readable)
 const consoleFormat = winston.format.combine(
+  winston.format.splat(),
+  redactFormat(),
   winston.format.colorize({ all: true }),
   winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   winston.format.printf(
