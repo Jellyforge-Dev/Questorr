@@ -82,6 +82,15 @@ describe("requestStore.deriveStage", () => {
     { status: 2, mediaStatus: 3, expected: "Processing" },
     { status: 2, mediaStatus: 1, expected: "Processing" },
     { status: 2, mediaStatus: undefined, expected: "Processing" },
+    // request.status COMPLETED (5): availability must come from media.status,
+    // not fall through to Pending (Jellyseerr flips the request to COMPLETED
+    // once the media is fully available).
+    { status: 5, mediaStatus: 5, expected: "Available" },
+    { status: 5, mediaStatus: 4, expected: "PartiallyAvailable" },
+    { status: 5, mediaStatus: 3, expected: "Processing" },
+    // request.status FAILED (4): past approval, derive from media.status.
+    { status: 4, mediaStatus: 5, expected: "Available" },
+    { status: 4, mediaStatus: 3, expected: "Processing" },
   ];
 
   for (const { status, mediaStatus, expected } of cases) {
@@ -119,6 +128,18 @@ describe("requestStore.updateFromSeerr", () => {
   it("does not create records for unknown requestIds", () => {
     store.updateFromSeerr([{ id: 12345, status: 2, media: { status: 5 } }]);
     expect(store.getByUser("user-C")).toEqual([]);
+  });
+
+  it("keeps an available item Available when the request flips to COMPLETED (status 5)", () => {
+    store.add({ requestId: 7, tmdbId: 3003, mediaType: "movie", title: "Dune", discordUserId: "user-E" });
+
+    // Approved + downloading -> Processing
+    store.updateFromSeerr([{ id: 7, status: 2, media: { status: 3 } }]);
+    expect(store.getByUser("user-E")[0].stage).toBe("Processing");
+
+    // Jellyseerr flips the request to COMPLETED once media is available.
+    store.updateFromSeerr([{ id: 7, status: 5, media: { status: 5 } }]);
+    expect(store.getByUser("user-E")[0].stage).toBe("Available");
   });
 });
 

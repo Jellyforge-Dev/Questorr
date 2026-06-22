@@ -35,14 +35,18 @@ export function deriveStage(req) {
   const status = req?.status;
   const mediaStatus = req?.media?.status;
 
+  // request.status: 1 PENDING, 2 APPROVED, 3 DECLINED, 4 FAILED, 5 COMPLETED.
+  // Only PENDING and DECLINED gate on request.status. Everything past approval
+  // (APPROVED/FAILED/COMPLETED) derives availability from media.status — Jellyseerr
+  // flips the request to COMPLETED (5) once the media is available, so gating the
+  // media check on status === 2 would wrongly revert an available item to Pending.
   if (status === 3) return STAGES.DECLINED;
   if (status === 1) return STAGES.PENDING;
-  if (status === 2) {
-    if (mediaStatus === 5) return STAGES.AVAILABLE;
-    if (mediaStatus === 4) return STAGES.PARTIALLY_AVAILABLE;
-    return STAGES.PROCESSING;
-  }
-  return STAGES.PENDING;
+
+  // media.status: 1 UNKNOWN, 2 PENDING, 3 PROCESSING, 4 PARTIALLY_AVAILABLE, 5 AVAILABLE.
+  if (mediaStatus === 5) return STAGES.AVAILABLE;
+  if (mediaStatus === 4) return STAGES.PARTIALLY_AVAILABLE;
+  return STAGES.PROCESSING;
 }
 
 /**
