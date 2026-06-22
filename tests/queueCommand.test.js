@@ -28,6 +28,15 @@ vi.mock("../bot/helpers.js", () => ({
   getSeerrUrl: vi.fn(() => "http://seerr"),
   getSeerrApiKey: vi.fn(() => "key"),
   getTmdbApiKey: vi.fn(() => "tmdb-key"),
+  getUserMappingsFromEnv: () => {
+    try {
+      const raw = process.env.USER_MAPPINGS;
+      const m = typeof raw === "string" ? JSON.parse(raw) : raw || [];
+      return Array.isArray(m) ? m : [];
+    } catch {
+      return [];
+    }
+  },
 }));
 vi.mock("../utils/botStrings.js", () => ({ t: (k) => k }));
 vi.mock("../utils/logger.js", () => ({

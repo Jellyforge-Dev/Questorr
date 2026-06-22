@@ -35,21 +35,11 @@ import {
   resolveJellyfinUserId,
   findJellyfinItemByTmdbId,
 } from "../../api/jellyfin.js";
-import { buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import { buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey, getUserMappingsFromEnv } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
 const TYPE_FROM_JF = { Movie: "movie", Series: "tv" };
-
-function getUserMappings() {
-  try {
-    const raw = process.env.USER_MAPPINGS;
-    const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
-    return Array.isArray(mappings) ? mappings : [];
-  } catch {
-    return [];
-  }
-}
 
 /** Extract TMDB ID + media type + title from a Jellyfin item's ProviderIds. */
 function jfToSeed(item) {
@@ -82,7 +72,7 @@ export async function handleForYouCommand(interaction) {
     const discordId = interaction.user.id;
     const seerrUrl = getSeerrUrl();
     const seerrApiKey = getSeerrApiKey();
-    const userMappings = getUserMappings();
+    const userMappings = getUserMappingsFromEnv();
 
     // Resolve the user's Jellyfin user ID via the Seerr chain
     const jellyfinUserId =

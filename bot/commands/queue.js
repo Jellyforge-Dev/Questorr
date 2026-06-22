@@ -3,7 +3,7 @@ import { t } from "../../utils/botStrings.js";
 import { getByUser, updateFromSeerr, backfillFromSeerr, resolveMissingTitles, STAGES } from "../../utils/requestStore.js";
 import { fetchSeerrUserRequestsFull, fetchRequests } from "../../api/seerr.js";
 import { tmdbGetDetails } from "../../api/tmdb.js";
-import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
+import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey, getUserMappingsFromEnv } from "../helpers.js";
 import logger from "../../utils/logger.js";
 
 // Render order of the user-facing pipeline (matches the spec's embed example).
@@ -53,17 +53,8 @@ async function resolveTitleFromTmdb(tmdbId, mediaType) {
 }
 
 function resolveSeerrUserId(discordId) {
-  try {
-    const raw = process.env.USER_MAPPINGS;
-    const mappings = typeof raw === "string" ? JSON.parse(raw) : raw || [];
-    if (Array.isArray(mappings)) {
-      const m = mappings.find((x) => String(x.discordUserId) === String(discordId));
-      return m ? m.seerrUserId : null;
-    }
-  } catch {
-    /* fall through to null */
-  }
-  return null;
+  const m = getUserMappingsFromEnv().find((x) => String(x.discordUserId) === String(discordId));
+  return m ? m.seerrUserId : null;
 }
 
 export async function handleQueueCommand(interaction) {
