@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const fetchRequests = vi.fn();
-const updateFromSeerr = vi.fn();
+const updateFromSeerr = vi.fn(() => []);
+const prune = vi.fn();
 
 vi.mock("../api/seerr.js", () => ({ fetchRequests }));
-vi.mock("../utils/requestStore.js", () => ({ updateFromSeerr }));
+vi.mock("../utils/requestStore.js", () => ({ updateFromSeerr, prune }));
+vi.mock("../utils/notifyPrefs.js", () => ({ isNotifyEnabled: vi.fn(() => false) }));
 vi.mock("../seerrWebhook.js", () => ({
   sendRequesterDm: vi.fn(),
   getAdminPendingMsg: vi.fn(() => null),

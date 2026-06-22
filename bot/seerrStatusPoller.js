@@ -18,7 +18,7 @@
  */
 
 import { fetchRequests } from "../api/seerr.js";
-import { updateFromSeerr } from "../utils/requestStore.js";
+import { updateFromSeerr, prune as pruneRequestStore } from "../utils/requestStore.js";
 import { isNotifyEnabled } from "../utils/notifyPrefs.js";
 import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
 import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
@@ -120,6 +120,9 @@ export async function poll(seedOnly) {
     const transitions = updateFromSeerr(results);
     // /notify: DM opted-in requesters when their request becomes available.
     await notifyAvailableTransitions(transitions, botState.discordClient);
+    // Prune old completed entries on each tick too, so long-running instances
+    // (that never restart) don't grow the store unbounded.
+    pruneRequestStore();
   }
 
   for (const req of results) {
