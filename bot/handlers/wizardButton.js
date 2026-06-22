@@ -9,6 +9,7 @@ import { handleRandomCommand } from "../commands/random.js";
 import { handleWatchlistCommand } from "../commands/watchlist.js";
 import { handleHistoryCommand } from "../commands/history.js";
 import { handleUpcomingCommand } from "../commands/upcoming.js";
+import { handleQueueCommand } from "../commands/queue.js";
 import logger from "../../utils/logger.js";
 
 function patchOptions(interaction, params) {
@@ -44,6 +45,10 @@ export async function handleWizardButton(interaction) {
     case "wizard_watchlist":
       patchOptions(interaction, {});
       return handleWatchlistCommand(interaction);
+
+    case "wizard_queue":
+      patchOptions(interaction, {});
+      return handleQueueCommand(interaction);
 
     case "wizard_history":
       patchOptions(interaction, {});
