@@ -101,6 +101,48 @@ export function updateFromSeerr(reqArray) {
   if (changed) save();
 }
 
+/**
+ * Backfill records for Seerr requests not yet tracked by the store, attributing
+ * them to the given Discord user. Only safe to call with requests known to
+ * belong to that user (e.g. fetchSeerrUserRequestsFull via the requestedBy
+ * filter) — never with a global fetch, which mixes other users' requests.
+ * Existing requestIds and requests without a TMDB id are skipped.
+ *
+ * @returns {number} how many records were added
+ */
+export function backfillFromSeerr(reqArray, discordUserId) {
+  if (!Array.isArray(reqArray) || !discordUserId) return 0;
+  const now = new Date().toISOString();
+  let added = 0;
+
+  for (const req of reqArray) {
+    if (req?.id == null) continue;
+    const key = String(req.id);
+    if (records.has(key)) continue; // already tracked (by click-time add or prior backfill)
+
+    const tmdbId = req.media?.tmdbId;
+    if (tmdbId == null) continue; // can't build a useful record without a TMDB id
+
+    const mediaType = (req.media?.mediaType || req.type) === "tv" ? "tv" : "movie";
+    records.set(key, {
+      requestId: req.id,
+      tmdbId,
+      mediaType,
+      title: req.media?.title || req.media?.name || null,
+      discordUserId,
+      stage: deriveStage(req),
+      seerrStatus: req.status ?? null,
+      mediaStatus: req.media?.status ?? null,
+      requestedAt: req.createdAt || now,
+      updatedAt: now,
+    });
+    added++;
+  }
+
+  if (added > 0) save();
+  return added;
+}
+
 /** All records for a given Discord user (for the /queue view). */
 export function getByUser(discordUserId) {
   return [...records.values()].filter((r) => r.discordUserId === discordUserId);

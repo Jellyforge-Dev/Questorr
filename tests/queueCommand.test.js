@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const getByUser = vi.fn();
 const updateFromSeerr = vi.fn();
+const backfillFromSeerr = vi.fn();
 const fetchSeerrUserRequestsFull = vi.fn();
 const fetchRequests = vi.fn();
 
 vi.mock("../utils/requestStore.js", () => ({
   getByUser,
   updateFromSeerr,
+  backfillFromSeerr,
   STAGES: {
     PENDING: "Pending",
     PROCESSING: "Processing",
@@ -82,7 +84,8 @@ describe("handleQueueCommand", () => {
     process.env.USER_MAPPINGS = JSON.stringify([
       { discordUserId: "discord-user-1", seerrUserId: 42 },
     ]);
-    fetchSeerrUserRequestsFull.mockResolvedValue([{ id: 1, status: 1, media: { status: 1 } }]);
+    const mappedResults = [{ id: 1, status: 1, media: { status: 1 } }];
+    fetchSeerrUserRequestsFull.mockResolvedValue(mappedResults);
     getByUser.mockReturnValue([{ title: "Dune", mediaType: "movie", stage: "Pending" }]);
     const interaction = makeInteraction();
 
@@ -91,6 +94,8 @@ describe("handleQueueCommand", () => {
     expect(fetchSeerrUserRequestsFull).toHaveBeenCalledWith(42, "http://seerr", "key", 100);
     expect(fetchRequests).not.toHaveBeenCalled();
     expect(updateFromSeerr).toHaveBeenCalledTimes(1);
+    // Backfill untracked requests for this (mapped, attributable) user.
+    expect(backfillFromSeerr).toHaveBeenCalledWith(mappedResults, "discord-user-1");
     expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({ embeds: expect.any(Array) })
     );
@@ -106,5 +111,7 @@ describe("handleQueueCommand", () => {
     expect(fetchRequests).toHaveBeenCalledWith("http://seerr", "key", 100, "all");
     expect(fetchSeerrUserRequestsFull).not.toHaveBeenCalled();
     expect(updateFromSeerr).toHaveBeenCalledTimes(1);
+    // No backfill for unmapped users — global results aren't attributable.
+    expect(backfillFromSeerr).not.toHaveBeenCalled();
   });
 });

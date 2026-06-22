@@ -143,6 +143,52 @@ describe("requestStore.updateFromSeerr", () => {
   });
 });
 
+describe("requestStore.backfillFromSeerr", () => {
+  const seerrReqs = [
+    { id: 10, type: "movie", status: 5, createdAt: "2026-01-01T00:00:00.000Z",
+      media: { tmdbId: 500, status: 5, title: "Old Movie" } },
+    { id: 11, type: "tv", status: 1, media: { tmdbId: 600, status: 1, name: "Old Series" } },
+  ];
+
+  it("adds missing requests attributed to the given Discord user with derived stage", () => {
+    const added = store.backfillFromSeerr(seerrReqs, "user-F");
+    expect(added).toBe(2);
+
+    const records = store.getByUser("user-F");
+    expect(records).toHaveLength(2);
+
+    const movie = records.find((r) => r.requestId === 10);
+    expect(movie).toMatchObject({
+      tmdbId: 500,
+      mediaType: "movie",
+      title: "Old Movie",
+      discordUserId: "user-F",
+      stage: "Available",
+    });
+    expect(movie.requestedAt).toBe("2026-01-01T00:00:00.000Z");
+
+    const series = records.find((r) => r.requestId === 11);
+    expect(series).toMatchObject({ mediaType: "tv", title: "Old Series", stage: "Pending" });
+  });
+
+  it("does not duplicate requests already tracked by requestId", () => {
+    store.add({ requestId: 10, tmdbId: 500, mediaType: "movie", title: "Old Movie", discordUserId: "user-F" });
+    const added = store.backfillFromSeerr(seerrReqs, "user-F");
+    expect(added).toBe(1); // only id 11 is new
+    expect(store.getByUser("user-F").filter((r) => r.requestId === 10)).toHaveLength(1);
+  });
+
+  it("skips requests without a TMDB id", () => {
+    const added = store.backfillFromSeerr([{ id: 99, status: 1, media: { status: 1 } }], "user-F");
+    expect(added).toBe(0);
+    expect(store.getByUser("user-F")).toEqual([]);
+  });
+
+  it("is a no-op without a discordUserId", () => {
+    expect(store.backfillFromSeerr(seerrReqs, undefined)).toBe(0);
+  });
+});
+
 describe("requestStore persistence", () => {
   it("round-trips records through save() and load()", () => {
     store.add({

@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 import { t } from "../../utils/botStrings.js";
-import { getByUser, updateFromSeerr, STAGES } from "../../utils/requestStore.js";
+import { getByUser, updateFromSeerr, backfillFromSeerr, STAGES } from "../../utils/requestStore.js";
 import { fetchSeerrUserRequestsFull, fetchRequests } from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
@@ -65,16 +65,19 @@ export async function handleQueueCommand(interaction) {
   if (seerrUrl && seerrApiKey) {
     try {
       const seerrUserId = resolveSeerrUserId(discordId);
-      let results;
       if (seerrUserId != null) {
         // Mapped: requestedBy filter — not subject to the poller's 100-request window.
-        results = await fetchSeerrUserRequestsFull(seerrUserId, seerrUrl, seerrApiKey, 100);
+        const results = await fetchSeerrUserRequestsFull(seerrUserId, seerrUrl, seerrApiKey, 100);
+        updateFromSeerr(results);
+        // Backfill requests made before the store existed / via the Seerr UI.
+        // Safe here because the requestedBy filter guarantees they're this user's.
+        backfillFromSeerr(results, discordId);
       } else {
-        // Unmapped: reconcile against the global recent fetch.
+        // Unmapped: reconcile against the global recent fetch. No backfill —
+        // global results mix other users' requests and aren't attributable.
         const data = await fetchRequests(seerrUrl, seerrApiKey, 100, "all");
-        results = data?.results || [];
+        updateFromSeerr(data?.results || []);
       }
-      updateFromSeerr(results);
     } catch (err) {
       logger.warn(`[queue] reconcile failed: ${err?.message || err}`);
     }
