@@ -131,6 +131,23 @@ describe("requestStore.updateFromSeerr", () => {
     expect(store.getByUser("user-C")).toEqual([]);
   });
 
+  it("returns the stage transitions it applied", () => {
+    store.add({ requestId: 70, tmdbId: 1, mediaType: "movie", title: "T", discordUserId: "user-T",
+      seerrStatus: 2, mediaStatus: 3 }); // starts Processing
+
+    const transitions = store.updateFromSeerr([{ id: 70, status: 2, media: { status: 5 } }]);
+    expect(transitions).toEqual([
+      expect.objectContaining({ from: "Processing", to: "Available", record: expect.objectContaining({ requestId: 70 }) }),
+    ]);
+  });
+
+  it("returns no transition when the stage is unchanged", () => {
+    store.add({ requestId: 71, tmdbId: 2, mediaType: "movie", title: "T", discordUserId: "user-T",
+      seerrStatus: 1, mediaStatus: 1 }); // Pending
+    const transitions = store.updateFromSeerr([{ id: 71, status: 1, media: { status: 1 } }]);
+    expect(transitions).toEqual([]);
+  });
+
   it("keeps an available item Available when the request flips to COMPLETED (status 5)", () => {
     store.add({ requestId: 7, tmdbId: 3003, mediaType: "movie", title: "Dune", discordUserId: "user-E" });
 

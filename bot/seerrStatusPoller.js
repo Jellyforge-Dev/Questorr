@@ -19,6 +19,7 @@
 
 import { fetchRequests } from "../api/seerr.js";
 import { updateFromSeerr } from "../utils/requestStore.js";
+import { isNotifyEnabled } from "../utils/notifyPrefs.js";
 import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
 import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
 import logger from "../utils/logger.js";
@@ -82,6 +83,29 @@ export function stopSeerrStatusPoller() {
   logger.info("[SEERR Status Poller] Stopped");
 }
 
+/**
+ * DM opted-in requesters when one of their requests transitions into Available.
+ * Driven by the stage transitions returned from updateFromSeerr — opt-in only
+ * (see /notify). Best-effort per user; a failed DM doesn't block the others.
+ */
+export async function notifyAvailableTransitions(transitions, client) {
+  if (!client || !Array.isArray(transitions)) return;
+
+  for (const { to, record } of transitions) {
+    if (to !== "Available") continue;
+    const discordUserId = record?.discordUserId;
+    if (!discordUserId || !isNotifyEnabled(discordUserId)) continue;
+
+    try {
+      const user = await client.users.fetch(discordUserId);
+      await user.send(t("notify_available_dm", { title: record.title || `TMDB ${record.tmdbId}` }));
+      logger.info(`[/notify] DM sent to ${discordUserId} for "${record.title}" (now available)`);
+    } catch (err) {
+      logger.warn(`[/notify] Could not DM ${discordUserId}: ${err.message}`);
+    }
+  }
+}
+
 export async function poll(seedOnly) {
   const seerrUrl = process.env.SEERR_URL;
   const apiKey = process.env.SEERR_API_KEY;
@@ -92,7 +116,11 @@ export async function poll(seedOnly) {
 
   // Keep the request lifecycle store warm. Reuses the already-fetched data — no
   // extra HTTP call. Skipped during seed for parity with the DM-suppression logic.
-  if (!seedOnly) updateFromSeerr(results);
+  if (!seedOnly) {
+    const transitions = updateFromSeerr(results);
+    // /notify: DM opted-in requesters when their request becomes available.
+    await notifyAvailableTransitions(transitions, botState.discordClient);
+  }
 
   for (const req of results) {
     const reqId = req.id;

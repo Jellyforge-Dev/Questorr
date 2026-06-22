@@ -16,6 +16,7 @@ export function buildHelpDescription() {
     `**${t("wizard_section_browse")}**`,
     `📋 \`/watchlist\` — ${t("wizard_desc_watchlist")}`,
     `🗒️ \`/queue\` — ${t("wizard_desc_queue")}`,
+    `🔔 \`/notify\` — ${t("wizard_desc_notify")}`,
     `📅 \`/upcoming\` — ${t("wizard_desc_upcoming")}`,
     `📈 \`/trending\` — ${t("wizard_desc_trending")}`,
     "",

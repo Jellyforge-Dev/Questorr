@@ -86,7 +86,8 @@ export function add({ requestId, tmdbId, mediaType, title, discordUserId, seerrS
  * records by requestId only; unknown ids are ignored (not created).
  */
 export function updateFromSeerr(reqArray) {
-  if (!Array.isArray(reqArray)) return;
+  const transitions = [];
+  if (!Array.isArray(reqArray)) return transitions;
   let changed = false;
 
   for (const req of reqArray) {
@@ -94,14 +95,20 @@ export function updateFromSeerr(reqArray) {
     const record = records.get(String(req.id));
     if (!record) continue;
 
+    const fromStage = record.stage;
     record.seerrStatus = req.status ?? null;
     record.mediaStatus = req.media?.status ?? null;
     record.stage = deriveStage(req);
     record.updatedAt = new Date().toISOString();
     changed = true;
+
+    if (record.stage !== fromStage) {
+      transitions.push({ record, from: fromStage, to: record.stage });
+    }
   }
 
   if (changed) save();
+  return transitions;
 }
 
 /**
