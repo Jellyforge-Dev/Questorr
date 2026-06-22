@@ -16,6 +16,7 @@ vi.mock("../utils/requestStore.js", () => ({
     AVAILABLE: "Available",
     PARTIALLY_AVAILABLE: "PartiallyAvailable",
     DECLINED: "Declined",
+    FAILED: "Failed",
   },
 }));
 vi.mock("../api/seerr.js", () => ({ fetchSeerrUserRequestsFull, fetchRequests }));
@@ -66,6 +67,17 @@ describe("buildQueueEmbed", () => {
   it("labels media type and falls back to TMDB id when title is missing", () => {
     const embed = buildQueueEmbed([{ title: null, tmdbId: 999, mediaType: "movie", stage: "Pending" }]);
     expect(embed.data.description).toContain("999");
+  });
+
+  it("renders a Failed group last", () => {
+    const records = [
+      { title: "Broken Movie", mediaType: "movie", stage: "Failed" },
+      { title: "Dune", mediaType: "movie", stage: "Pending" },
+    ];
+    const desc = buildQueueEmbed(records).data.description;
+    expect(desc).toContain("queue_stage_failed");
+    expect(desc).toContain("Broken Movie");
+    expect(desc.indexOf("queue_stage_pending")).toBeLessThan(desc.indexOf("queue_stage_failed"));
   });
 });
 

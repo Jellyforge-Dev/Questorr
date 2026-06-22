@@ -12,6 +12,7 @@ const STAGE_ORDER = [
   [STAGES.PARTIALLY_AVAILABLE, "queue_stage_partial"],
   [STAGES.AVAILABLE, "queue_stage_available"],
   [STAGES.DECLINED, "queue_stage_declined"],
+  [STAGES.FAILED, "queue_stage_failed"],
 ];
 
 function typeLabel(mediaType) {

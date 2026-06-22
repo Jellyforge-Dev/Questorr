@@ -88,9 +88,10 @@ describe("requestStore.deriveStage", () => {
     { status: 5, mediaStatus: 5, expected: "Available" },
     { status: 5, mediaStatus: 4, expected: "PartiallyAvailable" },
     { status: 5, mediaStatus: 3, expected: "Processing" },
-    // request.status FAILED (4): past approval, derive from media.status.
-    { status: 4, mediaStatus: 5, expected: "Available" },
-    { status: 4, mediaStatus: 3, expected: "Processing" },
+    // request.status FAILED (4): dedicated Failed stage regardless of media.status.
+    { status: 4, mediaStatus: 5, expected: "Failed" },
+    { status: 4, mediaStatus: 3, expected: "Failed" },
+    { status: 4, mediaStatus: 1, expected: "Failed" },
   ];
 
   for (const { status, mediaStatus, expected } of cases) {

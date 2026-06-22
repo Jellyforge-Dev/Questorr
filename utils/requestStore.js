@@ -14,9 +14,11 @@ export const STAGES = {
   AVAILABLE: "Available",
   PARTIALLY_AVAILABLE: "PartiallyAvailable",
   DECLINED: "Declined",
+  FAILED: "Failed",
 };
 
-const COMPLETED_STAGES = new Set([STAGES.AVAILABLE, STAGES.DECLINED]);
+// Terminal stages — prune drops these once old enough.
+const COMPLETED_STAGES = new Set([STAGES.AVAILABLE, STAGES.DECLINED, STAGES.FAILED]);
 
 const STORE_PATH = path.join(path.dirname(CONFIG_PATH), "request-store.json");
 
@@ -36,12 +38,13 @@ export function deriveStage(req) {
   const mediaStatus = req?.media?.status;
 
   // request.status: 1 PENDING, 2 APPROVED, 3 DECLINED, 4 FAILED, 5 COMPLETED.
-  // Only PENDING and DECLINED gate on request.status. Everything past approval
-  // (APPROVED/FAILED/COMPLETED) derives availability from media.status — Jellyseerr
-  // flips the request to COMPLETED (5) once the media is available, so gating the
-  // media check on status === 2 would wrongly revert an available item to Pending.
+  // PENDING/DECLINED/FAILED gate on request.status. Everything else past approval
+  // (APPROVED/COMPLETED) derives availability from media.status — Jellyseerr flips
+  // the request to COMPLETED (5) once the media is available, so gating the media
+  // check on status === 2 would wrongly revert an available item to Pending.
   if (status === 3) return STAGES.DECLINED;
   if (status === 1) return STAGES.PENDING;
+  if (status === 4) return STAGES.FAILED;
 
   // media.status: 1 UNKNOWN, 2 PENDING, 3 PROCESSING, 4 PARTIALLY_AVAILABLE, 5 AVAILABLE.
   if (mediaStatus === 5) return STAGES.AVAILABLE;
