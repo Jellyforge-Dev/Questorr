@@ -247,9 +247,6 @@ export function getCommands() {
     new SlashCommandBuilder()
       .setName("queue")
       .setDescription("Show the status of your Questorr requests"),
-    new SlashCommandBuilder()
-      .setName("notify")
-      .setDescription("Toggle a DM when one of your requests becomes available"),
   ].map((c) => c.toJSON());
 }
 

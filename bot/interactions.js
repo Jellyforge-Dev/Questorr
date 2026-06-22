@@ -17,7 +17,6 @@ import { handleCollectionCommand, buildCollectionReply } from "./commands/collec
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
 import { handleSimilarCommand } from "./commands/similar.js";
 import { handleQueueCommand } from "./commands/queue.js";
-import { handleNotifyCommand } from "./commands/notify.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -241,9 +240,6 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "queue") {
           return handleQueueCommand(interaction);
-        }
-        if (interaction.commandName === "notify") {
-          return handleNotifyCommand(interaction);
         }
       }
     } catch (outerErr) {

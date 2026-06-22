@@ -14,7 +14,6 @@ Schnell-Orientierung, wo Daten liegen:
 |-------|--------|
 | `config/request-store.json` | Lifecycle aller via Questorr/Seerr getrackten Requests |
 | `config/notification-audit.json` | Audit-Trail (was wurde gepostet/übersprungen) |
-| `config/notify-prefs.json` | Wer hat `/notify` aktiviert |
 | `config/notify-dedup.json` | Cross-Source-Dedup-Fenster (48h) |
 | `logs/combined-*.log`, `logs/error-*.log` | Bot-Logs (mit Secret-Redaktion) |
 
@@ -111,45 +110,7 @@ curl http://<host>:8282/api/notifications/audit?limit=20 \
   notified`.
 
 ---
-
-## 4. `/notify` – Opt-in-DM bei Verfügbarkeit
-
-**Was:** User können per `/notify` eine DM abonnieren, die kommt, sobald eine
-ihrer Anfragen den Status **Verfügbar** erreicht.
-
-**Voraussetzung:** Der Seerr-Status-Poller muss laufen
-(`SEERR_STATUS_POLLING_ENABLED=true`), da die Übergangserkennung dort sitzt.
-
-**Schritte:**
-1. In Discord `/notify` ausführen → es sollte „🔔 Du bekommst jetzt eine DM …"
-   (ephemer) erscheinen. Nochmal `/notify` → „🔕 … ausgeschaltet."
-2. `/notify` wieder **aktivieren**.
-3. Einen Film/eine Serie via Questorr anfragen (Request-Button), der noch nicht
-   verfügbar ist.
-4. Den Request verfügbar werden lassen (Download abschließen, bis Seerr
-   `media.status = 5` meldet). Auf den nächsten Poll-Tick warten
-   (Default 120 s, via `SEERR_STATUS_POLL_INTERVAL_SECONDS`).
-
-**Erwartetes Ergebnis:**
-- Schritt 1: korrekte Ein-/Aus-Bestätigung, jeweils nur für dich sichtbar.
-- Schritt 4: Du erhältst eine **DM**: „🎬 **<Titel>** ist jetzt auf Jellyfin
-  verfügbar. Viel Spaß!".
-- Hast du `/notify` **nicht** aktiviert, kommt **keine** DM.
-
-**Wo schauen:**
-- Discord: ephemere Antwort + DM vom Bot.
-- Datei: `config/notify-prefs.json` enthält deine Discord-ID, wenn aktiviert.
-- Logs: `[/notify] DM sent to <id> for "<Titel>" (now available)`.
-
-**Schnelltest ohne echten Download:** `config/request-store.json` bei
-gestopptem Bot editieren – einen Eintrag mit deiner `discordUserId` und
-`stage: "Processing"` anlegen, Bot starten, `/notify` aktivieren, dann in Seerr
-den Status auf verfügbar bringen; beim nächsten Tick erkennt der Poller den
-Übergang Processing → Available und schickt die DM.
-
----
-
-## 5. `/queue` – Backfill, Titel-Auflösung, Stages
+## 4. `/queue` – Backfill, Titel-Auflösung, Stages
 
 **Was:** `/queue` (auch über den „Meine Anfragen"-Button im `/help`-Embed)
 zeigt deine Requests gruppiert nach Stage. Neu: Backfill alter Requests,
@@ -188,9 +149,9 @@ Requests nicht eindeutig einem Discord-User zuordenbar sind.
 
 ---
 
-## 6. Quick Wins
+## 5. Quick Wins
 
-### 6a. Autocomplete-Mindestlänge
+### 5a. Autocomplete-Mindestlänge
 **Schritte:** `/search` (oder `/request`, `/collection`) tippen und **1 Zeichen**
 eingeben, dann ein zweites.
 **Erwartet:** Bei 1 Zeichen **keine** Vorschläge; ab 2 Zeichen kommen TMDB-
@@ -198,19 +159,19 @@ Vorschläge. Spart TMDB-Calls.
 **Wo schauen:** Discord-Autocomplete-Dropdown; Logs zeigen keine TMDB-Suche bei
 1 Zeichen.
 
-### 6b. Parallele Titel-Auflösung
+### 5b. Parallele Titel-Auflösung
 **Schritte:** Mit vielen alten, titellosen Einträgen `/queue` erstmals aufrufen.
 **Erwartet:** Titel erscheinen zügig (Lookups laufen parallel statt
 nacheinander); Ergebnis identisch zu vorher, nur schneller.
 **Wo schauen:** `/queue`-Antwortzeit; `config/request-store.json` (Titel gefüllt).
 
-### 6c. Geteilter `getUserMappingsFromEnv`-Helper
+### 5c. Geteilter `getUserMappingsFromEnv`-Helper
 **Schritte:** `/foryou` und `/queue` als **gemappter** User aufrufen.
 **Erwartet:** Beide erkennen dein Mapping wie zuvor (reines Refactoring, kein
 Verhaltenswechsel).
 **Wo schauen:** Discord (personalisierte Ergebnisse bzw. Backfill funktionieren).
 
-### 6d. `prune()` im Poll-Tick
+### 5d. `prune()` im Poll-Tick
 **Was:** Abgeschlossene Store-Einträge (>30 Tage) werden jetzt auch laufend
 beim Seerr-Poll entfernt, nicht nur beim Start.
 **Schritte:** Bei gestopptem Bot in `config/request-store.json` einen
@@ -219,7 +180,7 @@ anlegen; Bot starten mit aktiviertem Status-Poller; einen Poll-Tick abwarten.
 **Erwartet:** Der alte Eintrag verschwindet aus `request-store.json`.
 **Wo schauen:** `config/request-store.json` vor/nach dem Tick.
 
-### 6e. Toter Code entfernt
+### 5e. Toter Code entfernt
 **Was:** `api/streamystats.js` und `bot/jellyfinWebhook.js` (nirgends importiert)
 wurden gelöscht.
 **Erwartet:** App startet normal; keine Import-Fehler.
