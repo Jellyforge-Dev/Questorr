@@ -35,7 +35,7 @@ import {
 import logger from "../utils/logger.js";
 import { t } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
-import { wasRecentlyNotified } from "../utils/notifyDedup.js";
+import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
 // (requestButton.js, randomRequestButton.js, commands/search.js). The poller
 // reads it to recognize "this title was requested via Questorr" and skip the
@@ -627,7 +627,7 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   await doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
 }
 
-async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
+export async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
   const itemType = item.Type;
   const typeSettings = TYPE_SETTINGS[itemType];
   if (!typeSettings) return;
@@ -678,6 +678,11 @@ async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap,
   await channel.send(msgOptions);
 
   logger.info(`[Jellyfin Poller] ✅ Sent notification for "${item.Name}" → channel ${channelId}`);
+
+  // Mark this TMDB ID so the Seerr MEDIA_AVAILABLE webhook skips the duplicate
+  // post. Mirrors seerrWebhook.js: both sources now check AND mark notifyDedup,
+  // making the cross-source dedup bidirectional regardless of which fires first.
+  if (tmdbId) markNotified(tmdbType, tmdbId);
 }
 
 // ─── Embed Builder ────────────────────────────────────────────────────────────
