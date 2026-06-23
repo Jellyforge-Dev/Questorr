@@ -332,6 +332,24 @@ export function updateConfig(updates) {
 }
 
 /**
+ * One-time migration of NOTIFY_ON_AVAILABLE for installs that predate the
+ * availability-DM gate. The gate was never wired, so the DM always fired and a
+ * stored "false" reflected the old default — not a deliberate choice. Bump such
+ * a "false" to "true" to preserve the observed behaviour, and set a marker so a
+ * user's *future* deliberate "false" (now that the gate works) is never reverted.
+ *
+ * Mutates `config` in place. @returns {boolean} true if the caller should persist.
+ */
+export function migrateNotifyOnAvailable(config) {
+  if (config.NOTIFY_ON_AVAILABLE_MIGRATED !== undefined) return false;
+  if (config.NOTIFY_ON_AVAILABLE === "false" || config.NOTIFY_ON_AVAILABLE === false) {
+    config.NOTIFY_ON_AVAILABLE = "true";
+  }
+  config.NOTIFY_ON_AVAILABLE_MIGRATED = true;
+  return true;
+}
+
+/**
  * Loads config into process.env for compatibility with existing code
  * Includes automatic migrations for backwards compatibility
  * @returns {boolean} True if load succeeded
@@ -383,6 +401,17 @@ export function loadConfigToEnv() {
       config.SEERR_ROOT_FOLDER_CHANNELS = JSON.parse(config.SEERR_ROOT_FOLDER_CHANNELS);
     } catch (_) {
       config.SEERR_ROOT_FOLDER_CHANNELS = {};
+    }
+  }
+
+  // 1b. One-time NOTIFY_ON_AVAILABLE migration (see migrateNotifyOnAvailable).
+  if (migrateNotifyOnAvailable(config)) {
+    if (writeConfig(config)) {
+      logger.info(
+        `🔄 NOTIFY_ON_AVAILABLE migrated (now "${config.NOTIFY_ON_AVAILABLE}") and marker set`
+      );
+    } else {
+      logger.error("Failed to persist NOTIFY_ON_AVAILABLE migration");
     }
   }
 
