@@ -380,7 +380,7 @@ export function matchRootFolderToChannel(rootFolder) {
   return null;
 }
 
-async function resolveChannel(rootFolder, tmdbId, mediaType) {
+export async function resolveChannel(rootFolder, tmdbId, mediaType) {
   // 1. Root-folder mapping. rootFolder may come from the webhook payload directly
   //    OR from the Seerr API fallback in processEvent — both are authoritative.
   if (rootFolder) {
