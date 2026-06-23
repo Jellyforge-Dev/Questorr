@@ -4177,3 +4177,40 @@ tr.notif-disabled td {
   opacity: 0.35;
   pointer-events: none;
 }
+
+/* ── Notification audit table: responsive card layout on narrow screens ───── */
+@media (max-width: 768px) {
+  .audit-table thead {
+    /* Hide the header row; each cell carries its own label via data-label. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .audit-table,
+  .audit-table tbody,
+  .audit-table tr,
+  .audit-table td {
+    display: block;
+    width: 100%;
+  }
+  .audit-table tr {
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--surface1);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+  }
+  .audit-table td {
+    padding: 0.15rem 0 !important;
+    white-space: normal !important;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .audit-table td::before {
+    content: attr(data-label);
+    flex: 0 0 5.5rem;
+    font-weight: 600;
+    color: var(--subtext0);
+  }
+}

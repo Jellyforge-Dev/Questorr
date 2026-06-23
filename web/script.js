@@ -1750,34 +1750,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       const cols = ["time", "source", "event", "title", "channel", "status"];
+      const labels = cols.map((c) => esc(t("config.audit_col_" + c)));
       const head =
-        '<tr style="text-align:left;border-bottom:1px solid var(--surface1);">' +
-        cols
-          .map((c) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${esc(t("config.audit_col_" + c))}</th>`)
+        '<thead><tr style="text-align:left;border-bottom:1px solid var(--surface1);">' +
+        labels.map((l) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${l}</th>`).join("") +
+        "</tr></thead>";
+      const body =
+        "<tbody>" +
+        rows
+          .map((r) => {
+            const when = r.at ? new Date(r.at).toLocaleString() : "—";
+            const status =
+              r.status === "posted"
+                ? `<span style="color:var(--green,#a6e3a1);">✅ ${esc(t("config.audit_status_posted"))}</span>`
+                : `<span style="color:var(--subtext0);">⏭️ ${esc(t("config.audit_status_skipped"))}</span>`;
+            const reason = r.reason ? ` <span style="color:var(--subtext0);">(${esc(r.reason)})</span>` : "";
+            const title = r.title || (r.tmdbId ? `TMDB ${r.tmdbId}` : "—");
+            const cells = [esc(when), esc(r.source || "—"), esc(r.eventType || "—"), esc(title), esc(r.channelId || "—"), status + reason];
+            return (
+              '<tr style="border-bottom:1px solid var(--surface0);">' +
+              cells
+                .map((cell, i) => `<td data-label="${labels[i]}" style="padding:0.3rem 0.6rem 0.3rem 0;vertical-align:top;">${cell}</td>`)
+                .join("") +
+              "</tr>"
+            );
+          })
           .join("") +
-        "</tr>";
-      const body = rows
-        .map((r) => {
-          const when = r.at ? new Date(r.at).toLocaleString() : "—";
-          const status =
-            r.status === "posted"
-              ? `<span style="color:var(--green,#a6e3a1);">✅ ${esc(t("config.audit_status_posted"))}</span>`
-              : `<span style="color:var(--subtext0);">⏭️ ${esc(t("config.audit_status_skipped"))}</span>`;
-          const reason = r.reason ? ` <span style="color:var(--subtext0);">(${esc(r.reason)})</span>` : "";
-          const title = r.title || (r.tmdbId ? `TMDB ${r.tmdbId}` : "—");
-          return (
-            '<tr style="border-bottom:1px solid var(--surface0);">' +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;white-space:nowrap;">${esc(when)}</td>` +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.source || "—")}</td>` +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.eventType || "—")}</td>` +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(title)}</td>` +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.channelId || "—")}</td>` +
-            `<td style="padding:0.3rem 0.6rem 0.3rem 0;white-space:nowrap;">${status}${reason}</td>` +
-            "</tr>"
-          );
-        })
-        .join("");
-      auditBody.innerHTML = `<table style="width:100%;border-collapse:collapse;">${head}${body}</table>`;
+        "</tbody>";
+      auditBody.innerHTML = `<table class="audit-table" style="width:100%;border-collapse:collapse;">${head}${body}</table>`;
     };
 
     const loadAudit = async () => {
