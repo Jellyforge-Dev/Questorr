@@ -143,11 +143,10 @@ export async function handleRequestButton(interaction) {
       discordUserId: interaction.user.id,
     });
 
-    // Round 12: ALWAYS record the request in pendingRequests (no longer gated
-    // on NOTIFY_ON_AVAILABLE). The map now also serves as the source-of-truth
-    // for the Jellyfin poller to recognize "this title was requested via
-    // Questorr/Seerr" and suppress the duplicate "Neu in Jellyfin" post.
-    // DM dispatch in seerrWebhook.js remains NOTIFY_ON_AVAILABLE-gated.
+    // Always record the request in pendingRequests. The map serves as the
+    // source-of-truth for the Jellyfin poller to recognize "this title was
+    // requested via Questorr/Seerr" and suppress the duplicate "Neu in Jellyfin"
+    // post. The availability DM in seerrWebhook.js is gated by NOTIFY_ON_AVAILABLE.
     {
       const requestKey = `${tmdbId}-${mediaType}`;
       if (!pendingRequests.has(requestKey)) {

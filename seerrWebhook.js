@@ -1202,6 +1202,14 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
   const meta = DM_EVENT_META[eventType];
   if (!meta) return;
 
+  // NOTIFY_ON_AVAILABLE gates only the "now available" DM (dashboard checkbox).
+  // Default on; set to "false" to suppress availability DMs while keeping the
+  // channel post and all other DMs (pending/approved/declined) unaffected.
+  if (eventType === "MEDIA_AVAILABLE" && process.env.NOTIFY_ON_AVAILABLE === "false") {
+    logger.debug("[SEERR WEBHOOK] Skipping MEDIA_AVAILABLE DM — NOTIFY_ON_AVAILABLE is false");
+    return;
+  }
+
   const discordId = await findDiscordIdForSeerrUser(data);
   if (!discordId) {
     logger.debug(`[SEERR WEBHOOK] No Discord ID found for DM (event: ${eventType}, user: ${data.request?.requestedBy_username || "unknown"})`);
