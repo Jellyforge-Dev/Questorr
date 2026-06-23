@@ -1,12 +1,16 @@
 /**
  * Preflight diagnostics — runs a set of independent readiness checks and
- * collects a per-check {ok, detail} result. The checks themselves are injected
- * (so the runner stays pure/testable); the route wires the real implementations.
+ * collects a per-check result. The checks themselves are injected (so the runner
+ * stays pure/testable); the route wires the real implementations.
+ *
+ * Checks return language-neutral results: { ok, detailKey, params } — the
+ * frontend resolves detailKey (+ params) against the active locale, so the panel
+ * is fully translatable.
  */
 
 /**
- * @param {Record<string, () => Promise<{ok: boolean, detail?: string}>>} checks
- * @returns {Promise<Array<{name: string, ok: boolean, detail: string}>>}
+ * @param {Record<string, () => Promise<{ok: boolean, detailKey?: string, params?: object}>>} checks
+ * @returns {Promise<Array<{name: string, ok: boolean, detailKey: string, params: object}>>}
  */
 export async function runPreflight(checks) {
   const entries = Object.entries(checks || {});
@@ -14,9 +18,9 @@ export async function runPreflight(checks) {
     entries.map(async ([name, fn]) => {
       try {
         const r = await fn();
-        return { name, ok: !!r?.ok, detail: r?.detail ?? "" };
+        return { name, ok: !!r?.ok, detailKey: r?.detailKey ?? "", params: r?.params ?? {} };
       } catch (err) {
-        return { name, ok: false, detail: err?.message || "error" };
+        return { name, ok: false, detailKey: "preflight_error_detail", params: { message: err?.message || "error" } };
       }
     })
   );
@@ -25,22 +29,22 @@ export async function runPreflight(checks) {
 /**
  * Validate USER_MAPPINGS shape/consistency from its raw env value.
  * @param {string|undefined} raw
- * @returns {{ok: boolean, detail: string}}
+ * @returns {{ok: boolean, detailKey: string, params?: object}}
  */
 export function checkUserMappings(raw) {
-  if (!raw) return { ok: true, detail: "Keine Mappings konfiguriert" };
+  if (!raw) return { ok: true, detailKey: "preflight_mappings_none" };
   let mappings;
   try {
     mappings = typeof raw === "string" ? JSON.parse(raw) : raw;
   } catch {
-    return { ok: false, detail: "USER_MAPPINGS ist kein gültiges JSON" };
+    return { ok: false, detailKey: "preflight_mappings_not_json" };
   }
   if (!Array.isArray(mappings)) {
-    return { ok: false, detail: "USER_MAPPINGS ist kein Array" };
+    return { ok: false, detailKey: "preflight_mappings_not_array" };
   }
   const bad = mappings.filter((m) => !m || !m.discordUserId || !m.seerrUserId);
   if (bad.length > 0) {
-    return { ok: false, detail: `${bad.length} Mapping(s) ohne discordUserId/seerrUserId` };
+    return { ok: false, detailKey: "preflight_mappings_incomplete", params: { count: bad.length } };
   }
-  return { ok: true, detail: `${mappings.length} Mapping(s) konsistent` };
+  return { ok: true, detailKey: "preflight_mappings_ok", params: { count: mappings.length } };
 }

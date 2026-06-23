@@ -197,30 +197,34 @@ router.get("/preflight", authenticateToken, async (_req, res) => {
 
   const checks = {
     seerr: async () => {
-      if (!seerrUrl || !seerrKey) return { ok: false, detail: "Nicht konfiguriert" };
+      if (!seerrUrl || !seerrKey) return { ok: false, detailKey: "preflight_not_configured" };
       const u = new URL(getSeerrApiUrl(seerrUrl));
       u.pathname = u.pathname.replace(/\/$/, "") + "/settings/about";
       const r = await axios.get(u.href, { headers: { "X-Api-Key": seerrKey }, timeout: TIMEOUTS.SEERR_API });
-      return { ok: true, detail: `Verbunden (v${r.data?.version ?? "?"})` };
+      return { ok: true, detailKey: "preflight_seerr_connected", params: { version: r.data?.version ?? "?" } };
     },
     jellyfin: async () => {
-      if (!jfBase) return { ok: false, detail: "Nicht konfiguriert" };
+      if (!jfBase) return { ok: false, detailKey: "preflight_not_configured" };
       const u = new URL(jfBase);
       u.pathname = u.pathname.replace(/\/$/, "") + "/System/Info/Public";
       const r = await axios.get(u.href, { timeout: TIMEOUTS.JELLYFIN_API });
-      return { ok: !!r.data?.ServerName, detail: r.data?.ServerName ? `${r.data.ServerName} (v${r.data.Version})` : "Ungültige Antwort" };
+      return r.data?.ServerName
+        ? { ok: true, detailKey: "preflight_jellyfin_connected", params: { name: r.data.ServerName, version: r.data.Version } }
+        : { ok: false, detailKey: "preflight_jellyfin_invalid" };
     },
     tmdb: async () => {
-      if (!tmdbKey) return { ok: false, detail: "Nicht konfiguriert" };
+      if (!tmdbKey) return { ok: false, detailKey: "preflight_not_configured" };
       await axios.get("https://api.themoviedb.org/3/configuration", {
         params: { api_key: tmdbKey },
         timeout: TIMEOUTS.TMDB_API ?? 8000,
       });
-      return { ok: true, detail: "API-Key gültig" };
+      return { ok: true, detailKey: "preflight_tmdb_valid" };
     },
     bot: async () => {
       const running = botState.isBotRunning && !!botState.discordClient?.user;
-      return { ok: running, detail: running ? `Verbunden als ${botState.discordClient.user.tag}` : "Bot läuft nicht / Discord nicht verbunden" };
+      return running
+        ? { ok: true, detailKey: "preflight_bot_connected", params: { tag: botState.discordClient.user.tag } }
+        : { ok: false, detailKey: "preflight_bot_down" };
     },
     mappings: async () => checkUserMappings(process.env.USER_MAPPINGS),
   };

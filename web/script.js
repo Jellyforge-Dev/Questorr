@@ -1698,12 +1698,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const body = document.getElementById("PREFLIGHT_BODY");
     const btn = document.getElementById("BTN_PREFLIGHT");
     if (!body || !btn) return;
-    const labels = { seerr: "Seerr", jellyfin: "Jellyfin", tmdb: "TMDB", bot: "Bot / Discord", mappings: "User-Mappings" };
     const esc = (s) =>
       String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    // Resolve a backend detailKey (+ params) against the active locale.
+    const detail = (c) => {
+      let s = t("config." + c.detailKey);
+      const p = c.params || {};
+      for (const k in p) s = s.split("{{" + k + "}}").join(String(p[k]));
+      return s;
+    };
     const run = async () => {
       btn.disabled = true;
-      body.textContent = "Prüfe…";
+      body.textContent = t("config.preflight_checking");
       try {
         const token = localStorage.getItem("questorr_token") || "";
         const res = await fetch("/api/preflight", { headers: { Authorization: `Bearer ${token}` } });
@@ -1712,15 +1718,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         body.innerHTML = (data.checks || [])
           .map(
             (c) =>
-              '<div style="display:flex;gap:0.5rem;padding:0.2rem 0;align-items:baseline;">' +
+              '<div style="display:flex;gap:0.5rem;padding:0.3rem 0;align-items:baseline;flex-wrap:wrap;">' +
               `<span>${c.ok ? "✅" : "❌"}</span>` +
-              `<span style="min-width:120px;font-weight:600;">${esc(labels[c.name] || c.name)}</span>` +
-              `<span style="color:var(--subtext0);">${esc(c.detail || "")}</span>` +
+              `<span style="font-weight:600;min-width:110px;">${esc(t("config.preflight_label_" + c.name))}</span>` +
+              `<span style="color:var(--subtext0);flex:1;min-width:0;word-break:break-word;">${esc(detail(c))}</span>` +
               "</div>"
           )
           .join("");
       } catch (err) {
-        body.textContent = "Fehler: " + err.message;
+        const tpl = t("config.preflight_error_detail");
+        body.textContent = tpl.split("{{message}}").join(err.message);
       } finally {
         btn.disabled = false;
       }
@@ -1739,14 +1746,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderAudit = (rows) => {
       if (!rows || rows.length === 0) {
-        auditBody.innerHTML =
-          '<div style="padding:0.5rem 0;color:var(--subtext0);">Noch keine Benachrichtigungen aufgezeichnet.</div>';
+        auditBody.innerHTML = `<div style="padding:0.5rem 0;color:var(--subtext0);">${esc(t("config.audit_empty"))}</div>`;
         return;
       }
+      const cols = ["time", "source", "event", "title", "channel", "status"];
       const head =
         '<tr style="text-align:left;border-bottom:1px solid var(--surface1);">' +
-        ["Zeit", "Quelle", "Event", "Titel", "Channel", "Status"]
-          .map((h) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${h}</th>`)
+        cols
+          .map((c) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${esc(t("config.audit_col_" + c))}</th>`)
           .join("") +
         "</tr>";
       const body = rows
@@ -1754,8 +1761,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           const when = r.at ? new Date(r.at).toLocaleString() : "—";
           const status =
             r.status === "posted"
-              ? '<span style="color:var(--green,#a6e3a1);">✅ posted</span>'
-              : '<span style="color:var(--subtext0);">⏭️ skipped</span>';
+              ? `<span style="color:var(--green,#a6e3a1);">✅ ${esc(t("config.audit_status_posted"))}</span>`
+              : `<span style="color:var(--subtext0);">⏭️ ${esc(t("config.audit_status_skipped"))}</span>`;
           const reason = r.reason ? ` <span style="color:var(--subtext0);">(${esc(r.reason)})</span>` : "";
           const title = r.title || (r.tmdbId ? `TMDB ${r.tmdbId}` : "—");
           return (
@@ -1774,7 +1781,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const loadAudit = async () => {
-      auditBody.textContent = "Lädt…";
+      auditBody.textContent = t("config.audit_loading");
       try {
         const token = localStorage.getItem("questorr_token") || "";
         const res = await fetch("/api/notifications/audit?limit=50", {
@@ -1784,7 +1791,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await res.json();
         renderAudit(data.notifications || []);
       } catch (err) {
-        auditBody.textContent = "Fehler beim Laden: " + err.message;
+        auditBody.textContent = t("config.audit_error_loading") + ": " + err.message;
       }
     };
 
