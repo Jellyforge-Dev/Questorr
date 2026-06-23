@@ -1693,6 +1693,41 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   // Test Cleanup Advisor button
+  // ── Preflight panel (issue #7): aggregated readiness check ────────────────
+  (() => {
+    const body = document.getElementById("PREFLIGHT_BODY");
+    const btn = document.getElementById("BTN_PREFLIGHT");
+    if (!body || !btn) return;
+    const labels = { seerr: "Seerr", jellyfin: "Jellyfin", tmdb: "TMDB", bot: "Bot / Discord", mappings: "User-Mappings" };
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const run = async () => {
+      btn.disabled = true;
+      body.textContent = "Prüfe…";
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/preflight", { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        body.innerHTML = (data.checks || [])
+          .map(
+            (c) =>
+              '<div style="display:flex;gap:0.5rem;padding:0.2rem 0;align-items:baseline;">' +
+              `<span>${c.ok ? "✅" : "❌"}</span>` +
+              `<span style="min-width:120px;font-weight:600;">${esc(labels[c.name] || c.name)}</span>` +
+              `<span style="color:var(--subtext0);">${esc(c.detail || "")}</span>` +
+              "</div>"
+          )
+          .join("");
+      } catch (err) {
+        body.textContent = "Fehler: " + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    btn.addEventListener("click", run);
+  })();
+
   // ── Notification audit panel (issue #5): recent post/skip decisions ───────
   (() => {
     const auditBody = document.getElementById("NOTIFICATION_AUDIT_BODY");

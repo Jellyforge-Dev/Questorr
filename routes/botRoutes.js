@@ -8,6 +8,9 @@ import path from "path";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
 import { getRecentNotifications } from "../utils/notificationAudit.js";
+import { runPreflight, checkUserMappings } from "../utils/preflight.js";
+import { getSeerrApiUrl } from "../utils/seerrUrl.js";
+import { TIMEOUTS } from "../lib/constants.js";
 import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
 import { updateConfig } from "../utils/configFile.js";
@@ -181,6 +184,55 @@ router.get("/health/details", authenticateToken, async (_req, res) => {
 router.get("/notifications/audit", authenticateToken, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
   res.json({ notifications: getRecentNotifications(limit) });
+});
+
+// ─── Preflight: aggregated readiness check (dashboard "Alles prüfen") ────────
+// Runs independent checks against the *saved* config and reports {name,ok,detail}
+// per check. Each check is isolated so one failure doesn't sink the others.
+router.get("/preflight", authenticateToken, async (_req, res) => {
+  const seerrUrl = process.env.SEERR_URL;
+  const seerrKey = process.env.SEERR_API_KEY;
+  const jfBase = process.env.JELLYFIN_BASE_URL;
+  const tmdbKey = process.env.TMDB_API_KEY;
+
+  const checks = {
+    seerr: async () => {
+      if (!seerrUrl || !seerrKey) return { ok: false, detail: "Nicht konfiguriert" };
+      const u = new URL(getSeerrApiUrl(seerrUrl));
+      u.pathname = u.pathname.replace(/\/$/, "") + "/settings/about";
+      const r = await axios.get(u.href, { headers: { "X-Api-Key": seerrKey }, timeout: TIMEOUTS.SEERR_API });
+      return { ok: true, detail: `Verbunden (v${r.data?.version ?? "?"})` };
+    },
+    jellyfin: async () => {
+      if (!jfBase) return { ok: false, detail: "Nicht konfiguriert" };
+      const u = new URL(jfBase);
+      u.pathname = u.pathname.replace(/\/$/, "") + "/System/Info/Public";
+      const r = await axios.get(u.href, { timeout: TIMEOUTS.JELLYFIN_API });
+      return { ok: !!r.data?.ServerName, detail: r.data?.ServerName ? `${r.data.ServerName} (v${r.data.Version})` : "Ungültige Antwort" };
+    },
+    tmdb: async () => {
+      if (!tmdbKey) return { ok: false, detail: "Nicht konfiguriert" };
+      await axios.get("https://api.themoviedb.org/3/configuration", {
+        params: { api_key: tmdbKey },
+        timeout: TIMEOUTS.TMDB_API ?? 8000,
+      });
+      return { ok: true, detail: "API-Key gültig" };
+    },
+    bot: async () => {
+      const running = botState.isBotRunning && !!botState.discordClient?.user;
+      return { ok: running, detail: running ? `Verbunden als ${botState.discordClient.user.tag}` : "Bot läuft nicht / Discord nicht verbunden" };
+    },
+    mappings: async () => checkUserMappings(process.env.USER_MAPPINGS),
+  };
+
+  try {
+    const results = await runPreflight(checks);
+    const allOk = results.every((r) => r.ok);
+    res.json({ ok: allOk, checks: results });
+  } catch (err) {
+    logger.error("Preflight failed:", err.message);
+    res.status(500).json({ ok: false, error: "Preflight failed" });
+  }
 });
 
 // ─── Insights for Dashboard Step 8 ─────────────────────────────────────────
