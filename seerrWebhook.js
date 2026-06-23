@@ -20,8 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import path from "path";
 import { t, tNotif } from "./utils/botStrings.js";
-import { markNotified } from "./utils/notifyDedup.js";
-import { shouldPost, markPosted } from "./utils/notificationDispatcher.js";
+import { shouldPost, markPosted, markApprovalDmSent } from "./utils/notificationDispatcher.js";
 // Round 12: clean up pendingRequests entries after MEDIA_AVAILABLE so the map
 // (which doubles as the poller's "via Questorr" dedup source) doesn't grow
 // unbounded over time.
@@ -1259,14 +1258,15 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
     logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);
 
     // Cross-source dedup: mark approval/decline DMs so the status poller and
-    // the Discord approve/decline button handler skip duplicates.
+    // the Discord approve/decline button handler skip duplicates. Goes through
+    // the dispatcher so it also lands in the audit trail.
     if (
       eventType === "MEDIA_APPROVED" ||
       eventType === "MEDIA_AUTO_APPROVED" ||
       eventType === "MEDIA_DECLINED"
     ) {
       const reqId = data.request?.request_id ?? tmdbId;
-      if (reqId) markNotified("approval", `${eventType}-${reqId}`);
+      if (reqId) markApprovalDmSent({ eventType, requestId: reqId, source: "seerr-webhook", title, tmdbId });
     }
   } catch (err) {
     logger.warn(`[SEERR WEBHOOK] Could not send DM to ${discordId}: ${err.message}`);

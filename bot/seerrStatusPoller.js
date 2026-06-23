@@ -20,7 +20,7 @@
 import { fetchRequests } from "../api/seerr.js";
 import { updateFromSeerr, prune as pruneRequestStore } from "../utils/requestStore.js";
 import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
-import { wasRecentlyNotified, markNotified } from "../utils/notifyDedup.js";
+import { shouldSendApprovalDm, suppressApprovalDm } from "../utils/notificationDispatcher.js";
 import logger from "../utils/logger.js";
 import { botState } from "./botState.js";
 import { t } from "../utils/botStrings.js";
@@ -127,9 +127,6 @@ export async function poll(seedOnly) {
       const tmdbId = req.media?.tmdbId;
       const mediaType = req.media?.mediaType || req.type;
       const eventType = status === STATUS_APPROVED ? "MEDIA_APPROVED" : "MEDIA_DECLINED";
-      // Shared key with seerrWebhook.js + seerrApproveDecline.js so the three
-      // sources don't fire duplicate DMs for the same approval/decline.
-      const dedupKey = `${eventType}-${reqId}`;
 
       // ── Edit admin embed to show disabled status button ──────────────────
       if (botState.discordClient) {
@@ -178,7 +175,7 @@ export async function poll(seedOnly) {
       }
 
       // ── Send requester DM ─────────────────────────────────────────────────
-      if (wasRecentlyNotified("approval", dedupKey)) {
+      if (!shouldSendApprovalDm({ eventType, requestId: reqId, source: "seerr-status-poller", title: req.media?.title, tmdbId }).send) {
         logger.debug(
           `[SEERR Status Poller] Skipping ${eventType} DM for request ${reqId} (recently notified)`
         );
@@ -191,7 +188,8 @@ export async function poll(seedOnly) {
           logger.debug(
             `[SEERR Status Poller] Skipping ${eventType} DM for request ${reqId} — no title resolved (webhook/button-click should cover this)`
           );
-          markNotified("approval", dedupKey); // mark anyway so we don't loop
+          // Mark anyway so we don't loop; recorded as a skip in the audit trail.
+          suppressApprovalDm({ eventType, requestId: reqId, source: "seerr-status-poller", tmdbId, reason: "no-title" });
           lastSeenStatus.set(reqId, status);
           continue;
         }
@@ -208,8 +206,9 @@ export async function poll(seedOnly) {
           },
         };
         try {
+          // sendRequesterDm marks the approval dedup (via markApprovalDmSent)
+          // and records the posted audit entry, so no explicit mark here.
           await sendRequesterDm(synth, eventType, {}, botState.discordClient, null, null, { tmdbId });
-          markNotified("approval", dedupKey);
           logger.info(
             `[SEERR Status Poller] Detected pending→${
               status === STATUS_APPROVED ? "approved" : "declined"

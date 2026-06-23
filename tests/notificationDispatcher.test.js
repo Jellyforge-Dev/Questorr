@@ -7,9 +7,45 @@ const recordNotification = vi.fn();
 vi.mock("../utils/notifyDedup.js", () => ({ wasRecentlyNotified, markNotified }));
 vi.mock("../utils/notificationAudit.js", () => ({ recordNotification }));
 
-const { shouldPost, markPosted } = await import("../utils/notificationDispatcher.js");
+const { shouldPost, markPosted, shouldSendApprovalDm, markApprovalDmSent, suppressApprovalDm } =
+  await import("../utils/notificationDispatcher.js");
 
 beforeEach(() => vi.clearAllMocks());
+
+describe("approval-DM dedup via the dispatcher", () => {
+  it("allows a new approval DM (keyed eventType-requestId)", () => {
+    wasRecentlyNotified.mockReturnValue(false);
+    const r = shouldSendApprovalDm({ eventType: "MEDIA_APPROVED", requestId: 99, source: "seerr-status-poller" });
+    expect(r.send).toBe(true);
+    expect(wasRecentlyNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-99");
+    expect(recordNotification).not.toHaveBeenCalled();
+  });
+
+  it("blocks a duplicate approval DM and records a skipped audit entry", () => {
+    wasRecentlyNotified.mockReturnValue(true);
+    const r = shouldSendApprovalDm({ eventType: "MEDIA_DECLINED", requestId: 7, source: "seerr-webhook", title: "Dune", tmdbId: 5 });
+    expect(r.send).toBe(false);
+    expect(recordNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "skipped", reason: "already-notified", source: "seerr-webhook", title: "Dune", tmdbId: 5 })
+    );
+  });
+
+  it("markApprovalDmSent marks dedup and records a posted entry", () => {
+    markApprovalDmSent({ eventType: "MEDIA_APPROVED", requestId: 12, source: "seerr-webhook", title: "X", tmdbId: 3, channelId: null });
+    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-12");
+    expect(recordNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "posted", source: "seerr-webhook", tmdbId: 3 })
+    );
+  });
+
+  it("suppressApprovalDm marks dedup and records a skipped entry with the given reason", () => {
+    suppressApprovalDm({ eventType: "MEDIA_APPROVED", requestId: 8, source: "seerr-status-poller", reason: "no-title" });
+    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-8");
+    expect(recordNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "skipped", reason: "no-title" })
+    );
+  });
+});
 
 describe("notificationDispatcher.shouldPost", () => {
   it("allows a brand-new notification", () => {
