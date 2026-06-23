@@ -1693,6 +1693,70 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   // Test Cleanup Advisor button
+  // ── Notification audit panel (issue #5): recent post/skip decisions ───────
+  (() => {
+    const auditBody = document.getElementById("NOTIFICATION_AUDIT_BODY");
+    const refreshBtn = document.getElementById("BTN_REFRESH_AUDIT");
+    if (!auditBody) return;
+
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    const renderAudit = (rows) => {
+      if (!rows || rows.length === 0) {
+        auditBody.innerHTML =
+          '<div style="padding:0.5rem 0;color:var(--subtext0);">Noch keine Benachrichtigungen aufgezeichnet.</div>';
+        return;
+      }
+      const head =
+        '<tr style="text-align:left;border-bottom:1px solid var(--surface1);">' +
+        ["Zeit", "Quelle", "Event", "Titel", "Channel", "Status"]
+          .map((h) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${h}</th>`)
+          .join("") +
+        "</tr>";
+      const body = rows
+        .map((r) => {
+          const when = r.at ? new Date(r.at).toLocaleString() : "—";
+          const status =
+            r.status === "posted"
+              ? '<span style="color:var(--green,#a6e3a1);">✅ posted</span>'
+              : '<span style="color:var(--subtext0);">⏭️ skipped</span>';
+          const reason = r.reason ? ` <span style="color:var(--subtext0);">(${esc(r.reason)})</span>` : "";
+          const title = r.title || (r.tmdbId ? `TMDB ${r.tmdbId}` : "—");
+          return (
+            '<tr style="border-bottom:1px solid var(--surface0);">' +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;white-space:nowrap;">${esc(when)}</td>` +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.source || "—")}</td>` +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.eventType || "—")}</td>` +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(title)}</td>` +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;">${esc(r.channelId || "—")}</td>` +
+            `<td style="padding:0.3rem 0.6rem 0.3rem 0;white-space:nowrap;">${status}${reason}</td>` +
+            "</tr>"
+          );
+        })
+        .join("");
+      auditBody.innerHTML = `<table style="width:100%;border-collapse:collapse;">${head}${body}</table>`;
+    };
+
+    const loadAudit = async () => {
+      auditBody.textContent = "Lädt…";
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/notifications/audit?limit=50", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        renderAudit(data.notifications || []);
+      } catch (err) {
+        auditBody.textContent = "Fehler beim Laden: " + err.message;
+      }
+    };
+
+    if (refreshBtn) refreshBtn.addEventListener("click", loadAudit);
+    loadAudit();
+  })();
+
   // ── Jellyfin Poller status panel + manual "Poll now" button ──────────────
   const pollerStatusEl = document.getElementById("POLLER_STATUS_TEXT");
   const pollerNowBtn = document.getElementById("BTN_POLL_NOW");
