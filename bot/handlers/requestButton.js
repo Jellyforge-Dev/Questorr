@@ -3,7 +3,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
 import { buildNotificationEmbed, buildButtons } from "../embeds.js";
-import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
+import { parseQualityAndServerOptions, getSeerrAutoApprove, getQuotaDenial } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
 import { add as addToRequestStore } from "../../utils/requestStore.js";
 import { getUserMappings } from "../../utils/configFile.js";
@@ -22,6 +22,11 @@ export async function handleRequestButton(interaction) {
   }
 
   await interaction.deferUpdate();
+
+  const quotaDenial = getQuotaDenial(interaction);
+  if (quotaDenial) {
+    return interaction.followUp({ content: quotaDenial, flags: 64 });
+  }
 
   try {
     const details = await tmdbApi.tmdbGetDetails(

@@ -316,6 +316,13 @@
     "roles_allowlist_desc": "Wenn leer, können alle Mitglieder Befehle nutzen. Mit ausgewählten Rollen können nur diese Mitglieder den Bot verwenden.",
     "roles_blocklist": "Blocklist (Diese Rollen blockieren)",
     "roles_blocklist_desc": "Mitglieder mit diesen Rollen können keine Bot-Befehle nutzen.",
+    "quota_section": "Anfrage-Limit",
+    "quota_desc": "Begrenzt, wie viele Anfragen jeder User in einem rollierenden 7-Tage-Fenster stellen darf. 0 = unbegrenzt (aus). Zählt nur über Questorr gestellte Anfragen.",
+    "quota_limit_label": "Anfragen pro 7 Tage (0 = unbegrenzt)",
+    "quota_bypass_roles_label": "Ausnahme-Rollen (unbegrenzt)",
+    "quota_bypass_roles_desc": "Mitglieder mit einer dieser Rollen werden nie limitiert.",
+    "quota_unlimited_users_label": "Unbegrenzte User (Discord-IDs)",
+    "quota_unlimited_users_desc": "Kommagetrennte Discord-User-IDs, die immer anfragen dürfen.",
     "roles_loading": "Lade Rollen...",
     "misc_section": "Verschiedenes",
     "misc_desc": "Optionale Einstellungen zur Erweiterung deines Bots.",
@@ -700,7 +707,8 @@
     "feature_similar": "<code>/similar &lt;Titel&gt;</code> Finde <strong style=\"color: var(--blue);\">ähnliche Titel</strong> basierend auf Genre und Keywords — ein anderer Algorithmus als <code>/recommend</code>. Zeigt Verfügbarkeitsstatus und Watch-Now-Buttons.",
     "feature_content_rating": "<strong style=\"color: var(--blue);\">Altersfreigaben</strong> (FSK, MPAA) werden in Such-Embeds angezeigt — konfigurierbar nach Land. Erfahre vor dem Anfordern ob ein Titel altersgerecht ist.",
     "feature_providers": "<strong style=\"color: var(--blue);\">Streaming-Anbieter</strong> zeigen wo ein Titel zum Streamen verfügbar ist (Netflix, Disney+, etc.) — basierend auf TMDB- und JustWatch-Daten.",
-    "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer-Buttons</strong> werden automatisch zu <code>/search</code>- und <code>/request</code>-Embeds hinzugefügt wenn ein YouTube-Trailer auf TMDB verfügbar ist — Trailer ansehen bevor du anforderst."
+    "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer-Buttons</strong> werden automatisch zu <code>/search</code>- und <code>/request</code>-Embeds hinzugefügt wenn ein YouTube-Trailer auf TMDB verfügbar ist — Trailer ansehen bevor du anforderst.",
+    "feature_quota": "<code>Anfrage-Limit</code> Ein <strong style=\"color: var(--blue);\">Anfrage-Limit pro User</strong> festlegen — ein rollierendes 7-Tage-Limit, wie viele Anfragen jeder User über Questorr stellen darf. Ausnahme-Rollen und einzelne unbegrenzte User sind konfigurierbar; 0 deaktiviert das Limit."
   },
   "jellyfin_webhook": {
     "note": "Hinweis: Wenn du Questorr in Docker ausführst, musst du möglicherweise localhost durch die IP-Adresse deines Servers ersetzen.",

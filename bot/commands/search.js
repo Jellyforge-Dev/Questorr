@@ -4,7 +4,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
 import { buildNotificationEmbed, buildButtons, buildActionButtons } from "../embeds.js";
-import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
+import { parseQualityAndServerOptions, getSeerrAutoApprove, getQuotaDenial } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
 import { getUserMappings } from "../../utils/configFile.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
@@ -66,6 +66,10 @@ export async function handleSearchOrRequest(
     );
 
     if (mode === "request") {
+      const quotaDenial = getQuotaDenial(interaction);
+      if (quotaDenial) {
+        return interaction.editReply({ content: quotaDenial, components: [], embeds: [] });
+      }
       const status = await seerrApi.checkMediaStatus(
         tmdbId,
         mediaType,

@@ -244,6 +244,13 @@
     "roles_allowlist_desc": "If empty, all members can use commands. If roles are selected, only members with these roles can use commands.",
     "roles_blocklist": "Blocklist (Block These Roles)",
     "roles_blocklist_desc": "Members with these roles cannot use bot commands, even if they have an allowed role.",
+    "quota_section": "Request Quota",
+    "quota_desc": "Limit how many requests each user can make in a rolling 7-day window. 0 = unlimited (off). Counts only requests made through Questorr.",
+    "quota_limit_label": "Requests per 7 days (0 = unlimited)",
+    "quota_bypass_roles_label": "Bypass roles (unlimited)",
+    "quota_bypass_roles_desc": "Members with any of these roles are never limited.",
+    "quota_unlimited_users_label": "Unlimited users (Discord IDs)",
+    "quota_unlimited_users_desc": "Comma-separated Discord user IDs that can always request.",
     "roles_loading": "Loading roles...",
     "misc_section": "Miscellaneous",
     "misc_desc": "Optional settings to enhance your bot experience.",
@@ -628,7 +635,8 @@
     "feature_similar": "<code>/similar &lt;title&gt;</code> Find <strong style=\"color: var(--blue);\">similar titles</strong> based on genre and keywords — a different algorithm than <code>/recommend</code>. Shows availability status and Watch Now buttons.",
     "feature_content_rating": "<strong style=\"color: var(--blue);\">Content ratings</strong> (FSK, MPAA) are shown in search embeds — configurable by country. Know if a title is age-appropriate before requesting.",
     "feature_providers": "<strong style=\"color: var(--blue);\">Streaming providers</strong> show where a title is available for streaming (Netflix, Disney+, etc.) — powered by TMDB and JustWatch data.",
-    "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting."
+    "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.",
+    "feature_quota": "<code>Request Quota</code> Set a <strong style=\"color: var(--blue);\">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",

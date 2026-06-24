@@ -244,6 +244,13 @@
     "roles_allowlist_desc": "",
     "roles_blocklist": "",
     "roles_blocklist_desc": "",
+    "quota_section": "",
+    "quota_desc": "",
+    "quota_limit_label": "",
+    "quota_bypass_roles_label": "",
+    "quota_bypass_roles_desc": "",
+    "quota_unlimited_users_label": "",
+    "quota_unlimited_users_desc": "",
     "roles_loading": "",
     "misc_section": "",
     "misc_desc": "",
@@ -626,7 +633,8 @@
     "feature_similar": "",
     "feature_content_rating": "",
     "feature_providers": "",
-    "feature_trailer": ""
+    "feature_trailer": "",
+    "feature_quota": ""
   },
   "jellyfin_webhook": {
     "note": "",

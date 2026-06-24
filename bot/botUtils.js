@@ -1,4 +1,32 @@
 import logger from "../utils/logger.js";
+import { getByUser } from "../utils/requestStore.js";
+import { resolveQuotaConfigFromEnv, checkQuota } from "../utils/quota.js";
+import { t } from "../utils/botStrings.js";
+
+/**
+ * Quota gate for a request interaction. Returns null if the user may request,
+ * or a ready-to-send i18n denial message if they hit their weekly limit.
+ * Counts only Questorr requests (requestStore); honours the unlimited-user list
+ * and bypass roles; disabled (returns null immediately) when QUOTA_WEEKLY_LIMIT is 0.
+ */
+export function getQuotaDenial(interaction) {
+  const config = resolveQuotaConfigFromEnv();
+  if (config.limit <= 0) return null;
+
+  const discordUserId = interaction.user.id;
+  const memberRoleIds = interaction.member?.roles?.cache?.map((r) => r.id) || [];
+  const records = getByUser(discordUserId);
+  const result = checkQuota({ discordUserId, memberRoleIds, config, records, now: Date.now() });
+  if (result.allowed) return null;
+
+  const ms = new Date(result.resetAt).getTime() - Date.now();
+  const hours = Math.max(1, Math.ceil(ms / 3600000));
+  const reset = hours >= 24 ? `${Math.ceil(hours / 24)}d` : `${hours}h`;
+  return t("quota_exceeded")
+    .split("{{used}}").join(String(result.used))
+    .split("{{limit}}").join(String(result.limit))
+    .split("{{reset}}").join(reset);
+}
 
 export function pad2(n) {
   return String(n).padStart(2, "0");

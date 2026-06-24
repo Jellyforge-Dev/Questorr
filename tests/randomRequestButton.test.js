@@ -10,6 +10,7 @@ vi.mock("../api/tmdb.js", () => ({ tmdbGetDetails }));
 vi.mock("../bot/botUtils.js", () => ({
   parseQualityAndServerOptions: vi.fn(() => ({ profileId: null, serverId: null })),
   getSeerrAutoApprove: vi.fn(() => false),
+  getQuotaDenial: vi.fn(() => null),
 }));
 vi.mock("../bot/botState.js", () => ({
   pendingRequests: new Map(),

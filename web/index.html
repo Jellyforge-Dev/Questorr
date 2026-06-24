@@ -866,6 +866,31 @@
                         </div>
                       </div>
                     </fieldset>
+
+                    <fieldset style="margin-top: 1.5rem;">
+                      <legend data-i18n="config.quota_section">Request Quota</legend>
+                      <div class="form-text" style="margin-bottom: 1rem;">
+                        <span data-i18n="config.quota_desc">Limit how many requests each user can make in a rolling 7-day window. 0 = unlimited (off). Counts only requests made through Questorr.</span>
+                      </div>
+                      <div class="form-group">
+                        <label for="QUOTA_WEEKLY_LIMIT" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.quota_limit_label">Requests per 7 days (0 = unlimited)</label>
+                        <input type="number" id="QUOTA_WEEKLY_LIMIT" name="QUOTA_WEEKLY_LIMIT" min="0" max="1000" placeholder="0"
+                          style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                      </div>
+                      <div class="form-group">
+                        <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_bypass_roles_label">Bypass roles (unlimited)</label>
+                        <div id="quota-bypass-roles" class="role-list">
+                          <p class="form-text" style="opacity:0.7;font-style:italic;" data-i18n="config.roles_loading">Loading roles...</p>
+                        </div>
+                        <div class="form-text"><span data-i18n="config.quota_bypass_roles_desc">Members with any of these roles are never limited.</span></div>
+                      </div>
+                      <div class="form-group">
+                        <label for="QUOTA_UNLIMITED_USERS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.quota_unlimited_users_label">Unlimited users (Discord IDs)</label>
+                        <textarea id="QUOTA_UNLIMITED_USERS" name="QUOTA_UNLIMITED_USERS" rows="2" placeholder="123456789012345678, 987654321098765432"
+                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:0.9rem;"></textarea>
+                        <div class="form-text"><span data-i18n="config.quota_unlimited_users_desc">Comma-separated Discord user IDs that can always request.</span></div>
+                      </div>
+                    </fieldset>
                   </div>
 
                   <!-- Miscellaneous Pane -->
@@ -1542,6 +1567,7 @@
                   <li><i class="bi bi-textarea-t"></i><div data-i18n="about.feature_embed_footer">Add a <strong style="color: var(--blue);">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.</div></li>
                   <!-- Administration -->
                   <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
+                  <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_quota">Set a <strong style="color: var(--blue);">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                   <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
                   <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>

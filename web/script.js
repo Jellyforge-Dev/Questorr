@@ -1286,6 +1286,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.debug("[saveConfig] ROLE_BLOCKLIST checkboxes not in DOM — omitting from save to preserve server value");
     }
 
+    // Quota: bypass roles (checkboxes) + unlimited users (comma-separated textarea → array).
+    if (document.querySelector('input[name="QUOTA_BYPASS_ROLES"]')) {
+      config.QUOTA_BYPASS_ROLES = Array.from(
+        document.querySelectorAll('input[name="QUOTA_BYPASS_ROLES"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      delete config.QUOTA_BYPASS_ROLES; // not rendered → preserve server value
+    }
+    const quotaUnlimitedEl = document.getElementById("QUOTA_UNLIMITED_USERS");
+    if (quotaUnlimitedEl) {
+      config.QUOTA_UNLIMITED_USERS = quotaUnlimitedEl.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => /^\d{17,20}$/.test(s));
+    }
+
     // Round 11: BOT_LANGUAGE — guard against empty value being sent.
     // The form may include <select name="BOT_LANGUAGE"> with an empty initial
     // value if the languages list hasn't loaded yet. Sending "" would overwrite
@@ -4578,12 +4594,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
       populateRoleList("allowlist-roles", parseList(config.ROLE_ALLOWLIST));
       populateRoleList("blocklist-roles", parseList(config.ROLE_BLOCKLIST));
+      populateRoleList("quota-bypass-roles", parseList(config.QUOTA_BYPASS_ROLES), "QUOTA_BYPASS_ROLES");
+      // Unlimited-users textarea: stored as an array, shown comma-separated.
+      const unlimitedEl = document.getElementById("QUOTA_UNLIMITED_USERS");
+      if (unlimitedEl) unlimitedEl.value = parseList(config.QUOTA_UNLIMITED_USERS).join(", ");
     } catch (error) {
       console.warn("[loadRoles] error:", error);
     }
   }
 
-  function populateRoleList(containerId, selectedRoles) {
+  function populateRoleList(containerId, selectedRoles, inputName) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -4593,23 +4613,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const name =
+      inputName || (containerId.includes("allowlist") ? "ROLE_ALLOWLIST" : "ROLE_BLOCKLIST");
+
     container.innerHTML = guildRoles
       .map((role) => {
         const isChecked = selectedRoles.includes(role.id);
-        const listType = containerId.includes("allowlist")
-          ? "allowlist"
-          : "blocklist";
         const roleColor =
           role.color && role.color !== "#000000" ? role.color : "#b8bdc2";
 
         return `
         <label class="role-item">
           <input type="checkbox"
-                 name="${
-                   listType === "allowlist"
-                     ? "ROLE_ALLOWLIST"
-                     : "ROLE_BLOCKLIST"
-                 }"
+                 name="${name}"
                  value="${role.id}"
                  ${isChecked ? "checked" : ""}>
           <div class="role-color-indicator" style="background-color: ${roleColor};"></div>

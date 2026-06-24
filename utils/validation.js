@@ -115,6 +115,9 @@ export const configSchema = Joi.object({
   USER_MAPPING_METADATA: Joi.object().optional(),
   ROLE_ALLOWLIST: Joi.array().items(Joi.string()).optional(),
   ROLE_BLOCKLIST: Joi.array().items(Joi.string()).optional(),
+  QUOTA_WEEKLY_LIMIT: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().pattern(/^\d+$/)).optional(),
+  QUOTA_BYPASS_ROLES: Joi.array().items(Joi.string()).optional(),
+  QUOTA_UNLIMITED_USERS: Joi.array().items(Joi.string()).optional(),
   CHANNEL_MOVIES: Joi.string().allow("").optional(),
   CHANNEL_SERIES: Joi.string().allow("").optional(),
   JELLYFIN_RETRY_DELAY_SECONDS: Joi.alternatives(

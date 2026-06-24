@@ -5,6 +5,7 @@ const sendRequest = vi.fn();
 const checkMediaStatus = vi.fn();
 const tmdbGetDetails = vi.fn();
 const tmdbGetExternalImdb = vi.fn();
+const getQuotaDenial = vi.fn(() => null);
 
 vi.mock("../utils/requestStore.js", () => ({ add }));
 vi.mock("../api/seerr.js", () => ({
@@ -21,6 +22,7 @@ vi.mock("../bot/embeds.js", () => ({
 vi.mock("../bot/botUtils.js", () => ({
   parseQualityAndServerOptions: vi.fn(() => ({ profileId: null, serverId: null })),
   getSeerrAutoApprove: vi.fn(() => false),
+  getQuotaDenial,
 }));
 vi.mock("../bot/botState.js", () => ({
   pendingRequests: new Map(),
@@ -54,6 +56,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   checkMediaStatus.mockResolvedValue({ exists: false, available: false });
   tmdbGetExternalImdb.mockResolvedValue(null);
+  getQuotaDenial.mockReturnValue(null);
+});
+
+describe("handleRequestButton → quota", () => {
+  it("rejects with the denial message and does not request when over quota", async () => {
+    getQuotaDenial.mockReturnValueOnce("⚠️ limit reached");
+    const interaction = makeInteraction("request|693134|movie||");
+
+    await handleRequestButton(interaction);
+
+    expect(interaction.followUp).toHaveBeenCalledWith({ content: "⚠️ limit reached", flags: 64 });
+    expect(sendRequest).not.toHaveBeenCalled();
+    expect(add).not.toHaveBeenCalled();
+  });
 });
 
 describe("handleRequestButton → requestStore.add", () => {
