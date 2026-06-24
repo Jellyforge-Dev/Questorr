@@ -118,6 +118,9 @@ export const configSchema = Joi.object({
   QUOTA_WEEKLY_LIMIT: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().pattern(/^\d+$/)).optional(),
   QUOTA_BYPASS_ROLES: Joi.array().items(Joi.string()).optional(),
   QUOTA_UNLIMITED_USERS: Joi.array().items(Joi.string()).optional(),
+  SUBSCRIPTION_POLL_INTERVAL_MINUTES: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().pattern(/^\d+$/)).optional(),
+  WEEKLY_RECOMMENDATION_DAY: Joi.string().valid("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday").optional(),
+  WEEKLY_RECOMMENDATION_TIME: Joi.string().pattern(/^\d{1,2}:\d{2}$/).optional(),
   CHANNEL_MOVIES: Joi.string().allow("").optional(),
   CHANNEL_SERIES: Joi.string().allow("").optional(),
   JELLYFIN_RETRY_DELAY_SECONDS: Joi.alternatives(

@@ -156,6 +156,34 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
 }
 
 /**
+ * Count the real seasons (excluding Specials / index 0) of a series in Jellyfin,
+ * identified by its TMDB id. Returns the count, or null if the series isn't in
+ * the library or the lookup fails. Used by the subscription poller to detect a
+ * newly added season.
+ */
+export async function countSeriesSeasonsInJellyfin(tmdbId, apiKey, baseUrl) {
+  if (!apiKey || !baseUrl) return null;
+  try {
+    const seriesId = await findItemByTmdbId(tmdbId, "tv", apiKey, baseUrl);
+    if (!seriesId) return null;
+    const base = baseUrl.replace(/\/$/, "");
+    const res = await withRetry(
+      () => axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: { ParentId: seriesId, IncludeItemTypes: "Season", Fields: "IndexNumber", Limit: 100 },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin seasons ${seriesId}` }
+    );
+    const seasons = res.data?.Items || [];
+    return seasons.filter((s) => Number(s.IndexNumber) >= 1).length;
+  } catch (err) {
+    logger.warn(`[Jellyfin] countSeriesSeasonsInJellyfin error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * Find library for an item by querying Jellyfin's ancestor endpoint
  * This is more reliable than traversing parent chain
  * @param {string} itemId - Item ID to find library for

@@ -634,7 +634,8 @@
     "feature_content_rating": "",
     "feature_providers": "",
     "feature_trailer": "",
-    "feature_quota": ""
+    "feature_quota": "",
+    "feature_subscribe": ""
   },
   "jellyfin_webhook": {
     "note": "",

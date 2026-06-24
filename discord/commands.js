@@ -247,6 +247,21 @@ export function getCommands() {
     new SlashCommandBuilder()
       .setName("queue")
       .setDescription("Show the status of your Questorr requests"),
+    new SlashCommandBuilder()
+      .setName("subscribe")
+      .setDescription("Subscribe to series (new-season DM) and weekly recommendations")
+      .addSubcommand((sc) =>
+        sc
+          .setName("series")
+          .setDescription("Get a DM when a new season appears on Jellyfin")
+          .addStringOption((opt) =>
+            opt.setName("title").setDescription("Series").setRequired(true).setAutocomplete(true)
+          )
+      )
+      .addSubcommand((sc) =>
+        sc.setName("weekly").setDescription("Toggle a weekly personalised recommendation DM")
+      )
+      .addSubcommand((sc) => sc.setName("list").setDescription("Show your subscriptions")),
   ].map((c) => c.toJSON());
 }
 

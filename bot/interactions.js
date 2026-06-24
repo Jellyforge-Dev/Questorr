@@ -17,6 +17,7 @@ import { handleCollectionCommand, buildCollectionReply } from "./commands/collec
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
 import { handleSimilarCommand } from "./commands/similar.js";
 import { handleQueueCommand } from "./commands/queue.js";
+import { handleSubscribeCommand, showSubscribeModal, handleSubscribeModalSubmit } from "./commands/subscribe.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -70,6 +71,9 @@ export function registerInteractions(client) {
 
       // ─── Modal Submits ─────────────────────────────────────────────
       if (interaction.isModalSubmit()) {
+        if (interaction.customId === "subscribe_modal_submit") {
+          return handleSubscribeModalSubmit(interaction);
+        }
         if (interaction.customId.startsWith("wizard_modal_submit|")) {
           return handleWizardModalSubmit(interaction);
         }
@@ -93,6 +97,11 @@ export function registerInteractions(client) {
           const actionName = interaction.customId.split("|")[0].replace("action_", "action:");
           trackCommand(actionName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
           return handleActionButton(interaction);
+        }
+
+        // /subscribe series → free-text modal (before the generic wizard_ check)
+        if (interaction.customId === "wizard_subscribe") {
+          return showSubscribeModal(interaction);
         }
 
         // /search & /request go straight to the modal
@@ -240,6 +249,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "queue") {
           return handleQueueCommand(interaction);
+        }
+        if (interaction.commandName === "subscribe") {
+          return handleSubscribeCommand(interaction);
         }
       }
     } catch (outerErr) {

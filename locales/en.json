@@ -636,7 +636,8 @@
     "feature_content_rating": "<strong style=\"color: var(--blue);\">Content ratings</strong> (FSK, MPAA) are shown in search embeds — configurable by country. Know if a title is age-appropriate before requesting.",
     "feature_providers": "<strong style=\"color: var(--blue);\">Streaming providers</strong> show where a title is available for streaming (Netflix, Disney+, etc.) — powered by TMDB and JustWatch data.",
     "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.",
-    "feature_quota": "<code>Request Quota</code> Set a <strong style=\"color: var(--blue);\">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it."
+    "feature_quota": "<code>Request Quota</code> Set a <strong style=\"color: var(--blue);\">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.",
+    "feature_subscribe": "<code>/subscribe</code> <strong style=\"color: var(--blue);\">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the \"Subscribe\" button in the /help wizard."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",
