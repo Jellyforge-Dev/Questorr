@@ -14,6 +14,7 @@ import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
 import { startSubscriptionPoller } from "./subscriptionPoller.js";
 import { scheduleWeeklyRecommendation } from "./weeklyRecommendation.js";
+import { scheduleWeeklyDigest } from "./weeklyDigest.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -81,6 +82,7 @@ export async function startBot() {
       scheduleDailyRecommendation(client);
       scheduleCleanupAdvisor(client);
       scheduleWeeklyRecommendation(client);
+      scheduleWeeklyDigest(client);
       startJellyfinPoller(client);
       startSeerrStatusPoller();
       startSubscriptionPoller();

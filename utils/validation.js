@@ -121,6 +121,10 @@ export const configSchema = Joi.object({
   SUBSCRIPTION_POLL_INTERVAL_MINUTES: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().pattern(/^\d+$/)).optional(),
   WEEKLY_RECOMMENDATION_DAY: Joi.string().valid("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday").optional(),
   WEEKLY_RECOMMENDATION_TIME: Joi.string().pattern(/^\d{1,2}:\d{2}$/).optional(),
+  DIGEST_ENABLED: Joi.alternatives().try(Joi.boolean(), Joi.string().valid("true", "false")).optional(),
+  DIGEST_CHANNEL_ID: Joi.string().allow("").optional(),
+  DIGEST_DAY: Joi.string().valid("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday").optional(),
+  DIGEST_TIME: Joi.string().pattern(/^\d{1,2}:\d{2}$/).optional(),
   CHANNEL_MOVIES: Joi.string().allow("").optional(),
   CHANNEL_SERIES: Joi.string().allow("").optional(),
   JELLYFIN_RETRY_DELAY_SECONDS: Joi.alternatives(

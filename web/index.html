@@ -928,6 +928,43 @@
                       <div class="form-text" style="margin-top:0.5rem;"><span data-i18n="config.weekly_rec_help">Personalised picks are sent only to users who enabled them via /subscribe weekly (mapped users only).</span></div>
                     </fieldset>
                     <fieldset>
+                      <legend data-i18n="config.digest_section">Weekly digest</legend>
+                      <div class="form-text" style="margin-bottom: 1rem;">
+                        <span data-i18n="config.digest_desc">Post a weekly summary of movies and series added to the library. Silent when nothing new.</span>
+                      </div>
+                      <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:0.5rem;font-weight:600;cursor:pointer;">
+                          <input type="checkbox" id="DIGEST_ENABLED" name="DIGEST_ENABLED" style="width:auto;" />
+                          <span data-i18n="config.digest_enabled_label">Enable weekly digest</span>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label for="DIGEST_CHANNEL_ID" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_channel_label">Digest channel ID (optional)</label>
+                        <input type="text" id="DIGEST_CHANNEL_ID" name="DIGEST_CHANNEL_ID" placeholder="123456789012345678"
+                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                        <div class="form-text"><span data-i18n="config.digest_channel_help">Where the digest is posted. Falls back to the Jellyfin channel if empty.</span></div>
+                      </div>
+                      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                        <div class="form-group" style="margin:0;">
+                          <label for="DIGEST_DAY" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_day">Day</label>
+                          <select id="DIGEST_DAY" name="DIGEST_DAY" style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
+                            <option value="monday" selected>Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                            <option value="sunday">Sunday</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                          <label for="DIGEST_TIME" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_time">Time (HH:MM)</label>
+                          <input type="time" id="DIGEST_TIME" name="DIGEST_TIME"
+                            style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;" />
+                        </div>
+                      </div>
+                    </fieldset>
+                    <fieldset>
                       <legend data-i18n="config.misc_section">Miscellaneous</legend>
                       <p class="form-text" style="margin-bottom: 1.5rem;">
                         <span data-i18n="config.misc_desc">Optional settings to enhance your bot experience.</span>
@@ -1601,6 +1638,7 @@
                   <!-- Administration -->
                   <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_quota">Set a <strong style="color: var(--blue);">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.</div></li>
+                  <li><i class="bi bi-calendar-week"></i><div data-i18n="about.feature_digest"><strong style="color: var(--blue);">Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                   <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
                   <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>

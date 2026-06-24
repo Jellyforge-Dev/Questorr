@@ -491,7 +491,14 @@
     "subscription_interval_help": "",
     "weekly_rec_day": "",
     "weekly_rec_time": "",
-    "weekly_rec_help": ""
+    "weekly_rec_help": "",
+    "digest_section": "Weekly digest",
+    "digest_desc": "Post a weekly summary of movies and series added to the library. Silent when nothing new.",
+    "digest_enabled_label": "Enable weekly digest",
+    "digest_channel_label": "Digest channel ID (optional)",
+    "digest_channel_help": "Where the digest is posted. Falls back to the Jellyfin channel if empty.",
+    "digest_day": "Day",
+    "digest_time": "Time (HH:MM)"
   },
   "ui": {
     "hide_header": "",
@@ -642,7 +649,8 @@
     "feature_providers": "",
     "feature_trailer": "",
     "feature_quota": "",
-    "feature_subscribe": ""
+    "feature_subscribe": "",
+    "feature_digest": "<strong>Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week."
   },
   "jellyfin_webhook": {
     "note": "",
