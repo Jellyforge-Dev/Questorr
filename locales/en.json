@@ -486,7 +486,14 @@
     "poller_polled_msg": "Polled: {{fetched}} fetched, {{new}} new",
     "poller_scan_started": "Scan started — results will appear in Discord",
     "poller_scan_inprogress": "Scan already in progress…",
-    "poller_scan_cap_hit": "Limit reached, click again for more"
+    "poller_scan_cap_hit": "Limit reached, click again for more",
+    "subscriptions_section": "Subscriptions",
+    "subscriptions_desc": "Settings for /subscribe — series new-season DMs and the weekly recommendation DM.",
+    "subscription_interval_label": "Series check interval (minutes, 0 = off)",
+    "subscription_interval_help": "How often Jellyfin is checked for new seasons of subscribed series.",
+    "weekly_rec_day": "Weekly recommendation — day",
+    "weekly_rec_time": "Time (HH:MM)",
+    "weekly_rec_help": "Personalised picks are sent only to users who enabled them via /subscribe weekly (mapped users only)."
   },
   "ui": {
     "hide_header": "Hide header",

@@ -484,7 +484,14 @@
     "poller_polled_msg": "",
     "poller_scan_started": "",
     "poller_scan_inprogress": "",
-    "poller_scan_cap_hit": ""
+    "poller_scan_cap_hit": "",
+    "subscriptions_section": "",
+    "subscriptions_desc": "",
+    "subscription_interval_label": "",
+    "subscription_interval_help": "",
+    "weekly_rec_day": "",
+    "weekly_rec_time": "",
+    "weekly_rec_help": ""
   },
   "ui": {
     "hide_header": "",

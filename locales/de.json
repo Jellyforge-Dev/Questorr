@@ -555,7 +555,14 @@
     "poller_polled_msg": "Geprüft: {{fetched}} abgerufen, {{new}} neu",
     "poller_scan_started": "Scan gestartet — Ergebnisse erscheinen in Discord",
     "poller_scan_inprogress": "Scan läuft bereits …",
-    "poller_scan_cap_hit": "Limit erreicht, ggf. erneut klicken"
+    "poller_scan_cap_hit": "Limit erreicht, ggf. erneut klicken",
+    "subscriptions_section": "Abonnements",
+    "subscriptions_desc": "Einstellungen für /subscribe — DMs bei neuen Staffeln und die wöchentliche Empfehlungs-DM.",
+    "subscription_interval_label": "Serien-Prüfintervall (Minuten, 0 = aus)",
+    "subscription_interval_help": "Wie oft Jellyfin auf neue Staffeln abonnierter Serien geprüft wird.",
+    "weekly_rec_day": "Wochenempfehlung — Tag",
+    "weekly_rec_time": "Uhrzeit (HH:MM)",
+    "weekly_rec_help": "Personalisierte Empfehlungen gehen nur an User, die sie über /subscribe weekly aktiviert haben (nur gemappte User)."
   },
   "ui": {
     "hide_header": "Header ausblenden",
