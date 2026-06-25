@@ -34,6 +34,15 @@
 | 📦 `/collection` | Alle Filme einer Filmreihe/Kollektion mit Verfügbarkeit anzeigen |
 | 🎭 `/cast` | Filmografie eines Schauspielers mit Pagination durchsuchen |
 | 🔗 `/similar` | Ähnliche Titel basierend auf Genre und Keywords finden |
+| 📥 `/queue` | Status **deiner eigenen** Anfragen verfolgen — gruppiert nach Phase (wartet, lädt, verfügbar, abgelehnt, fehlgeschlagen) |
+| 🔔 `/subscribe` | Eine Serie abonnieren und eine DM bei neuer Staffel erhalten, plus optionale **personalisierte Wochenempfehlung per DM** |
+| ✨ `/foryou` | Personalisierte Empfehlungen basierend auf deinem Jellyfin-Sehverlauf |
+| 🔖 `/watchlist` | Aktuelle Medienanfragen aus Seerr ansehen |
+| 🕘 `/history` | Kürzlich zu Jellyfin hinzugefügte Filme und Serien ansehen |
+| 📅 `/upcoming` | Kommende Filmveröffentlichungen und neue Serien von TMDB durchstöbern |
+| ❓ `/help` | Alle Befehle mit Schnellaktions-Buttons anzeigen |
+| 🆕 Wöchentlicher Digest | Optionaler Wochenpost mit neuen Filmen, Serien **und Folgen** aus deiner Jellyfin-Library |
+| 🚦 Anfragelimit pro Benutzer | Optionales rollierendes 7-Tage-Limit pro Benutzer, mit Bypass-Rollen und unbegrenzten Benutzern |
 | 🔔 Smarte Benachrichtigungen | Reichhaltige Discord-Embeds für alle Seerr-Events (ausstehend, genehmigt, verfügbar, abgelehnt, fehlgeschlagen, Probleme) |
 | 📺 Channel-Routing | Benachrichtigungen werden automatisch basierend auf dem Radarr/Sonarr Root-Folder in den richtigen Kanal geleitet |
 | 🔕 Private Events | Neue Anfragen und abgelehnte Anfragen werden nur als DM an den Anfrager gesendet — nicht in den öffentlichen Kanal |
