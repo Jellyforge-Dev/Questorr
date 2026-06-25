@@ -4690,6 +4690,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       populateRoleFilterSelect("quota-unlimited-role-filter", quotaUnlimitedRoleFilter);
       populateRoleFilterSelect("mapping-role-filter", mappingRoleFilter);
       populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+      // The unlimited-users list needs the Discord member list, which is
+      // otherwise only loaded on the user-mapping step. Trigger it here too so
+      // opening the roles step directly still populates the list. Cached and
+      // guarded; on completion populateDiscordMemberSelect re-renders the list.
+      loadDiscordMembers();
     } catch (error) {
       console.warn("[loadRoles] error:", error);
     }
