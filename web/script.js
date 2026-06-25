@@ -4793,6 +4793,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                  name="${inputName}"
                  value="${escapeHtml(member.id)}"
                  ${isChecked ? "checked" : ""}>
+          ${member.avatar ? `<img src="${escapeHtml(member.avatar)}" alt="" class="member-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;">` : ""}
           <span class="role-name">${escapeHtml(label)}</span>
           ${member.username ? `<span class="role-member-count">@${escapeHtml(member.username)}</span>` : ""}
         </label>
