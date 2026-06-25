@@ -249,8 +249,8 @@
     "quota_limit_label": "Requests per 7 days (0 = unlimited)",
     "quota_bypass_roles_label": "Bypass roles (unlimited)",
     "quota_bypass_roles_desc": "Members with any of these roles are never limited.",
-    "quota_unlimited_users_label": "Unlimited users (Discord IDs)",
-    "quota_unlimited_users_desc": "Comma-separated Discord user IDs that can always request.",
+    "quota_unlimited_users_label": "Unlimited users",
+    "quota_unlimited_users_desc": "These users can always request, regardless of the quota.",
     "roles_loading": "Loading roles...",
     "misc_section": "Miscellaneous",
     "misc_desc": "Optional settings to enhance your bot experience.",
@@ -500,7 +500,8 @@
     "digest_channel_label": "Digest channel ID (optional)",
     "digest_channel_help": "Where the digest is posted. Falls back to the Jellyfin channel if empty.",
     "digest_day": "Day",
-    "digest_time": "Time (HH:MM)"
+    "digest_time": "Time (HH:MM)",
+    "members_load_hint": "Select a server to load members."
   },
   "ui": {
     "hide_header": "Hide header",
@@ -651,7 +652,7 @@
     "feature_providers": "<strong style=\"color: var(--blue);\">Streaming providers</strong> show where a title is available for streaming (Netflix, Disney+, etc.) — powered by TMDB and JustWatch data.",
     "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.",
     "feature_quota": "<code>Request Quota</code> Set a <strong style=\"color: var(--blue);\">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.",
-    "feature_subscribe": "<code>/subscribe</code> <strong style=\"color: var(--blue);\">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the \"Subscribe\" button in the /help wizard.",
+    "feature_subscribe": "<code>/subscribe</code> <strong>Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the \"Subscribe\" button in the /help wizard.",
     "feature_digest": "<strong>Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week."
   },
   "jellyfin_webhook": {

@@ -259,6 +259,14 @@ export function getCommands() {
           )
       )
       .addSubcommand((sc) =>
+        sc
+          .setName("remove")
+          .setDescription("Unsubscribe from a series you no longer follow")
+          .addStringOption((opt) =>
+            opt.setName("title").setDescription("One of your subscribed series").setRequired(true).setAutocomplete(true)
+          )
+      )
+      .addSubcommand((sc) =>
         sc.setName("weekly").setDescription("Toggle a weekly personalised recommendation DM")
       )
       .addSubcommand((sc) => sc.setName("list").setDescription("Show your subscriptions")),

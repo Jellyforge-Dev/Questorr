@@ -69,6 +69,30 @@ describe("/subscribe list", () => {
   });
 });
 
+describe("/subscribe remove", () => {
+  it("removes the series for the user and confirms", async () => {
+    removeSeries.mockReturnValue(true);
+    const i = interaction("remove", { title: "1399|tv|Game of Thrones" });
+    await handleSubscribeCommand(i);
+    expect(removeSeries).toHaveBeenCalledWith("u1", 1399);
+    expect(i.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "subscribe_removed", flags: 64 }));
+  });
+
+  it("reports when the user was not subscribed", async () => {
+    removeSeries.mockReturnValue(false);
+    const i = interaction("remove", { title: "555|tv|Nope" });
+    await handleSubscribeCommand(i);
+    expect(i.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "subscribe_not_subscribed", flags: 64 }));
+  });
+
+  it("rejects an invalid selection", async () => {
+    const i = interaction("remove", { title: "" });
+    await handleSubscribeCommand(i);
+    expect(removeSeries).not.toHaveBeenCalled();
+    expect(i.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "subscribe_invalid", flags: 64 }));
+  });
+});
+
 describe("subscribe modal submit (wizard button)", () => {
   function modalInteraction(value) {
     return {

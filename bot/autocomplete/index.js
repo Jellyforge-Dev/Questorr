@@ -1,6 +1,7 @@
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
+import { getSeriesByUser } from "../../utils/subscriptionStore.js";
 import logger from "../../utils/logger.js";
 
 // ─── Shared: build rich autocomplete choices from TMDB items ──────────────────
@@ -306,6 +307,21 @@ async function handleSeriesAutocomplete(interaction, focusedValue) {
   }
 }
 
+// Autocomplete for /subscribe remove — lists only the caller's own subscriptions.
+async function handleSubscriptionRemoveAutocomplete(interaction, focusedValue) {
+  try {
+    const q = (focusedValue || "").toLowerCase();
+    const choices = getSeriesByUser(interaction.user.id)
+      .filter((s) => !q || (s.title || "").toLowerCase().includes(q))
+      .slice(0, 25)
+      .map((s) => ({ name: (s.title || `TMDB ${s.tmdbId}`).slice(0, 100), value: `${s.tmdbId}|tv|${s.title || ""}`.slice(0, 100) }));
+    await interaction.respond(choices);
+  } catch (e) {
+    logger.error("Autocomplete error:", e);
+    return await interaction.respond([]);
+  }
+}
+
 // ─── Genre Autocomplete ──────────────────────────────────────────────────────
 async function handleGenreAutocomplete(interaction, focusedValue) {
   try {
@@ -361,7 +377,11 @@ export async function handleAutocomplete(interaction) {
   if (interaction.commandName === "trending") return handleTrendingAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "status") return handleStatusAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "cast") return handlePersonAutocomplete(interaction, focusedValue);
-  if (interaction.commandName === "subscribe") return handleSeriesAutocomplete(interaction, focusedValue);
+  if (interaction.commandName === "subscribe") {
+    return interaction.options.getSubcommand() === "remove"
+      ? handleSubscriptionRemoveAutocomplete(interaction, focusedValue)
+      : handleSeriesAutocomplete(interaction, focusedValue);
+  }
 
   // Default: search autocomplete (used by /search, /request, /collection)
   return handleSearchAutocomplete(interaction, focusedValue);

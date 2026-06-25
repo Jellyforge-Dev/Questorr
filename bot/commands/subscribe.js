@@ -1,6 +1,7 @@
 import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from "discord.js";
 import {
   addSeries,
+  removeSeries,
   getSeriesByUser,
   toggleWeekly,
   isWeeklyEnabled,
@@ -31,8 +32,23 @@ async function subscribeToSeries(discordUserId, tmdbId, fallbackTitle) {
 export async function handleSubscribeCommand(interaction) {
   const sub = interaction.options.getSubcommand();
   if (sub === "series") return subscribeSeries(interaction);
+  if (sub === "remove") return subscribeRemove(interaction);
   if (sub === "weekly") return subscribeWeekly(interaction);
   if (sub === "list") return subscribeList(interaction);
+}
+
+async function subscribeRemove(interaction) {
+  // Autocomplete value is "tmdbId|mediaType|title" — same shape as subscribe.
+  const raw = interaction.options.getString("title") || "";
+  const tmdbId = parseInt(raw.split("|")[0], 10);
+  if (!tmdbId) {
+    return interaction.reply({ content: t("subscribe_invalid"), flags: 64 });
+  }
+  const removed = removeSeries(interaction.user.id, tmdbId);
+  return interaction.reply({
+    content: removed ? t("subscribe_removed") : t("subscribe_not_subscribed"),
+    flags: 64,
+  });
 }
 
 async function subscribeSeries(interaction) {

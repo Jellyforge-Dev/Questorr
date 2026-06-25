@@ -885,10 +885,11 @@
                         <div class="form-text"><span data-i18n="config.quota_bypass_roles_desc">Members with any of these roles are never limited.</span></div>
                       </div>
                       <div class="form-group">
-                        <label for="QUOTA_UNLIMITED_USERS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.quota_unlimited_users_label">Unlimited users (Discord IDs)</label>
-                        <textarea id="QUOTA_UNLIMITED_USERS" name="QUOTA_UNLIMITED_USERS" rows="2" placeholder="123456789012345678, 987654321098765432"
-                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:0.9rem;"></textarea>
-                        <div class="form-text"><span data-i18n="config.quota_unlimited_users_desc">Comma-separated Discord user IDs that can always request.</span></div>
+                        <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_unlimited_users_label">Unlimited users</label>
+                        <div id="quota-unlimited-users" class="role-list">
+                          <p class="form-text" style="opacity:0.7;font-style:italic;" data-i18n="config.members_load_hint">Select a server to load members.</p>
+                        </div>
+                        <div class="form-text"><span data-i18n="config.quota_unlimited_users_desc">These users can always request, regardless of the quota.</span></div>
                       </div>
                     </fieldset>
                   </div>
@@ -939,9 +940,11 @@
                         </label>
                       </div>
                       <div class="form-group">
-                        <label for="DIGEST_CHANNEL_ID" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_channel_label">Digest channel ID (optional)</label>
-                        <input type="text" id="DIGEST_CHANNEL_ID" name="DIGEST_CHANNEL_ID" placeholder="123456789012345678"
-                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                        <label for="DIGEST_CHANNEL_ID" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_channel_label">Digest channel (optional)</label>
+                        <select id="DIGEST_CHANNEL_ID" name="DIGEST_CHANNEL_ID" data-channel-select="true"
+                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
+                          <option value="" data-i18n="config.select_channel">Select a channel...</option>
+                        </select>
                         <div class="form-text"><span data-i18n="config.digest_channel_help">Where the digest is posted. Falls back to the Jellyfin channel if empty.</span></div>
                       </div>
                       <div style="display:flex;gap:1rem;flex-wrap:wrap;">
@@ -1612,7 +1615,7 @@
                   <li><i class="bi bi-shuffle"></i><div data-i18n="about.feature_random"><code>/random movie</code> or <code>/random series</code> — get a <strong style="color: var(--blue);">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.</div></li>
                   <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
                   <li><i class="bi bi-card-checklist"></i><div data-i18n="about.feature_queue"><code>/queue</code> Track the status of <strong style="color: var(--blue);">your own requests</strong> — grouped by stage (waiting for approval, downloading, available, declined, failed). Backfills older requests and resolves real titles. Also available as the "My Requests" button in the /help wizard.</div></li>
-                  <li><i class="bi bi-bell"></i><div data-i18n="about.feature_subscribe"><code>/subscribe</code> <strong style="color: var(--blue);">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the "Subscribe" button in the /help wizard.</div></li>
+                  <li><i class="bi bi-bell"></i><div data-i18n="about.feature_subscribe"><code>/subscribe</code> <strong style="color: var(--blue);">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the "Subscribe" button in the /help wizard.</div></li>
                   <li><i class="bi bi-calendar-event"></i><div data-i18n="about.feature_upcoming"><code>/upcoming</code> Browse <strong style="color: var(--blue);">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.</div></li>
                   <li><i class="bi bi-clock-history"></i><div data-i18n="about.feature_history"><code>/history</code> See what was <strong style="color: var(--blue);">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.</div></li>
                   <li><i class="bi bi-magic"></i><div data-i18n="about.feature_foryou"><code>/foryou</code> Get <strong style="color: var(--blue);">personalised recommendations</strong> based on your Jellyfin watch history. Aggregates TMDB similarities across 5 random seeds from your recently played content, surfacing titles with the highest combined frequency × rating. Optional <code>filter</code> parameter to limit results to library-only.</div></li>

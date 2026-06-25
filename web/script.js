@@ -1286,7 +1286,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.debug("[saveConfig] ROLE_BLOCKLIST checkboxes not in DOM — omitting from save to preserve server value");
     }
 
-    // Quota: bypass roles (checkboxes) + unlimited users (comma-separated textarea → array).
+    // Quota: bypass roles + unlimited users — both rendered as member/role
+    // checkbox lists. Collect the checked values into arrays; if the list isn't
+    // rendered (data not loaded yet) omit the key so the server value survives.
     if (document.querySelector('input[name="QUOTA_BYPASS_ROLES"]')) {
       config.QUOTA_BYPASS_ROLES = Array.from(
         document.querySelectorAll('input[name="QUOTA_BYPASS_ROLES"]:checked')
@@ -1294,12 +1296,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       delete config.QUOTA_BYPASS_ROLES; // not rendered → preserve server value
     }
-    const quotaUnlimitedEl = document.getElementById("QUOTA_UNLIMITED_USERS");
-    if (quotaUnlimitedEl) {
-      config.QUOTA_UNLIMITED_USERS = quotaUnlimitedEl.value
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => /^\d{17,20}$/.test(s));
+    if (document.querySelector('input[name="QUOTA_UNLIMITED_USERS"]')) {
+      config.QUOTA_UNLIMITED_USERS = Array.from(
+        document.querySelectorAll('input[name="QUOTA_UNLIMITED_USERS"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      delete config.QUOTA_UNLIMITED_USERS; // not rendered → preserve server value
     }
 
     // Round 11: BOT_LANGUAGE — guard against empty value being sent.
@@ -3582,6 +3584,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- User Mappings ---
   let seerrUsers = [];
   let discordMembers = [];
+  let quotaUnlimitedSelected = []; // remembered QUOTA_UNLIMITED_USERS selection, re-applied when members load
   let currentMappings = []; // Will be array of enriched objects with metadata
   let membersLoaded = false; // Track if we've loaded members for the dropdown
   let usersLoaded = false; // Track if we've loaded seerr users
@@ -3670,6 +3673,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function populateDiscordMemberSelect() {
+    // Members just (re)loaded — refresh the quota unlimited-users checkbox list
+    // with the remembered selection, regardless of the mapping widget below.
+    populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS");
+
     const customSelect = document.getElementById("discord-user-select");
     if (!customSelect) return;
 
@@ -4595,9 +4602,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       populateRoleList("allowlist-roles", parseList(config.ROLE_ALLOWLIST));
       populateRoleList("blocklist-roles", parseList(config.ROLE_BLOCKLIST));
       populateRoleList("quota-bypass-roles", parseList(config.QUOTA_BYPASS_ROLES), "QUOTA_BYPASS_ROLES");
-      // Unlimited-users textarea: stored as an array, shown comma-separated.
-      const unlimitedEl = document.getElementById("QUOTA_UNLIMITED_USERS");
-      if (unlimitedEl) unlimitedEl.value = parseList(config.QUOTA_UNLIMITED_USERS).join(", ");
+      // Unlimited users: stored as an array of Discord IDs, rendered as a member
+      // checkbox list. Remember the selection so it can be re-rendered once the
+      // member list finishes loading (it may arrive after this config load).
+      quotaUnlimitedSelected = parseList(config.QUOTA_UNLIMITED_USERS);
+      populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS");
     } catch (error) {
       console.warn("[loadRoles] error:", error);
     }
@@ -4633,6 +4642,35 @@ document.addEventListener("DOMContentLoaded", async () => {
           <span class="role-member-count">${
             role.memberCount || 0
           } members</span>
+        </label>
+      `;
+      })
+      .join("");
+  }
+
+  function populateMemberList(containerId, selectedIds, inputName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!discordMembers || discordMembers.length === 0) {
+      container.innerHTML =
+        `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('config.members_load_hint') || 'Select a server to load members.'}</p>`;
+      return;
+    }
+
+    const selected = selectedIds || [];
+    container.innerHTML = discordMembers
+      .map((member) => {
+        const isChecked = selected.includes(member.id);
+        const label = member.displayName || member.username || member.id;
+        return `
+        <label class="role-item">
+          <input type="checkbox"
+                 name="${inputName}"
+                 value="${escapeHtml(member.id)}"
+                 ${isChecked ? "checked" : ""}>
+          <span class="role-name">${escapeHtml(label)}</span>
+          ${member.username ? `<span class="role-member-count">@${escapeHtml(member.username)}</span>` : ""}
         </label>
       `;
       })
