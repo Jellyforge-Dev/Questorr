@@ -111,12 +111,22 @@ function t(key) {
   return getNestedTranslation(key);
 }
 
+// Read the persisted UI-language preference (survives reloads and works on the
+// unauthenticated login screen, unlike the server config).
+function getStoredUiLang() {
+  try { return localStorage.getItem('questorr_ui_lang'); } catch { return null; }
+}
+
 async function switchLanguage(language) {
   currentLanguage = language;
+  // Persist locally first — this always succeeds, even at the login screen
+  // where the authenticated /api/config write below would be rejected.
+  try { localStorage.setItem('questorr_ui_lang', language); } catch { /* ignore */ }
   currentTranslations = await loadTranslations(language);
   updateUITranslations();
 
-  // Save language preference
+  // Also save to server config (default for new sessions/devices). Best-effort:
+  // fails with 401 when not logged in, which is fine — localStorage already won.
   try {
     await fetch('/api/config', {
       method: 'POST',
@@ -200,10 +210,12 @@ async function initializeI18n() {
   try {
     const response = await fetch('/api/config');
     const config = await response.json();
-    currentLanguage = config.LANGUAGE || 'en';
+    // Local preference wins over the server default so a per-browser choice
+    // (incl. the one made on the login screen) survives reloads.
+    currentLanguage = getStoredUiLang() || config.LANGUAGE || 'en';
   } catch (error) {
     console.warn('Could not load saved language, using default');
-    currentLanguage = 'en';
+    currentLanguage = getStoredUiLang() || 'en';
   }
   
   // Populate language selectors
@@ -777,18 +789,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
 
-      // Sync app-language selector with LANGUAGE config value
-      if (config.LANGUAGE) {
+      // Sync the language selectors. A local per-browser preference wins over
+      // the server config, so loading config here must not revert the UI to the
+      // saved default (this was the "F5 / logo click flips to German" bug).
+      const effectiveLang = getStoredUiLang() || config.LANGUAGE;
+      if (effectiveLang) {
         const appLanguageSelect = document.getElementById('app-language');
         const authLanguageSelect = document.getElementById('auth-language');
         if (appLanguageSelect) {
-          appLanguageSelect.value = config.LANGUAGE;
+          appLanguageSelect.value = effectiveLang;
         }
         if (authLanguageSelect) {
-          authLanguageSelect.value = config.LANGUAGE;
+          authLanguageSelect.value = effectiveLang;
         }
-        // Update global currentLanguage
-        currentLanguage = config.LANGUAGE;
+        // Keep global currentLanguage in sync; re-render only if it actually
+        // changed (avoids overriding the active choice with the server default).
+        if (effectiveLang !== currentLanguage) {
+          switchLanguage(effectiveLang);
+        }
       }
       
       // Initialize episodes/seasons notify values
