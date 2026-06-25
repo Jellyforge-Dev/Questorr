@@ -499,7 +499,9 @@
     "digest_channel_help": "Where the digest is posted. Falls back to the Jellyfin channel if empty.",
     "digest_day": "Day",
     "digest_time": "Time (HH:MM)",
-    "members_load_hint": "Select a server to load members."
+    "members_load_hint": "Select a server to load members.",
+    "all_members": "All members",
+    "no_members_for_role": "No members with this role."
   },
   "ui": {
     "hide_header": "",

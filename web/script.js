@@ -1296,12 +1296,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       delete config.QUOTA_BYPASS_ROLES; // not rendered → preserve server value
     }
-    if (document.querySelector('input[name="QUOTA_UNLIMITED_USERS"]')) {
-      config.QUOTA_UNLIMITED_USERS = Array.from(
-        document.querySelectorAll('input[name="QUOTA_UNLIMITED_USERS"]:checked')
-      ).map((cb) => cb.value);
+    // Unlimited users come from JS state (quotaUnlimitedSelected), not the DOM:
+    // the role filter can hide checked members, so reading only visible checked
+    // boxes would silently drop them. Only write when the member list has loaded
+    // at least once; otherwise omit the key to preserve the saved value.
+    if (membersLoaded) {
+      config.QUOTA_UNLIMITED_USERS = [...quotaUnlimitedSelected];
     } else {
-      delete config.QUOTA_UNLIMITED_USERS; // not rendered → preserve server value
+      delete config.QUOTA_UNLIMITED_USERS;
     }
 
     // Round 11: BOT_LANGUAGE — guard against empty value being sent.
@@ -3585,6 +3587,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let seerrUsers = [];
   let discordMembers = [];
   let quotaUnlimitedSelected = []; // remembered QUOTA_UNLIMITED_USERS selection, re-applied when members load
+  let quotaUnlimitedRoleFilter = ""; // role id narrowing the unlimited-users member list ("" = all)
+  let mappingRoleFilter = ""; // role id narrowing the user-mapping member dropdown ("" = all)
   let currentMappings = []; // Will be array of enriched objects with metadata
   let membersLoaded = false; // Track if we've loaded members for the dropdown
   let usersLoaded = false; // Track if we've loaded seerr users
@@ -3675,7 +3679,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   function populateDiscordMemberSelect() {
     // Members just (re)loaded — refresh the quota unlimited-users checkbox list
     // with the remembered selection, regardless of the mapping widget below.
-    populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS");
+    populateRoleFilterSelect("quota-unlimited-role-filter", quotaUnlimitedRoleFilter);
+    populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+    populateRoleFilterSelect("mapping-role-filter", mappingRoleFilter);
 
     const customSelect = document.getElementById("discord-user-select");
     if (!customSelect) return;
@@ -3687,7 +3693,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     optionsContainer.innerHTML = "";
 
-    discordMembers.forEach((member) => {
+    discordMembers
+      .filter((member) => memberHasRole(member, mappingRoleFilter))
+      .forEach((member) => {
       const option = document.createElement("div");
       option.className = "custom-select-option";
       option.dataset.value = member.id;
@@ -4606,7 +4614,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // checkbox list. Remember the selection so it can be re-rendered once the
       // member list finishes loading (it may arrive after this config load).
       quotaUnlimitedSelected = parseList(config.QUOTA_UNLIMITED_USERS);
-      populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS");
+      populateRoleFilterSelect("quota-unlimited-role-filter", quotaUnlimitedRoleFilter);
+      populateRoleFilterSelect("mapping-role-filter", mappingRoleFilter);
+      populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
     } catch (error) {
       console.warn("[loadRoles] error:", error);
     }
@@ -4648,7 +4658,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       .join("");
   }
 
-  function populateMemberList(containerId, selectedIds, inputName) {
+  // Fill a role-filter <select> with an "all members" default plus every guild
+  // role. Used above member pickers so the admin can narrow a long list.
+  function populateRoleFilterSelect(selectId, currentValue) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const allLabel = t('config.all_members') || 'All members';
+    const opts = [`<option value="">${escapeHtml(allLabel)}</option>`];
+    for (const role of guildRoles) {
+      const selected = String(role.id) === String(currentValue) ? " selected" : "";
+      opts.push(`<option value="${escapeHtml(role.id)}"${selected}>${escapeHtml(role.name)}</option>`);
+    }
+    sel.innerHTML = opts.join("");
+
+    // Bind the change handler once. Re-rendering options does not remove the
+    // listener, so guard with a dataset flag.
+    if (sel.dataset.wired !== "1") {
+      sel.dataset.wired = "1";
+      sel.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (selectId === "quota-unlimited-role-filter") {
+          quotaUnlimitedRoleFilter = val;
+          populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+        } else if (selectId === "mapping-role-filter") {
+          mappingRoleFilter = val;
+          populateDiscordMemberSelect();
+        }
+      });
+    }
+  }
+
+  function memberHasRole(member, roleId) {
+    if (!roleId) return true;
+    return Array.isArray(member.roles) && member.roles.includes(roleId);
+  }
+
+  function populateMemberList(containerId, selectedIds, inputName, roleFilter) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -4659,7 +4704,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const selected = selectedIds || [];
-    container.innerHTML = discordMembers
+    const visible = discordMembers.filter((m) => memberHasRole(m, roleFilter));
+    if (visible.length === 0) {
+      container.innerHTML =
+        `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('config.no_members_for_role') || 'No members with this role.'}</p>`;
+      return;
+    }
+    container.innerHTML = visible
       .map((member) => {
         const isChecked = selected.includes(member.id);
         const label = member.displayName || member.username || member.id;
@@ -4675,6 +4726,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
       })
       .join("");
+
+    // Track selection in JS state, not just the DOM: a role-filtered member that
+    // is checked but currently hidden must NOT be lost on save. Bind once per
+    // container (delegation survives innerHTML re-renders).
+    if (inputName === "QUOTA_UNLIMITED_USERS" && container.dataset.wired !== "1") {
+      container.dataset.wired = "1";
+      container.addEventListener("change", (e) => {
+        const cb = e.target;
+        if (!cb || cb.name !== "QUOTA_UNLIMITED_USERS") return;
+        if (cb.checked) {
+          if (!quotaUnlimitedSelected.includes(cb.value)) quotaUnlimitedSelected.push(cb.value);
+        } else {
+          quotaUnlimitedSelected = quotaUnlimitedSelected.filter((id) => id !== cb.value);
+        }
+      });
+    }
   }
 
   // --- LOGS PAGE FUNCTIONALITY ---

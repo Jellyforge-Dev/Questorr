@@ -801,6 +801,10 @@
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
                               <label for="discord-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_discord_label">Discord User</label>
                             </div>
+                            <select id="mapping-role-filter" aria-label="Filter members by role"
+                              style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
+                              <option value="" data-i18n="config.all_members">All members</option>
+                            </select>
                             <div class="custom-select" id="discord-user-select">
                               <input type="text" class="custom-select-trigger" placeholder="Discord-User suchen..." data-i18n="config.mappings_discord_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
@@ -886,6 +890,10 @@
                       </div>
                       <div class="form-group">
                         <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_unlimited_users_label">Unlimited users</label>
+                        <select id="quota-unlimited-role-filter" aria-label="Filter members by role"
+                          style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
+                          <option value="" data-i18n="config.all_members">All members</option>
+                        </select>
                         <div id="quota-unlimited-users" class="role-list">
                           <p class="form-text" style="opacity:0.7;font-style:italic;" data-i18n="config.members_load_hint">Select a server to load members.</p>
                         </div>

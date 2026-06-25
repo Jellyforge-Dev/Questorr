@@ -580,6 +580,9 @@ function configureWebServer() {
           displayName: member.displayName || member.user.username,
           avatar: member.user.displayAvatarURL({ size: 64 }),
           discriminator: member.user.discriminator,
+          // Role IDs for the dashboard role filter. Exclude @everyone (its id
+          // equals the guild id) since every member has it.
+          roles: [...member.roles.cache.keys()].filter((rid) => rid !== guildId),
         }))
         .sort((a, b) => a.username.localeCompare(b.username)) // Sort alphabetically
         .slice(0, 1000); // Increased limit to 1000 members

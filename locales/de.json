@@ -570,7 +570,9 @@
     "digest_channel_help": "Wohin der Digest gepostet wird. Fällt auf den Jellyfin-Channel zurück, wenn leer.",
     "digest_day": "Tag",
     "digest_time": "Uhrzeit (HH:MM)",
-    "members_load_hint": "Server auswählen, um Mitglieder zu laden."
+    "members_load_hint": "Server auswählen, um Mitglieder zu laden.",
+    "all_members": "Alle Mitglieder",
+    "no_members_for_role": "Keine Mitglieder mit dieser Rolle."
   },
   "ui": {
     "hide_header": "Header ausblenden",
