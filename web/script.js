@@ -1942,6 +1942,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // Digest test button: trigger the weekly digest now and report the outcome.
+  const digestTestBtn = document.getElementById("digest-test-btn");
+  if (digestTestBtn) {
+    digestTestBtn.addEventListener("click", async () => {
+      digestTestBtn.disabled = true;
+      const origHTML = digestTestBtn.innerHTML;
+      digestTestBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.digest_test_running") || "Sende…");
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/digest/test", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409 || data.reason === "bot-stopped") {
+          showToast(t("config.digest_test_bot_stopped") || "Bot is not running — start it first.");
+          return;
+        }
+        if (!data.success) {
+          showToast((t("common.error") || "Error") + ": " + (data.error || data.reason || "unknown"));
+          return;
+        }
+        const counts = `${data.movies || 0} ${t("config.digest_movies_word") || "movies"}, ${data.series || 0} ${t("config.digest_series_word") || "series"}`;
+        let msg;
+        switch (data.reason) {
+          case "posted":
+            msg = (t("config.digest_test_posted") || "Digest posted ({{counts}}).").split("{{counts}}").join(counts);
+            break;
+          case "empty":
+            msg = t("config.digest_test_empty") || "Nothing added in the last 7 days — nothing posted (this is correct).";
+            break;
+          case "no-channel":
+            msg = t("config.digest_test_no_channel") || "No digest channel set, and no Jellyfin channel fallback.";
+            break;
+          case "channel-invalid":
+            msg = t("config.digest_test_channel_invalid") || "Configured channel was not found or is not a text channel.";
+            break;
+          case "send-failed":
+            msg = (t("config.digest_test_send_failed") || "Send failed: {{error}} (check the bot's channel permissions).").split("{{error}}").join(data.error || "");
+            break;
+          default:
+            msg = t("config.digest_test_done") || "Digest test finished.";
+        }
+        showToast(msg);
+      } catch (err) {
+        showToast((t("common.error") || "Error") + ": " + (err.message || "unknown"));
+      } finally {
+        digestTestBtn.disabled = false;
+        digestTestBtn.innerHTML = origHTML;
+      }
+    });
+  }
+
   // Cleanup-fetch-timeout preset toggle: shows custom number input when "custom"
   const cleanupTimeoutPreset = document.getElementById("CLEANUP_FETCH_TIMEOUT_PRESET");
   const cleanupTimeoutCustomWrap = document.getElementById("CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP");

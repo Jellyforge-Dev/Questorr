@@ -59,28 +59,51 @@ describe("sendWeeklyDigest", () => {
     delete process.env.JELLYFIN_CHANNEL_ID;
   });
 
-  it("posts a digest embed when new items exist", async () => {
+  it("posts a digest embed when new items exist and reports the outcome", async () => {
     const recent = new Date(Date.now() - DAY).toISOString();
     fetchItemsAddedSince.mockResolvedValue([{ Type: "Movie", Name: "New One", DateCreated: recent }]);
     const send = vi.fn();
-    await sendWeeklyDigest(makeClient(send));
+    const result = await sendWeeklyDigest(makeClient(send));
     expect(send).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(send.mock.calls[0][0])).toContain("New One");
+    expect(result).toMatchObject({ posted: true, reason: "posted", movies: 1, series: 0, channelId: "chan1" });
   });
 
-  it("does not post when disabled", async () => {
+  it("does not post when disabled and reports reason", async () => {
     process.env.DIGEST_ENABLED = "false";
     const send = vi.fn();
-    await sendWeeklyDigest(makeClient(send));
+    const result = await sendWeeklyDigest(makeClient(send));
     expect(fetchItemsAddedSince).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ posted: false, reason: "disabled", enabled: false });
   });
 
-  it("skips silently when nothing new this week", async () => {
+  it("force-runs even when disabled (test button)", async () => {
+    process.env.DIGEST_ENABLED = "false";
+    const recent = new Date(Date.now() - DAY).toISOString();
+    fetchItemsAddedSince.mockResolvedValue([{ Type: "Series", Name: "Forced", DateCreated: recent }]);
+    const send = vi.fn();
+    const result = await sendWeeklyDigest(makeClient(send), { force: true });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ posted: true, reason: "posted", enabled: false, series: 1 });
+  });
+
+  it("skips silently when nothing new this week and reports reason", async () => {
     fetchItemsAddedSince.mockResolvedValue([]);
     const send = vi.fn();
-    await sendWeeklyDigest(makeClient(send));
+    const result = await sendWeeklyDigest(makeClient(send));
     expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ posted: false, reason: "empty" });
+  });
+
+  it("reports when no channel is configured", async () => {
+    delete process.env.DIGEST_CHANNEL_ID;
+    const recent = new Date(Date.now() - DAY).toISOString();
+    fetchItemsAddedSince.mockResolvedValue([{ Type: "Movie", Name: "X", DateCreated: recent }]);
+    const send = vi.fn();
+    const result = await sendWeeklyDigest(makeClient(send));
+    expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ posted: false, reason: "no-channel" });
   });
 
   it("falls back to JELLYFIN_CHANNEL_ID when DIGEST_CHANNEL_ID unset", async () => {
@@ -93,8 +116,9 @@ describe("sendWeeklyDigest", () => {
     expect(client.channels.fetch).toHaveBeenCalledWith("jfchan");
   });
 
-  it("is a no-op without a client", async () => {
-    await expect(sendWeeklyDigest(null)).resolves.toBeUndefined();
+  it("reports no-client without a client", async () => {
+    const result = await sendWeeklyDigest(null);
+    expect(result).toMatchObject({ posted: false, reason: "no-client" });
     expect(fetchItemsAddedSince).not.toHaveBeenCalled();
   });
 });

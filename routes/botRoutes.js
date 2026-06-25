@@ -13,6 +13,7 @@ import { getSeerrApiUrl } from "../utils/seerrUrl.js";
 import { TIMEOUTS } from "../lib/constants.js";
 import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
+import { sendWeeklyDigest } from "../bot/weeklyDigest.js";
 import { updateConfig } from "../utils/configFile.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
@@ -184,6 +185,22 @@ router.get("/health/details", authenticateToken, async (_req, res) => {
 router.get("/notifications/audit", authenticateToken, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
   res.json({ notifications: getRecentNotifications(limit) });
+});
+
+// ─── Digest test: run the weekly digest now and report the outcome ───────────
+// Forces a run even if DIGEST_ENABLED is off, so admins can preview and diagnose
+// (the response says exactly why nothing posted: disabled, empty, no-channel…).
+router.post("/digest/test", authenticateToken, async (_req, res) => {
+  if (!botState.isBotRunning || !botState.discordClient) {
+    return res.status(409).json({ success: false, reason: "bot-stopped" });
+  }
+  try {
+    const result = await sendWeeklyDigest(botState.discordClient, { force: true });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error(`[Digest test] ${err.message}`);
+    return res.status(500).json({ success: false, reason: "error", error: err.message });
+  }
 });
 
 // ─── Preflight: aggregated readiness check (dashboard "Alles prüfen") ────────

@@ -572,7 +572,19 @@
     "digest_time": "Uhrzeit (HH:MM)",
     "members_load_hint": "Server auswählen, um Mitglieder zu laden.",
     "all_members": "Alle Mitglieder",
-    "no_members_for_role": "Keine Mitglieder mit dieser Rolle."
+    "no_members_for_role": "Keine Mitglieder mit dieser Rolle.",
+    "digest_test_btn": "Test-Digest jetzt senden",
+    "digest_test_help": "Postet den Digest sofort (auch wenn deaktiviert), damit du Channel und Inhalt prüfen kannst.",
+    "digest_test_running": "Sende…",
+    "digest_test_bot_stopped": "Bot läuft nicht — starte ihn zuerst.",
+    "digest_test_posted": "Digest gepostet ({{counts}}).",
+    "digest_test_empty": "Nichts in den letzten 7 Tagen hinzugefügt — kein Post (korrektes Verhalten).",
+    "digest_test_no_channel": "Kein Digest-Channel gesetzt und kein Jellyfin-Channel als Fallback.",
+    "digest_test_channel_invalid": "Eingestellter Channel nicht gefunden oder kein Textkanal.",
+    "digest_test_send_failed": "Senden fehlgeschlagen: {{error}} (Channel-Rechte des Bots prüfen).",
+    "digest_test_done": "Digest-Test abgeschlossen.",
+    "digest_movies_word": "Filme",
+    "digest_series_word": "Serien"
   },
   "ui": {
     "hide_header": "Header ausblenden",

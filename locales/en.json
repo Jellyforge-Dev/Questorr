@@ -503,7 +503,19 @@
     "digest_time": "Time (HH:MM)",
     "members_load_hint": "Select a server to load members.",
     "all_members": "All members",
-    "no_members_for_role": "No members with this role."
+    "no_members_for_role": "No members with this role.",
+    "digest_test_btn": "Send test digest now",
+    "digest_test_help": "Posts the digest immediately (even if disabled) so you can verify the channel and content.",
+    "digest_test_running": "Sending…",
+    "digest_test_bot_stopped": "Bot is not running — start it first.",
+    "digest_test_posted": "Digest posted ({{counts}}).",
+    "digest_test_empty": "Nothing added in the last 7 days — nothing posted (this is correct behaviour).",
+    "digest_test_no_channel": "No digest channel set, and no Jellyfin channel as fallback.",
+    "digest_test_channel_invalid": "Configured channel was not found or is not a text channel.",
+    "digest_test_send_failed": "Send failed: {{error}} (check the bot's channel permissions).",
+    "digest_test_done": "Digest test finished.",
+    "digest_movies_word": "movies",
+    "digest_series_word": "series"
   },
   "ui": {
     "hide_header": "Hide header",

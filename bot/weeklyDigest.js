@@ -52,37 +52,51 @@ export function buildDigestEmbed(summary) {
   return embed;
 }
 
-/** Post the weekly digest. No-op when disabled, no client, or nothing new. */
-export async function sendWeeklyDigest(client) {
-  if (!client) return;
-  if (String(process.env.DIGEST_ENABLED).toLowerCase() !== "true") return;
+/**
+ * Post the weekly digest. Returns a diagnostic result so the scheduler and the
+ * dashboard "test" button can report exactly what happened:
+ *   { posted, reason, enabled, movies, series, channelId, error? }
+ * reason ∈ no-client | disabled | empty | no-channel | channel-invalid |
+ *          send-failed | posted
+ *
+ * @param {object} opts
+ * @param {boolean} opts.force  Run even when DIGEST_ENABLED is off (manual test).
+ */
+export async function sendWeeklyDigest(client, { force = false } = {}) {
+  if (!client) return { posted: false, reason: "no-client" };
+  const enabled = String(process.env.DIGEST_ENABLED).toLowerCase() === "true";
+  if (!enabled && !force) return { posted: false, reason: "disabled", enabled };
 
   const items = await fetchItemsAddedSince(process.env.JELLYFIN_API_KEY, process.env.JELLYFIN_BASE_URL, {
     maxPages: 5,
   });
   const summary = buildDigestSummary(items, Date.now() - WINDOW_MS);
+  const movies = summary.movies.length;
+  const series = summary.series.length;
   const embed = buildDigestEmbed(summary);
   if (!embed) {
     logger.info("[Digest] Nothing new this week — skipping post");
-    return;
+    return { posted: false, reason: "empty", enabled, movies, series };
   }
 
   const channelId = process.env.DIGEST_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID;
   if (!channelId) {
     logger.warn("[Digest] No channel configured (DIGEST_CHANNEL_ID / JELLYFIN_CHANNEL_ID) — skipping");
-    return;
+    return { posted: false, reason: "no-channel", enabled, movies, series };
   }
 
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel || !channel.isTextBased?.()) {
       logger.warn(`[Digest] Channel ${channelId} not text-based — skipping`);
-      return;
+      return { posted: false, reason: "channel-invalid", enabled, movies, series, channelId };
     }
     await channel.send({ embeds: [embed] });
-    logger.info(`[Digest] Posted weekly digest (${summary.movies.length} movies, ${summary.series.length} series)`);
+    logger.info(`[Digest] Posted weekly digest (${movies} movies, ${series} series)`);
+    return { posted: true, reason: "posted", enabled, movies, series, channelId };
   } catch (err) {
     logger.warn(`[Digest] Failed to post: ${err.message}`);
+    return { posted: false, reason: "send-failed", enabled, movies, series, channelId, error: err.message };
   }
 }
 
