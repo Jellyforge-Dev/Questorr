@@ -686,8 +686,45 @@ function configureWebServer() {
   // CSS, JS, images and locale files are served for unauthenticated visitors.
   app.use("/assets", express.static(path.join(__dirname, "assets")));
   app.use("/locales", express.static(path.join(__dirname, "locales")));
-  // Disable caching for dashboard JS/CSS so updates are always picked up immediately
+
+  // Cache-busting: derive a version token from the asset mtimes. Whenever
+  // script.js/style.css change (a redeploy), the token changes, so the
+  // ?v=<token> asset URLs differ and no browser or reverse proxy (e.g. Nginx
+  // Proxy Manager) can serve a stale bundle — even if it ignores no-store.
+  const assetVersion = () => {
+    try {
+      const js = fs.statSync(path.join(__dirname, "web", "script.js")).mtimeMs;
+      const css = fs.statSync(path.join(__dirname, "web", "style.css")).mtimeMs;
+      return Math.floor(Math.max(js, css)).toString(36);
+    } catch {
+      return Date.now().toString(36);
+    }
+  };
+
+  // Serve the dashboard shell with cache-busted asset URLs. Registered BEFORE
+  // the static middleware so "/" and "/index.html" go through the injector
+  // instead of being served as a raw static file.
+  const serveDashboardShell = (_req, res) => {
+    try {
+      const v = assetVersion();
+      let html = fs.readFileSync(path.join(__dirname, "web", "index.html"), "utf-8");
+      html = html
+        .replace('src="script.js"', `src="script.js?v=${v}"`)
+        .replace('href="style.css"', `href="style.css?v=${v}"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.type("html").send(html);
+    } catch (err) {
+      logger.error(`[Dashboard] Failed to serve index.html: ${err.message}`);
+      res.status(500).send("Failed to load dashboard.");
+    }
+  };
+  app.get(["/", "/index.html"], serveDashboardShell);
+
+  // Disable caching for dashboard JS/CSS so updates are always picked up
+  // immediately. index:false so the static layer never serves index.html
+  // directly — the cache-busting injector above owns that.
   app.use(express.static(path.join(__dirname, "web"), {
+    index: false,
     etag: false,
     lastModified: false,
     setHeaders(res, filePath) {
@@ -696,10 +733,6 @@ function configureWebServer() {
       }
     },
   }));
-
-  app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "web", "index.html"));
-  });
 
   // Global error handler middleware — must be AFTER all routes and static handlers
   app.use((err, req, res, _next) => {
