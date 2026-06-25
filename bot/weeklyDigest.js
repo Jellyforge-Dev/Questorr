@@ -67,36 +67,46 @@ export async function sendWeeklyDigest(client, { force = false } = {}) {
   const enabled = String(process.env.DIGEST_ENABLED).toLowerCase() === "true";
   if (!enabled && !force) return { posted: false, reason: "disabled", enabled };
 
+  const sinceMs = Date.now() - WINDOW_MS;
   const items = await fetchItemsAddedSince(process.env.JELLYFIN_API_KEY, process.env.JELLYFIN_BASE_URL, {
     maxPages: 5,
   });
-  const summary = buildDigestSummary(items, Date.now() - WINDOW_MS);
+  // Diagnostics so "nothing new" is explainable: how many items Jellyfin
+  // returned, how many fall inside the 7-day window (any type), and how many of
+  // those are whole movies/series (episodes/seasons are intentionally excluded).
+  const fetched = Array.isArray(items) ? items.length : 0;
+  const inWindowAll = (items || []).filter((i) => {
+    const c = Date.parse(i.DateCreated || "");
+    return Number.isFinite(c) && c >= sinceMs;
+  }).length;
+  const summary = buildDigestSummary(items, sinceMs);
   const movies = summary.movies.length;
   const series = summary.series.length;
+  const stats = { fetched, inWindowAll, movies, series };
   const embed = buildDigestEmbed(summary);
   if (!embed) {
-    logger.info("[Digest] Nothing new this week — skipping post");
-    return { posted: false, reason: "empty", enabled, movies, series };
+    logger.info(`[Digest] Nothing to post — fetched ${fetched}, ${inWindowAll} added in last 7d, ${movies} movies + ${series} series qualify`);
+    return { posted: false, reason: "empty", enabled, ...stats };
   }
 
   const channelId = process.env.DIGEST_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID;
   if (!channelId) {
     logger.warn("[Digest] No channel configured (DIGEST_CHANNEL_ID / JELLYFIN_CHANNEL_ID) — skipping");
-    return { posted: false, reason: "no-channel", enabled, movies, series };
+    return { posted: false, reason: "no-channel", enabled, ...stats };
   }
 
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel || !channel.isTextBased?.()) {
       logger.warn(`[Digest] Channel ${channelId} not text-based — skipping`);
-      return { posted: false, reason: "channel-invalid", enabled, movies, series, channelId };
+      return { posted: false, reason: "channel-invalid", enabled, ...stats, channelId };
     }
     await channel.send({ embeds: [embed] });
     logger.info(`[Digest] Posted weekly digest (${movies} movies, ${series} series)`);
-    return { posted: true, reason: "posted", enabled, movies, series, channelId };
+    return { posted: true, reason: "posted", enabled, ...stats, channelId };
   } catch (err) {
     logger.warn(`[Digest] Failed to post: ${err.message}`);
-    return { posted: false, reason: "send-failed", enabled, movies, series, channelId, error: err.message };
+    return { posted: false, reason: "send-failed", enabled, ...stats, channelId, error: err.message };
   }
 }
 

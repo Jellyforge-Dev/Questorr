@@ -93,7 +93,20 @@ describe("sendWeeklyDigest", () => {
     const send = vi.fn();
     const result = await sendWeeklyDigest(makeClient(send));
     expect(send).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ posted: false, reason: "empty" });
+    expect(result).toMatchObject({ posted: false, reason: "empty", fetched: 0, inWindowAll: 0 });
+  });
+
+  it("reports diagnostic counts when items exist but none qualify (e.g. only episodes)", async () => {
+    const recent = new Date(Date.now() - DAY).toISOString();
+    const old = new Date(Date.now() - 30 * DAY).toISOString();
+    fetchItemsAddedSince.mockResolvedValue([
+      { Type: "Episode", Name: "S1E1", DateCreated: recent }, // in window, not a movie/series
+      { Type: "Movie", Name: "Old", DateCreated: old },       // movie but out of window
+    ]);
+    const send = vi.fn();
+    const result = await sendWeeklyDigest(makeClient(send));
+    expect(send).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ reason: "empty", fetched: 2, inWindowAll: 1, movies: 0, series: 0 });
   });
 
   it("reports when no channel is configured", async () => {

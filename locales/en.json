@@ -509,7 +509,7 @@
     "digest_test_running": "Sending…",
     "digest_test_bot_stopped": "Bot is not running — start it first.",
     "digest_test_posted": "Digest posted ({{counts}}).",
-    "digest_test_empty": "Nothing added in the last 7 days — nothing posted (this is correct behaviour).",
+    "digest_test_empty": "Nothing posted: {{fetched}} items loaded, {{inwindow}} added in the last 7 days, of which 0 are whole movies/series (episodes/seasons don't count).",
     "digest_test_no_channel": "No digest channel set, and no Jellyfin channel as fallback.",
     "digest_test_channel_invalid": "Configured channel was not found or is not a text channel.",
     "digest_test_send_failed": "Send failed: {{error}} (check the bot's channel permissions).",

@@ -1971,7 +1971,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             msg = (t("config.digest_test_posted") || "Digest posted ({{counts}}).").split("{{counts}}").join(counts);
             break;
           case "empty":
-            msg = t("config.digest_test_empty") || "Nothing added in the last 7 days — nothing posted (this is correct).";
+            msg = (t("config.digest_test_empty") || "Nothing posted: {{fetched}} items loaded, {{inwindow}} added in the last 7 days, of which 0 are whole movies/series (episodes/seasons don't count).")
+              .split("{{fetched}}").join(data.fetched ?? 0)
+              .split("{{inwindow}}").join(data.inWindowAll ?? 0);
             break;
           case "no-channel":
             msg = t("config.digest_test_no_channel") || "No digest channel set, and no Jellyfin channel fallback.";
