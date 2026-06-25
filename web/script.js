@@ -111,12 +111,22 @@ function t(key) {
   return getNestedTranslation(key);
 }
 
+// Read the persisted UI-language preference (survives reloads and works on the
+// unauthenticated login screen, unlike the server config).
+function getStoredUiLang() {
+  try { return localStorage.getItem('questorr_ui_lang'); } catch { return null; }
+}
+
 async function switchLanguage(language) {
   currentLanguage = language;
+  // Persist locally first — this always succeeds, even at the login screen
+  // where the authenticated /api/config write below would be rejected.
+  try { localStorage.setItem('questorr_ui_lang', language); } catch { /* ignore */ }
   currentTranslations = await loadTranslations(language);
   updateUITranslations();
 
-  // Save language preference
+  // Also save to server config (default for new sessions/devices). Best-effort:
+  // fails with 401 when not logged in, which is fine — localStorage already won.
   try {
     await fetch('/api/config', {
       method: 'POST',
@@ -200,10 +210,12 @@ async function initializeI18n() {
   try {
     const response = await fetch('/api/config');
     const config = await response.json();
-    currentLanguage = config.LANGUAGE || 'en';
+    // Local preference wins over the server default so a per-browser choice
+    // (incl. the one made on the login screen) survives reloads.
+    currentLanguage = getStoredUiLang() || config.LANGUAGE || 'en';
   } catch (error) {
     console.warn('Could not load saved language, using default');
-    currentLanguage = 'en';
+    currentLanguage = getStoredUiLang() || 'en';
   }
   
   // Populate language selectors
@@ -240,6 +252,21 @@ function toggleCollapsible(bodyId, btnEl) {
       btnEl.textContent = (typeof getNestedTranslation === "function") ? (getNestedTranslation("config.show_more") || "Mehr anzeigen") : "Mehr anzeigen";
     }
   }
+}
+
+// ─── Global toast helper ─────────────────────────────────────────────────────
+// Defined at module scope so both DOMContentLoaded blocks can call it.
+function showToast(message, duration = 3000) {
+  let toastEl = document.getElementById("toast");
+  if (!toastEl) {
+    toastEl = document.createElement("div");
+    toastEl.id = "toast";
+    toastEl.className = "toast";
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), duration);
 }
 
 // ─── Event delegation for collapsible buttons ────────────────────────────────
@@ -424,14 +451,100 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function showToast(message, duration = 3000) {
-    toast.textContent = message;
-    toast.classList.add("show");
-    setTimeout(() => {
-      toast.classList.remove("show");
-    }, duration);
+  // ── Library / Lifecycle / Request-Genre Insights ───────────────────────────
+  function renderInsightBars(containerId, items, color) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!items || items.length === 0) {
+      el.innerHTML = `<div style="font-size:0.85rem;color:var(--subtext0);">${t("config.stats_insights_empty") || "No data."}</div>`;
+      return;
+    }
+    const max = Math.max(...items.map(i => i.count));
+    el.innerHTML = items.map(it => {
+      const pct = Math.round((it.count / max) * 100);
+      return `
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;">
+          <div style="flex:0 0 130px;color:var(--text);">${it.name}</div>
+          <div style="flex:1;background:var(--surface0);border-radius:4px;height:18px;position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;width:${pct}%;background:${color};border-radius:4px;"></div>
+          </div>
+          <div style="flex:0 0 40px;text-align:right;color:var(--subtext0);">${it.count}</div>
+        </div>`;
+    }).join("");
   }
 
+  async function loadInsights({ refresh = false } = {}) {
+    const statusEl = document.getElementById("stats-insights-status");
+    const btn = document.getElementById("stats-insights-load-btn");
+    const refreshBtn = document.getElementById("stats-insights-refresh-btn");
+    const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    // Visible feedback so users see something happen before the fetch resolves.
+    if (btn) { btn.disabled = true; }
+    if (refreshBtn) { refreshBtn.disabled = true; }
+    if (statusEl) { statusEl.textContent = "⏳ " + (t("config.stats_insights_loading") || "Loading…"); statusEl.style.color = "var(--subtext0)"; }
+    try {
+      const token = localStorage.getItem("questorr_token") || "";
+      // Round 9: ?refresh=true bypasses the 5-min server cache for an immediate live fetch.
+      // Round 11: also append a cache-buster query parameter and disable client-side
+      // caching, so neither the browser nor any reverse-proxy/CDN can serve stale data.
+      const cacheBuster = `_=${Date.now()}`;
+      const base = refresh ? "/api/stats/insights?refresh=true" : "/api/stats/insights?";
+      const url = base + (base.endsWith("?") ? cacheBuster : `&${cacheBuster}`);
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      // Library cards
+      if (data.library) {
+        setText("stats-lib-movies", data.library.movies ?? 0);
+        setText("stats-lib-series", data.library.series ?? 0);
+        const hours = data.library.totalRuntimeMinutes
+          ? Math.round(data.library.totalRuntimeMinutes / 60)
+          : 0;
+        setText("stats-lib-runtime", hours);
+        renderInsightBars("stats-lib-genres", data.library.topGenres || [], "var(--mauve)");
+      } else {
+        setText("stats-lib-movies", "–");
+        setText("stats-lib-series", "–");
+        setText("stats-lib-runtime", "–");
+        renderInsightBars("stats-lib-genres", [], "var(--mauve)");
+      }
+
+      // Lifecycle
+      if (data.lifecycle) {
+        setText("stats-lc-pending",   data.lifecycle.pendingToApprovedAvgHours   ?? "–");
+        setText("stats-lc-available", data.lifecycle.approvedToAvailableAvgHours ?? "–");
+      } else {
+        setText("stats-lc-pending", "–");
+        setText("stats-lc-available", "–");
+      }
+
+      // Request genres
+      renderInsightBars("stats-req-genres", data.requestGenres || [], "var(--peach)");
+
+      if (statusEl) { statusEl.textContent = "✓ " + (t("config.stats_insights_ok") || "Loaded"); statusEl.style.color = "var(--green)"; }
+      setTimeout(() => { if (statusEl) statusEl.textContent = ""; }, 3000);
+    } catch (err) {
+      if (statusEl) { statusEl.textContent = "✗ " + err.message; statusEl.style.color = "var(--red)"; }
+    } finally {
+      if (btn) btn.disabled = false;
+      if (refreshBtn) refreshBtn.disabled = false;
+    }
+  }
+
+  const insightsBtn = document.getElementById("stats-insights-load-btn");
+  if (insightsBtn) insightsBtn.addEventListener("click", () => loadInsights({ refresh: false }));
+
+  // Round 9: dedicated refresh button bypasses the 5-min cache.
+  const insightsRefreshBtn = document.getElementById("stats-insights-refresh-btn");
+  if (insightsRefreshBtn) insightsRefreshBtn.addEventListener("click", () => loadInsights({ refresh: true }));
 
   // ─── Per-event notification buttons table ─────────────────────────────────
   const NOTIF_EVENTS = [
@@ -463,103 +576,151 @@ document.addEventListener("DOMContentLoaded", async () => {
     return true;
   }
 
+  // Channel = posted in the Discord channel; DM = direct-message to the requester.
+  // Each event renders TWO sub-rows so users can configure both independently.
+  // /random and /status are command embeds, not webhook events \u2014 they have no DM
+  // counterpart, so we skip the DM sub-row for those.
+  const VARIANTS = [
+    { key: "CHANNEL", label: "Channel", envSuffix: ""   },
+    { key: "DM",      label: "DM",      envSuffix: "_DM" },
+  ];
+  const COMMAND_ONLY_EVENTS = new Set(["RANDOM", "STATUS"]);
+
   function buildNotifButtonsTable(configData, resetToGlobal) {
     const tbody = document.getElementById("notif-buttons-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
 
     for (const evt of NOTIF_EVENTS) {
-      const perEventKey = "NOTIF_BUTTONS_" + evt.key;
-      const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
+      const variantsForEvent = COMMAND_ONLY_EVENTS.has(evt.key)
+        ? [VARIANTS[0]]   // only Channel for command-only entries
+        : VARIANTS;
 
-      // Parse saved per-event value
-      let checkedMap = null;
-      if (raw) {
-        const parts = raw.toLowerCase().split(",").map(s => s.trim());
-        const on  = parts.filter(p => !p.startsWith("-"));
-        const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
-        checkedMap = {};
-        for (const b of BTN_DEFS) {
-          if (on.includes(b.key))       checkedMap[b.key] = true;
-          else if (off.includes(b.key)) checkedMap[b.key] = false;
-          else                          checkedMap[b.key] = globalBtnDefault(configData, b);
-        }
-      }
+      variantsForEvent.forEach((variant, idx) => {
+        const perEventKey = "NOTIF_BUTTONS_" + evt.key + variant.envSuffix;
+        const raw = (!resetToGlobal && configData && configData[perEventKey]) || "";
 
-      const tr = document.createElement("tr");
-      tr.style.cssText = "border-bottom: 0.5px solid var(--surface1);";
-
-      const tdLabel = document.createElement("td");
-      tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap;";
-      tdLabel.textContent = evt.label;
-      tr.appendChild(tdLabel);
-
-      for (const btn of BTN_DEFS) {
-        const td = document.createElement("td");
-        td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.dataset.event = evt.key;
-        cb.dataset.btn   = btn.key;
-        cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
-        cb.checked = checkedMap ? checkedMap[btn.key] : globalBtnDefault(configData, btn);
-
-        cb.addEventListener("change", () => saveNotifButtonsRow(evt.key));
-        td.appendChild(cb);
-        tr.appendChild(td);
-      }
-      // Test button column
-      const tdTest = document.createElement("td");
-      tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem;";
-      const testBtn = document.createElement("button");
-      testBtn.type = "button";
-      testBtn.textContent = "\u25B6";
-      testBtn.title = "Send test to admin channel";
-      testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
-      testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
-      testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
-      testBtn.addEventListener("click", (function(evtKey, btn) {
-        return async function() {
-          btn.disabled = true;
-          btn.textContent = "\u2026";
-          try {
-            const r = await fetch("/api/test-notification-buttons", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ eventType: evtKey }),
-            });
-            const d = await r.json();
-            btn.textContent = d.success ? "\u2705" : "\u274C";
-            if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
-          } catch (e) {
-            btn.textContent = "\u274C";
+        // Parse saved per-event value into checkbox state
+        let checkedMap = null;
+        if (raw) {
+          const parts = raw.toLowerCase().split(",").map(s => s.trim());
+          const on  = parts.filter(p => !p.startsWith("-"));
+          const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+          checkedMap = {};
+          for (const b of BTN_DEFS) {
+            if (on.includes(b.key))       checkedMap[b.key] = true;
+            else if (off.includes(b.key)) checkedMap[b.key] = false;
+            else                          checkedMap[b.key] = globalBtnDefault(configData, b);
           }
-          setTimeout(function() { btn.disabled = false; btn.textContent = "\u25B6"; }, 3000);
-        };
-      })(evt.key, testBtn));
-      tdTest.appendChild(testBtn);
-      tr.appendChild(tdTest);
+        }
+        // Default state when no override saved:
+        //  - Channel: global default
+        //  - DM:      always OFF (DMs default to no buttons unless explicitly enabled)
+        //  - DM for MEDIA_AVAILABLE: inherit Channel defaults for backward compat
+        const defaultDmInheritsChannel = evt.key === "MEDIA_AVAILABLE";
 
-      tbody.appendChild(tr);
+        const tr = document.createElement("tr");
+        tr.style.cssText = idx === variantsForEvent.length - 1
+          ? "border-bottom: 0.5px solid var(--surface1);"
+          : "";
+
+        // Event label only on first sub-row, with rowspan
+        if (idx === 0) {
+          const tdLabel = document.createElement("td");
+          tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap; vertical-align: middle;";
+          if (variantsForEvent.length > 1) tdLabel.rowSpan = variantsForEvent.length;
+          tdLabel.textContent = evt.label;
+          tr.appendChild(tdLabel);
+        }
+
+        // Variant column
+        const tdVariant = document.createElement("td");
+        tdVariant.style.cssText = "text-align: center; padding: 0.55rem 0.4rem; font-size: 0.78rem; color: var(--subtext0);";
+        tdVariant.textContent = variant.label;
+        tr.appendChild(tdVariant);
+
+        for (const btn of BTN_DEFS) {
+          const td = document.createElement("td");
+          td.style.cssText = "text-align: center; padding: 0.55rem 0.4rem;";
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.dataset.event   = evt.key;
+          cb.dataset.variant = variant.key;
+          cb.dataset.btn     = btn.key;
+          cb.style.cssText = "width: 15px; height: 15px; cursor: pointer; accent-color: #1ec8a0;";
+          if (checkedMap) {
+            cb.checked = checkedMap[btn.key];
+          } else if (variant.key === "DM" && !defaultDmInheritsChannel) {
+            cb.checked = false;
+          } else {
+            cb.checked = globalBtnDefault(configData, btn);
+          }
+
+          cb.addEventListener("change", () => saveNotifButtonsRow(evt.key, variant.key));
+          td.appendChild(cb);
+          tr.appendChild(td);
+        }
+
+        // Test button column \u2014 only on first sub-row, spans both
+        if (idx === 0) {
+          const tdTest = document.createElement("td");
+          tdTest.style.cssText = "text-align: center; padding: 0.4rem 0.4rem; vertical-align: middle;";
+          if (variantsForEvent.length > 1) tdTest.rowSpan = variantsForEvent.length;
+          const testBtn = document.createElement("button");
+          testBtn.type = "button";
+          testBtn.textContent = "\u25B6";
+          testBtn.title = "Send test to admin channel";
+          testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
+          testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
+          testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
+          testBtn.addEventListener("click", (function(evtKey, btn) {
+            return async function() {
+              btn.disabled = true;
+              btn.textContent = "\u2026";
+              try {
+                const r = await fetch("/api/test-notification-buttons", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ eventType: evtKey }),
+                });
+                const d = await r.json();
+                btn.textContent = d.success ? "\u2705" : "\u274C";
+                if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
+              } catch (e) {
+                btn.textContent = "\u274C";
+              }
+              setTimeout(function() { btn.disabled = false; btn.textContent = "\u25B6"; }, 3000);
+            };
+          })(evt.key, testBtn));
+          tdTest.appendChild(testBtn);
+          tr.appendChild(tdTest);
+        }
+
+        tbody.appendChild(tr);
+      });
     }
 
-    // If reset: write empty values so save will clear per-event config
+    // If reset: write empty values for both variants so save will clear per-event config
     if (resetToGlobal) {
       for (const evt of NOTIF_EVENTS) {
-        saveNotifButtonsRow(evt.key);
+        const variantsForEvent = COMMAND_ONLY_EVENTS.has(evt.key) ? [VARIANTS[0]] : VARIANTS;
+        for (const v of variantsForEvent) saveNotifButtonsRow(evt.key, v.key);
       }
     }
   }
 
-  function saveNotifButtonsRow(eventKey) {
-    const cbs = document.querySelectorAll(`[data-event="${eventKey}"]`);
+  function saveNotifButtonsRow(eventKey, variantKey = "CHANNEL") {
+    const cbs = document.querySelectorAll(
+      `[data-event="${eventKey}"][data-variant="${variantKey}"]`
+    );
     const parts = [];
     cbs.forEach(cb => {
       parts.push(cb.checked ? cb.dataset.btn : "-" + cb.dataset.btn);
     });
-    const envKey = "NOTIF_BUTTONS_" + eventKey;
+    const variant = VARIANTS.find(v => v.key === variantKey) || VARIANTS[0];
+    const envKey = "NOTIF_BUTTONS_" + eventKey + variant.envSuffix;
     let inp = document.getElementById(envKey);
     if (!inp) {
       inp = document.createElement("input");
@@ -587,7 +748,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       const config = await response.json();
       for (const key in config) {
-        const input = document.getElementById(key);
+        // Round 12: name-selector fallback. Some inputs use lowercase/hyphenated
+        // IDs (e.g. <select id="bot-language" name="BOT_LANGUAGE">), so a strict
+        // getElementById(key) lookup misses them and the dropdown is never
+        // populated — which then defaults to the first option ("English") on
+        // every page load, even after the user saved "Deutsch". Using name as a
+        // fallback covers these cases without renaming the existing DOM IDs.
+        const input = document.getElementById(key) || document.querySelector(`[name="${key}"]`);
         if (!input) continue;
         if (input.type === "checkbox") {
           const val = String(config[key]).trim().toLowerCase();
@@ -622,18 +789,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildNotifButtonsTable(config);
       initNotifButtonsReset(config);
 
-      // Sync app-language selector with LANGUAGE config value
-      if (config.LANGUAGE) {
+      // Sync the language selectors. A local per-browser preference wins over
+      // the server config, so loading config here must not revert the UI to the
+      // saved default (this was the "F5 / logo click flips to German" bug).
+      const effectiveLang = getStoredUiLang() || config.LANGUAGE;
+      if (effectiveLang) {
         const appLanguageSelect = document.getElementById('app-language');
         const authLanguageSelect = document.getElementById('auth-language');
         if (appLanguageSelect) {
-          appLanguageSelect.value = config.LANGUAGE;
+          appLanguageSelect.value = effectiveLang;
         }
         if (authLanguageSelect) {
-          authLanguageSelect.value = config.LANGUAGE;
+          authLanguageSelect.value = effectiveLang;
         }
-        // Update global currentLanguage
-        currentLanguage = config.LANGUAGE;
+        // Keep global currentLanguage in sync; re-render only if it actually
+        // changed (avoids overriding the active choice with the server default).
+        if (effectiveLang !== currentLanguage) {
+          switchLanguage(effectiveLang);
+        }
       }
       
       // Initialize episodes/seasons notify values
@@ -1107,15 +1280,58 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
     // Handle role allowlist/blocklist as arrays
-    const allowlistRoles = Array.from(
-      document.querySelectorAll('input[name="ROLE_ALLOWLIST"]:checked')
-    ).map((cb) => cb.value);
-    const blocklistRoles = Array.from(
-      document.querySelectorAll('input[name="ROLE_BLOCKLIST"]:checked')
-    ).map((cb) => cb.value);
+    // Round 11: only include the role arrays if the role-section was actually
+    // rendered with checkboxes. Otherwise (e.g. dashboard opened before Discord
+    // guild data loaded), the querySelectorAll returns an empty NodeList and
+    // we would send [] to the backend, overwriting the user's saved roles.
+    // We detect "section rendered" by checking for ANY ROLE_* checkbox in DOM
+    // (checked or not). If none exist, we omit the field — backend will then
+    // preserve the existing config.json value via its merge logic.
+    const anyAllowlistRoleCheckbox = document.querySelector('input[name="ROLE_ALLOWLIST"]');
+    const anyBlocklistRoleCheckbox = document.querySelector('input[name="ROLE_BLOCKLIST"]');
+    if (anyAllowlistRoleCheckbox) {
+      config.ROLE_ALLOWLIST = Array.from(
+        document.querySelectorAll('input[name="ROLE_ALLOWLIST"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      console.debug("[saveConfig] ROLE_ALLOWLIST checkboxes not in DOM — omitting from save to preserve server value");
+    }
+    if (anyBlocklistRoleCheckbox) {
+      config.ROLE_BLOCKLIST = Array.from(
+        document.querySelectorAll('input[name="ROLE_BLOCKLIST"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      console.debug("[saveConfig] ROLE_BLOCKLIST checkboxes not in DOM — omitting from save to preserve server value");
+    }
 
-    config.ROLE_ALLOWLIST = allowlistRoles;
-    config.ROLE_BLOCKLIST = blocklistRoles;
+    // Quota: bypass roles + unlimited users — both rendered as member/role
+    // checkbox lists. Collect the checked values into arrays; if the list isn't
+    // rendered (data not loaded yet) omit the key so the server value survives.
+    if (document.querySelector('input[name="QUOTA_BYPASS_ROLES"]')) {
+      config.QUOTA_BYPASS_ROLES = Array.from(
+        document.querySelectorAll('input[name="QUOTA_BYPASS_ROLES"]:checked')
+      ).map((cb) => cb.value);
+    } else {
+      delete config.QUOTA_BYPASS_ROLES; // not rendered → preserve server value
+    }
+    // Unlimited users come from JS state (quotaUnlimitedSelected), not the DOM:
+    // the role filter can hide checked members, so reading only visible checked
+    // boxes would silently drop them. Only write when the member list has loaded
+    // at least once; otherwise omit the key to preserve the saved value.
+    if (membersLoaded) {
+      config.QUOTA_UNLIMITED_USERS = [...quotaUnlimitedSelected];
+    } else {
+      delete config.QUOTA_UNLIMITED_USERS;
+    }
+
+    // Round 11: BOT_LANGUAGE — guard against empty value being sent.
+    // The form may include <select name="BOT_LANGUAGE"> with an empty initial
+    // value if the languages list hasn't loaded yet. Sending "" would overwrite
+    // the saved language on the server.
+    if (config.BOT_LANGUAGE === "" || config.BOT_LANGUAGE === null || config.BOT_LANGUAGE === undefined) {
+      delete config.BOT_LANGUAGE;
+      console.debug("[saveConfig] BOT_LANGUAGE empty — omitting from save to preserve server value");
+    }
 
     // Handle Jellyfin notification libraries (can be array or object)
     try {
@@ -1334,6 +1550,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadMappings();
       }
 
+      // Auto-load root folder mappings when Seerr tab is opened
+      // Only triggers if: tab body is empty, Seerr is configured, and bot is running
+      if (targetId === "seerr") {
+        const container = document.getElementById("root-folder-mappings");
+        const seerrUrl = document.getElementById("SEERR_URL")?.value;
+        const seerrKey = document.getElementById("SEERR_API_KEY")?.value;
+        const btn = document.getElementById("load-root-folders-btn");
+        if (container && !container.innerHTML.trim() && seerrUrl && seerrKey && btn && !btn.disabled) {
+          btn.click();
+        }
+      }
+
       // Auto-load Jellyfin libraries if not yet loaded
       if (targetId === "jellyfin") {
         if (librariesList && !librariesList.innerHTML.trim()) {
@@ -1346,9 +1574,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadRoles();
       }
 
-      // Load statistics when stats tab is opened
+      // Load statistics + insights when stats tab is opened
       if (targetId === "stats") {
         loadStatistics();
+        loadInsights();
       }
     });
   });
@@ -1501,6 +1730,354 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  // Test Cleanup Advisor button
+  // ── Preflight panel (issue #7): aggregated readiness check ────────────────
+  (() => {
+    const body = document.getElementById("PREFLIGHT_BODY");
+    const btn = document.getElementById("BTN_PREFLIGHT");
+    if (!body || !btn) return;
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    // Resolve a backend detailKey (+ params) against the active locale.
+    const detail = (c) => {
+      let s = t("config." + c.detailKey);
+      const p = c.params || {};
+      for (const k in p) s = s.split("{{" + k + "}}").join(String(p[k]));
+      return s;
+    };
+    const run = async () => {
+      btn.disabled = true;
+      body.textContent = t("config.preflight_checking");
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/preflight", { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        body.innerHTML = (data.checks || [])
+          .map(
+            (c) =>
+              '<div style="display:flex;gap:0.5rem;padding:0.3rem 0;align-items:baseline;flex-wrap:wrap;">' +
+              `<span>${c.ok ? "✅" : "❌"}</span>` +
+              `<span style="font-weight:600;min-width:110px;">${esc(t("config.preflight_label_" + c.name))}</span>` +
+              `<span style="color:var(--subtext0);flex:1;min-width:0;word-break:break-word;">${esc(detail(c))}</span>` +
+              "</div>"
+          )
+          .join("");
+      } catch (err) {
+        const tpl = t("config.preflight_error_detail");
+        body.textContent = tpl.split("{{message}}").join(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+    btn.addEventListener("click", run);
+  })();
+
+  // ── Notification audit panel (issue #5): recent post/skip decisions ───────
+  (() => {
+    const auditBody = document.getElementById("NOTIFICATION_AUDIT_BODY");
+    const refreshBtn = document.getElementById("BTN_REFRESH_AUDIT");
+    if (!auditBody) return;
+
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    const renderAudit = (rows) => {
+      if (!rows || rows.length === 0) {
+        auditBody.innerHTML = `<div style="padding:0.5rem 0;color:var(--subtext0);">${esc(t("config.audit_empty"))}</div>`;
+        return;
+      }
+      const cols = ["time", "source", "event", "title", "channel", "status"];
+      const labels = cols.map((c) => esc(t("config.audit_col_" + c)));
+      const head =
+        '<thead><tr style="text-align:left;border-bottom:1px solid var(--surface1);">' +
+        labels.map((l) => `<th style="padding:0.3rem 0.6rem 0.3rem 0;font-weight:600;">${l}</th>`).join("") +
+        "</tr></thead>";
+      const body =
+        "<tbody>" +
+        rows
+          .map((r) => {
+            const when = r.at ? new Date(r.at).toLocaleString() : "—";
+            const status =
+              r.status === "posted"
+                ? `<span style="color:var(--green,#a6e3a1);">✅ ${esc(t("config.audit_status_posted"))}</span>`
+                : `<span style="color:var(--subtext0);">⏭️ ${esc(t("config.audit_status_skipped"))}</span>`;
+            const reason = r.reason ? ` <span style="color:var(--subtext0);">(${esc(r.reason)})</span>` : "";
+            const title = r.title || (r.tmdbId ? `TMDB ${r.tmdbId}` : "—");
+            const cells = [esc(when), esc(r.source || "—"), esc(r.eventType || "—"), esc(title), esc(r.channelId || "—"), status + reason];
+            return (
+              '<tr style="border-bottom:1px solid var(--surface0);">' +
+              cells
+                .map((cell, i) => `<td data-label="${labels[i]}" style="padding:0.3rem 0.6rem 0.3rem 0;vertical-align:top;">${cell}</td>`)
+                .join("") +
+              "</tr>"
+            );
+          })
+          .join("") +
+        "</tbody>";
+      auditBody.innerHTML = `<table class="audit-table" style="width:100%;border-collapse:collapse;">${head}${body}</table>`;
+    };
+
+    const loadAudit = async () => {
+      auditBody.textContent = t("config.audit_loading");
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/notifications/audit?limit=50", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        renderAudit(data.notifications || []);
+      } catch (err) {
+        auditBody.textContent = t("config.audit_error_loading") + ": " + err.message;
+      }
+    };
+
+    if (refreshBtn) refreshBtn.addEventListener("click", loadAudit);
+    loadAudit();
+  })();
+
+  // ── Jellyfin Poller status panel + manual "Poll now" button ──────────────
+  const pollerStatusEl = document.getElementById("POLLER_STATUS_TEXT");
+  const pollerNowBtn = document.getElementById("BTN_POLL_NOW");
+  if (pollerStatusEl) {
+    const fmtAgo = (sec) => {
+      if (sec == null) return "—";
+      if (sec < 60) return `${sec}s`;
+      if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+      return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+    };
+    const renderStatus = (s) => {
+      if (!s || s.enabled === false) {
+        pollerStatusEl.textContent = (t("config.poller_status_disabled") || "Status: deaktiviert");
+        return;
+      }
+      const last = s.lastPollAt ? fmtAgo(s.lastPollAgoSeconds) + " ago" : "—";
+      const tracked = s.totalItemsTracked ?? 0;
+      const newCnt = s.lastPollNewCount ?? 0;
+      const tpl = (t("config.poller_status_text")
+        || "Last poll: {{last}} · Tracked: {{tracked}} · New (last): {{new}}");
+      pollerStatusEl.textContent = tpl
+        .replace("{{last}}", last)
+        .replace("{{tracked}}", tracked)
+        .replace("{{new}}", newCnt);
+    };
+    const fetchStatus = async () => {
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/jellyfin/poller-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        renderStatus(data);
+      } catch (err) {
+        pollerStatusEl.textContent = (t("config.poller_status_error") || "Status: Fehler") + ": " + err.message;
+      }
+    };
+    // Initial + 30s refresh; clear interval on page nav
+    fetchStatus();
+    const statusInterval = setInterval(fetchStatus, 30000);
+    window.addEventListener("beforeunload", () => clearInterval(statusInterval));
+
+    // Scan-runner for the "Jetzt prüfen" button (Round 10: single mode "full",
+    // server-side Recently-Added window filter prevents notifying old content).
+    async function runLibraryScan(btn, mode, limit) {
+      btn.disabled = true;
+      const origHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.poller_polling") || "Prüfe…");
+      let scanPollTimer = null;
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const body = { mode };
+        if (limit) body.limit = limit;
+        const res = await fetch("/api/jellyfin/poll-now", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          showToast((t("common.error") || "Fehler") + ": " + (data.error || "unknown"));
+          return;
+        }
+        if (data.started === false) {
+          showToast(t("config.poller_scan_inprogress") || "Scan läuft bereits …");
+        } else {
+          showToast(t("config.poller_scan_started") || "Scan gestartet — Ergebnisse erscheinen in Discord");
+        }
+        await new Promise((resolve) => {
+          scanPollTimer = setInterval(async () => {
+            try {
+              const sRes = await fetch("/api/jellyfin/poller-status", {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!sRes.ok) throw new Error("HTTP " + sRes.status);
+              const status = await sRes.json();
+              renderStatus(status);
+              const prog = status.fullScanProgress;
+              if (prog && status.fullScanInProgress) {
+                btn.innerHTML =
+                  '<i class="bi bi-arrow-repeat"></i> ' +
+                  `${prog.scanned ?? 0} / ? · ${prog.newFound ?? 0} neu`;
+              } else {
+                if (prog) {
+                  const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";
+                  let msg = tpl
+                    .replace("{{fetched}}", prog.scanned ?? 0)
+                    .replace("{{new}}", prog.newFound ?? 0);
+                  if (prog.hitCap) {
+                    msg += " — " + (t("config.poller_scan_cap_hit") || "Limit erreicht, ggf. erneut klicken");
+                  }
+                  showToast(msg);
+                }
+                clearInterval(scanPollTimer);
+                scanPollTimer = null;
+                resolve();
+              }
+            } catch (err) {
+              clearInterval(scanPollTimer);
+              scanPollTimer = null;
+              showToast((t("common.error") || "Fehler") + ": " + err.message);
+              resolve();
+            }
+          }, 3000);
+        });
+      } catch (err) {
+        showToast((t("common.error") || "Fehler") + ": " + err.message);
+      } finally {
+        if (scanPollTimer) clearInterval(scanPollTimer);
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+      }
+    }
+
+    if (pollerNowBtn) {
+      // Round 10: SINGLE button "Jetzt prüfen" — full library scan filtered by Recently-Added window.
+      // Items older than JELLYFIN_RECENT_ADDED_DAYS (default 7) are silently dropped server-side
+      // so this button is safe to click without spamming old library content.
+      pollerNowBtn.addEventListener("click", () => runLibraryScan(pollerNowBtn, "full"));
+    }
+  }
+
+  // Digest test button: trigger the weekly digest now and report the outcome.
+  const digestTestBtn = document.getElementById("digest-test-btn");
+  if (digestTestBtn) {
+    digestTestBtn.addEventListener("click", async () => {
+      digestTestBtn.disabled = true;
+      const origHTML = digestTestBtn.innerHTML;
+      digestTestBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + (t("config.digest_test_running") || "Sende…");
+      try {
+        const token = localStorage.getItem("questorr_token") || "";
+        const res = await fetch("/api/digest/test", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409 || data.reason === "bot-stopped") {
+          showToast(t("config.digest_test_bot_stopped") || "Bot is not running — start it first.");
+          return;
+        }
+        if (!data.success) {
+          showToast((t("common.error") || "Error") + ": " + (data.error || data.reason || "unknown"));
+          return;
+        }
+        const counts = `${data.movies || 0} ${t("config.digest_movies_word") || "movies"}, ${data.series || 0} ${t("config.digest_series_word") || "series"}`;
+        let msg;
+        switch (data.reason) {
+          case "posted":
+            msg = (t("config.digest_test_posted") || "Digest posted ({{counts}}).").split("{{counts}}").join(counts);
+            break;
+          case "empty":
+            msg = (t("config.digest_test_empty") || "Nothing posted: {{fetched}} items loaded, {{inwindow}} added in the last 7 days, of which 0 are whole movies/series (episodes/seasons don't count).")
+              .split("{{fetched}}").join(data.fetched ?? 0)
+              .split("{{inwindow}}").join(data.inWindowAll ?? 0);
+            break;
+          case "no-channel":
+            msg = t("config.digest_test_no_channel") || "No digest channel set, and no Jellyfin channel fallback.";
+            break;
+          case "channel-invalid":
+            msg = t("config.digest_test_channel_invalid") || "Configured channel was not found or is not a text channel.";
+            break;
+          case "send-failed":
+            msg = (t("config.digest_test_send_failed") || "Send failed: {{error}} (check the bot's channel permissions).").split("{{error}}").join(data.error || "");
+            break;
+          default:
+            msg = t("config.digest_test_done") || "Digest test finished.";
+        }
+        showToast(msg);
+      } catch (err) {
+        showToast((t("common.error") || "Error") + ": " + (err.message || "unknown"));
+      } finally {
+        digestTestBtn.disabled = false;
+        digestTestBtn.innerHTML = origHTML;
+      }
+    });
+  }
+
+  // Cleanup-fetch-timeout preset toggle: shows custom number input when "custom"
+  const cleanupTimeoutPreset = document.getElementById("CLEANUP_FETCH_TIMEOUT_PRESET");
+  const cleanupTimeoutCustomWrap = document.getElementById("CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP");
+  const cleanupTimeoutInput = document.getElementById("CLEANUP_FETCH_TIMEOUT_SECONDS");
+  if (cleanupTimeoutPreset && cleanupTimeoutCustomWrap && cleanupTimeoutInput) {
+    const PRESETS = ["30", "60", "120"];
+    // On load: pick preset if value matches, else "custom"
+    const applyValueToUI = () => {
+      const val = (cleanupTimeoutInput.value || "60").toString();
+      if (PRESETS.includes(val)) {
+        cleanupTimeoutPreset.value = val;
+        cleanupTimeoutCustomWrap.style.display = "none";
+      } else {
+        cleanupTimeoutPreset.value = "custom";
+        cleanupTimeoutCustomWrap.style.display = "";
+      }
+    };
+    // Run after config has loaded; also wire change event
+    setTimeout(applyValueToUI, 500);
+    cleanupTimeoutPreset.addEventListener("change", () => {
+      const v = cleanupTimeoutPreset.value;
+      if (v === "custom") {
+        cleanupTimeoutCustomWrap.style.display = "";
+        if (!cleanupTimeoutInput.value) cleanupTimeoutInput.value = "60";
+      } else {
+        cleanupTimeoutCustomWrap.style.display = "none";
+        cleanupTimeoutInput.value = v;
+      }
+    });
+  }
+
+  const testCleanupBtn = document.getElementById("test-cleanup-advisor-btn");
+  const testCleanupStatus = document.getElementById("test-cleanup-advisor-status");
+  if (testCleanupBtn) {
+    testCleanupBtn.addEventListener("click", async () => {
+      testCleanupBtn.disabled = true;
+      if (testCleanupStatus) testCleanupStatus.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/test-cleanup-advisor", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (testCleanupStatus) testCleanupStatus.textContent = "✅ " + data.message;
+          showToast(data.message);
+        } else {
+          if (testCleanupStatus) testCleanupStatus.textContent = "❌ " + (data.message || (t("common.error") || "Fehler"));
+          showToast(data.message || "Fehler beim Senden.");
+        }
+      } catch (err) {
+        if (testCleanupStatus) testCleanupStatus.textContent = "❌ Error";
+        showToast("Fehler beim Senden.");
+      } finally {
+        testCleanupBtn.disabled = false;
+        setTimeout(() => { if (testCleanupStatus) testCleanupStatus.textContent = ""; }, 5000);
+      }
+    });
+  }
+
   // Test Seerr Webhook button
   const testSeerrWebhookBtn = document.getElementById("test-seerr-webhook-btn");
   const testSeerrWebhookStatus = document.getElementById("test-seerr-webhook-status");
@@ -1530,6 +2107,101 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => { if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = ""; }, 4000);
       }
     });
+  }
+
+  // Round-Trip Test button — triggers Seerr's API to fire its webhook so we
+  // can verify the full chain (URL + Authorization header) end-to-end.
+  const rtBtn = document.getElementById("test-seerr-roundtrip-btn");
+  if (rtBtn) {
+    rtBtn.addEventListener("click", async () => {
+      rtBtn.disabled = true;
+      const statusEl = document.getElementById("test-seerr-webhook-status");
+      if (statusEl) statusEl.textContent = t("config.sending") || "Wird gesendet...";
+      try {
+        const response = await fetch("/api/test-seerr-roundtrip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (data.success) {
+          if (statusEl) statusEl.textContent = "✅";
+          showToast(data.message || "Round-Trip erfolgreich!");
+        } else {
+          if (statusEl) statusEl.textContent = "❌";
+          showToast(data.message || "Round-Trip fehlgeschlagen.");
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "❌";
+        showToast("Fehler beim Round-Trip-Test.");
+      } finally {
+        rtBtn.disabled = false;
+        setTimeout(() => {
+          const s = document.getElementById("test-seerr-webhook-status");
+          if (s) s.textContent = "";
+        }, 6000);
+      }
+    });
+  }
+
+  // ─── Seerr Webhook Live-Status-Badge ────────────────────────────────────────
+  // Polls /api/webhook-log every 30s, shows the most recent event in the
+  // Seerr-Webhook setup box so the user can see at a glance whether the secret
+  // is configured correctly in Seerr.
+  const seerrWebhookBadge = document.getElementById("seerr-webhook-status-badge");
+  if (seerrWebhookBadge) {
+    const formatRelativeTime = (iso) => {
+      if (!iso) return "";
+      const diffMs = Date.now() - new Date(iso).getTime();
+      if (Number.isNaN(diffMs) || diffMs < 0) return "";
+      const sec = Math.floor(diffMs / 1000);
+      if (sec < 60) return `vor ${sec}s`;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `vor ${min} Min`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `vor ${hr} h`;
+      const day = Math.floor(hr / 24);
+      return `vor ${day} d`;
+    };
+
+    const renderBadge = (events) => {
+      if (!events || events.length === 0) {
+        seerrWebhookBadge.style.display = "inline-flex";
+        seerrWebhookBadge.style.background = "rgba(249, 226, 175, 0.15)";
+        seerrWebhookBadge.style.color = "var(--yellow)";
+        seerrWebhookBadge.title = "Es wurde noch nie ein Webhook von Seerr empfangen. Trage URL und Secret in Seerr ein und sende einen Test.";
+        seerrWebhookBadge.innerHTML = "🟡 Noch nie empfangen";
+        return;
+      }
+      const latest = events[0]; // events are unshifted, latest is index 0
+      const rel = formatRelativeTime(latest.ts);
+      const isAuthFail = latest.status === "unauthorized" || latest.event === "AUTH_FAIL" || latest.event === "NO_SECRET";
+      seerrWebhookBadge.style.display = "inline-flex";
+      if (isAuthFail) {
+        seerrWebhookBadge.style.background = "rgba(243, 139, 168, 0.15)";
+        seerrWebhookBadge.style.color = "var(--red)";
+        const subjectHint = latest.subject && latest.subject !== "—" ? ` · ${latest.subject}` : "";
+        seerrWebhookBadge.title = `Letzter Webhook-Versuch wurde mit ${latest.event} abgewiesen. Prüfe das Authorization-Header-Secret in Seerr.${subjectHint}`;
+        seerrWebhookBadge.innerHTML = `🔴 Auth-Fehler · ${rel}`;
+      } else {
+        seerrWebhookBadge.style.background = "rgba(166, 227, 161, 0.15)";
+        seerrWebhookBadge.style.color = "var(--green)";
+        seerrWebhookBadge.title = `Letzter Webhook empfangen (${latest.event || "ok"}) · ${latest.subject || ""}`;
+        seerrWebhookBadge.innerHTML = `🟢 OK · ${rel}`;
+      }
+    };
+
+    const refreshBadge = async () => {
+      try {
+        const res = await fetch("/api/webhook-log", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderBadge(data.events || []);
+      } catch (_) { /* silent */ }
+    };
+
+    refreshBadge();
+    setInterval(refreshBadge, 30 * 1000);
   }
 
 
@@ -1855,6 +2527,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     channelSel.className = "root-folder-channel-select";
     channelSel.style.cssText = "flex:1;background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.9rem;";
     channelSel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Select a channel'} —</option>`;
+    // Stash the saved channelId on the element itself so a late channel-load
+    // can still restore the correct selection (closure capture wasn't enough
+    // when populateChannels was called with stale/empty data).
+    if (channelId) channelSel.dataset.savedValue = String(channelId);
 
     // Remove button
     const removeBtn = document.createElement("button");
@@ -1870,11 +2546,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Populate channels - use passed channels, cache, or fetch
     const populateChannels = (chs) => {
+      // Always read the desired channelId from the element so that even
+      // late/duplicate population calls preserve the correct selection.
+      const desired = channelSel.dataset.savedValue || channelId || "";
+      // If options were already populated (e.g. by an earlier call),
+      // clear them first so we don't end up with duplicates.
+      while (channelSel.options.length > 1) channelSel.remove(1);
       chs.forEach(ch => {
         const opt = document.createElement("option");
         opt.value = ch.id;
         opt.textContent = `#${ch.name}`;
-        if (ch.id === channelId) opt.selected = true;
+        if (String(ch.id) === String(desired)) opt.selected = true;
         channelSel.appendChild(opt);
       });
     };
@@ -2649,6 +3331,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const episodeChannelSelect = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID");
     const seasonChannelSelect = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID");
     const dailyRandomPickChannelSelect = document.getElementById("DAILY_RANDOM_PICK_CHANNEL_ID");
+    const cleanupChannelSelect = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
 
     if (!guildId) {
       if (channelSelect) {
@@ -2667,6 +3350,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         dailyRandomPickChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
+      if (cleanupChannelSelect) {
+        cleanupChannelSelect.innerHTML =
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+      }
+      const postHelpChanSelEmpty = document.getElementById("POST_HELP_CHANNEL_ID");
+      if (postHelpChanSelEmpty) postHelpChanSelEmpty.innerHTML = `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       return;
     }
 
@@ -2680,6 +3369,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (seasonChannelSelect) {
       seasonChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
+    if (cleanupChannelSelect) {
+      cleanupChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    }
     if (dailyRandomPickChannelSelect) {
       dailyRandomPickChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
@@ -2687,6 +3379,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
     if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    const postHelpChanSelLoading = document.getElementById("POST_HELP_CHANNEL_ID");
+    if (postHelpChanSelLoading) postHelpChanSelLoading.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
       const response = await fetch(`/api/discord/channels/${guildId}`);
@@ -2801,6 +3495,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         const dailyRecChannelSelect = document.getElementById("DAILY_RECOMMENDATION_CHANNEL_ID");
         populateSeerrSelect(dailyRecChannelSelect, `— ${t('config.select_channel') || 'Select a channel'} —`, "DAILY_RECOMMENDATION_CHANNEL_ID");
 
+        // Populate Cleanup Advisor channel select
+        const cleanupChanSel = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
+        populateSeerrSelect(cleanupChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "CLEANUP_ADVISOR_CHANNEL_ID");
+
+        // Populate Post Help Wizard channel select
+        const postHelpChanSel = document.getElementById("POST_HELP_CHANNEL_ID");
+        populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "POST_HELP_CHANNEL_ID");
+
+        // Generic fallback: populate any [data-channel-select="true"] elements not yet handled above
+        document.querySelectorAll("[data-channel-select='true']").forEach(sel => {
+          if (sel.options.length > 1) return; // already populated — skip
+          sel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Kanal auswählen'} —</option>`;
+          data.channels.forEach((channel) => {
+            const option = document.createElement("option");
+            option.value = channel.id;
+            const icon = channel.type === "announcement" ? " 📢" : channel.type === "forum-thread" ? " 🧵" : "";
+            option.textContent = `#${channel.name}${icon}`;
+            sel.appendChild(option);
+          });
+          const sv = sel.dataset.savedValue;
+          if (sv) sel.value = sv;
+        });
+
         // Also populate root-folder channel dropdowns if any exist
         document.querySelectorAll(".root-folder-channel-select").forEach((sel) => {
           const savedVal = sel.dataset.savedValue || sel.value;
@@ -2831,6 +3548,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           dailyRandomPickChannelSelect.innerHTML =
             `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
+        if (cleanupChannelSelect) {
+          cleanupChannelSelect.innerHTML =
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+        }
       }
     } catch (error) {
       if (channelSelect) {
@@ -2849,6 +3570,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         dailyRandomPickChannelSelect.innerHTML =
           `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
+      if (cleanupChannelSelect) {
+        cleanupChannelSelect.innerHTML =
+          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+      }
     }
   }
 
@@ -2863,7 +3588,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const episodeChannelSelect = document.getElementById("JELLYFIN_EPISODE_CHANNEL_ID");
         const seasonChannelSelect = document.getElementById("JELLYFIN_SEASON_CHANNEL_ID");
         const dailyRandomPickChannelSelect = document.getElementById("DAILY_RANDOM_PICK_CHANNEL_ID");
-        
+        const cleanupChannelSelect2 = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
+
         if (channelSelect) {
           channelSelect.innerHTML =
             '<option value="">Select a server first...</option>';
@@ -2878,6 +3604,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
+            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+        }
+        if (cleanupChannelSelect2) {
+          cleanupChannelSelect2.innerHTML =
             `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
@@ -2929,6 +3659,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- User Mappings ---
   let seerrUsers = [];
   let discordMembers = [];
+  let quotaUnlimitedSelected = []; // remembered QUOTA_UNLIMITED_USERS selection, re-applied when members load
+  let quotaUnlimitedRoleFilter = ""; // role id narrowing the unlimited-users member list ("" = all)
+  let mappingRoleFilter = ""; // role id narrowing the user-mapping member dropdown ("" = all)
   let currentMappings = []; // Will be array of enriched objects with metadata
   let membersLoaded = false; // Track if we've loaded members for the dropdown
   let usersLoaded = false; // Track if we've loaded seerr users
@@ -3017,6 +3750,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function populateDiscordMemberSelect() {
+    // Members just (re)loaded — refresh the quota unlimited-users checkbox list
+    // with the remembered selection, regardless of the mapping widget below.
+    populateRoleFilterSelect("quota-unlimited-role-filter", quotaUnlimitedRoleFilter);
+    populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+    populateRoleFilterSelect("mapping-role-filter", mappingRoleFilter);
+
     const customSelect = document.getElementById("discord-user-select");
     if (!customSelect) return;
 
@@ -3027,7 +3766,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     optionsContainer.innerHTML = "";
 
-    discordMembers.forEach((member) => {
+    discordMembers
+      .filter((member) => memberHasRole(member, mappingRoleFilter))
+      .forEach((member) => {
       const option = document.createElement("div");
       option.className = "custom-select-option";
       option.dataset.value = member.id;
@@ -3368,6 +4109,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById("mappings-list");
     if (!container) return;
 
+    // Toggle the "remove all" button: only visible when at least one mapping exists
+    const removeAllBtn = document.getElementById("remove-all-mappings-btn");
+    if (removeAllBtn) {
+      removeAllBtn.style.display =
+        Array.isArray(currentMappings) && currentMappings.length > 0 ? "" : "none";
+    }
+
     if (!Array.isArray(currentMappings) || currentMappings.length === 0) {
       container.innerHTML =
         '<p style="opacity: 0.7; font-style: italic;">No user mappings configured yet.</p>';
@@ -3464,6 +4212,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast(t("errors.mapping_remove_failed") || "Fehler beim Entfernen der Zuordnung.");
     }
   };
+
+  // Remove-all mappings button (shown only when ≥1 mapping exists)
+  const removeAllMappingsBtn = document.getElementById("remove-all-mappings-btn");
+  if (removeAllMappingsBtn) {
+    removeAllMappingsBtn.addEventListener("click", async () => {
+      const msg = t("config.remove_all_mappings_confirm")
+        || "Wirklich ALLE Benutzer-Zuordnungen entfernen?";
+      if (!confirm(msg)) return;
+      removeAllMappingsBtn.disabled = true;
+      try {
+        const response = await fetch("/api/user-mappings/all", { method: "DELETE" });
+        const result = await response.json();
+        if (result.success) {
+          showToast(t("config.remove_all_mappings_ok") || "Alle Zuordnungen entfernt.");
+          await loadMappings();
+        } else {
+          showToast(result.message || t("config.remove_all_mappings_fail") || "Fehler.");
+        }
+      } catch (err) {
+        showToast(t("config.remove_all_mappings_fail") || "Fehler beim Entfernen.");
+      } finally {
+        removeAllMappingsBtn.disabled = false;
+      }
+    });
+  }
 
   const addMappingBtn = document.getElementById("add-mapping-btn");
   if (addMappingBtn) {
@@ -3867,36 +4640,67 @@ document.addEventListener("DOMContentLoaded", async () => {
   let guildRoles = [];
 
   async function loadRoles() {
-    if (rolesLoaded && guildRoles.length > 0) {
-      return;
-    }
-
+    // Always re-render — never short-circuit. Otherwise saved selections fail
+    // to re-populate after a page reload + tab switch.
     try {
-      const response = await fetch("/api/discord-roles");
-      const data = await response.json();
-
-      if (data.success && data.roles) {
-        guildRoles = data.roles;
-        rolesLoaded = true;
-
-        // Load current config to get saved allowlist/blocklist
-        const configResponse = await fetch("/api/config");
-        const config = await configResponse.json();
-        const allowlist = config.ROLE_ALLOWLIST || [];
-        const blocklist = config.ROLE_BLOCKLIST || [];
-
-        populateRoleList("allowlist-roles", allowlist);
-        populateRoleList("blocklist-roles", blocklist);
-      } else {
-        document.getElementById("allowlist-roles").innerHTML =
-          `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
-        document.getElementById("blocklist-roles").innerHTML =
-          `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('errors.bot_must_be_running')}</p>`;
+      // Re-use cached guild roles if already fetched (cheap), otherwise pull
+      if (!rolesLoaded || guildRoles.length === 0) {
+        // Round 12: explicit credentials so the cookie-based auth_token is sent
+        // even in browsers that default to "same-origin" but get tripped up by
+        // proxy rewrites (Nginx Proxy Manager etc.).
+        const response = await fetch("/api/discord-roles", { credentials: "include" });
+        const data = await response.json().catch(() => ({}));
+        if (data.success && data.roles) {
+          guildRoles = data.roles;
+          rolesLoaded = true;
+        } else {
+          // Round 12: surface the ACTUAL backend message instead of always
+          // showing the generic "bot must be running" placeholder. The backend
+          // now returns specific messages ("Bot is starting", "No guild
+          // selected", "Bot is not in the configured guild", etc.). This makes
+          // self-diagnosis far easier when something other than a stopped bot
+          // is the real cause.
+          const msg = (data && data.message) || t('errors.bot_must_be_running');
+          const html = `<p class="form-text" style="opacity: 0.7; font-style: italic;">${msg}</p>`;
+          document.getElementById("allowlist-roles").innerHTML = html;
+          document.getElementById("blocklist-roles").innerHTML = html;
+          console.warn("[loadRoles] /api/discord-roles failed:", { status: response.status, data });
+          return;
+        }
       }
-    } catch (error) {}
+
+      // Always re-fetch saved selections so changes persist across tab switches/reloads
+      const configResponse = await fetch("/api/config");
+      const config = await configResponse.json();
+      // Defensive: API may return arrays, JSON-strings, or undefined
+      const parseList = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === "string" && v.trim()) {
+          try { const parsed = JSON.parse(v); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+        }
+        return [];
+      };
+      populateRoleList("allowlist-roles", parseList(config.ROLE_ALLOWLIST));
+      populateRoleList("blocklist-roles", parseList(config.ROLE_BLOCKLIST));
+      populateRoleList("quota-bypass-roles", parseList(config.QUOTA_BYPASS_ROLES), "QUOTA_BYPASS_ROLES");
+      // Unlimited users: stored as an array of Discord IDs, rendered as a member
+      // checkbox list. Remember the selection so it can be re-rendered once the
+      // member list finishes loading (it may arrive after this config load).
+      quotaUnlimitedSelected = parseList(config.QUOTA_UNLIMITED_USERS);
+      populateRoleFilterSelect("quota-unlimited-role-filter", quotaUnlimitedRoleFilter);
+      populateRoleFilterSelect("mapping-role-filter", mappingRoleFilter);
+      populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+      // The unlimited-users list needs the Discord member list, which is
+      // otherwise only loaded on the user-mapping step. Trigger it here too so
+      // opening the roles step directly still populates the list. Cached and
+      // guarded; on completion populateDiscordMemberSelect re-renders the list.
+      loadDiscordMembers();
+    } catch (error) {
+      console.warn("[loadRoles] error:", error);
+    }
   }
 
-  function populateRoleList(containerId, selectedRoles) {
+  function populateRoleList(containerId, selectedRoles, inputName) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -3906,23 +4710,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const name =
+      inputName || (containerId.includes("allowlist") ? "ROLE_ALLOWLIST" : "ROLE_BLOCKLIST");
+
     container.innerHTML = guildRoles
       .map((role) => {
         const isChecked = selectedRoles.includes(role.id);
-        const listType = containerId.includes("allowlist")
-          ? "allowlist"
-          : "blocklist";
         const roleColor =
           role.color && role.color !== "#000000" ? role.color : "#b8bdc2";
 
         return `
         <label class="role-item">
           <input type="checkbox"
-                 name="${
-                   listType === "allowlist"
-                     ? "ROLE_ALLOWLIST"
-                     : "ROLE_BLOCKLIST"
-                 }"
+                 name="${name}"
                  value="${role.id}"
                  ${isChecked ? "checked" : ""}>
           <div class="role-color-indicator" style="background-color: ${roleColor};"></div>
@@ -3934,6 +4734,93 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
       })
       .join("");
+  }
+
+  // Fill a role-filter <select> with an "all members" default plus every guild
+  // role. Used above member pickers so the admin can narrow a long list.
+  function populateRoleFilterSelect(selectId, currentValue) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const allLabel = t('config.all_members') || 'All members';
+    const opts = [`<option value="">${escapeHtml(allLabel)}</option>`];
+    for (const role of guildRoles) {
+      const selected = String(role.id) === String(currentValue) ? " selected" : "";
+      opts.push(`<option value="${escapeHtml(role.id)}"${selected}>${escapeHtml(role.name)}</option>`);
+    }
+    sel.innerHTML = opts.join("");
+
+    // Bind the change handler once. Re-rendering options does not remove the
+    // listener, so guard with a dataset flag.
+    if (sel.dataset.wired !== "1") {
+      sel.dataset.wired = "1";
+      sel.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (selectId === "quota-unlimited-role-filter") {
+          quotaUnlimitedRoleFilter = val;
+          populateMemberList("quota-unlimited-users", quotaUnlimitedSelected, "QUOTA_UNLIMITED_USERS", quotaUnlimitedRoleFilter);
+        } else if (selectId === "mapping-role-filter") {
+          mappingRoleFilter = val;
+          populateDiscordMemberSelect();
+        }
+      });
+    }
+  }
+
+  function memberHasRole(member, roleId) {
+    if (!roleId) return true;
+    return Array.isArray(member.roles) && member.roles.includes(roleId);
+  }
+
+  function populateMemberList(containerId, selectedIds, inputName, roleFilter) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!discordMembers || discordMembers.length === 0) {
+      container.innerHTML =
+        `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('config.members_load_hint') || 'Select a server to load members.'}</p>`;
+      return;
+    }
+
+    const selected = selectedIds || [];
+    const visible = discordMembers.filter((m) => memberHasRole(m, roleFilter));
+    if (visible.length === 0) {
+      container.innerHTML =
+        `<p class="form-text" style="opacity: 0.7; font-style: italic;">${t('config.no_members_for_role') || 'No members with this role.'}</p>`;
+      return;
+    }
+    container.innerHTML = visible
+      .map((member) => {
+        const isChecked = selected.includes(member.id);
+        const label = member.displayName || member.username || member.id;
+        return `
+        <label class="role-item">
+          <input type="checkbox"
+                 name="${inputName}"
+                 value="${escapeHtml(member.id)}"
+                 ${isChecked ? "checked" : ""}>
+          ${member.avatar ? `<img src="${escapeHtml(member.avatar)}" alt="" class="member-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;">` : ""}
+          <span class="role-name">${escapeHtml(label)}</span>
+          ${member.username ? `<span class="role-member-count">@${escapeHtml(member.username)}</span>` : ""}
+        </label>
+      `;
+      })
+      .join("");
+
+    // Track selection in JS state, not just the DOM: a role-filtered member that
+    // is checked but currently hidden must NOT be lost on save. Bind once per
+    // container (delegation survives innerHTML re-renders).
+    if (inputName === "QUOTA_UNLIMITED_USERS" && container.dataset.wired !== "1") {
+      container.dataset.wired = "1";
+      container.addEventListener("change", (e) => {
+        const cb = e.target;
+        if (!cb || cb.name !== "QUOTA_UNLIMITED_USERS") return;
+        if (cb.checked) {
+          if (!quotaUnlimitedSelected.includes(cb.value)) quotaUnlimitedSelected.push(cb.value);
+        } else {
+          quotaUnlimitedSelected = quotaUnlimitedSelected.filter((id) => id !== cb.value);
+        }
+      });
+    }
   }
 
   // --- LOGS PAGE FUNCTIONALITY ---
@@ -4567,6 +5454,82 @@ document.addEventListener("DOMContentLoaded", () => {
           importStatus.textContent = "❌ Invalid JSON file";
           importStatus.style.color = "var(--red)";
         }
+      }
+    });
+  }
+
+  // The Post-Help channel-select now carries data-channel-select="true",
+  // so it's populated by the standard channel loader (loadDiscordChannels)
+  // and its value is restored on reload via dataset.savedValue.
+
+  // Post Help Wizard button
+  const postHelpBtn = document.getElementById("post-help-btn");
+  const postHelpStatus = document.getElementById("post-help-status");
+  if (postHelpBtn) {
+    postHelpBtn.addEventListener("click", async () => {
+      const channelId = document.getElementById("POST_HELP_CHANNEL_ID")?.value;
+      const pin = document.getElementById("post-help-pin")?.checked;
+      if (!channelId) {
+        if (postHelpStatus) {
+          postHelpStatus.textContent = "⚠️ " + (t("config.select_channel") || "Please select a channel first.");
+          postHelpStatus.style.color = "var(--yellow)";
+        }
+        return;
+      }
+      postHelpBtn.disabled = true;
+      if (postHelpStatus) {
+        postHelpStatus.textContent = t("config.sending") || "Posting...";
+        postHelpStatus.style.color = "var(--subtext0)";
+      }
+      try {
+        const response = await fetch("/api/post-help", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("questorr_token") || ""}`,
+          },
+          body: JSON.stringify({ channelId, pin }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          // Three outcomes:
+          //  - pin requested + worked → green "Posted and pinned!"
+          //  - pin requested + failed (e.g. Missing Permissions) → yellow warning, post still succeeded
+          //  - pin not requested → green "Posted!"
+          let msg, color;
+          if (pin && data.pinned === false && data.pinError) {
+            msg = (t("config.post_help_success_pin_failed") || "⚠️ Posted, but could not pin: ") + data.pinError;
+            color = "var(--yellow)";
+          } else if (pin) {
+            msg = (t("config.post_help_success_pinned") || "✅ Posted and pinned!");
+            color = "var(--green)";
+          } else {
+            msg = (t("config.post_help_success") || "✅ Posted!");
+            color = "var(--green)";
+          }
+          if (postHelpStatus) {
+            postHelpStatus.textContent = msg;
+            postHelpStatus.style.color = color;
+          }
+          showToast(msg);
+        } else {
+          if (postHelpStatus) {
+            postHelpStatus.textContent = "❌ " + (data.message || (t("common.error") || "Failed"));
+            postHelpStatus.style.color = "var(--red)";
+          }
+          showToast(data.message || "Failed to post help wizard.");
+        }
+      } catch (err) {
+        const detail = err?.message ? `: ${err.message}` : "";
+        if (postHelpStatus) {
+          postHelpStatus.textContent = "❌ " + (t("config.post_help_failed") || "Failed") + detail;
+          postHelpStatus.style.color = "var(--red)";
+        }
+        console.error("[post-help] fetch failed:", err);
+        showToast((t("config.post_help_failed") || "Failed to post help wizard") + detail);
+      } finally {
+        postHelpBtn.disabled = false;
+        setTimeout(() => { if (postHelpStatus) postHelpStatus.textContent = ""; }, 4000);
       }
     });
   }

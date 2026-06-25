@@ -1,11 +1,42 @@
 import { Router } from "express";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
+import { validateBody, jellyfinConnectionSchema, pollNowSchema } from "../utils/validation.js";
 import { isMaskedValue } from "../utils/configSanitize.js";
 import { TIMEOUTS } from "../lib/constants.js";
+import { getPollerStatus, triggerManualPoll } from "../bot/jellyfinPoller.js";
 import logger from "../utils/logger.js";
 
 const router = Router();
+
+// ─── Jellyfin Poller status & manual trigger (dashboard UI) ────────────────────
+
+router.get("/jellyfin/poller-status", authenticateToken, (req, res) => {
+  try {
+    res.json(getPollerStatus());
+  } catch (err) {
+    res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
+router.post("/jellyfin/poll-now", authenticateToken, validateBody(pollNowSchema), async (req, res) => {
+  try {
+    // Round 10: two modes (rescan removed — see jellyfinPoller.js triggerManualPoll docs):
+    //   "fast" — top-1000 by DateCreated, sync, same as periodic poll
+    //   "full" — exhaustive scan (default), skips seenItems, fire-and-forget. Items outside the
+    //            JELLYFIN_RECENT_ADDED_DAYS window are silently filtered out — so the dashboard
+    //            "Jetzt prüfen" button is safe to click without spamming old library content.
+    //   "rescan" is accepted but silently mapped to "full" for backward compat with old UI builds.
+    const reqMode = req.body?.mode;
+    const mode = ["fast", "full", "rescan"].includes(reqMode) ? reqMode : "full";
+    const reqLimit = parseInt(req.body?.limit, 10);
+    const limit = Number.isFinite(reqLimit) && reqLimit > 0 && reqLimit <= 500 ? reqLimit : 50;
+    const result = await triggerManualPoll({ mode, limit });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || String(err) });
+  }
+});
 
 // Simple in-memory library cache (replaces the one from jellyfinWebhook.js)
 const libraryCache = {
@@ -28,7 +59,7 @@ function isAllowedUrl(url) {
 }
 
 // Fetch Jellyfin libraries given a URL + API key (used by config UI before saving)
-router.post("/jellyfin-libraries", authenticateToken, async (req, res) => {
+router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConnectionSchema), async (req, res) => {
   try {
     const { url } = req.body;
     let { apiKey } = req.body;
@@ -70,7 +101,7 @@ router.post("/jellyfin-libraries", authenticateToken, async (req, res) => {
 });
 
 // Test Jellyfin connectivity
-router.post("/test-jellyfin", authenticateToken, async (req, res) => {
+router.post("/test-jellyfin", authenticateToken, validateBody(jellyfinConnectionSchema), async (req, res) => {
   const { url } = req.body;
   if (!url) {
     return res.status(400).json({ success: false, message: "Jellyfin URL is required." });

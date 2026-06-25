@@ -10,7 +10,7 @@ import { TIMEOUTS } from "../lib/constants.js";
 import { withRetry } from "../utils/axiosRetry.js";
 
 /** Map BOT_LANGUAGE to TMDB locale code */
-function getTmdbLanguage() {
+export function getTmdbLanguage() {
   const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
   const map = { en: "en-US", de: "de-DE", sv: "sv-SE", fr: "fr-FR", es: "es-ES", it: "it-IT", nl: "nl-NL", pt: "pt-PT", ja: "ja-JP", ko: "ko-KR", zh: "zh-CN", ru: "ru-RU", pl: "pl-PL", da: "da-DK", no: "no-NO", fi: "fi-FI", cs: "cs-CZ", hu: "hu-HU", ro: "ro-RO", tr: "tr-TR" };
   return map[lang] || "en-US";
@@ -152,6 +152,37 @@ export async function tmdbGetSimilar(id, mediaType, apiKey) {
 }
 
 /**
+ * Get genre/keyword-based "similar titles" — distinct from the
+ * personalised "recommendations" endpoint above. Used by /similar.
+ *
+ * TMDB exposes a separate `/similar` endpoint that performs cluster
+ * analysis on shared keywords/genres, which yields different (and
+ * usually broader) results than `/recommendations`.
+ */
+export async function tmdbGetSimilarTitles(id, mediaType, apiKey) {
+  const endpoint = mediaType === "movie"
+    ? `https://api.themoviedb.org/3/movie/${id}/similar`
+    : `https://api.themoviedb.org/3/tv/${id}/similar`;
+  try {
+    const res = await withRetry(
+      () => axios.get(endpoint, {
+        params: {
+          api_key: apiKey,
+          language: getTmdbLanguage(),
+          page: 1,
+        },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB similar ${mediaType}/${id}` }
+    );
+    return res.data?.results || [];
+  } catch (err) {
+    logger.error(`TMDB similar fetch failed for ${mediaType} ${id}: ${err.message}`);
+    return [];
+  }
+}
+
+/**
  * Get external IDs (IMDb) for a movie or TV show
  * @param {number} id - TMDB ID
  * @param {string} mediaType - 'movie' or 'tv'
@@ -184,6 +215,31 @@ export async function tmdbGetExternalImdb(id, mediaType, apiKey) {
   } catch (err) {
     logger.error(`TMDB external IDs fetch failed for ${mediaType} ${id}: ${err.message}`);
     throw err;
+  }
+}
+
+/**
+ * Get the TVDB ID for a TV show from TMDB external IDs.
+ * Sonarr indexes series by TVDB ID, not TMDB — this resolver lets us bridge
+ * the gap when looking up a series rootFolder from Sonarr directly.
+ *
+ * @param {number} tmdbId - TMDB ID of a TV series
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<number|null>} TVDB ID or null if not available
+ */
+export async function tmdbGetExternalTvdb(tmdbId, apiKey) {
+  try {
+    const res = await withRetry(
+      () => axios.get(`https://api.themoviedb.org/3/tv/${tmdbId}/external_ids`, {
+        params: { api_key: apiKey },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB external TVDB tv/${tmdbId}` }
+    );
+    return res.data?.tvdb_id || null;
+  } catch (err) {
+    logger.warn(`TMDB external TVDB fetch failed for tv/${tmdbId}: ${err.message}`);
+    return null;
   }
 }
 

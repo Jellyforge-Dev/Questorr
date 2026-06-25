@@ -2,15 +2,53 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { createRequire } from "module";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
 import axios from "axios";
 import { authenticateToken } from "../utils/auth.js";
+import { getRecentNotifications } from "../utils/notificationAudit.js";
+import { runPreflight, checkUserMappings } from "../utils/preflight.js";
+import { getSeerrApiUrl } from "../utils/seerrUrl.js";
+import { TIMEOUTS } from "../lib/constants.js";
 import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
+import { sendWeeklyDigest } from "../bot/weeklyDigest.js";
+import { updateConfig } from "../utils/configFile.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
 
 const require = createRequire(import.meta.url);
 const { version: APP_VERSION } = require("../package.json");
+
+// ── Widget locale helpers ────────────────────────────────────────────────────
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let _widgetLocale = null;
+function getWidgetLocale() {
+  if (_widgetLocale) return _widgetLocale;
+  const lang = process.env.LANGUAGE || process.env.BOT_LANGUAGE || "en";
+  try {
+    _widgetLocale = JSON.parse(readFileSync(path.join(__dirname, `../locales/${lang}.json`), "utf8"));
+  } catch {
+    try {
+      _widgetLocale = JSON.parse(readFileSync(path.join(__dirname, "../locales/en.json"), "utf8"));
+    } catch {
+      _widgetLocale = {};
+    }
+  }
+  return _widgetLocale;
+}
+/** Translate a dot-notation key from the widget locale, e.g. "widget.uptime" */
+function wt(key, fallback = "") {
+  const locale = getWidgetLocale();
+  const parts = key.split(".");
+  let val = locale;
+  for (const p of parts) {
+    if (!val || typeof val !== "object") return fallback;
+    val = val[p];
+  }
+  return typeof val === "string" ? val : fallback;
+}
 
 const router = Router();
 
@@ -141,8 +179,246 @@ router.get("/health/details", authenticateToken, async (_req, res) => {
   res.json(await collectHealthData());
 });
 
+// Notification audit trail — what was posted/skipped, by which source, to which
+// channel, and why (dedup reason). Gives admins visibility into the otherwise
+// opaque 5-tier routing + cross-source dedup.
+router.get("/notifications/audit", authenticateToken, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+  res.json({ notifications: getRecentNotifications(limit) });
+});
+
+// ─── Digest test: run the weekly digest now and report the outcome ───────────
+// Forces a run even if DIGEST_ENABLED is off, so admins can preview and diagnose
+// (the response says exactly why nothing posted: disabled, empty, no-channel…).
+router.post("/digest/test", authenticateToken, async (_req, res) => {
+  if (!botState.isBotRunning || !botState.discordClient) {
+    return res.status(409).json({ success: false, reason: "bot-stopped" });
+  }
+  try {
+    const result = await sendWeeklyDigest(botState.discordClient, { force: true });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error(`[Digest test] ${err.message}`);
+    return res.status(500).json({ success: false, reason: "error", error: err.message });
+  }
+});
+
+// ─── Preflight: aggregated readiness check (dashboard "Alles prüfen") ────────
+// Runs independent checks against the *saved* config and reports {name,ok,detail}
+// per check. Each check is isolated so one failure doesn't sink the others.
+router.get("/preflight", authenticateToken, async (_req, res) => {
+  const seerrUrl = process.env.SEERR_URL;
+  const seerrKey = process.env.SEERR_API_KEY;
+  const jfBase = process.env.JELLYFIN_BASE_URL;
+  const tmdbKey = process.env.TMDB_API_KEY;
+
+  const checks = {
+    seerr: async () => {
+      if (!seerrUrl || !seerrKey) return { ok: false, detailKey: "preflight_not_configured" };
+      const u = new URL(getSeerrApiUrl(seerrUrl));
+      u.pathname = u.pathname.replace(/\/$/, "") + "/settings/about";
+      const r = await axios.get(u.href, { headers: { "X-Api-Key": seerrKey }, timeout: TIMEOUTS.SEERR_API });
+      return { ok: true, detailKey: "preflight_seerr_connected", params: { version: r.data?.version ?? "?" } };
+    },
+    jellyfin: async () => {
+      if (!jfBase) return { ok: false, detailKey: "preflight_not_configured" };
+      const u = new URL(jfBase);
+      u.pathname = u.pathname.replace(/\/$/, "") + "/System/Info/Public";
+      const r = await axios.get(u.href, { timeout: TIMEOUTS.JELLYFIN_API });
+      return r.data?.ServerName
+        ? { ok: true, detailKey: "preflight_jellyfin_connected", params: { name: r.data.ServerName, version: r.data.Version } }
+        : { ok: false, detailKey: "preflight_jellyfin_invalid" };
+    },
+    tmdb: async () => {
+      if (!tmdbKey) return { ok: false, detailKey: "preflight_not_configured" };
+      await axios.get("https://api.themoviedb.org/3/configuration", {
+        params: { api_key: tmdbKey },
+        timeout: TIMEOUTS.TMDB_API ?? 8000,
+      });
+      return { ok: true, detailKey: "preflight_tmdb_valid" };
+    },
+    bot: async () => {
+      const running = botState.isBotRunning && !!botState.discordClient?.user;
+      return running
+        ? { ok: true, detailKey: "preflight_bot_connected", params: { tag: botState.discordClient.user.tag } }
+        : { ok: false, detailKey: "preflight_bot_down" };
+    },
+    mappings: async () => checkUserMappings(process.env.USER_MAPPINGS),
+  };
+
+  try {
+    const results = await runPreflight(checks);
+    const allOk = results.every((r) => r.ok);
+    res.json({ ok: allOk, checks: results });
+  } catch (err) {
+    logger.error("Preflight failed:", err.message);
+    res.status(500).json({ ok: false, error: "Preflight failed" });
+  }
+});
+
+// ─── Insights for Dashboard Step 8 ─────────────────────────────────────────
+// Aggregates Library / Request-Lifecycle / Top-Request-Genres in one call.
+// Each block fails independently — partial data is preferable to a 500.
+//
+// Library counts are cached in-memory for 5 min — fetchLibrarySummary is the
+// slow part (round-trip to Jellyfin for genre/runtime aggregation). The cache
+// is shared between this endpoint and getInsightsForWidget() below.
+const _statsLibraryCache = { data: null, ts: 0 };
+const LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedLibrarySummary() {
+  const jfBase = process.env.JELLYFIN_BASE_URL;
+  const jfKey  = process.env.JELLYFIN_API_KEY;
+  if (!jfBase || !jfKey) return null;
+  if (_statsLibraryCache.data && Date.now() - _statsLibraryCache.ts < LIBRARY_CACHE_TTL_MS) {
+    return _statsLibraryCache.data;
+  }
+  const { fetchLibrarySummary } = await import("../api/jellyfin.js");
+  const summary = await fetchLibrarySummary(jfKey, jfBase);
+  _statsLibraryCache.data = summary;
+  _statsLibraryCache.ts = Date.now();
+  return summary;
+}
+
+/**
+ * Invalidate the library + widget caches.
+ * Called by the Jellyfin poller after new items are detected, so the
+ * dashboard reflects updated counts without waiting for the 5-min TTL.
+ *
+ * Round 11: ALSO set .data = null defensively. Setting ts = 0 alone is
+ * semantically sufficient (the TTL check returns false when ts is 0), but
+ * a future change to the cache-hit logic could accidentally introduce a
+ * stale read if .data is still around. Nulling the payload makes the
+ * invalidation unambiguous and survives refactors.
+ */
+export function invalidateLibraryCache() {
+  _statsLibraryCache.ts = 0;
+  _statsLibraryCache.data = null;
+  _insightsCache.ts = 0;
+  _insightsCache.data = null;
+  logger.debug("[stats] library + insights cache invalidated (ts=0, data=null)");
+}
+
+router.get("/stats/insights", authenticateToken, async (req, res) => {
+  const out = { library: null, lifecycle: null, requestGenres: null };
+
+  // Round 11: send no-store headers so neither browser nor reverse-proxy
+  // can serve a stale response. The route is auth-protected and small, so
+  // there's no downside to disabling caching at the HTTP layer.
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
+  // Round 9: ?refresh=true bypasses the 5-min cache for an immediate live fetch.
+  // Used by the dashboard "Refresh" button so the user can force fresh data
+  // without waiting for the TTL.
+  // Round 11: also invalidate _insightsCache (widget cache) and null out .data
+  // so the next read is a guaranteed miss.
+  if (req.query.refresh === "true") {
+    _statsLibraryCache.ts = 0;
+    _statsLibraryCache.data = null;
+    _insightsCache.ts = 0;
+    _insightsCache.data = null;
+    logger.info("[stats/insights] cache bypassed via ?refresh=true (library + insights nulled)");
+  } else {
+    const libAge = _statsLibraryCache.ts ? Date.now() - _statsLibraryCache.ts : null;
+    logger.debug(`[stats/insights] cache state — library: ${libAge === null ? "empty" : `${libAge}ms old`}`);
+  }
+
+  try {
+    out.library = await getCachedLibrarySummary();
+  } catch (e) {
+    logger.warn(`[stats/insights] library failed: ${e.message}`);
+  }
+
+  try {
+    const { fetchRequestLifecycleStats } = await import("../api/seerr.js");
+    const seerrUrl = process.env.SEERR_URL;
+    const seerrKey = process.env.SEERR_API_KEY;
+    if (seerrUrl && seerrKey) {
+      out.lifecycle = await fetchRequestLifecycleStats(seerrUrl, seerrKey);
+    }
+  } catch (e) {
+    logger.warn(`[stats/insights] lifecycle failed: ${e.message}`);
+  }
+
+  try {
+    const { fetchTopRequestGenres } = await import("../api/seerr.js");
+    const { tmdbGetDetails } = await import("../api/tmdb.js");
+    const seerrUrl = process.env.SEERR_URL;
+    const seerrKey = process.env.SEERR_API_KEY;
+    const tmdbKey  = process.env.TMDB_API_KEY;
+    if (seerrUrl && seerrKey && tmdbKey) {
+      const detailsFn = (id, type) => tmdbGetDetails(id, type, tmdbKey);
+      out.requestGenres = await fetchTopRequestGenres(seerrUrl, seerrKey, detailsFn, 200);
+    }
+  } catch (e) {
+    logger.warn(`[stats/insights] requestGenres failed: ${e.message}`);
+  }
+
+  res.json(out);
+});
+
+// Round 11: diagnostic endpoint — returns the current state of both stats caches.
+// Useful when stale data appears on the dashboard: lets us tell at a glance
+// which layer (library cache, widget insights cache) is holding the old data.
+router.get("/stats/cache-state", authenticateToken, (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const now = Date.now();
+  res.json({
+    now,
+    statsLibraryCache: {
+      ts: _statsLibraryCache.ts,
+      ageMs: _statsLibraryCache.ts ? now - _statsLibraryCache.ts : null,
+      hasData: _statsLibraryCache.data !== null && _statsLibraryCache.data !== undefined,
+      ttlMs: LIBRARY_CACHE_TTL_MS,
+    },
+    insightsCache: {
+      ts: _insightsCache.ts,
+      ageMs: _insightsCache.ts ? now - _insightsCache.ts : null,
+      hasData: _insightsCache.data !== null && _insightsCache.data !== undefined,
+      ttlMs: INSIGHTS_TTL_MS,
+    },
+  });
+});
+
 // ─── Widget Stats (JSON, protected by API key) ─────────────────────────────
-router.get("/widget/stats", authenticateWidget, (req, res) => {
+//
+// In-memory cache for the heavier insights data. Library/Lifecycle/Genres
+// involve external API calls (Jellyfin + Seerr + TMDB) so we cache them for
+// 5 minutes. The cheap data (uptime, command stats, memory) is always fresh.
+const _insightsCache = { data: null, ts: 0 };
+const INSIGHTS_TTL_MS = 5 * 60 * 1000;
+
+async function getInsightsForWidget() {
+  if (_insightsCache.data && Date.now() - _insightsCache.ts < INSIGHTS_TTL_MS) {
+    return _insightsCache.data;
+  }
+  const out = { library: null, lifecycle: null, requestGenres: null };
+  try {
+    out.library = await getCachedLibrarySummary();
+  } catch (e) { logger.warn(`[widget/stats] library failed: ${e.message}`); }
+  try {
+    const { fetchRequestLifecycleStats } = await import("../api/seerr.js");
+    if (process.env.SEERR_URL && process.env.SEERR_API_KEY) {
+      out.lifecycle = await fetchRequestLifecycleStats(process.env.SEERR_URL, process.env.SEERR_API_KEY);
+    }
+  } catch (e) { logger.warn(`[widget/stats] lifecycle failed: ${e.message}`); }
+  try {
+    const { fetchTopRequestGenres } = await import("../api/seerr.js");
+    const { tmdbGetDetails } = await import("../api/tmdb.js");
+    if (process.env.SEERR_URL && process.env.SEERR_API_KEY && process.env.TMDB_API_KEY) {
+      const detailsFn = (id, type) => tmdbGetDetails(id, type, process.env.TMDB_API_KEY);
+      out.requestGenres = await fetchTopRequestGenres(process.env.SEERR_URL, process.env.SEERR_API_KEY, detailsFn, 200);
+    }
+  } catch (e) { logger.warn(`[widget/stats] requestGenres failed: ${e.message}`); }
+
+  _insightsCache.data = out;
+  _insightsCache.ts = Date.now();
+  return out;
+}
+
+router.get("/widget/stats", authenticateWidget, async (req, res) => {
   const botUptime = getBotUptime();
   const cacheStats = cache.getStats();
   const cmdStats = getCommandStats();
@@ -157,6 +433,10 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
     }));
   }
 
+  // Fetch insights (cached 5 min). If unavailable / not configured, fields
+  // are null and the widget renders "—" placeholders.
+  const insights = await getInsightsForWidget();
+
   res.json({
     status: botState.isBotRunning ? "online" : "offline",
     botUsername: botState.isBotRunning && botState.discordClient?.user ? botState.discordClient.user.tag : null,
@@ -167,6 +447,9 @@ router.get("/widget/stats", authenticateWidget, (req, res) => {
     memoryMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
     version: APP_VERSION,
     commandStats: cmdStats,
+    library: insights.library,
+    lifecycle: insights.lifecycle,
+    requestGenres: insights.requestGenres,
     timestamp: new Date().toISOString(),
   });
 });
@@ -241,11 +524,23 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 .user-cmd-tags{display:flex;flex-wrap:wrap;gap:3px;margin-left:26px}
 .user-cmd-tag{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(30,200,160,0.08);color:#8b949e;white-space:nowrap}
 .user-cmd-tag b{color:#1ec8a0;font-weight:600}
-.tabs{display:flex;gap:3px;margin-bottom:8px;flex-shrink:0}
-.tab{padding:4px 8px;border:1px solid rgba(30,200,160,0.15);border-radius:5px;background:transparent;color:#8b949e;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.tabs{display:flex;gap:3px;margin-bottom:8px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:4px 8px;border:1px solid rgba(30,200,160,0.15);border-radius:5px;background:transparent;color:#8b949e;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
 .tab.active{background:rgba(30,200,160,0.12);color:#1ec8a0;border-color:rgba(30,200,160,0.3)}
 .tab-content{display:none;flex:1;min-height:0;overflow:hidden}
 .tab-content.active{display:flex;flex-direction:column}
+.lib-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;flex-shrink:0}
+.lib-card{background:rgba(30,200,160,0.06);border:1px solid rgba(30,200,160,0.1);border-radius:8px;padding:8px 6px;text-align:center}
+.lib-card .v{font-size:16px;font-weight:700;color:#1ec8a0}
+.lib-card .l{font-size:9px;color:#8b949e;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.lc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0}
+.bar-row{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0}
+.bar-name{flex:0 0 90px;color:#c9d1d9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:10px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#cba6f7,#b388ff);border-radius:3px}
+.bar-fill.peach{background:linear-gradient(90deg,#fab387,#f9a04a)}
+.bar-count{flex:0 0 30px;text-align:right;color:#8b949e;font-size:11px}
 </style>
 </head>
 <body>
@@ -256,31 +551,52 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 <span class="dot offline" id="dot"></span>
 </div>
 <div class="bot-info">
-<span id="bn">Loading...</span>
+<span id="bn">${wt("widget.loading","Loading…")}</span>
 <span id="ver"></span>
 </div>
 <div class="stats">
-<div class="stat"><div class="v" id="up">--</div><div class="l">Uptime</div></div>
-<div class="stat"><div class="v" id="cmds">--</div><div class="l">Commands</div></div>
-<div class="stat"><div class="v" id="mem">--</div><div class="l">RAM MB</div></div>
+<div class="stat"><div class="v" id="up">--</div><div class="l">${wt("widget.uptime","Uptime")}</div></div>
+<div class="stat"><div class="v" id="cmds">--</div><div class="l">${wt("widget.commands","Commands")}</div></div>
+<div class="stat"><div class="v" id="mem">--</div><div class="l">${wt("widget.ram_mb","RAM MB")}</div></div>
 </div>
 <div class="section">
 <div class="tabs">
-<button class="tab active" onclick="switchTab('commands',this)">Commands</button>
-<button class="tab" onclick="switchTab('users',this)">Top Users</button>
+<button class="tab active" onclick="switchTab('commands',this)">${wt("widget.tab_commands","Commands")}</button>
+<button class="tab" onclick="switchTab('users',this)">${wt("widget.tab_users","Top Users")}</button>
+<button class="tab" onclick="switchTab('library',this)">${wt("widget.tab_library","Library")}</button>
+<button class="tab" onclick="switchTab('lifecycle',this)">${wt("widget.tab_lifecycle","Lifecycle")}</button>
+<button class="tab" onclick="switchTab('genres',this)">${wt("widget.tab_genres","Req. Genres")}</button>
 </div>
 <div class="tab-content active" id="tab-commands">
-<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="cmdList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 <div class="tab-content" id="tab-users">
-<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div></div>
+<div class="cmd-list" id="userList"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
+</div>
+<div class="tab-content" id="tab-library">
+<div class="lib-grid" id="libGrid">
+<div class="lib-card"><div class="v" id="libMovies">--</div><div class="l">${wt("widget.movies","Movies")}</div></div>
+<div class="lib-card"><div class="v" id="libSeries">--</div><div class="l">${wt("widget.series","Series")}</div></div>
+<div class="lib-card"><div class="v" id="libHours">--</div><div class="l">${wt("widget.hours","Hours")}</div></div>
+</div>
+<div class="cmd-list" id="libGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
+</div>
+<div class="tab-content" id="tab-lifecycle">
+<div class="lc-grid">
+<div class="lib-card"><div class="v" id="lcPending">--</div><div class="l">${wt("widget.pend_appr","Pend → Apprv (h)")}</div></div>
+<div class="lib-card"><div class="v" id="lcAvail">--</div><div class="l">${wt("widget.appr_avail","Apprv → Avail (h)")}</div></div>
+</div>
+<div style="color:#484f58;font-size:10px;text-align:center;padding:10px 6px">${wt("widget.avg_wait","Average wait time across all requests.")}</div>
+</div>
+<div class="tab-content" id="tab-genres">
+<div class="cmd-list" id="reqGenres" style="overflow-y:auto"><div style="color:#484f58;font-size:11px;text-align:center;padding:8px">${wt("widget.no_data","No data yet")}</div></div>
 </div>
 </div>
 <div class="btn-row">
 <button class="toggle-btn start" id="tb" onclick="toggle()" disabled>
-<span id="tbIcon">&#9654;</span> <span id="tbText">Start Bot</span>
+<span id="tbIcon">&#9654;</span> <span id="tbText">${wt("widget.start_bot","Start Bot")}</span>
 </button>
-<button class="reset-btn" id="rb" onclick="resetStats()" title="Reset command statistics">&#x21BA; Reset</button>
+<button class="reset-btn" id="rb" onclick="resetStats()" title="Reset command statistics">&#x21BA; ${wt("widget.reset","Reset")}</button>
 </div>
 <div class="err" id="err"></div>
 <div class="ver" id="verFull"></div>
@@ -289,6 +605,19 @@ body{font-family:'Inter',system-ui,sans-serif;background:transparent;color:#c9d1
 const A="${baseUrl}/api";
 const WK="${apiKey}";
 const H=WK?{"x-widget-key":WK}:{};
+const L=${JSON.stringify({
+  noData:    wt("widget.no_data","No data yet"),
+  offline:   wt("widget.bot_offline","Bot offline"),
+  loading:   wt("widget.loading","Loading…"),
+  startBot:  wt("widget.start_bot","Start Bot"),
+  stopBot:   wt("widget.stop_bot","Stop Bot"),
+  connFail:  wt("widget.connection_failed","Connection failed"),
+  actFail:   wt("widget.action_failed","Action failed"),
+  resetFail: wt("widget.reset_failed","Reset failed"),
+  confirm:   wt("widget.confirm","Confirm?"),
+  reset:     wt("widget.reset","Reset"),
+  done:      wt("widget.done","Done"),
+})};
 let isOnline=false;
 
 function switchTab(name,el){
@@ -306,7 +635,7 @@ const d=await(await fetch(A+"/widget/stats",{headers:H})).json();
 if(d.error){document.getElementById("err").textContent=d.error;return;}
 isOnline=d.status==="online";
 document.getElementById("dot").className="dot "+d.status;
-document.getElementById("bn").textContent=d.botUsername||"Bot offline";
+document.getElementById("bn").textContent=d.botUsername||L.offline;
 document.getElementById("up").textContent=d.uptimeFormatted||"0h 00m 00s";
 document.getElementById("cmds").textContent=d.commandStats?.totalCommands||0;
 document.getElementById("mem").textContent=d.memoryMB;
@@ -315,10 +644,10 @@ document.getElementById("verFull").textContent="Questorr v"+d.version;
 document.getElementById("tb").disabled=false;
 document.getElementById("tb").className="toggle-btn "+(isOnline?"stop":"start");
 document.getElementById("tbIcon").innerHTML=isOnline?"&#9632;":"&#9654;";
-document.getElementById("tbText").textContent=isOnline?"Stop Bot":"Start Bot";
+document.getElementById("tbText").textContent=isOnline?L.stopBot:L.startBot;
 document.getElementById("err").textContent="";
 const cs=d.commandStats;
-const emptyMsg='<div style="color:#484f58;font-size:11px;text-align:center;padding:8px">No data yet</div>';
+const emptyMsg='<div style="color:#484f58;font-size:11px;text-align:center;padding:8px">'+L.noData+'</div>';
 if(cs&&cs.commands&&Object.keys(cs.commands).length>0){
 const max=Math.max(...Object.values(cs.commands));
 let h="";
@@ -345,7 +674,40 @@ h+='<div class="user-card"><div class="user-header"><span class="user-rank">'+(i
 });
 document.getElementById("userList").innerHTML=h;
 }else{document.getElementById("userList").innerHTML=emptyMsg;}
-}catch(e){document.getElementById("err").textContent="Connection failed"}}
+// Library tab
+if(d.library){
+document.getElementById("libMovies").textContent=d.library.movies||0;
+document.getElementById("libSeries").textContent=d.library.series||0;
+document.getElementById("libHours").textContent=d.library.totalRuntimeMinutes?Math.round(d.library.totalRuntimeMinutes/60):0;
+const tg=d.library.topGenres||[];
+if(tg.length>0){
+const max=Math.max(...tg.map(g=>g.count));
+let h="";
+tg.forEach(g=>{const pct=max>0?Math.round(g.count/max*100):0;
+h+='<div class="bar-row"><span class="bar-name">'+esc(g.name)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div><span class="bar-count">'+g.count+'</span></div>';});
+document.getElementById("libGenres").innerHTML=h;
+}else{document.getElementById("libGenres").innerHTML=emptyMsg;}
+}else{
+document.getElementById("libMovies").textContent="—";document.getElementById("libSeries").textContent="—";document.getElementById("libHours").textContent="—";
+document.getElementById("libGenres").innerHTML=emptyMsg;
+}
+// Lifecycle tab
+if(d.lifecycle){
+document.getElementById("lcPending").textContent=d.lifecycle.pendingToApprovedAvgHours??"—";
+document.getElementById("lcAvail").textContent=d.lifecycle.approvedToAvailableAvgHours??"—";
+}else{
+document.getElementById("lcPending").textContent="—";document.getElementById("lcAvail").textContent="—";
+}
+// Request genres tab
+const rg=d.requestGenres||[];
+if(rg.length>0){
+const max=Math.max(...rg.map(g=>g.count));
+let h="";
+rg.forEach(g=>{const pct=max>0?Math.round(g.count/max*100):0;
+h+='<div class="bar-row"><span class="bar-name">'+esc(g.name)+'</span><div class="bar-track"><div class="bar-fill peach" style="width:'+pct+'%"></div></div><span class="bar-count">'+g.count+'</span></div>';});
+document.getElementById("reqGenres").innerHTML=h;
+}else{document.getElementById("reqGenres").innerHTML=emptyMsg;}
+}catch(e){document.getElementById("err").textContent=L.connFail}}
 
 async function toggle(){
 const action=isOnline?"stop":"start";
@@ -357,22 +719,22 @@ const d=await res.json();
 if(!res.ok)document.getElementById("err").textContent=d.message||d.error;
 setTimeout(r,1500);
 }catch(e){
-document.getElementById("err").textContent="Action failed";
+document.getElementById("err").textContent=L.actFail;
 document.getElementById("tb").disabled=false;
 }}
 
 let resetPending=false;
 async function resetStats(){
 const rb=document.getElementById("rb");
-if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; Confirm?";rb.style.color="#f38ba8";rb.style.borderColor="rgba(243,139,168,0.4)";setTimeout(()=>{if(resetPending){resetPending=false;rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";}},3000);return;}
+if(!resetPending){resetPending=true;rb.innerHTML="&#x21BA; "+L.confirm;rb.style.color="#f38ba8";rb.style.borderColor="rgba(243,139,168,0.4)";setTimeout(()=>{if(resetPending){resetPending=false;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";}},3000);return;}
 resetPending=false;
 try{
 rb.disabled=true;rb.innerHTML="...";
 const res=await fetch(A+"/widget/reset-stats",{method:"POST",headers:H});
 const d=await res.json();
-if(d.success){rb.innerHTML="&#x2705; Done";rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.disabled=false;r();},1500);}
-else{document.getElementById("err").textContent=d.message||"Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
-}catch(e){document.getElementById("err").textContent="Reset failed";rb.innerHTML="&#x21BA; Reset";rb.style.color="";rb.style.borderColor="";rb.disabled=false;}}
+if(d.success){rb.innerHTML="&#x2705; "+L.done;rb.style.color="#1ec8a0";rb.style.borderColor="";setTimeout(()=>{rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.disabled=false;r();},1500);}
+else{document.getElementById("err").textContent=d.message||L.resetFail;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";rb.disabled=false;}
+}catch(e){document.getElementById("err").textContent=L.resetFail;rb.innerHTML="&#x21BA; "+L.reset;rb.style.color="";rb.style.borderColor="";rb.disabled=false;}}
 
 r();setInterval(r,15000);
 </script>
@@ -380,6 +742,53 @@ r();setInterval(r,15000);
 </html>`;
 
   res.type("html").send(html);
+});
+
+// ─── Post Help Wizard (authenticated) ────────────────────────────────────────
+router.post("/post-help", botControlLimiter, authenticateToken, async (req, res) => {
+  if (!botState.isBotRunning || !botState.discordClient) {
+    return res.status(400).json({ success: false, message: "Bot is not running." });
+  }
+  const { channelId, pin } = req.body;
+  if (!channelId) {
+    return res.status(400).json({ success: false, message: "channelId is required." });
+  }
+  try {
+    const channel = await botState.discordClient.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) {
+      return res.status(400).json({ success: false, message: "Channel not found or not a text channel." });
+    }
+    const { buildHelpEmbed, buildHelpComponents } = await import("../bot/helpers/helpMessage.js");
+    const message = await channel.send({
+      embeds: [buildHelpEmbed()],
+      components: buildHelpComponents(),
+    });
+    // Pin in its own try/catch — a missing "Manage Messages" permission must
+    // not turn an otherwise-successful post into a hard error.
+    let pinned = false;
+    let pinError = null;
+    if (pin) {
+      try {
+        await message.pin();
+        pinned = true;
+      } catch (pinErr) {
+        pinError = pinErr.message;
+        logger.warn(`[post-help] Posted but could not pin: ${pinErr.message}`);
+      }
+    }
+    // Persist the chosen channel so it pre-fills the dropdown on next dashboard load
+    try {
+      updateConfig({ POST_HELP_CHANNEL_ID: String(channelId) });
+      process.env.POST_HELP_CHANNEL_ID = String(channelId);
+    } catch (e) {
+      logger.warn(`[post-help] Failed to persist POST_HELP_CHANNEL_ID: ${e.message}`);
+    }
+    logger.info(`[post-help] Help wizard posted to #${channel.name} (${channelId})${pinned ? " and pinned" : ""}`);
+    res.json({ success: true, messageId: message.id, channelId: channel.id, pinned, pinError });
+  } catch (err) {
+    logger.error("[post-help] Error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // ─── Bot Status (authenticated) ──────────────────────────────────────────────

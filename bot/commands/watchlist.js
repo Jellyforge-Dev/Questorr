@@ -1,19 +1,28 @@
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
 import { fetchRequests } from "../../api/seerr.js";
-import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
+import { getSeerrUrl, getSeerrApiKey, buildJellyfinUrl } from "../helpers.js";
+import { isValidUrl } from "../../utils/url.js";
+import { formatDate } from "../../utils/dateFormat.js";
 import logger from "../../utils/logger.js";
 import axios from "axios";
 import { getSeerrApiUrl } from "../../utils/seerrUrl.js";
 import { TIMEOUTS } from "../../lib/constants.js";
 
-const STATUS_MAP = {
-  1: { emoji: "❓", label: "Unknown" },
-  2: { emoji: "⏳", label: "Pending" },
-  3: { emoji: "⬇️", label: "Processing" },
-  4: { emoji: "🟡", label: "Partial" },
-  5: { emoji: "✅", label: "Available" },
-};
+/**
+ * Translatable status map. Function instead of const so the labels reflect the
+ * current bot language at call time (BOT_LANGUAGE may switch via dashboard).
+ */
+function getStatusMap() {
+  return {
+    1: { emoji: "❓", label: t("watchlist_status_unknown") },
+    2: { emoji: "⏳", label: t("watchlist_status_pending") },
+    3: { emoji: "⬇️", label: t("watchlist_status_processing") },
+    4: { emoji: "🟡", label: t("watchlist_status_partial") },
+    5: { emoji: "✅", label: t("watchlist_status_available") },
+  };
+}
 
 const PAGE_SIZE = 10;
 
@@ -54,23 +63,46 @@ function getSeerrUserIdFromDiscord(discordId) {
 }
 
 /**
+ * For all status===5 items on the current page, look up the Jellyfin item ID
+ * and stash it on r._jellyfinItemId so the embed-builder can emit Watch links.
+ * Mutates the requests array in place.
+ */
+async function enrichWatchableWithJellyfinIds(requestsOnPage) {
+  const jfBase = process.env.JELLYFIN_BASE_URL;
+  const jfKey = process.env.JELLYFIN_API_KEY;
+  if (!jfBase || !jfKey) return;
+  await Promise.all(requestsOnPage.map(async (r) => {
+    // Status 4 = partial (e.g. some seasons), 5 = fully available
+    if (r.media?.status !== 4 && r.media?.status !== 5) return;
+    const tmdbId = r.media?.tmdbId;
+    const mediaType = r.media?.mediaType || r.type;
+    if (!tmdbId || !r._resolvedTitle) return;
+    try {
+      r._jellyfinItemId = await findJellyfinItemByTmdbId(tmdbId, mediaType, r._resolvedTitle, jfKey, jfBase);
+    } catch {
+      r._jellyfinItemId = null;
+    }
+  }));
+}
+
+/**
  * Build the watchlist embed for a given page
- * @param {string|null} currentSeerrUserId - The requesting user's Seerr ID (to censor other users' names)
  */
 function buildWatchlistEmbed(requests, page, totalCount, currentSeerrUserId) {
   const start = page * PAGE_SIZE;
   const shown = requests.slice(start, start + PAGE_SIZE);
   const totalPages = Math.ceil(requests.length / PAGE_SIZE);
+  const statusMap = getStatusMap();
 
   const lines = shown.map((r, i) => {
     const title = r._resolvedTitle || "Unknown";
     const mediaType = r.type === "movie" ? "🎬" : "📺";
-    const status = STATUS_MAP[r.media?.status] || STATUS_MAP[1];
+    const status = statusMap[r.media?.status] || statusMap[1];
     const isOwnRequest = currentSeerrUserId && String(r.requestedBy?.id) === currentSeerrUserId;
     const user = isOwnRequest
       ? (r.requestedBy?.displayName || r.requestedBy?.username || "?")
       : "A User";
-    const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "";
+    const date = r.createdAt ? formatDate(r.createdAt) : "";
     return `${start + i + 1}. ${mediaType} **${title}** — ${status.emoji} ${status.label}\n   ↳ ${user} · ${date}`;
   });
 
@@ -110,6 +142,52 @@ function buildPaginationRow(page, totalPages, filter) {
   return row;
 }
 
+/**
+ * Build link-button rows for available items on the current page.
+ * Returns up to 4 ActionRows (Discord limit: 5 total minus 1 for pagination).
+ */
+function buildWatchRows(requestsOnPage) {
+  const buttons = [];
+  for (const r of requestsOnPage) {
+    const status = r.media?.status;
+    if (status !== 4 && status !== 5) continue;
+    if (!r._jellyfinItemId) continue;
+    const url = buildJellyfinUrl(r._jellyfinItemId);
+    if (!url || !isValidUrl(url)) continue;
+    const title = r._resolvedTitle || "Unknown";
+    // Partial items get the 🟡 prefix; available items the standard ▶
+    const prefix = status === 4 ? "🟡 ▶" : "▶";
+    buttons.push(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel(`${prefix} ${title.substring(0, 58)}`)
+        .setURL(url)
+    );
+    if (buttons.length >= 20) break; // 4 rows × 5 buttons
+  }
+  const rows = [];
+  for (let i = 0; i < buttons.length; i += 5) {
+    const row = new ActionRowBuilder().addComponents(buttons.slice(i, i + 5));
+    rows.push(row);
+  }
+  return rows;
+}
+
+async function buildReply(requests, page, totalCount, currentSeerrUserId, filter) {
+  const start = page * PAGE_SIZE;
+  const shown = requests.slice(start, start + PAGE_SIZE);
+  await enrichWatchableWithJellyfinIds(shown);
+
+  const embed = buildWatchlistEmbed(requests, page, totalCount, currentSeerrUserId);
+  const totalPages = Math.ceil(requests.length / PAGE_SIZE);
+
+  const components = [];
+  if (totalPages > 1) components.push(buildPaginationRow(page, totalPages, filter));
+  components.push(...buildWatchRows(shown));
+
+  return { embeds: [embed], components };
+}
+
 export async function handleWatchlistCommand(interaction) {
   await interaction.deferReply({ flags: 64 });
 
@@ -129,7 +207,6 @@ export async function handleWatchlistCommand(interaction) {
     const data = await fetchRequests(seerrUrl, apiKey, 50, filter === "mine" ? "all" : filter);
     let requests = data?.results || [];
 
-    // If "mine" filter, show only own requests
     if (filter === "mine") {
       if (currentSeerrUserId) {
         requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
@@ -155,14 +232,7 @@ export async function handleWatchlistCommand(interaction) {
     requests.forEach((r, i) => { r._resolvedTitle = titles[i]; });
 
     const totalCount = data?.pageInfo?.results || requests.length;
-    const totalPages = Math.ceil(requests.length / PAGE_SIZE);
-    const embed = buildWatchlistEmbed(requests, 0, totalCount, currentSeerrUserId);
-
-    const reply = { embeds: [embed] };
-    if (totalPages > 1) {
-      reply.components = [buildPaginationRow(0, totalPages, filter)];
-    }
-
+    const reply = await buildReply(requests, 0, totalCount, currentSeerrUserId, filter);
     return interaction.editReply(reply);
   } catch (err) {
     logger.error("Watchlist command error:", err);
@@ -194,7 +264,6 @@ export async function handleWatchlistPagination(interaction) {
       requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
     }
 
-    // Resolve titles
     const titlePromises = requests.map(r => {
       const tmdbId = r.media?.tmdbId;
       const mediaType = r.media?.mediaType || r.type;
@@ -205,13 +274,8 @@ export async function handleWatchlistPagination(interaction) {
     requests.forEach((r, i) => { r._resolvedTitle = titles[i]; });
 
     const totalCount = data?.pageInfo?.results || requests.length;
-    const totalPages = Math.ceil(requests.length / PAGE_SIZE);
-    const embed = buildWatchlistEmbed(requests, newPage, totalCount, currentSeerrUserId);
-
-    return interaction.editReply({
-      embeds: [embed],
-      components: totalPages > 1 ? [buildPaginationRow(newPage, totalPages, filter)] : [],
-    });
+    const reply = await buildReply(requests, newPage, totalCount, currentSeerrUserId, filter);
+    return interaction.editReply(reply);
   } catch (err) {
     logger.error("Watchlist pagination error:", err);
   }

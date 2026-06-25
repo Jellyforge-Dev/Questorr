@@ -17,7 +17,14 @@
  *   5. JELLYFIN_CHANNEL_ID
  */
 
+import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
+import path from "path";
 import { t, tNotif } from "./utils/botStrings.js";
+import { shouldPost, markPosted, markApprovalDmSent } from "./utils/notificationDispatcher.js";
+// Round 12: clean up pendingRequests entries after MEDIA_AVAILABLE so the map
+// (which doubles as the poller's "via Questorr" dedup source) doesn't grow
+// unbounded over time.
+import { pendingRequests, savePendingRequests } from "./bot/botState.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -27,7 +34,62 @@ import {
 import axios from "axios";
 import logger from "./utils/logger.js";
 import { isValidUrl } from "./utils/url.js";
-import { findBestBackdrop } from "./api/tmdb.js";
+import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
+import { CONFIG_PATH } from "./utils/configFile.js";
+
+// ─── Admin Pending Messages persistence ──────────────────────────────────────
+// Maps requestId → { channelId, messageId } so the status poller can edit the
+// admin embed when Seerr approves/declines from its own UI.
+
+const ADMIN_PENDING_MSGS_PATH = path.join(
+  path.dirname(CONFIG_PATH),
+  "admin-pending-messages.json"
+);
+
+// In-memory map; loaded once on first use
+let _adminPendingMsgs = null;
+
+function loadAdminPendingMsgs() {
+  if (_adminPendingMsgs) return _adminPendingMsgs;
+  try {
+    if (existsSync(ADMIN_PENDING_MSGS_PATH)) {
+      _adminPendingMsgs = JSON.parse(readFileSync(ADMIN_PENDING_MSGS_PATH, "utf-8"));
+    } else {
+      _adminPendingMsgs = {};
+    }
+  } catch {
+    _adminPendingMsgs = {};
+  }
+  return _adminPendingMsgs;
+}
+
+function saveAdminPendingMsgs() {
+  try {
+    const tmp = ADMIN_PENDING_MSGS_PATH + ".tmp";
+    writeFileSync(tmp, JSON.stringify(_adminPendingMsgs, null, 2), "utf-8");
+    renameSync(tmp, ADMIN_PENDING_MSGS_PATH);
+  } catch (err) {
+    logger.warn(`[SEERR WEBHOOK] Could not save admin-pending-messages: ${err.message}`);
+  }
+}
+
+export function recordAdminPendingMsg(requestId, channelId, messageId) {
+  const map = loadAdminPendingMsgs();
+  map[String(requestId)] = { channelId, messageId };
+  saveAdminPendingMsgs();
+}
+
+export function getAdminPendingMsg(requestId) {
+  return loadAdminPendingMsgs()[String(requestId)] || null;
+}
+
+export function removeAdminPendingMsg(requestId) {
+  const map = loadAdminPendingMsgs();
+  if (map[String(requestId)]) {
+    delete map[String(requestId)];
+    saveAdminPendingMsgs();
+  }
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -104,6 +166,36 @@ const EVENT_CONFIG = {
 const tmdbCache = new Map();
 const TMDB_CACHE_TTL = 6 * 60 * 60 * 1000;
 
+// Webhook deduplication — Seerr occasionally fires retries or duplicate webhooks
+// for the same event within milliseconds (observed: two MEDIA_AVAILABLE for the
+// same TMDB ID in the same second). Without dedup, the bot posts the embed twice.
+const recentWebhookEvents = new Map(); // key = `${eventType}|${mediaType}|${tmdbId}` → expiresAt
+const WEBHOOK_DEDUP_WINDOW_MS = 30_000;
+
+// Events for which we fetch rootFolder from the Seerr API when the webhook payload
+// doesn't carry it. MEDIA_PENDING is excluded — it goes to the admin channel via a
+// separate path, and Seerr hasn't assigned a rootFolder before approval anyway.
+const ROOTFOLDER_RELEVANT_EVENTS = new Set([
+  "MEDIA_APPROVED",
+  "MEDIA_AUTO_APPROVED",
+  "MEDIA_AVAILABLE",
+  "MEDIA_FAILED",
+]);
+
+function isDuplicateWebhookEvent(eventType, mediaType, tmdbId) {
+  if (!eventType || !tmdbId) return false; // payload without identity → never dedup (e.g. TEST_NOTIFICATION)
+  const now = Date.now();
+  // Lazy cleanup of expired entries
+  for (const [k, exp] of recentWebhookEvents) {
+    if (exp < now) recentWebhookEvents.delete(k);
+  }
+  const key = `${eventType}|${mediaType || "?"}|${tmdbId}`;
+  const expiresAt = recentWebhookEvents.get(key);
+  if (expiresAt && expiresAt > now) return true;
+  recentWebhookEvents.set(key, now + WEBHOOK_DEDUP_WINDOW_MS);
+  return false;
+}
+
 // ─── Channel Resolution ───────────────────────────────────────────────────────
 
 /**
@@ -118,50 +210,127 @@ const TMDB_CACHE_TTL = 6 * 60 * 60 * 1000;
 /**
  * Look up the root folder for a media item from Seerr API.
  * Seerr doesn't always include rootFolder in MEDIA_AVAILABLE webhooks.
+ *
+ * Strategy: use the targeted media endpoint (/movie/{id} or /tv/{id}) which
+ * returns all requests for that TMDB ID with their rootFolders — more reliable
+ * than the paginated /request list (which caps at 20 results and can miss older
+ * requests). Returns null if the media has no Seerr request (e.g. manually
+ * marked as available without a prior request), in which case the Jellyfin
+ * library lookup in resolveChannel handles routing instead.
  */
-async function fetchRootFolderFromSeerr(tmdbId, mediaType) {
+async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
   const seerrUrl = process.env.SEERR_URL;
   const seerrApiKey = process.env.SEERR_API_KEY;
   if (!seerrUrl || !seerrApiKey) return null;
 
+  const base = seerrUrl.replace(/\/$/, "");
+  const headers = { "X-Api-Key": seerrApiKey };
+
   try {
-    const base = seerrUrl.replace(/\/$/, "");
-    // Search requests for this media item
-    const res = await axios.get(`${base}/api/v1/request`, {
-      headers: { "X-Api-Key": seerrApiKey },
-      params: {
-        take: 20,
-        sort: "modified",
-        filter: "all",
-      },
-      timeout: 5000,
-    });
-
-    const requests = res.data?.results || [];
-    const mediaTypeSeerr = mediaType === "movie" ? 1 : 2;
-
-    // Find most recent request for this TMDB ID
-    const match = requests.find(r =>
-      r.media?.tmdbId === Number(tmdbId) && r.media?.mediaType === (mediaType === "movie" ? "movie" : "tv")
-    );
-
-    if (match?.rootFolder) {
-      logger.info(`[SEERR WEBHOOK] 📁 Found root folder from Seerr API: ${match.rootFolder}`);
-      return match.rootFolder;
+    // Primary: use the specific request endpoint if we have a request_id from the
+    // webhook payload. This returns the full MediaRequest object — including the
+    // rootFolder that Jellyseerr assigns when forwarding the request to Radarr/Sonarr
+    // during admin approval (even if Questorr originally omitted it).
+    if (requestId) {
+      const reqRes = await axios
+        .get(`${base}/api/v1/request/${requestId}`, { headers, timeout: 5000 })
+        .catch(() => null);
+      const directRootFolder = reqRes?.data?.rootFolder;
+      logger.debug(
+        `[SEERR WEBHOOK] Direct request lookup (id=${requestId}): rootFolder=${directRootFolder ?? "null"}`
+      );
+      if (directRootFolder) {
+        logger.info(
+          `[SEERR WEBHOOK] 📁 Root folder from direct request ${requestId}: ${directRootFolder}`
+        );
+        return directRootFolder;
+      }
     }
 
-    // Also check media.requests if nested
-    const res2 = await axios.get(`${base}/api/v1/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`, {
-      headers: { "X-Api-Key": seerrApiKey },
-      timeout: 5000,
-    }).catch(() => null);
+    // Fallback: query all requests via the TMDB media endpoint. Used when no
+    // request_id is available, or when the direct lookup returned null (e.g.
+    // Jellyseerr didn't update rootFolder in the request record on approval).
+    const endpoint = mediaType === "movie" ? "movie" : "tv";
+    const res = await axios
+      .get(`${base}/api/v1/${endpoint}/${tmdbId}`, { headers, timeout: 5000 })
+      .catch(() => null);
 
-    const reqs = res2?.data?.requests || [];
-    const rootFolders = reqs.map(r => r.rootFolder).filter(Boolean);
+    const reqs = res?.data?.mediaInfo?.requests || [];
+    logger.debug(
+      `[SEERR WEBHOOK] Media endpoint TMDB ${tmdbId}: mediaInfo.requests has ${reqs.length} item(s), rootFolders=[${reqs.map((r) => r.rootFolder ?? "null").join(", ")}]`
+    );
+    const rootFolders = reqs.map((r) => r.rootFolder).filter(Boolean);
     if (rootFolders.length > 0) {
-      logger.info(`[SEERR WEBHOOK] 📁 Found root folder from media endpoint: ${rootFolders[0]}`);
+      logger.info(
+        `[SEERR WEBHOOK] 📁 Root folder from mediaInfo.requests for TMDB ${tmdbId}: ${rootFolders[0]} (${reqs.length} request(s))`
+      );
       return rootFolders[0];
     }
+
+    // Tier 3 (Round 8): Jellyseerr's request record can be missing rootFolder
+    // when the admin approves without explicitly selecting a path. The downstream
+    // Radarr/Sonarr server always knows the actual path though — query it directly.
+    // Round 9: Logs upgraded from debug→info so the failure mode is visible.
+    try {
+      const { fetchArrConnections, fetchMoviePathFromRadarr, fetchSeriesPathFromSonarr } =
+        await import("./api/seerr.js");
+      const { radarr, sonarr } = await fetchArrConnections(seerrUrl, seerrApiKey);
+
+      if (mediaType === "movie") {
+        if (radarr.length === 0) {
+          logger.info(`[SEERR WEBHOOK] Tier-3 skipped for TMDB ${tmdbId}: no Radarr servers configured in Jellyseerr`);
+        } else {
+          logger.info(`[SEERR WEBHOOK] Tier-3: querying ${radarr.length} Radarr server(s) for TMDB ${tmdbId}`);
+          for (const srv of radarr) {
+            const movie = await fetchMoviePathFromRadarr(srv, tmdbId);
+            const folder = movie?.rootFolderPath || movie?.path;
+            if (folder) {
+              logger.info(
+                `[SEERR WEBHOOK] 📁 Root folder from Radarr "${srv.name}" for TMDB ${tmdbId}: ${folder}`
+              );
+              return folder;
+            }
+          }
+          logger.info(`[SEERR WEBHOOK] Tier-3: TMDB ${tmdbId} not found in any of ${radarr.length} Radarr server(s) — falling through`);
+        }
+      } else if (mediaType === "tv") {
+        if (sonarr.length === 0) {
+          logger.info(`[SEERR WEBHOOK] Tier-3 skipped for TMDB ${tmdbId}: no Sonarr servers configured in Jellyseerr`);
+        } else {
+          // Sonarr indexes by TVDB ID — resolve via TMDB external_ids first.
+          const tmdbApiKey = process.env.TMDB_API_KEY;
+          let tvdbId = null;
+          if (tmdbApiKey) {
+            const { tmdbGetExternalTvdb } = await import("./api/tmdb.js");
+            tvdbId = await tmdbGetExternalTvdb(tmdbId, tmdbApiKey);
+          }
+          if (tvdbId) {
+            logger.info(`[SEERR WEBHOOK] Tier-3: querying ${sonarr.length} Sonarr server(s) for TVDB ${tvdbId} (TMDB ${tmdbId})`);
+            for (const srv of sonarr) {
+              const series = await fetchSeriesPathFromSonarr(srv, tvdbId);
+              const folder = series?.rootFolderPath || series?.path;
+              if (folder) {
+                logger.info(
+                  `[SEERR WEBHOOK] 📁 Root folder from Sonarr "${srv.name}" for TVDB ${tvdbId} (TMDB ${tmdbId}): ${folder}`
+                );
+                return folder;
+              }
+            }
+            logger.info(`[SEERR WEBHOOK] Tier-3: TVDB ${tvdbId} not found in any of ${sonarr.length} Sonarr server(s) — falling through`);
+          } else {
+            logger.info(
+              `[SEERR WEBHOOK] Tier-3 Sonarr skipped: could not resolve TVDB ID for TMDB ${tmdbId} (TMDB_API_KEY missing or external_ids empty)`
+            );
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn(`[SEERR WEBHOOK] Tier-3 Radarr/Sonarr fallback errored: ${e.message}`);
+    }
+
+    logger.info(
+      `[SEERR WEBHOOK] No rootFolder from Seerr/Radarr/Sonarr for TMDB ${tmdbId} (requestId=${requestId ?? "none"}) — falling back to Jellyfin item path / library lookup`
+    );
   } catch (e) {
     logger.debug(`[SEERR WEBHOOK] Could not fetch root folder from Seerr: ${e.message}`);
   }
@@ -182,27 +351,44 @@ export function resolveMediaTypeChannel(mediaType) {
   return null;
 }
 
-async function resolveChannel(rootFolder, tmdbId, mediaType) {
-  // 1. Root-folder mapping
-  if (rootFolder) {
-    try {
-      const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
-      const mappings = typeof raw === "object" && raw !== null
-        ? raw
-        : JSON.parse(raw || "{}");
+/**
+ * Match a filesystem path against the configured `SEERR_ROOT_FOLDER_CHANNELS`
+ * mapping. Returns the matching channel ID or null.
+ *
+ * Exported so the Tier-3.5 Jellyfin-item-path fallback in `processEvent` can
+ * re-use the exact same matching logic without duplicating normalization.
+ */
+export function matchRootFolderToChannel(rootFolder) {
+  if (!rootFolder) return null;
+  try {
+    const raw = process.env.SEERR_ROOT_FOLDER_CHANNELS;
+    const mappings = typeof raw === "object" && raw !== null
+      ? raw
+      : JSON.parse(raw || "{}");
 
-      const normalizedRoot = rootFolder.replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
-      for (const [folder, channelId] of Object.entries(mappings)) {
-        const normalizedFolder = folder.replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
-        if (normalizedRoot === normalizedFolder || normalizedRoot.startsWith(normalizedFolder + "/")) {
-          logger.info(`[SEERR WEBHOOK] ✅ Root folder "${rootFolder}" → channel ${channelId}`);
-          return channelId;
-        }
+    const normalizedRoot = String(rootFolder).replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
+    for (const [folder, channelId] of Object.entries(mappings)) {
+      const normalizedFolder = String(folder).replace(/\\/g, "/").toLowerCase().replace(/\/$/, "");
+      if (normalizedRoot === normalizedFolder || normalizedRoot.startsWith(normalizedFolder + "/")) {
+        return channelId;
       }
-      logger.debug(`[SEERR WEBHOOK] No root folder match for "${rootFolder}"`);
-    } catch (e) {
-      logger.warn("[SEERR WEBHOOK] Failed to parse SEERR_ROOT_FOLDER_CHANNELS:", e.message);
     }
+  } catch (e) {
+    logger.warn("[SEERR WEBHOOK] Failed to parse SEERR_ROOT_FOLDER_CHANNELS:", e.message);
+  }
+  return null;
+}
+
+export async function resolveChannel(rootFolder, tmdbId, mediaType) {
+  // 1. Root-folder mapping. rootFolder may come from the webhook payload directly
+  //    OR from the Seerr API fallback in processEvent — both are authoritative.
+  if (rootFolder) {
+    const channelId = matchRootFolderToChannel(rootFolder);
+    if (channelId) {
+      logger.info(`[SEERR WEBHOOK] ✅ Root folder "${rootFolder}" → channel ${channelId}`);
+      return channelId;
+    }
+    logger.debug(`[SEERR WEBHOOK] No root folder match for "${rootFolder}"`);
   }
 
   // 2. Jellyfin library mapping via TMDB ID
@@ -233,79 +419,131 @@ async function resolveChannel(rootFolder, tmdbId, mediaType) {
 /**
  * Find a Jellyfin item by TMDB ID.
  *
- * Jellyfin's AnyProviderIdEquals is broken on this server (returns all items).
- * Instead we use the TMDB title to search, then verify the TMDB ID in ProviderIds.
- * TMDB data must be fetched before calling this function (tmdbCache must be populated).
+ * Strategy (two-pass):
+ *   1. AnyProviderIdEquals query — works regardless of library language/title.
+ *   2. Title-search fallback — catches items whose TMDB ID is not yet indexed
+ *      (e.g. freshly downloaded, metadata scan still running).
+ *
+ * TMDB data must be fetched before calling this function (tmdbCache must be
+ * populated) so we have a title available for the fallback pass.
  */
 export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
   const apiKey = process.env.JELLYFIN_API_KEY;
   const baseUrl = process.env.JELLYFIN_BASE_URL;
   if (!apiKey || !baseUrl) return null;
 
-  // Get title from TMDB cache – must be populated before this is called
-  const cached = tmdbCache.get(`${mediaType}-${tmdbId}`);
-  const title = cached?.data?.title || cached?.data?.name
-             || cached?.data?.original_title || cached?.data?.original_name;
+  // ── Pass 1: provider-ID query (language-agnostic) ──────────────────────────
+  try {
+    const { findItemByTmdbId } = await import("./api/jellyfin.js");
+    const itemId = await findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl);
+    if (itemId) {
+      logger.info(`[SEERR WEBHOOK] ✅ Found via TMDB-ID query: Jellyfin ID=${itemId} (TMDB ${tmdbId})`);
+      return itemId;
+    }
+    logger.info(`[SEERR WEBHOOK] TMDB-ID query returned nothing for TMDB ${tmdbId} – falling back to title search`);
+  } catch (e) {
+    logger.warn(`[SEERR WEBHOOK] TMDB-ID query error for ${tmdbId}: ${e.message} – falling back to title search`);
+  }
 
-  if (!title) {
-    logger.warn(`[SEERR WEBHOOK] No TMDB title in cache for ${mediaType}/${tmdbId} – cannot search Jellyfin`);
+  // ── Pass 2: title search with TMDB-ID verification ────────────────────────
+  // Try multiple title variants — Jellyfin may have the localized title (e.g. "Der
+  // Medicus II") while TMDB's localized lookup returned the original/English title,
+  // or vice versa. Each candidate is searched separately and verified against the
+  // TMDB ID, so we never accidentally accept a wrong title with the same name.
+  const cached = tmdbCache.get(`${mediaType}-${tmdbId}`);
+  const candidates = [
+    cached?.data?.title,           // localized (e.g. de-DE)
+    cached?.data?.name,            // TV localized
+    cached?.data?.original_title,  // production original (Movies)
+    cached?.data?.original_name,   // production original (TV)
+  ].filter(Boolean).filter((t, i, a) => a.indexOf(t) === i);
+
+  if (candidates.length === 0) {
+    logger.warn(`[SEERR WEBHOOK] No TMDB title in cache for ${mediaType}/${tmdbId} – cannot do title-search fallback`);
     return null;
   }
 
   const base = baseUrl.replace(/\/$/, "");
   const itemType = mediaType === "movie" ? "Movie" : "Series";
+  const year = cached?.data?.release_date?.substring(0, 4)
+            || cached?.data?.first_air_date?.substring(0, 4);
 
-  logger.info(`[SEERR WEBHOOK] Searching Jellyfin for "${title}" (TMDB ${tmdbId})`);
+  let yearMatchFallback = null; // remember first year-only match across all candidates
 
-  try {
-    // Search by title, verify TMDB ID in results
-    const res = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
-      params: {
-        Recursive: true,
-        searchTerm: title,
-        IncludeItemTypes: itemType,
-        Fields: "ProviderIds,Name,ProductionYear",
-        Limit: 20,
-      },
-      timeout: 8000,
-    });
+  for (const title of candidates) {
+    logger.info(`[SEERR WEBHOOK] Title-search fallback: "${title}" (TMDB ${tmdbId})`);
 
-    const items = res.data?.Items || [];
-    logger.info(`[SEERR WEBHOOK] Title search returned ${items.length} results`);
+    let items;
+    try {
+      const res = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          searchTerm: title,
+          IncludeItemTypes: itemType,
+          Fields: "ProviderIds,Name,ProductionYear",
+          Limit: 20,
+        },
+        timeout: 8000,
+      });
+      items = res.data?.Items || [];
+    } catch (e) {
+      logger.warn(`[SEERR WEBHOOK] Title-search error for "${title}": ${e.message}`);
+      continue;
+    }
 
-    // Try exact TMDB ID match first
+    logger.info(`[SEERR WEBHOOK] Title search "${title}" returned ${items.length} results`);
+
+    // Exact TMDB-ID match wins immediately
     for (const item of items) {
       const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
       logger.debug(`[SEERR WEBHOOK] Candidate: "${item.Name}" (${item.ProductionYear}) TMDB=${itemTmdbId}`);
       if (String(itemTmdbId) === String(tmdbId)) {
-        logger.info(`[SEERR WEBHOOK] ✅ Verified: "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
+        logger.info(`[SEERR WEBHOOK] ✅ Title-search verified via "${title}": "${item.Name}" ID=${item.Id} TMDB=${itemTmdbId}`);
         return item.Id;
       }
     }
 
-    // If no TMDB match, try year-based fallback for newly added items
-    // (ProviderIds may not be indexed yet right after download)
-    const year = cached?.data?.release_date?.substring(0, 4)
-              || cached?.data?.first_air_date?.substring(0, 4);
-
-    if (year) {
+    // Stash a year match as last-resort fallback. We accept matches even when Jellyfin
+    // has a wrong (or no) TMDB ID, because title-search already filtered to plausible
+    // candidates and the year is a strong discriminator (e.g. "Mary Poppins" 1964
+    // vs. "Mary Poppins Returns" 2018). For channel-routing purposes the library
+    // assignment is what matters, not the TMDB metadata accuracy.
+    //
+    // Sanity filter: Jellyfin's fuzzy search occasionally returns wildly unrelated
+    // items for short/common titles (observed: searchTerm="Oben" returned "Toy Story 2",
+    // "Scream 2", "Bärenbrüder 2" — letter-overlap matches). Reject items whose name
+    // shares no normalized substring with the search term before accepting a year-match.
+    if (!yearMatchFallback && year) {
+      const normTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const titleTokens = normTitle.split(/\s+/).filter(t => t.length >= 3);
+      const nameMatches = (itemName) => {
+        if (!itemName) return false;
+        const n = itemName.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        if (n.includes(normTitle)) return true;
+        return titleTokens.length > 0 && titleTokens.some(t => n.includes(t));
+      };
       for (const item of items) {
-        const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
-        // Only accept if no conflicting TMDB ID (could be unindexed new item)
-        if (!itemTmdbId && String(item.ProductionYear) === String(year)) {
-          logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback: "${item.Name}" (${year}) ID=${item.Id} – TMDB ID not yet indexed`);
-          return item.Id;
-        }
+        if (String(item.ProductionYear) !== String(year)) continue;
+        if (!nameMatches(item.Name)) continue;
+        const itemTmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+        yearMatchFallback = { item, viaTitle: title, wrongTmdbId: itemTmdbId || null };
+        break;
       }
     }
-
-    logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} ("${title}")`);
-    return null;
-  } catch (e) {
-    logger.warn(`[SEERR WEBHOOK] Jellyfin search error for "${title}": ${e.message}`);
-    return null;
   }
+
+  if (yearMatchFallback) {
+    const { item, viaTitle, wrongTmdbId } = yearMatchFallback;
+    const note = wrongTmdbId
+      ? `– Jellyfin has wrong TMDB ID (${wrongTmdbId} ≠ ${tmdbId})`
+      : `– TMDB ID not yet indexed`;
+    logger.info(`[SEERR WEBHOOK] ⚠️ Year-match fallback via "${viaTitle}": "${item.Name}" (${item.ProductionYear}) ID=${item.Id} ${note}`);
+    return item.Id;
+  }
+
+  logger.info(`[SEERR WEBHOOK] No Jellyfin item matched TMDB ${tmdbId} after trying ${candidates.length} title variant(s): ${candidates.map(c => `"${c}"`).join(", ")}`);
+  return null;
 }
 
 /**
@@ -385,7 +623,11 @@ async function fetchTmdbDetails(tmdbId, mediaType) {
       ? `https://api.themoviedb.org/3/movie/${tmdbId}`
       : `https://api.themoviedb.org/3/tv/${tmdbId}`;
     const res = await axios.get(endpoint, {
-      params: { api_key: process.env.TMDB_API_KEY, append_to_response: "images,external_ids" },
+      params: {
+        api_key: process.env.TMDB_API_KEY,
+        language: getTmdbLanguage(),
+        append_to_response: "images,external_ids",
+      },
       timeout: 8000,
     });
     tmdbCache.set(cacheKey, { data: res.data, timestamp: Date.now() });
@@ -455,9 +697,42 @@ async function processEvent(data, eventType, cfg, client) {
   const tmdbId = media?.tmdbId || null;
   let rootFolder = request?.rootFolder || null;
 
-  // If rootFolder missing (common for MEDIA_AVAILABLE), look it up from Seerr API
-  if (!rootFolder && tmdbId && mediaType && eventType === "MEDIA_AVAILABLE") {
-    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType);
+  // Drop identical webhooks fired within the dedup window. Seerr sometimes sends
+  // the same MEDIA_* event twice in quick succession (observed in production logs
+  // — see "Nürnberg (2025)" double-post). The key includes eventType so legitimate
+  // event progression (PENDING → APPROVED → AVAILABLE) is not affected.
+  if (isDuplicateWebhookEvent(eventType, mediaType, tmdbId)) {
+    logger.info(
+      `[SEERR WEBHOOK] 🔁 Duplicate ${eventType} for "${subject}" (TMDB ${tmdbId}) within ${WEBHOOK_DEDUP_WINDOW_MS / 1000}s – skipping`
+    );
+    return;
+  }
+
+  // Cross-source dedup for MEDIA_AVAILABLE via the central dispatcher. If the
+  // Jellyfin poller already posted "Now Available!" for this TMDB ID, skip the
+  // webhook to avoid the double-post (the skip is recorded in the audit trail).
+  if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
+    const { post } = shouldPost({ eventType, tmdbId, mediaType, source: "seerr-webhook", title: subject });
+    if (!post) {
+      logger.info(
+        `[SEERR WEBHOOK] Skipping duplicate MEDIA_AVAILABLE for "${subject}" (TMDB ${tmdbId}) — already notified (likely by Jellyfin poller)`
+      );
+      return;
+    }
+  }
+
+  // Webhook payloads never carry request.rootFolder (Seerr's notification template
+  // simply doesn't include it), so we always fetch it from the Seerr API for the
+  // events where channel-routing matters. Skipped for MEDIA_PENDING because those
+  // go to the admin channel via a separate path, and rootFolder isn't reliably
+  // populated until Seerr forwards the request to Radarr/Sonarr anyway.
+  // For manually-marked items with no Seerr request, the API returns no requests
+  // and routing falls through to the Jellyfin library lookup.
+  if (!rootFolder && tmdbId && mediaType && ROOTFOLDER_RELEVANT_EVENTS.has(eventType)) {
+    // Pass the webhook's request_id so we can fetch the specific request directly —
+    // more reliable than scanning mediaInfo.requests on the movie endpoint.
+    const requestId = request?.request_id || null;
+    rootFolder = await fetchRootFolderFromSeerr(tmdbId, mediaType, requestId);
   }
 
   logger.info(
@@ -476,23 +751,41 @@ async function processEvent(data, eventType, cfg, client) {
   ]);
 
   let channelId = channelIdResolved;
+  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
+
+  // Step 2a (Round 9 — Tier 3.5): If the channel resolved to the fallback AND we
+  // found the item in Jellyfin, retry the root-folder match using the Jellyfin
+  // item's filesystem path. Covers the Avengers case: Jellyseerr writes
+  // rootFolder=null, Radarr doesn't have the movie (manually added to Jellyfin),
+  // but the Jellyfin item itself has a Path like `/Jellyfin_ext/.../Filme/...`
+  // which directly matches a SEERR_ROOT_FOLDER_CHANNELS entry.
+  if (!cfg.adminOnly && jellyfinItemId && (!channelId || channelId === fallback)) {
+    try {
+      const { fetchItemPath } = await import("./api/jellyfin.js");
+      const jfApiKey = process.env.JELLYFIN_API_KEY;
+      const jfBase = process.env.JELLYFIN_BASE_URL;
+      if (jfApiKey && jfBase) {
+        const itemPath = await fetchItemPath(jellyfinItemId, jfApiKey, jfBase);
+        if (itemPath) {
+          const matched = matchRootFolderToChannel(itemPath);
+          if (matched) {
+            logger.info(`[SEERR WEBHOOK] 📁 Tier-3.5: root folder from Jellyfin item path "${itemPath}" → channel ${matched}`);
+            channelId = matched;
+            rootFolder = rootFolder || itemPath;  // record for downstream embed/retry
+          } else {
+            logger.info(`[SEERR WEBHOOK] Tier-3.5: Jellyfin item path "${itemPath}" did not match any SEERR_ROOT_FOLDER_CHANNELS entry`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.debug(`[SEERR WEBHOOK] Tier-3.5 item-path lookup failed: ${e.message}`);
+    }
+  }
 
   // Step 2b: Retry Jellyfin library lookup for MEDIA_AVAILABLE if item wasn't found
   // (Race condition: Seerr fires MEDIA_AVAILABLE before Jellyfin has scanned the file)
   const retryDelay = parseInt(process.env.JELLYFIN_RETRY_DELAY_SECONDS || "30", 10);
-  const fallback = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID || null;
   const usedFallback = channelId === fallback;
-
-  if (eventType === "MEDIA_AVAILABLE" && !cfg.adminOnly && retryDelay > 0 && tmdbId && mediaType && usedFallback) {
-    // Channel resolved to fallback — Jellyfin library lookup likely failed due to race condition
-    // Schedule a background retry
-    logger.info(`[SEERR WEBHOOK] ⏳ Jellyfin library lookup missed — scheduling retry in ${retryDelay}s for "${subject}"`);
-    scheduleJellyfinRetry({
-      data, eventType, cfg, client, tmdbDetails, imdbId,
-      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-      retryDelay, fallbackChannelId: channelId,
-    });
-  }
 
   if (!channelId) {
     logger.error(`[SEERR WEBHOOK] ❌ No Discord channel configured for ${eventType} – set SEERR_CHANNEL_ID`);
@@ -503,7 +796,8 @@ async function processEvent(data, eventType, cfg, client) {
 
   // Build embed and buttons
   const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
-  const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+  const tmdbCollectionId = tmdbDetails?.belongs_to_collection?.id || null;
+  const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
 
   // MEDIA_PENDING: send to admin channel with approve/decline buttons, THEN DM requester
   // MEDIA_DECLINED: DM only
@@ -529,25 +823,42 @@ async function processEvent(data, eventType, cfg, client) {
           );
         }
         if (buttons) {
-          // Add any link buttons (Seerr, IMDb etc.) from the standard button builder
-          const linkBtns = buttons.components.filter(c => c.data.style === ButtonStyle.Link);
-          adminButtons.push(...linkBtns);
+          // Pull every component from buildButtons (link buttons + Collection button if any).
+          // No filter by style: buildButtons does not emit approve/decline, so duplication
+          // is not a concern. Anything it returns belongs on the admin row.
+          const rows = Array.isArray(buttons) ? buttons : [buttons];
+          for (const row of rows) adminButtons.push(...row.components);
         }
         if (adminButtons.length > 0) {
-          adminOptions.components = [new ActionRowBuilder().addComponents(adminButtons)];
+          const adminRows = chunkButtonsIntoRows(adminButtons);
+          adminOptions.components = Array.isArray(adminRows) ? adminRows : [adminRows];
         }
-        await adminChannel.send(adminOptions);
+        const adminMsg = await adminChannel.send(adminOptions);
+        // Persist message reference so the status poller can edit it later
+        if (requestId) {
+          recordAdminPendingMsg(requestId, adminChannelId, adminMsg.id);
+        }
         logger.info(`[SEERR WEBHOOK] ✅ Sent MEDIA_PENDING with approve/decline to admin channel ${adminChannelId}`);
       } catch (err) {
         logger.error(`[SEERR WEBHOOK] ❌ Failed to send to admin channel: ${err.message}`);
       }
     }
-    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
     return;
   }
 
   if (eventType === "MEDIA_DECLINED") {
-    await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
+    return;
+  }
+
+  // MEDIA_APPROVED / MEDIA_AUTO_APPROVED — DM-only when flag is set (default true)
+  if (
+    (eventType === "MEDIA_APPROVED" || eventType === "MEDIA_AUTO_APPROVED") &&
+    process.env.APPROVAL_DM_ONLY !== "false"
+  ) {
+    await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
+    logger.info(`[SEERR WEBHOOK] ✉️ ${eventType} sent as DM-only (APPROVAL_DM_ONLY=true) for "${subject}"`);
     return;
   }
 
@@ -561,13 +872,57 @@ async function processEvent(data, eventType, cfg, client) {
   }
 
   const messageOptions = { embeds: [embed] };
-  if (buttons) messageOptions.components = [buttons];
+  if (buttons) messageOptions.components = Array.isArray(buttons) ? buttons : [buttons];
 
-  await channel.send(messageOptions);
+  const sentMessage = await channel.send(messageOptions);
   logger.info(`[SEERR WEBHOOK] ✅ Sent ${eventType} notification for "${subject}" to channel ${channelId}`);
 
+  // Mark this TMDB ID as notified (so the poller skips the duplicate) and record
+  // the post in the audit trail via the central dispatcher.
+  if (eventType === "MEDIA_AVAILABLE" && tmdbId && mediaType) {
+    markPosted({ eventType, tmdbId, mediaType, source: "seerr-webhook", title: subject, channelId });
+
+    // Round 12: clean up the pendingRequests entry for this title — the
+    // notification has been delivered, so the poller no longer needs the
+    // "via Questorr" marker for it. Keeps the map bounded.
+    const dedupType = mediaType === "movie" ? "movie" : "tv";
+    const requestKey = `${tmdbId}-${dedupType}`;
+    if (pendingRequests.has(requestKey)) {
+      pendingRequests.delete(requestKey);
+      savePendingRequests();
+      logger.debug(`[SEERR WEBHOOK] Cleaned up pendingRequests entry for ${requestKey}`);
+    }
+  }
+
+  // Schedule retry for two distinct cases:
+  //  - "relocate": initial routing fell back to default channel — find the right channel and resend
+  //  - "edit"   : routing was direct, but Jellyfin had not scanned the file yet — re-lookup and add
+  //               the Watch-Now button by editing the existing message (no double post)
+  const needsRelocate = usedFallback;
+  const needsEditForWatchButton = !usedFallback && !jellyfinItemId;
+  if (
+    eventType === "MEDIA_AVAILABLE" &&
+    !cfg.adminOnly &&
+    retryDelay > 0 &&
+    tmdbId &&
+    mediaType &&
+    (needsRelocate || needsEditForWatchButton)
+  ) {
+    scheduleJellyfinRetry({
+      data, eventType, cfg, client, tmdbDetails, imdbId, tmdbCollectionId,
+      rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
+      retryDelay,
+      mode: needsRelocate ? "relocate" : "edit",
+      fallbackChannelId: channelId,
+      fallbackMessageId: sentMessage?.id || null,
+      fallbackChannel: channel,
+      sentMessage,
+      sentChannel: channel,
+    });
+  }
+
   // DM requester for personal events
-  await sendRequesterDm(data, eventType, cfg, client, embed, buttons);
+  await sendRequesterDm(data, eventType, cfg, client, embed, buttons, { tmdbId, imdbId, jellyfinItemId });
 }
 
 // ─── Jellyfin Item Lookup ─────────────────────────────────────────────────────
@@ -634,7 +989,7 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     case "MEDIA_FAILED": {
       const fields = [];
       if (mediaType) {
-        fields.push({ name: "Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
+        fields.push({ name: t("field_type"), value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       }
       if (request?.requestedBy_username && ["MEDIA_PENDING", "MEDIA_DECLINED", "MEDIA_FAILED"].includes(eventType)) {
         fields.push({ name: t("field_requested_by"), value: request.requestedBy_username, inline: true });
@@ -682,15 +1037,19 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
 // ─── Button Builder ───────────────────────────────────────────────────────────
 
-function getEventButtons(eventType) {
+export function getEventButtons(eventType, variant = "CHANNEL") {
   // Per-event button config: NOTIF_BUTTONS_MEDIA_AVAILABLE=seerr,watch,-letterboxd,-imdb
   // Positive = always show, -negative = always hide, missing = use global toggle
-  const envKey = "NOTIF_BUTTONS_" + eventType;
+  // For DM variant: NOTIF_BUTTONS_MEDIA_AVAILABLE_DM with the same format.
+  // DM resolution order: NOTIF_BUTTONS_<EVENT>_DM → all OFF (DMs default to no buttons,
+  // except MEDIA_AVAILABLE which inherits CHANNEL config for backward compat).
+  const isDm = variant === "DM";
+  const envKey = isDm ? `NOTIF_BUTTONS_${eventType}_DM` : `NOTIF_BUTTONS_${eventType}`;
   const custom = process.env[envKey];
-  if (custom !== undefined && custom !== "") {
-    const parts = custom.toLowerCase().split(",").map(s => s.trim());
-    const on  = parts.filter(p => !p.startsWith("-"));
-    const off = parts.filter(p =>  p.startsWith("-")).map(p => p.slice(1));
+  const parseCustom = (raw) => {
+    const parts = raw.toLowerCase().split(",").map((s) => s.trim());
+    const on  = parts.filter((p) => !p.startsWith("-"));
+    const off = parts.filter((p) =>  p.startsWith("-")).map((p) => p.slice(1));
     const glob = {
       showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
       showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
@@ -703,8 +1062,20 @@ function getEventButtons(eventType) {
       showLetterboxd: on.includes("letterboxd") ? true : off.includes("letterboxd") ? false : glob.showLetterboxd,
       showImdb:       on.includes("imdb")       ? true : off.includes("imdb")       ? false : glob.showImdb,
     };
+  };
+
+  if (custom !== undefined && custom !== "") return parseCustom(custom);
+
+  if (isDm) {
+    // Backward-compat: MEDIA_AVAILABLE DMs historically inherited CHANNEL buttons.
+    // Other events default to no buttons in DMs.
+    if (eventType === "MEDIA_AVAILABLE") {
+      return getEventButtons(eventType, "CHANNEL");
+    }
+    return { showSeerr: false, showWatch: false, showLetterboxd: false, showImdb: false };
   }
-  // Fall back to global toggles
+
+  // Channel default: global toggles
   return {
     showSeerr:      process.env.EMBED_SHOW_BUTTON_SEERR      !== "false",
     showWatch:      process.env.EMBED_SHOW_BUTTON_WATCH       !== "false",
@@ -713,10 +1084,10 @@ function getEventButtons(eventType) {
   };
 }
 
-function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
+function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, variant = "CHANNEL", tmdbCollectionId = null) {
   const components = [];
 
-  const { showSeerr, showWatch, showImdb } = getEventButtons(eventType);
+  const { showSeerr, showWatch, showImdb, showLetterboxd } = getEventButtons(eventType, variant);
 
   // View on Seerr
   if (showSeerr) {
@@ -745,7 +1116,6 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
   }
 
   // Letterboxd – movies only
-  const { showLetterboxd } = getEventButtons(eventType);
   if (showLetterboxd && imdbId && mediaType === "movie") {
     const lboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
     if (isValidUrl(lboxdUrl)) {
@@ -771,20 +1141,75 @@ function buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId) {
     }
   }
 
+  // Collection button — movies that belong to a TMDB collection. Skipped in DMs
+  // (the channel post already exposes it; the DM-receiving user is also the
+  // requester and can use the channel button).
+  if (tmdbCollectionId && mediaType === "movie" && variant !== "DM") {
+    components.push(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Secondary)
+        .setCustomId(`collection_show|${tmdbId}`)
+        .setLabel(t("btn_collection"))
+    );
+  }
+
   if (components.length === 0) return null;
-  return new ActionRowBuilder().addComponents(components);
+  return chunkButtonsIntoRows(components);
+}
+
+/**
+ * Split a flat list of ButtonBuilders into ActionRows of max 5 buttons each.
+ * Returns either a single ActionRowBuilder (if ≤5) or an array of rows.
+ * Callers should normalize via `Array.isArray(result) ? result : [result]`.
+ */
+function chunkButtonsIntoRows(components) {
+  if (components.length <= 5) {
+    return new ActionRowBuilder().addComponents(components);
+  }
+  const rows = [];
+  for (let i = 0; i < components.length; i += 5) {
+    rows.push(new ActionRowBuilder().addComponents(components.slice(i, i + 5)));
+  }
+  return rows;
 }
 
 // ─── DM Requester ────────────────────────────────────────────────────────────
 
-async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
-  // DM on these events regardless of NOTIFY_ON_AVAILABLE
-  const dmEvents = ["MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED", "MEDIA_DECLINED", "MEDIA_AVAILABLE"];
-  if (!dmEvents.includes(eventType)) return;
+// Per-event metadata for DM rendering. `dmKey` selects the i18n keys
+// (dm_<dmKey>_author / dm_<dmKey>_description); `color` is the embed color.
+const DM_EVENT_META = {
+  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500" },
+  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0" },
+  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0" },
+  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c" },
+  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71" },
+};
 
-  // Find Discord ID from user mapping
+/**
+ * Send a status DM to the requester.
+ *
+ * @param {Object} data       Webhook payload (or synthetic equivalent)
+ * @param {string} eventType  MEDIA_PENDING / MEDIA_APPROVED / etc.
+ * @param {Object} cfg        Routing config (currently unused inside DM, kept for parity)
+ * @param {Object} client     Discord client
+ * @param {Object} embed      Original channel embed (used for thumbnail/image inheritance)
+ * @param {Object} _legacyButtons  Ignored — DM buttons are now built per-event from
+ *                                 NOTIF_BUTTONS_<EVENT>_DM. Kept for signature stability.
+ * @param {Object} ctx        Optional { tmdbId, imdbId, jellyfinItemId } to enable rich link buttons.
+ */
+export async function sendRequesterDm(data, eventType, cfg, client, embed, _legacyButtons, ctx = {}) {
+  const meta = DM_EVENT_META[eventType];
+  if (!meta) return;
+
+  // NOTIFY_ON_AVAILABLE gates only the "now available" DM (dashboard checkbox).
+  // Default on; set to "false" to suppress availability DMs while keeping the
+  // channel post and all other DMs (pending/approved/declined) unaffected.
+  if (eventType === "MEDIA_AVAILABLE" && process.env.NOTIFY_ON_AVAILABLE === "false") {
+    logger.debug("[SEERR WEBHOOK] Skipping MEDIA_AVAILABLE DM — NOTIFY_ON_AVAILABLE is false");
+    return;
+  }
+
   const discordId = await findDiscordIdForSeerrUser(data);
-
   if (!discordId) {
     logger.debug(`[SEERR WEBHOOK] No Discord ID found for DM (event: ${eventType}, user: ${data.request?.requestedBy_username || "unknown"})`);
     return;
@@ -792,35 +1217,57 @@ async function sendRequesterDm(data, eventType, cfg, client, embed, buttons) {
 
   try {
     const user = await client.users.fetch(discordId);
+    const title = data.subject || "Questorr Notification";
+    const mediaType = data.media?.media_type;
+    const mediaTypeLabel = mediaType === "movie" ? t("field_type_movie") : t("field_type_tv");
+    const footerText = process.env.EMBED_FOOTER_TEXT;
 
-    // Use Seerr's own message field if present, else build a generic English fallback
-    const dmDescription = data.message
-      || (eventType === "MEDIA_AVAILABLE"
-        ? `**${data.subject}** is now available! 🎉`
-        : eventType === "MEDIA_APPROVED" || eventType === "MEDIA_AUTO_APPROVED"
-        ? `Your request for **${data.subject}** has been approved! ✅`
-        : eventType === "MEDIA_DECLINED"
-        ? `Your request for **${data.subject}** has been declined. ❌`
-        : `Your request status for **${data.subject}** has been updated.`);
+    const authorText = t(`dm_${meta.dmKey}_author`);
+    const description = t(`dm_${meta.dmKey}_description`, { title });
+
+    const fields = [];
+    if (mediaType) {
+      fields.push({ name: t("dm_field_type"), value: mediaTypeLabel, inline: true });
+    }
+    if (eventType === "MEDIA_DECLINED" && data.request?.comment) {
+      fields.push({ name: t("dm_field_reason"), value: data.request.comment, inline: false });
+    }
 
     const dmEmbed = new EmbedBuilder()
-      .setColor(cfg.color)
-      .setAuthor({ name: `${cfg.emoji} ${cfg.label}` })
-      .setTitle(data.subject || "Questorr Notification")
-      .setDescription(dmDescription)
+      .setColor(meta.color)
+      .setAuthor({ name: authorText })
+      .setTitle(title)
+      .setDescription(description)
       .setTimestamp();
 
-    const dmFooter = process.env.EMBED_FOOTER_TEXT;
-    if (dmFooter) dmEmbed.setFooter({ text: dmFooter });
+    if (footerText) dmEmbed.setFooter({ text: footerText });
+    if (fields.length > 0) dmEmbed.addFields(...fields);
+    if (embed?.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
+    if (embed?.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
 
-    if (embed.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
-    if (embed.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
+    // Build DM-specific buttons via the per-event "DM" variant config.
+    const tmdbId = ctx.tmdbId ?? data.media?.tmdbId;
+    const imdbId = ctx.imdbId ?? null;
+    const jellyfinItemId = ctx.jellyfinItemId ?? null;
+    const dmButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "DM");
 
     const dmOptions = { embeds: [dmEmbed] };
-    if (buttons) dmOptions.components = [buttons];
+    if (dmButtons) dmOptions.components = Array.isArray(dmButtons) ? dmButtons : [dmButtons];
 
     await user.send(dmOptions);
-    logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${data.subject}"`);
+    logger.info(`[SEERR WEBHOOK] ✉️ Sent DM to Discord user ${discordId} for ${eventType} – "${title}"`);
+
+    // Cross-source dedup: mark approval/decline DMs so the status poller and
+    // the Discord approve/decline button handler skip duplicates. Goes through
+    // the dispatcher so it also lands in the audit trail.
+    if (
+      eventType === "MEDIA_APPROVED" ||
+      eventType === "MEDIA_AUTO_APPROVED" ||
+      eventType === "MEDIA_DECLINED"
+    ) {
+      const reqId = data.request?.request_id ?? tmdbId;
+      if (reqId) markApprovalDmSent({ eventType, requestId: reqId, source: "seerr-webhook", title, tmdbId });
+    }
   } catch (err) {
     logger.warn(`[SEERR WEBHOOK] Could not send DM to ${discordId}: ${err.message}`);
   }
@@ -865,51 +1312,104 @@ async function findDiscordIdForSeerrUser(data) {
 
 /**
  * Schedule a background retry for Jellyfin library lookup.
- * When MEDIA_AVAILABLE fires before Jellyfin has scanned the file,
- * the initial lookup returns nothing and routing falls back to SEERR_CHANNEL_ID.
- * This retry waits, then re-runs the lookup and — if a better channel is found —
- * sends a corrected notification to the right channel.
+ *
+ * Two modes:
+ *  - "relocate": Initial routing fell back to default channel because the
+ *    Jellyfin library lookup returned nothing. Retry the lookup; if a better
+ *    channel is found, delete the fallback-channel message and resend in
+ *    the correct channel.
+ *  - "edit"   : Initial routing was correct (no fallback) but Jellyfin had
+ *    not scanned the file yet, so the Watch-Now button could not be built.
+ *    Retry the lookup; if the item shows up, edit the existing message in
+ *    place and add the Watch-Now button (no double post).
  */
 function scheduleJellyfinRetry(ctx) {
   const {
-    data, eventType, cfg, client, tmdbDetails, imdbId,
+    data, eventType, cfg, client, tmdbDetails, imdbId, tmdbCollectionId,
     rootFolder, tmdbId, mediaType, subject, message, image, request, issue, comment, extra,
-    retryDelay, fallbackChannelId,
+    retryDelay, mode = "relocate",
+    fallbackChannelId, fallbackMessageId, fallbackChannel,
+    sentMessage, sentChannel,
   } = ctx;
+
+  logger.info(
+    `[SEERR WEBHOOK] ⏳ Jellyfin lookup retry scheduled (mode=${mode}) in ${retryDelay}s for "${subject}"`
+  );
 
   const maxRetries = 3;
   let attempt = 0;
 
   const tryRetry = async () => {
     attempt++;
-    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
+    logger.info(`[SEERR WEBHOOK] 🔄 Retry ${attempt}/${maxRetries} (mode=${mode}) – Jellyfin lookup for "${subject}" (TMDB ${tmdbId})`);
 
     try {
-      // Clear TMDB cache entry so findVerifiedJellyfinItem gets fresh title data
-      // (cache is still valid, just re-use it)
-      const channelId = await resolveChannelViaJellyfin(tmdbId, mediaType);
+      if (!client || !client.isReady()) {
+        logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping retry`);
+        return;
+      }
+
+      const channelId = mode === "relocate"
+        ? await resolveChannelViaJellyfin(tmdbId, mediaType)
+        : null;
       const jellyfinItemId = await findVerifiedJellyfinItem(tmdbId, mediaType);
 
-      if (channelId && channelId !== fallbackChannelId) {
-        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
-
-        if (!client || !client.isReady()) {
-          logger.warn(`[SEERR WEBHOOK] Discord bot not ready on retry – dropping corrected notification`);
+      // ─── Mode: edit (in-place button update) ────────────────────────────
+      if (mode === "edit") {
+        if (!jellyfinItemId) {
+          if (attempt < maxRetries) {
+            logger.info(`[SEERR WEBHOOK] Retry ${attempt} (edit) – Jellyfin item still missing, next retry in ${retryDelay}s`);
+            setTimeout(tryRetry, retryDelay * 1000);
+          } else {
+            logger.info(`[SEERR WEBHOOK] ⚠️ Watch-Now button retry exhausted for "${subject}" – message stays without Watch button`);
+          }
           return;
         }
 
-        // Build and send the corrected notification
+        if (!sentMessage || !sentChannel) {
+          logger.debug(`[SEERR WEBHOOK] Edit retry has no sentMessage/sentChannel reference for "${subject}" – skipping`);
+          return;
+        }
+
+        try {
+          // Verify the message still exists (mod could have deleted it)
+          const fresh = await sentChannel.messages.fetch(sentMessage.id);
+          const newButtons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
+          const newComponents = newButtons
+            ? (Array.isArray(newButtons) ? newButtons : [newButtons])
+            : [];
+          await fresh.edit({ components: newComponents });
+          logger.info(`[SEERR WEBHOOK] ✏️ Watch-Now button added to "${subject}" after retry ${attempt}`);
+        } catch (editErr) {
+          logger.debug(`[SEERR WEBHOOK] Could not edit message for "${subject}": ${editErr.message}`);
+        }
+        return;
+      }
+
+      // ─── Mode: relocate (existing behavior) ─────────────────────────────
+      if (channelId && channelId !== fallbackChannelId) {
+        logger.info(`[SEERR WEBHOOK] ✅ Retry succeeded! Library → channel ${channelId} for "${subject}"`);
+
+        // Delete the fallback-channel message before sending to the correct channel
+        if (fallbackMessageId && fallbackChannel) {
+          try {
+            const fallbackMsg = await fallbackChannel.messages.fetch(fallbackMessageId);
+            await fallbackMsg.delete();
+            logger.info(`[SEERR WEBHOOK] 🗑️ Deleted fallback message ${fallbackMessageId} from channel ${fallbackChannelId}`);
+          } catch (delErr) {
+            logger.debug(`[SEERR WEBHOOK] Could not delete fallback message: ${delErr.message}`);
+          }
+        }
+
+        // Build and send the corrected notification to the right channel
         const embed = await buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra);
-        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId);
+        const buttons = buildButtons(eventType, mediaType, tmdbId, imdbId, jellyfinItemId, "CHANNEL", tmdbCollectionId);
 
         const channel = await client.channels.fetch(channelId);
         const messageOptions = { embeds: [embed] };
-        if (buttons) messageOptions.components = [buttons];
+        if (buttons) messageOptions.components = Array.isArray(buttons) ? buttons : [buttons];
         await channel.send(messageOptions);
         logger.info(`[SEERR WEBHOOK] ✅ Sent corrected ${eventType} notification for "${subject}" to channel ${channelId}`);
-
-        // Delete the original fallback message if possible
-        // (not implemented — would need to store message ID from initial send)
         return;
       }
 

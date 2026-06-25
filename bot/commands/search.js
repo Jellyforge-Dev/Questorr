@@ -3,8 +3,8 @@ import { ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
-import { buildNotificationEmbed, buildButtons } from "../embeds.js";
-import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
+import { buildNotificationEmbed, buildButtons, buildActionButtons } from "../embeds.js";
+import { parseQualityAndServerOptions, getSeerrAutoApprove, getQuotaDenial } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
 import { getUserMappings } from "../../utils/configFile.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
@@ -20,7 +20,10 @@ export async function handleSearchOrRequest(
   const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true" || options.ephemeral === true;
 
   try {
-    await interaction.deferReply({ ephemeral: isPrivateMode });
+    // Skip if the interaction was already deferred (e.g. from the DYM flow)
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: isPrivateMode });
+    }
   } catch (err) {
     logger.error(`Failed to defer reply: ${err.message}`);
     return;
@@ -63,6 +66,10 @@ export async function handleSearchOrRequest(
     );
 
     if (mode === "request") {
+      const quotaDenial = getQuotaDenial(interaction);
+      if (quotaDenial) {
+        return interaction.editReply({ content: quotaDenial, components: [], embeds: [] });
+      }
       const status = await seerrApi.checkMediaStatus(
         tmdbId,
         mediaType,
@@ -154,7 +161,10 @@ export async function handleSearchOrRequest(
         `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
       );
 
-      if (process.env.NOTIFY_ON_AVAILABLE === "true") {
+      // Round 12: ALWAYS record the request in pendingRequests (see
+      // requestButton.js for the full rationale — used as dedup source for
+      // the Jellyfin poller).
+      {
         const requestKey = `${tmdbId}-${mediaType}`;
         if (!pendingRequests.has(requestKey)) {
           pendingRequests.set(requestKey, new Set());
@@ -195,6 +205,10 @@ export async function handleSearchOrRequest(
       [],
       trailerUrl
     );
+
+    // Append the contextual action buttons (🔗 Similar | 📦 Collection | 🎭 Cast | ⭐ Recommend)
+    const actionRow = buildActionButtons(tmdbId, mediaType);
+    if (actionRow) components.push(actionRow);
 
     const showTagSelection = process.env.SHOW_TAG_SELECTION !== "false";
     if (mediaType === "movie" && mode === "search" && showTagSelection) {

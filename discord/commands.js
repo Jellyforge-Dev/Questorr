@@ -19,6 +19,9 @@ export function getCommands() {
 
   return [
     new SlashCommandBuilder()
+      .setName("help")
+      .setDescription("Show all available commands and quick-action buttons"),
+    new SlashCommandBuilder()
       .setName("search")
       .setDescription("Search for a movie/TV show (you can request it later)")
       .addStringOption((opt) =>
@@ -144,6 +147,22 @@ export function getCommands() {
           .setRequired(true)
           .setAutocomplete(true)
       ),
+    // /foryou registered whenever Jellyfin is configured (uses Jellyfin native recommendations)
+    ...(process.env.JELLYFIN_BASE_URL && process.env.JELLYFIN_API_KEY ? [
+      new SlashCommandBuilder()
+        .setName("foryou")
+        .setDescription("Personalized recommendations based on your Jellyfin watch history")
+        .addStringOption((opt) =>
+          opt
+            .setName("filter")
+            .setDescription("Filter results")
+            .setRequired(false)
+            .addChoices(
+              { name: "🌐 All recommendations (request what's missing)", value: "all" },
+              { name: "✅ Only available in library", value: "available" }
+            )
+        ),
+    ] : []),
     new SlashCommandBuilder()
       .setName("discover")
       .setDescription("Discover movies or TV shows by genre, year, and rating")
@@ -225,6 +244,32 @@ export function getCommands() {
             )
         ),
     ] : []),
+    new SlashCommandBuilder()
+      .setName("queue")
+      .setDescription("Show the status of your Questorr requests"),
+    new SlashCommandBuilder()
+      .setName("subscribe")
+      .setDescription("Subscribe to series (new-season DM) and weekly recommendations")
+      .addSubcommand((sc) =>
+        sc
+          .setName("series")
+          .setDescription("Get a DM when a new season appears on Jellyfin")
+          .addStringOption((opt) =>
+            opt.setName("title").setDescription("Series").setRequired(true).setAutocomplete(true)
+          )
+      )
+      .addSubcommand((sc) =>
+        sc
+          .setName("remove")
+          .setDescription("Unsubscribe from a series you no longer follow")
+          .addStringOption((opt) =>
+            opt.setName("title").setDescription("One of your subscribed series").setRequired(true).setAutocomplete(true)
+          )
+      )
+      .addSubcommand((sc) =>
+        sc.setName("weekly").setDescription("Toggle a weekly personalised recommendation DM")
+      )
+      .addSubcommand((sc) => sc.setName("list").setDescription("Show your subscriptions")),
   ].map((c) => c.toJSON());
 }
 

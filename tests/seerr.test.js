@@ -29,7 +29,34 @@ vi.mock("../utils/seerrUrl.js", () => ({
 }));
 
 import axios from "axios";
-import { checkMediaStatus, sendRequest } from "../api/seerr.js";
+import { checkMediaStatus, sendRequest, fetchSeerrUserRequestsFull } from "../api/seerr.js";
+
+describe("fetchSeerrUserRequestsFull", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns the raw results array filtered by requestedBy", async () => {
+    const results = [
+      { id: 1, status: 2, media: { status: 5, tmdbId: 10 } },
+      { id: 2, status: 1, media: { status: 1, tmdbId: 20 } },
+    ];
+    axios.get.mockResolvedValue({ data: { results } });
+
+    const out = await fetchSeerrUserRequestsFull(42, "http://seerr", "key", 100);
+
+    expect(out).toEqual(results);
+    const params = axios.get.mock.calls[0][1].params;
+    expect(params.requestedBy).toBe(42);
+    expect(params.take).toBe(100);
+  });
+
+  it("returns an empty array on error", async () => {
+    axios.get.mockRejectedValue(new Error("boom"));
+    const out = await fetchSeerrUserRequestsFull(42, "http://seerr", "key");
+    expect(out).toEqual([]);
+  });
+});
 
 describe("checkMediaStatus", () => {
   beforeEach(() => {

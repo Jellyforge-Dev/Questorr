@@ -124,6 +124,146 @@ async function fetchFromServers(seerrUrl, apiKey, fetchDetails, extractData) {
   return results;
 }
 
+// ─── Direct Radarr/Sonarr lookup (Round 8: rootFolder fallback) ──────────────
+//
+// Jellyseerr does not reliably populate `rootFolder` in its Request record when
+// the admin approves with the default profile. The downstream Radarr/Sonarr
+// server DOES know the path however — it's where the actual download lands.
+// We pull the connection details for each configured server from Jellyseerr
+// (`/api/v1/service/{type}/{id}` returns hostname + apiKey + useSsl), then call
+// the Arr's v3 API directly: `/api/v3/movie?tmdbId=X` or `/api/v3/series?tvdbId=Y`.
+//
+// Cached 5 min — server configs change rarely; the cache prevents hammering
+// Jellyseerr on every webhook event.
+
+let _arrConnectionsCache = { radarr: null, sonarr: null, ts: 0 };
+const ARR_CONNECTIONS_TTL_MS = 5 * 60 * 1000;
+
+function buildArrBaseUrl(server) {
+  const protocol = server.useSsl ? "https" : "http";
+  const baseUrlSuffix = server.baseUrl ? `/${String(server.baseUrl).replace(/^\/+|\/+$/g, "")}` : "";
+  return `${protocol}://${server.hostname}:${server.port}${baseUrlSuffix}`;
+}
+
+/**
+ * Fetch all configured Radarr/Sonarr server connections from Jellyseerr.
+ * Each result includes the credentials needed to call the Arr's API directly.
+ * Cached 5 min.
+ *
+ * @returns {Promise<{ radarr: Array, sonarr: Array }>}
+ */
+export async function fetchArrConnections(seerrUrl, apiKey) {
+  if (_arrConnectionsCache.radarr && _arrConnectionsCache.sonarr &&
+      Date.now() - _arrConnectionsCache.ts < ARR_CONNECTIONS_TTL_MS) {
+    return { radarr: _arrConnectionsCache.radarr, sonarr: _arrConnectionsCache.sonarr };
+  }
+
+  const safeApiUrl = new URL(normalizeApiUrl(seerrUrl));
+  const basePath = safeApiUrl.pathname.replace(/\/$/, "");
+  const buildUrl = (suffix) => {
+    const u = new URL(safeApiUrl.href);
+    u.pathname = basePath + suffix;
+    return u.href;
+  };
+
+  const fetchType = async (type) => {
+    const list = [];
+    let listSucceeded = false;
+    try {
+      const listRes = await axios.get(buildUrl(`/service/${type}`), {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      });
+      listSucceeded = true;
+      for (const summary of listRes.data || []) {
+        try {
+          const detailsRes = await axios.get(buildUrl(`/service/${type}/${summary.id}`), {
+            headers: { "X-Api-Key": apiKey },
+            timeout: TIMEOUTS.SEERR_API,
+          });
+          const d = detailsRes.data || {};
+          if (d.hostname && d.port && d.apiKey) {
+            list.push({
+              id: d.id ?? summary.id,
+              name: d.name || summary.name || `${type} ${summary.id}`,
+              hostname: d.hostname,
+              port: d.port,
+              apiKey: d.apiKey,
+              useSsl: !!d.useSsl,
+              baseUrl: d.baseUrl || "",
+            });
+          } else {
+            logger.info(`[SEERR WEBHOOK] Tier-3 ${type} "${summary.name || summary.id}": incomplete connection details (missing hostname/port/apiKey)`);
+          }
+        } catch (err) {
+          logger.warn(`[SEERR WEBHOOK] Tier-3 ${type} ${summary.id} details fetch failed: ${err?.message}`);
+        }
+      }
+    } catch (err) {
+      logger.warn(`[SEERR WEBHOOK] Tier-3 ${type} server list fetch failed: ${err?.message}`);
+    }
+    if (listSucceeded && list.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3: no ${type} servers configured in Jellyseerr`);
+    }
+    return list;
+  };
+
+  const [radarr, sonarr] = await Promise.all([fetchType("radarr"), fetchType("sonarr")]);
+  _arrConnectionsCache = { radarr, sonarr, ts: Date.now() };
+  logger.info(`[SEERR WEBHOOK] Tier-3 connections cached: ${radarr.length} Radarr, ${sonarr.length} Sonarr server(s) configured`);
+  return { radarr, sonarr };
+}
+
+/**
+ * Query a Radarr v3 server directly for a movie by TMDB ID.
+ * Returns `{ path, rootFolderPath }` or null if Radarr doesn't have the movie.
+ */
+export async function fetchMoviePathFromRadarr(server, tmdbId) {
+  try {
+    const url = `${buildArrBaseUrl(server)}/api/v3/movie`;
+    const res = await axios.get(url, {
+      headers: { "X-Api-Key": server.apiKey },
+      params: { tmdbId },
+      timeout: TIMEOUTS.SEERR_API,
+    });
+    const movies = Array.isArray(res.data) ? res.data : [];
+    if (movies.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3 Radarr "${server.name}": no movie with TMDB ${tmdbId}`);
+      return null;
+    }
+    const m = movies[0];
+    return { path: m.path || null, rootFolderPath: m.rootFolderPath || null };
+  } catch (err) {
+    logger.warn(`[SEERR WEBHOOK] Tier-3 Radarr "${server.name}" lookup failed for TMDB ${tmdbId}: ${err?.message}`);
+    return null;
+  }
+}
+
+/**
+ * Query a Sonarr v3 server directly for a series by TVDB ID.
+ * Returns `{ path, rootFolderPath }` or null if Sonarr doesn't have the series.
+ */
+export async function fetchSeriesPathFromSonarr(server, tvdbId) {
+  try {
+    const url = `${buildArrBaseUrl(server)}/api/v3/series`;
+    const res = await axios.get(url, {
+      headers: { "X-Api-Key": server.apiKey },
+      params: { tvdbId },
+      timeout: TIMEOUTS.SEERR_API,
+    });
+    const series = Array.isArray(res.data) ? res.data : [];
+    if (series.length === 0) {
+      logger.info(`[SEERR WEBHOOK] Tier-3 Sonarr "${server.name}": no series with TVDB ${tvdbId}`);
+      return null;
+    }
+    const s = series[0];
+    return { path: s.path || null, rootFolderPath: s.rootFolderPath || null };
+  } catch (err) {
+    logger.warn(`[SEERR WEBHOOK] Tier-3 Sonarr "${server.name}" lookup failed for TVDB ${tvdbId}: ${err?.message}`);
+    return null;
+  }
+}
+
 /**
  * Check if media exists and is available in Seerr
  * @param {number} tmdbId - TMDB ID
@@ -438,6 +578,243 @@ export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all")
     { label: "Seerr fetch requests" }
   );
   return response.data;
+}
+
+/**
+ * Fetch a single Seerr user by ID.
+ * Used to resolve Discord-User → Seerr-User → Jellyfin-User-ID for personalized
+ * recommendations.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object|null>} User object (with `jellyfinUserId` field) or null
+ */
+export async function fetchSeerrUserById(userId, seerrUrl, apiKey) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/user/${userId}`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr fetch user ${userId}` }
+    );
+    return response.data;
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserById(${userId}) failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
+ * Fetch media requests submitted by a specific Seerr user.
+ * Returns the N most-recent requests with TMDB IDs so they can be used
+ * as personalisation seeds for /foryou recommendations.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} limit - Max number of requests to return (default 20)
+ * @returns {Promise<Array<{tmdbId:string, type:string, title:string}>>}
+ */
+export async function fetchSeerrUserRequests(userId, seerrUrl, apiKey, limit = 20) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request`, {
+        headers: { "X-Api-Key": apiKey },
+        params: { take: limit, sort: "modified", requestedBy: userId },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr user requests for ${userId}` }
+    );
+    const results = response.data?.results || [];
+    return results
+      .filter((r) => r.media?.tmdbId)
+      .map((r) => ({
+        tmdbId: String(r.media.tmdbId),
+        type: r.type === "tv" ? "tv" : "movie",
+        title: r.media.title || r.media.name || "Unknown",
+      }));
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserRequests(${userId}) failed: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch the full Seerr request objects submitted by a specific Seerr user.
+ * Unlike fetchSeerrUserRequests (which strips down to TMDB seeds), this returns
+ * the raw request objects (`id`, `status`, `media.status`) so the request-status
+ * store can reconcile lifecycle stages for mapped users — not subject to the
+ * poller's global 100-request window.
+ *
+ * @param {number|string} userId - Seerr user ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @param {number} limit - Max number of requests to return (default 100)
+ * @returns {Promise<Array<Object>>} Raw Seerr request objects (empty array on error)
+ */
+export async function fetchSeerrUserRequestsFull(userId, seerrUrl, apiKey, limit = 100) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request`, {
+        headers: { "X-Api-Key": apiKey },
+        params: { take: limit, sort: "modified", requestedBy: userId },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr full user requests for ${userId}` }
+    );
+    return response.data?.results || [];
+  } catch (err) {
+    logger.warn(`[Seerr] fetchSeerrUserRequestsFull(${userId}) failed: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Aggregate all Seerr requests (paginated, up to a sane cap) and compute
+ * the average lifecycle durations for the dashboard "Insights" panel.
+ *
+ * Pending → Approved : difference between request.createdAt (=Pending) and
+ *                      request.updatedAt when status flipped to Approved (2).
+ * Approved → Available: difference between request.updatedAt and the moment
+ *                       the media became fully available (status 5) — we use
+ *                       the media's mediaAddedAt or updatedAt as proxy.
+ *
+ * @returns {Promise<{
+ *   totalRequests: number,
+ *   pendingToApprovedAvgHours: number | null,
+ *   approvedToAvailableAvgHours: number | null,
+ *   approvedSampleCount: number,
+ *   availableSampleCount: number,
+ * }>}
+ */
+export async function fetchRequestLifecycleStats(seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = 10; // hard cap → 1000 requests max
+  const all = [];
+
+  try {
+    for (let skip = 0, page = 0; page < MAX_PAGES; skip += PAGE_SIZE, page++) {
+      const res = await withRetry(
+        () => axios.get(`${apiUrl}/request`, {
+          headers: { "X-Api-Key": apiKey },
+          params: { take: PAGE_SIZE, skip, sort: "added" },
+          timeout: TIMEOUTS.SEERR_API,
+        }),
+        { label: `Seerr lifecycle page=${page}` }
+      );
+      const results = res.data?.results || [];
+      all.push(...results);
+      if (results.length < PAGE_SIZE) break;
+    }
+  } catch (err) {
+    logger.warn(`[Seerr] fetchRequestLifecycleStats failed: ${err?.message || err}`);
+  }
+
+  let pendingMs = 0, pendingN = 0;
+  let availableMs = 0, availableN = 0;
+
+  for (const r of all) {
+    const created = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+    const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+    const status  = r.status; // 1 = Pending, 2 = Approved, 3 = Declined
+    const mediaStatus = r.media?.status; // 4 = Partial, 5 = Available
+    const mediaAdded  = r.media?.mediaAddedAt
+      ? new Date(r.media.mediaAddedAt).getTime() : 0;
+
+    // Pending → Approved (only when we know the request was actually approved)
+    if (status === 2 && created && updated && updated > created) {
+      pendingMs += (updated - created);
+      pendingN++;
+    }
+
+    // Approved → Available — use mediaAddedAt as the Available signal,
+    // and request updatedAt as the Approval timestamp (best available proxy).
+    if (mediaStatus === 5 && mediaAdded && updated && mediaAdded > updated) {
+      availableMs += (mediaAdded - updated);
+      availableN++;
+    }
+  }
+
+  const HOUR = 3_600_000;
+  return {
+    totalRequests: all.length,
+    pendingToApprovedAvgHours:   pendingN ? +(pendingMs / pendingN / HOUR).toFixed(1) : null,
+    approvedToAvailableAvgHours: availableN ? +(availableMs / availableN / HOUR).toFixed(1) : null,
+    approvedSampleCount:  pendingN,
+    availableSampleCount: availableN,
+  };
+}
+
+/**
+ * Aggregate the top-10 genres from the most-recent N Seerr requests.
+ * Joins each request's TMDB id with `tmdbGetDetails` to read genre tags.
+ *
+ * @param {string} seerrUrl
+ * @param {string} apiKey
+ * @param {(tmdbId, mediaType) => Promise<{genres?: Array<{name: string}>}>} tmdbGetDetailsFn
+ *   Inject the TMDB-details fetcher so this module stays free of hard deps.
+ * @param {number} take - max number of recent requests to inspect (default 200)
+ * @returns {Promise<Array<{name: string, count: number}>>}
+ */
+export async function fetchTopRequestGenres(seerrUrl, apiKey, tmdbGetDetailsFn, take = 200) {
+  let requests = [];
+  try {
+    const data = await fetchRequests(seerrUrl, apiKey, take, "all");
+    requests = data?.results || [];
+  } catch (err) {
+    logger.warn(`[Seerr] fetchTopRequestGenres → fetchRequests failed: ${err?.message || err}`);
+    return [];
+  }
+
+  const genreCount = new Map();
+  await Promise.all(requests.map(async (r) => {
+    const tmdbId = r.media?.tmdbId;
+    const mediaType = r.media?.mediaType || r.type;
+    if (!tmdbId || !mediaType) return;
+    try {
+      const details = await tmdbGetDetailsFn(tmdbId, mediaType);
+      const genres = details?.genres || [];
+      for (const g of genres) {
+        if (!g?.name) continue;
+        genreCount.set(g.name, (genreCount.get(g.name) || 0) + 1);
+      }
+    } catch (_) { /* skip individual lookup failures */ }
+  }));
+
+  return [...genreCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+}
+
+/**
+ * Fetch a single Seerr request by ID.
+ * @param {number|string} requestId - Seerr request ID
+ * @param {string} seerrUrl - Seerr base URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object|null>} Request object or null on error
+ */
+export async function fetchRequestById(requestId, seerrUrl, apiKey) {
+  try {
+    const apiUrl = normalizeApiUrl(seerrUrl);
+    const response = await withRetry(
+      () => axios.get(`${apiUrl}/request/${requestId}`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: TIMEOUTS.SEERR_API,
+      }),
+      { label: `Seerr fetch request ${requestId}` }
+    );
+    return response.data;
+  } catch (err) {
+    logger.warn(`[Seerr] fetchRequestById(${requestId}) failed: ${err?.message || err}`);
+    return null;
+  }
 }
 
 /**

@@ -2,13 +2,22 @@ import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
 import { handleRandomCommand } from "./commands/random.js";
 import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
-import { handleUpcomingCommand } from "./commands/upcoming.js";
+import { handleUpcomingCommand, handleUpcomingPagination } from "./commands/upcoming.js";
 import { handleHistoryCommand } from "./commands/history.js";
 import { handleRecommendCommand } from "./commands/recommend.js";
+import { handleForYouCommand } from "./commands/foryou.js";
+import { handleHelpCommand } from "./commands/help.js";
+import { handleWizardButton } from "./handlers/wizardButton.js";
+import { showWizardSearchModal, handleWizardModalSubmit, WIZARD_DIRECT_MODAL_BUTTON_IDS } from "./handlers/wizardSearchModal.js";
+import { handleDymYes, handleDymNo, handleDymPick } from "./handlers/didYouMean.js";
+import { showWizardSmartPicker, handleSmartPickerSelect, PICKER_BUTTON_IDS } from "./handlers/wizardSmartPicker.js";
+import { handleActionButton, handleActionCastPick } from "./handlers/actionButton.js";
 import { handleDiscoverCommand } from "./commands/discover.js";
-import { handleCollectionCommand } from "./commands/collection.js";
+import { handleCollectionCommand, buildCollectionReply } from "./commands/collection.js";
 import { handleCastCommand, handleCastPagination } from "./commands/cast.js";
 import { handleSimilarCommand } from "./commands/similar.js";
+import { handleQueueCommand } from "./commands/queue.js";
+import { handleSubscribeCommand, showSubscribeModal, handleSubscribeModalSubmit } from "./commands/subscribe.js";
 import { handleAutocomplete } from "./autocomplete/index.js";
 import { handleRequestButton } from "./handlers/requestButton.js";
 import { handleStatusRequestButton } from "./handlers/statusRequestButton.js";
@@ -17,6 +26,7 @@ import { handleSeasonSelect } from "./handlers/seasonSelect.js";
 import { handleTagSelect } from "./handlers/tagSelect.js";
 import { handleRequestedButton } from "./handlers/requestedButton.js";
 import { handleSeerrApproveDecline } from "./handlers/seerrApproveDecline.js";
+import { handleCleanupPagination } from "./cleanupAdvisor.js";
 import { getOptionStringRobust, checkRolePermission } from "./botUtils.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "./helpers.js";
 import { checkCommandRateLimit } from "./commandRateLimit.js";
@@ -59,8 +69,58 @@ export function registerInteractions(client) {
         return handleAutocomplete(interaction);
       }
 
+      // ─── Modal Submits ─────────────────────────────────────────────
+      if (interaction.isModalSubmit()) {
+        if (interaction.customId === "subscribe_modal_submit") {
+          return handleSubscribeModalSubmit(interaction);
+        }
+        if (interaction.customId.startsWith("wizard_modal_submit|")) {
+          return handleWizardModalSubmit(interaction);
+        }
+      }
+
       // ─── Buttons ───────────────────────────────────────────────────
       if (interaction.isButton()) {
+        // "Meintest du?" confirmation / alternative selection
+        if (interaction.customId.startsWith("dym_yes|"))  return handleDymYes(interaction);
+        if (interaction.customId.startsWith("dym_no|"))   return handleDymNo(interaction);
+        if (interaction.customId.startsWith("dym_pick|")) return handleDymPick(interaction);
+
+        // Contextual action buttons (Similar / Collection / Cast / Recommend) on result embeds
+        if (
+          interaction.customId.startsWith("action_similar|") ||
+          interaction.customId.startsWith("action_collection|") ||
+          interaction.customId.startsWith("action_cast|") ||
+          interaction.customId.startsWith("action_recommend|")
+        ) {
+          // Track action-button usage (e.g. "action:similar", "action:recommend")
+          const actionName = interaction.customId.split("|")[0].replace("action_", "action:");
+          trackCommand(actionName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
+          return handleActionButton(interaction);
+        }
+
+        // /subscribe series → free-text modal (before the generic wizard_ check)
+        if (interaction.customId === "wizard_subscribe") {
+          return showSubscribeModal(interaction);
+        }
+
+        // /search & /request go straight to the modal
+        if (WIZARD_DIRECT_MODAL_BUTTON_IDS.includes(interaction.customId)) {
+          // Track wizard modal triggers (wizard_search / wizard_request)
+          const wizKey = interaction.customId.replace("wizard_", "btn:");
+          trackCommand(wizKey, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
+          return showWizardSearchModal(interaction);
+        }
+        // /recommend, /similar, /collection, /cast → contextual smart-picker
+        if (PICKER_BUTTON_IDS.includes(interaction.customId)) {
+          return showWizardSmartPicker(interaction);
+        }
+        if (interaction.customId.startsWith("wizard_")) {
+          // Track wizard shortcut buttons (foryou_all, foryou_avail, random_movie, etc.)
+          const btnKey = interaction.customId.replace("wizard_", "btn:");
+          trackCommand(btnKey, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
+          return handleWizardButton(interaction);
+        }
         if (interaction.customId.startsWith("status_request_btn|")) {
           return handleStatusRequestButton(interaction);
         }
@@ -76,11 +136,28 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("seerr_approve|") || interaction.customId.startsWith("seerr_decline|")) {
           return handleSeerrApproveDecline(interaction);
         }
+        if (interaction.customId.startsWith("collection_show|")) {
+          // "Sammlung anzeigen" button on Seerr-webhook embeds — reuses the
+          // /collection command's reply builder, scoped to the originating
+          // movie's TMDB ID. Reply is ephemeral so it doesn't clutter the channel.
+          if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply({ flags: 64 });
+          }
+          const tmdbIdRaw = interaction.customId.split("|")[1];
+          const reply = await buildCollectionReply({ tmdbId: tmdbIdRaw, mediaType: "movie" });
+          return interaction.editReply(reply);
+        }
         if (interaction.customId.startsWith("watchlist_prev|") || interaction.customId.startsWith("watchlist_next|")) {
           return handleWatchlistPagination(interaction);
         }
         if (interaction.customId.startsWith("cast_prev|") || interaction.customId.startsWith("cast_next|")) {
           return handleCastPagination(interaction);
+        }
+        if (interaction.customId.startsWith("upcoming_prev|") || interaction.customId.startsWith("upcoming_next|")) {
+          return handleUpcomingPagination(interaction);
+        }
+        if (interaction.customId.startsWith("cleanup_prev|") || interaction.customId.startsWith("cleanup_next|")) {
+          return handleCleanupPagination(interaction);
         }
       }
 
@@ -92,12 +169,23 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("select_tags|")) {
           return handleTagSelect(interaction);
         }
+        if (interaction.customId.startsWith("smartpick|")) {
+          return handleSmartPickerSelect(interaction);
+        }
+        if (interaction.customId.startsWith("action_cast_pick|")) {
+          return handleActionCastPick(interaction);
+        }
       }
 
       // ─── Slash Commands ───────────────────────────────────────────
       if (interaction.isCommand()) {
         // Track command usage
         trackCommand(interaction.commandName, interaction.user.id, interaction.user.username, interaction.user.displayAvatarURL({ size: 64 }));
+
+        // /help works without backend config — handle BEFORE the gate below
+        if (interaction.commandName === "help") {
+          return handleHelpCommand(interaction);
+        }
 
         if (!getSeerrUrl() || !getSeerrApiKey() || !getTmdbApiKey()) {
           return interaction.reply({
@@ -144,6 +232,9 @@ export function registerInteractions(client) {
         if (interaction.commandName === "recommend") {
           return handleRecommendCommand(interaction);
         }
+        if (interaction.commandName === "foryou") {
+          return handleForYouCommand(interaction);
+        }
         if (interaction.commandName === "discover") {
           return handleDiscoverCommand(interaction);
         }
@@ -155,6 +246,12 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "similar") {
           return handleSimilarCommand(interaction);
+        }
+        if (interaction.commandName === "queue") {
+          return handleQueueCommand(interaction);
+        }
+        if (interaction.commandName === "subscribe") {
+          return handleSubscribeCommand(interaction);
         }
       }
     } catch (outerErr) {

@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import net from "net";
 import { fileURLToPath } from "url";
+import axios from "axios";
 import express from "express";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
@@ -10,6 +11,7 @@ import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
+import { runCleanupAdvisor } from "./bot/cleanupAdvisor.js";
 import apiCache from "./utils/cache.js";
 
 // ESM __dirname equivalent
@@ -29,6 +31,7 @@ import jellyfinRouter from "./routes/jellyfinRoutes.js";
 import { botState, pendingRequests, savePendingRequests } from "./bot/botState.js";
 import { createBotRoutes } from "./routes/botRoutes.js";
 import { startBot } from "./bot/botManager.js";
+import { rescheduleTimedJobs } from "./bot/jobScheduler.js";
 import { registerCommands } from "./discord/commands.js";
 import { REST } from "@discordjs/rest";
 import {
@@ -234,6 +237,12 @@ function configureWebServer() {
       },
     },
     crossOriginEmbedderPolicy: false,
+    // Only send HSTS when the connection is actually over HTTPS (direct TLS or
+    // behind a reverse proxy that sets X-Forwarded-Proto: https).
+    // Sending HSTS over plain HTTP would break future HTTP-only access.
+    hsts: (req.secure || req.headers["x-forwarded-proto"] === "https")
+      ? { maxAge: 31536000, includeSubDomains: true }
+      : false,
   })(req, res, next);
   });
 
@@ -242,7 +251,16 @@ function configureWebServer() {
     // Allow iFrame embedding for widget route only (restricted to same origin by default)
     if (_req.path === "/api/widget/embed") {
       const widgetOrigins = readConfig()?.WIDGET_ALLOWED_ORIGINS || "";
-      const frameAncestors = widgetOrigins.trim() ? widgetOrigins.trim() : "'self'";
+      // Validate each origin: must be a valid URL with http(s) scheme and no private/internal hosts
+      const validOrigins = widgetOrigins.trim()
+        ? widgetOrigins.trim().split(/\s+/).filter((o) => {
+            try {
+              const u = new URL(o);
+              return u.protocol === "http:" || u.protocol === "https:";
+            } catch (_) { return false; }
+          })
+        : [];
+      const frameAncestors = validOrigins.length > 0 ? validOrigins.join(" ") : "'self'";
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
       res.setHeader("Content-Security-Policy", `frame-ancestors ${frameAncestors}`);
     } else {
@@ -562,6 +580,9 @@ function configureWebServer() {
           displayName: member.displayName || member.user.username,
           avatar: member.user.displayAvatarURL({ size: 64 }),
           discriminator: member.user.discriminator,
+          // Role IDs for the dashboard role filter. Exclude @everyone (its id
+          // equals the guild id) since every member has it.
+          roles: [...member.roles.cache.keys()].filter((rid) => rid !== guildId),
         }))
         .sort((a, b) => a.username.localeCompare(b.username)) // Sort alphabetically
         .slice(0, 1000); // Increased limit to 1000 members
@@ -588,22 +609,32 @@ function configureWebServer() {
   app.get("/api/discord-roles", authenticateToken, async (_req, res) => {
     try {
       logger.debug("[ROLES API] Request received");
+      // Round 12: explicit & granular bot-readiness check. Previously we only
+      // checked `discordClient.user`, which can be truthy during the brief
+      // window between `client.login()` and the `clientReady` event — leading
+      // to confusing "Bot not running" responses while the bot was actually
+      // starting. Now we report distinct states so the frontend can show the
+      // real reason to the user.
+      if (!botState.isBotRunning) {
+        logger.debug("[ROLES API] Bot is not running (isBotRunning=false)");
+        return res.json({ success: false, message: "Bot is not running" });
+      }
       if (!botState.discordClient || !botState.discordClient.user) {
-        logger.debug("[ROLES API] Bot not running");
-        return res.json({ success: false, message: "Bot not running" });
+        logger.debug("[ROLES API] Bot is starting (discordClient.user not ready yet)");
+        return res.json({ success: false, message: "Bot is starting — please retry in a few seconds" });
       }
 
       const guildId = process.env.GUILD_ID;
       logger.debug("[ROLES API] GUILD_ID from env:", guildId);
       if (!guildId) {
         logger.debug("[ROLES API] No guild selected");
-        return res.json({ success: false, message: "No guild selected" });
+        return res.json({ success: false, message: "No guild selected — configure GUILD_ID first" });
       }
 
       const guild = botState.discordClient.guilds.cache.get(guildId);
       if (!guild) {
         logger.debug("[ROLES API] Guild not found in cache");
-        return res.json({ success: false, message: "Guild not found" });
+        return res.json({ success: false, message: "Bot is not in the configured guild (check GUILD_ID and bot invite)" });
       }
 
       logger.debug("[ROLES API] Guild found:", guild.name);
@@ -655,11 +686,53 @@ function configureWebServer() {
   // CSS, JS, images and locale files are served for unauthenticated visitors.
   app.use("/assets", express.static(path.join(__dirname, "assets")));
   app.use("/locales", express.static(path.join(__dirname, "locales")));
-  app.use(express.static(path.join(__dirname, "web")));
 
-  app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "web", "index.html"));
-  });
+  // Cache-busting: derive a version token from the asset mtimes. Whenever
+  // script.js/style.css change (a redeploy), the token changes, so the
+  // ?v=<token> asset URLs differ and no browser or reverse proxy (e.g. Nginx
+  // Proxy Manager) can serve a stale bundle — even if it ignores no-store.
+  const assetVersion = () => {
+    try {
+      const js = fs.statSync(path.join(__dirname, "web", "script.js")).mtimeMs;
+      const css = fs.statSync(path.join(__dirname, "web", "style.css")).mtimeMs;
+      return Math.floor(Math.max(js, css)).toString(36);
+    } catch {
+      return Date.now().toString(36);
+    }
+  };
+
+  // Serve the dashboard shell with cache-busted asset URLs. Registered BEFORE
+  // the static middleware so "/" and "/index.html" go through the injector
+  // instead of being served as a raw static file.
+  const serveDashboardShell = (_req, res) => {
+    try {
+      const v = assetVersion();
+      let html = fs.readFileSync(path.join(__dirname, "web", "index.html"), "utf-8");
+      html = html
+        .replace('src="script.js"', `src="script.js?v=${v}"`)
+        .replace('href="style.css"', `href="style.css?v=${v}"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.type("html").send(html);
+    } catch (err) {
+      logger.error(`[Dashboard] Failed to serve index.html: ${err.message}`);
+      res.status(500).send("Failed to load dashboard.");
+    }
+  };
+  app.get(["/", "/index.html"], serveDashboardShell);
+
+  // Disable caching for dashboard JS/CSS so updates are always picked up
+  // immediately. index:false so the static layer never serves index.html
+  // directly — the cache-busting injector above owns that.
+  app.use(express.static(path.join(__dirname, "web"), {
+    index: false,
+    etag: false,
+    lastModified: false,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(".js") || filePath.endsWith(".css")) {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  }));
 
   // Global error handler middleware — must be AFTER all routes and static handlers
   app.use((err, req, res, _next) => {
@@ -697,7 +770,7 @@ function configureWebServer() {
     if (webhookEventLog.length > WEBHOOK_LOG_MAX) webhookEventLog.pop();
   }
 
-    app.post("/seerr-webhook", webhookLimiter, express.json({ type: "*/*" }), async (req, res) => {
+    app.post("/seerr-webhook", webhookLimiter, express.json({ limit: "100kb", type: "*/*" }), async (req, res) => {
     try {
       // Validate webhook secret via Authorization header.
       // Seerr sends this via the "Authorization Header" field in webhook settings.
@@ -712,8 +785,13 @@ function configureWebServer() {
       const a = Buffer.from(incomingSecret);
       const b = Buffer.from(configuredSecret.trim());
       if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – invalid or missing secret (IP: ${req.ip})`);
-        appendWebhookLog({ event: "AUTH_FAIL", subject: "—", status: "unauthorized", ip: req.ip });
+        // Diagnostic hint — never log the actual secret, only its length and a 4-char prefix.
+        // Helps users distinguish: missing header, wrong-length paste, or trailing whitespace.
+        const hint = incomingSecret.length === 0
+          ? "no Authorization header"
+          : `len=${incomingSecret.length} (expected ${b.length})${incomingSecret.length >= 4 ? `, prefix=${incomingSecret.slice(0, 4)}…` : ""}`;
+        logger.warn(`[SEERR WEBHOOK] ⛔ Unauthorized request – ${hint} (IP: ${req.ip})`);
+        appendWebhookLog({ event: "AUTH_FAIL", subject: hint, status: "unauthorized", ip: req.ip });
         return res.status(401).send("Unauthorized");
       }
 
@@ -788,8 +866,29 @@ function configureWebServer() {
         // Load existing config to preserve USER_MAPPINGS and other non-form fields
         const existingConfig = readConfig() || {};
 
-        // Merge with existing config, preserving USER_MAPPINGS and other fields not in the form
+        // Round 11: defensively strip empty values that should never overwrite
+        // an existing saved value. Specifically:
+        //   - BOT_LANGUAGE: empty string is never a valid language. If the form
+        //     sent "" (e.g. select wasn't populated by frontend in time), we
+        //     drop the key so existingConfig.BOT_LANGUAGE survives the merge.
+        //   - ROLE_ALLOWLIST / ROLE_BLOCKLIST: the frontend now omits these
+        //     entirely if the role checkboxes aren't rendered. As a belt-and-
+        //     braces backup, also reject empty arrays only when the existing
+        //     config had non-empty arrays (user can still legitimately clear
+        //     all roles by clicking and unchecking them — that submits an
+        //     empty array AFTER the checkboxes were rendered).
+        //   Both bugs caused settings to be silently lost on container restart.
+        const _origBotLang = configData.BOT_LANGUAGE;
+        if (configData.BOT_LANGUAGE === "" || configData.BOT_LANGUAGE == null) {
+          delete configData.BOT_LANGUAGE;
+          logger.info(`[Config save] BOT_LANGUAGE incoming was empty — preserving existing value "${existingConfig.BOT_LANGUAGE || configTemplate.BOT_LANGUAGE}"`);
+        }
+
+        // Merge: template defaults → existing values → new form values.
+        // Template is the base so keys absent from the form and from existing
+        // config still get their intended defaults (e.g. JELLYFIN_NOTIFY_MOVIES).
         const finalConfig = {
+          ...configTemplate,
           ...existingConfig,
           ...configData,
           // Ensure USER_MAPPINGS, USERS, JWT_SECRET, and WEBHOOK_SECRET are preserved
@@ -803,6 +902,26 @@ function configureWebServer() {
             existingConfig.JELLYFIN_NOTIFICATION_LIBRARIES ||
             {},
         };
+
+        // Round 11: log changes for BOT_LANGUAGE + role lists so users can
+        // trace persistence issues from the logs.
+        if (_origBotLang !== undefined && _origBotLang !== existingConfig.BOT_LANGUAGE) {
+          logger.info(`[Config save] BOT_LANGUAGE "${existingConfig.BOT_LANGUAGE || "(unset)"}" → "${finalConfig.BOT_LANGUAGE}"`);
+        }
+        if ("ROLE_ALLOWLIST" in configData) {
+          const before = JSON.stringify(existingConfig.ROLE_ALLOWLIST || []);
+          const after  = JSON.stringify(finalConfig.ROLE_ALLOWLIST || []);
+          if (before !== after) logger.info(`[Config save] ROLE_ALLOWLIST ${before} → ${after}`);
+        } else if (existingConfig.ROLE_ALLOWLIST?.length) {
+          logger.info(`[Config save] ROLE_ALLOWLIST not in submit — preserving ${existingConfig.ROLE_ALLOWLIST.length} existing entries`);
+        }
+        if ("ROLE_BLOCKLIST" in configData) {
+          const before = JSON.stringify(existingConfig.ROLE_BLOCKLIST || []);
+          const after  = JSON.stringify(finalConfig.ROLE_BLOCKLIST || []);
+          if (before !== after) logger.info(`[Config save] ROLE_BLOCKLIST ${before} → ${after}`);
+        } else if (existingConfig.ROLE_BLOCKLIST?.length) {
+          logger.info(`[Config save] ROLE_BLOCKLIST not in submit — preserving ${existingConfig.ROLE_BLOCKLIST.length} existing entries`);
+        }
 
         // Preserve sensitive fields only when the frontend sends a masked placeholder
         // or omits the field entirely — an explicit empty string intentionally clears the credential
@@ -850,6 +969,13 @@ function configureWebServer() {
         oldToken !== process.env.DISCORD_TOKEN ||
         oldGuildId !== process.env.GUILD_ID ||
         jellyfinApiKeyChanged;
+
+      // Apply timing/cron config changes (digest, weekly, cleanup, daily,
+      // subscription interval) to the running bot without a full restart. The
+      // needsRestart path below calls startBot(), which reschedules anyway.
+      if (botState.isBotRunning && !needsRestart) {
+        rescheduleTimedJobs(botState.discordClient);
+      }
 
       // Check if /request command options changed → need to re-register commands
       const commandOptionsChanged =
@@ -984,6 +1110,75 @@ function configureWebServer() {
     }
   });
 
+  // Seerr → Questorr round-trip test: asks Seerr's API to fire its configured
+  // webhook, then watches our own webhookEventLog for the resulting callback.
+  // Confirms the full chain (Seerr URL + Authorization header) is correct.
+  app.post("/api/test-seerr-roundtrip", authenticateToken, async (req, res) => {
+    const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "").replace(/\/api\/v1\/?$/, "");
+    const apiKey = process.env.SEERR_API_KEY;
+    if (!seerrUrl || !apiKey) {
+      return res.status(400).json({ success: false, message: "SEERR_URL or SEERR_API_KEY not configured." });
+    }
+
+    try {
+      // 1. Fetch Seerr's currently saved webhook notification settings.
+      const cfgRes = await axios.get(`${seerrUrl}/api/v1/settings/notifications/webhook`, {
+        headers: { "X-Api-Key": apiKey },
+        timeout: 8000,
+      });
+      const cfg = cfgRes.data || {};
+
+      // 2. Snapshot the latest event timestamp so we can detect new arrivals.
+      const before = webhookEventLog[0]?.ts || null;
+
+      // 3. Trigger Seerr to send a test notification to that webhook.
+      await axios.post(`${seerrUrl}/api/v1/settings/notifications/webhook/test`, cfg, {
+        headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+        timeout: 10000,
+      });
+
+      // 4. Poll our webhookEventLog for up to 6 seconds for a fresh entry.
+      const deadline = Date.now() + 6000;
+      let arrival = null;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 500));
+        const top = webhookEventLog[0];
+        if (top && top.ts !== before) {
+          arrival = top;
+          break;
+        }
+      }
+
+      if (!arrival) {
+        return res.json({
+          success: false,
+          message: "Seerr akzeptierte den Test-Auftrag, aber Questorr hat innerhalb von 6 Sekunden keinen Callback erhalten. Prüfe: Erreichbarkeit der Webhook-URL aus Seerr (Docker-Networking, Firewall) und ob Seerr den Webhook überhaupt aktiviert hat.",
+        });
+      }
+
+      if (arrival.status === "unauthorized") {
+        return res.json({
+          success: false,
+          message: `Seerr hat den Webhook gesendet, aber Questorr hat ihn mit Auth-Fehler abgewiesen (${arrival.subject || "-"}). Das Authorization-Header-Secret in Seerr stimmt nicht mit Questorr überein.`,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `✅ Round-Trip erfolgreich: Seerr → Questorr funktioniert. (Event: ${arrival.event}, Subject: ${arrival.subject})`,
+      });
+    } catch (err) {
+      const status = err?.response?.status;
+      const body = err?.response?.data;
+      const detail = status ? `HTTP ${status}${typeof body === "string" ? ` — ${body}` : ""}` : (err?.message || String(err));
+      logger.error(`[Seerr Round-Trip Test] ${detail}`);
+      return res.status(500).json({
+        success: false,
+        message: `Seerr-API-Aufruf fehlgeschlagen: ${detail}. Prüfe SEERR_URL und SEERR_API_KEY.`,
+      });
+    }
+  });
+
   // Test notification buttons – sends a test embed to the admin channel
   app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
     try {
@@ -1109,7 +1304,7 @@ function configureWebServer() {
       }
       if (Array.isArray(exportable.USERS)) exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
       exportable._exportedAt = new Date().toISOString();
-      exportable._questorrVersion = "2.3.0";
+      exportable._questorrVersion = "2.4.0";
       const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
       res.setHeader("Content-Disposition", "attachment; filename=" + filename);
       res.setHeader("Content-Type", "application/json");
@@ -1197,6 +1392,39 @@ function configureWebServer() {
         success: false,
         message: error.message || "Failed to send random pick. Check logs for details.",
       });
+    }
+  });
+
+  // Cleanup Advisor — manual trigger from web UI
+  app.post("/api/test-cleanup-advisor", authenticateToken, async (_req, res) => {
+    try {
+      if (!botState.discordClient || !botState.discordClient.isReady()) {
+        return res.status(400).json({
+          success: false,
+          message: "Discord bot is not running. Please start the bot first.",
+        });
+      }
+      const channelId = process.env.CLEANUP_ADVISOR_CHANNEL_ID;
+      if (!channelId) {
+        return res.status(400).json({
+          success: false,
+          message: "Cleanup Advisor channel is not configured.",
+        });
+      }
+      const result = await runCleanupAdvisor(botState.discordClient);
+      if (!result.posted) {
+        return res.status(400).json({
+          success: false,
+          message: result.message || "Cleanup advisor did not post — check logs.",
+        });
+      }
+      return res.json({
+        success: true,
+        message: `Cleanup post sent (${result.count} items, ${result.totalSizeGb} GB).`,
+      });
+    } catch (err) {
+      logger.error("Failed to run cleanup advisor:", err);
+      return res.status(500).json({ success: false, message: err.message || "Cleanup advisor failed." });
     }
   });
 

@@ -1,8 +1,7 @@
 import * as jellyfinApi from "../api/jellyfin.js";
 import logger from "../utils/logger.js";
 
-const SEEN_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
-const CLEANUP_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CLEANUP_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 /**
  * Fetches all libraries from Jellyfin and returns the library array,
@@ -79,29 +78,62 @@ export function resolveTargetChannel(configLibraryId, libraryChannels) {
  * Shared between the poller and WebSocket client so that an item
  * detected by both within 24 hours is only notified once.
  */
+// Round 9: timestamp=0 marks an item as "seed-only" — recorded during the
+// silent bulk-seed at first bot start, but never notified.
+//
+// Round 10 NOTE: the SEED_MARKER is preserved for diagnostic purposes (the
+// poll log distinguishes truly-notified vs. seed-marked counts), but it is
+// NO LONGER differentiated by the manual-scan path. All seenIds entries are
+// treated equally as "skip". The Recently-Added window filter in
+// jellyfinPoller.js (JELLYFIN_RECENT_ADDED_DAYS) is what guarantees old
+// library content is never notified — regardless of seenIds state.
+export const SEED_MARKER = 0;
+
 export class ItemDeduplicator {
   constructor() {
-    this.seenItems = new Map(); // itemId → timestamp
+    this.seenItems = new Map(); // itemId → timestamp (0 = seed-only)
   }
 
   /**
-   * Returns true if the item was seen recently (within SEEN_THRESHOLD_MS).
-   * If not seen recently, records it and returns false.
+   * Returns true if the item has ever been seen (persistent dedup).
+   * On a hit, refreshes the timestamp so the item is not evicted by cleanup —
+   * unless `seedMode` is set, in which case the marker is preserved.
+   * On a miss, records it (with SEED_MARKER if seedMode, else Date.now()) and
+   * returns false.
+   *
+   * @param {string} itemId
+   * @param {{ seedMode?: boolean }} [opts]
    */
-  checkAndRecord(itemId) {
-    const now = Date.now();
-    const lastSeen = this.seenItems.get(itemId);
-    if (lastSeen && now - lastSeen < SEEN_THRESHOLD_MS) {
-      return true; // already seen
+  checkAndRecord(itemId, opts = {}) {
+    const seedMode = !!opts.seedMode;
+    if (this.seenItems.has(itemId)) {
+      // Only refresh timestamp for real discoveries — preserve SEED_MARKER otherwise
+      if (!seedMode) this.seenItems.set(itemId, Date.now());
+      return true; // already seen — do NOT post again
     }
-    this.seenItems.set(itemId, now);
+    this.seenItems.set(itemId, seedMode ? SEED_MARKER : Date.now());
     return false;
   }
 
-  /** Remove entries older than 7 days to prevent unbounded growth. */
+  /** True if the item was recorded via seed (never notified). */
+  isSeeded(itemId) {
+    return this.seenItems.get(itemId) === SEED_MARKER;
+  }
+
+  /** Upgrade a seed-marked item to "truly seen" (after a real notification). */
+  markNotified(itemId) {
+    this.seenItems.set(itemId, Date.now());
+  }
+
+  /** Remove entries older than 90 days to prevent unbounded growth.
+   *  SEED_MARKER (0) entries are NEVER cleaned up — they represent the
+   *  full pre-existing library and must persist so we don't accidentally
+   *  re-discover and re-notify them later.
+   */
   cleanup() {
     const cutoff = Date.now() - CLEANUP_AGE_MS;
     for (const [id, ts] of this.seenItems) {
+      if (ts === SEED_MARKER) continue;
       if (ts < cutoff) this.seenItems.delete(id);
     }
   }

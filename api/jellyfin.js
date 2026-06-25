@@ -125,7 +125,23 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
       { label: `Jellyfin findByTmdb ${tmdbId}` }
     );
     const items = response.data?.Items || [];
-    return items.length > 0 ? items[0].Id : null;
+    if (items.length === 0) return null;
+
+    // Verify the returned item actually matches the queried TMDB ID. Some Jellyfin
+    // versions silently ignore AnyProviderIdEquals and return an arbitrary first
+    // item (Recursive=true + Limit=1), which would route every notification to the
+    // same wrong library. If the verification fails, return null so the caller's
+    // title-search fallback can take over.
+    const item = items[0];
+    const itemTmdbId =
+      item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+    if (String(itemTmdbId) !== String(tmdbId)) {
+      logger.warn(
+        `[findItemByTmdbId] Jellyfin returned item ${item.Id} with TMDB=${itemTmdbId ?? "none"} for query TMDB=${tmdbId} – AnyProviderIdEquals filter appears to be ignored, falling back to title search`
+      );
+      return null;
+    }
+    return item.Id;
   } catch (err) {
     const status = err?.response?.status;
     if (status === 401 || status === 403) {
@@ -135,6 +151,34 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
     } else {
       logger.warn(`[findItemByTmdbId] Could not look up TMDB ID ${tmdbId} in Jellyfin: ${err?.message || err}${err?.code ? ` (${err.code})` : ""}`);
     }
+    return null;
+  }
+}
+
+/**
+ * Count the real seasons (excluding Specials / index 0) of a series in Jellyfin,
+ * identified by its TMDB id. Returns the count, or null if the series isn't in
+ * the library or the lookup fails. Used by the subscription poller to detect a
+ * newly added season.
+ */
+export async function countSeriesSeasonsInJellyfin(tmdbId, apiKey, baseUrl) {
+  if (!apiKey || !baseUrl) return null;
+  try {
+    const seriesId = await findItemByTmdbId(tmdbId, "tv", apiKey, baseUrl);
+    if (!seriesId) return null;
+    const base = baseUrl.replace(/\/$/, "");
+    const res = await withRetry(
+      () => axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: { ParentId: seriesId, IncludeItemTypes: "Season", Fields: "IndexNumber", Limit: 100 },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin seasons ${seriesId}` }
+    );
+    const seasons = res.data?.Items || [];
+    return seasons.filter((s) => Number(s.IndexNumber) >= 1).length;
+  } catch (err) {
+    logger.warn(`[Jellyfin] countSeriesSeasonsInJellyfin error: ${err.message}`);
     return null;
   }
 }
@@ -479,14 +523,17 @@ export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
 export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "all") {
   try {
     const base = baseUrl.replace(/\/$/, "");
-    const includeTypes = type === "movie" ? "Movie" : type === "series" ? "Series" : "Movie,Series";
+    const includeTypes =
+      type === "movie"  ? "Movie" :
+      type === "series" ? "Series" :
+      "Movie,Series,Season,Episode";
     const response = await axios.get(`${base}/Items`, {
       headers: { "X-MediaBrowser-Token": apiKey },
       params: {
         SortBy: "DateCreated",
         SortOrder: "Descending",
         Limit: limit,
-        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated",
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
         IncludeItemTypes: includeTypes,
         Recursive: true,
       },
@@ -494,9 +541,190 @@ export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "
     });
     return response.data?.Items || [];
   } catch (err) {
-    logger.error("Failed to fetch latest additions from Jellyfin:", err?.message);
+    const status = err?.response?.status;
+    const msg = err?.message || String(err);
+    logger.error(`Failed to fetch latest additions from Jellyfin: ${status ? `HTTP ${status} — ` : ""}${msg}`);
     return [];
   }
+}
+
+/**
+ * Paginated fetch of ALL item IDs in the Jellyfin library for seed deduplication.
+ * Calls onBatch(items) for each page so the caller can record IDs incrementally.
+ * Returns total number of items fetched.
+ */
+export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
+  const base = baseUrl.replace(/\/$/, "");
+  const batchSize = 500;
+  let startIndex = 0;
+  let totalFetched = 0;
+
+  while (true) {
+    const response = await axios.get(`${base}/Items`, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: {
+        Recursive: true,
+        IncludeItemTypes: "Movie,Series,Season,Episode",
+        Fields: "Id",
+        StartIndex: startIndex,
+        Limit: batchSize,
+        SortBy: "DateCreated",
+        SortOrder: "Descending",
+      },
+      timeout: 20000,
+    });
+    const items = response.data?.Items || [];
+    const total = response.data?.TotalRecordCount ?? Infinity;
+    if (items.length === 0) break;
+    onBatch(items);
+    totalFetched += items.length;
+    if (totalFetched >= total || items.length < batchSize) break;
+    startIndex += batchSize;
+  }
+  return totalFetched;
+}
+
+/**
+ * Fetch the most recently added items from Jellyfin (by DateCreated, descending).
+ *
+ * Round 8 NOTE: Round 7 attempted to switch to DateLastSaved to catch files with old
+ * mtimes — but on this Jellyfin instance DateLastSaved is sparsely populated and the
+ * sort silently falls back to alphabetical, returning only Movies (no Series/Episodes).
+ * Reverted to DateCreated for stable behavior. Files with old mtimes (e.g. Senna 2010
+ * imported today) are caught by the separate `scanAllItemsForUnseen` full-library scan
+ * which the dashboard "Jetzt prüfen" button triggers.
+ *
+ * Walks through `maxPages` pages of `pageSize` items each; stops early if a page
+ * returns fewer items than `pageSize` (end of library reached).
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {{ maxPages?: number, pageSize?: number }} [opts]
+ *   defaults: maxPages=1, pageSize=200 (backward-compatible)
+ */
+export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
+  const { maxPages = 1, pageSize = 200 } = opts;
+  try {
+    const base = baseUrl.replace(/\/$/, "");
+    const all = [];
+    for (let page = 0; page < maxPages; page++) {
+      const response = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series,Season,Episode",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          StartIndex: page * pageSize,
+          Limit: pageSize,
+        },
+        timeout: 15000,
+      });
+      const pageItems = response.data?.Items || [];
+      all.push(...pageItems);
+      // End of library reached — Jellyfin returned fewer items than we asked for.
+      if (pageItems.length < pageSize) break;
+    }
+    return all;
+  } catch (err) {
+    const status = err?.response?.status;
+    const msg = err?.message || String(err);
+    logger.error(`Failed to fetch recent items from Jellyfin: ${status ? `HTTP ${status} — ` : ""}${msg}`);
+    return [];
+  }
+}
+
+/**
+ * Full library scan — paginates through ALL items and returns those whose Jellyfin ID
+ * is not in `seenIds`. Used by the dashboard "Jetzt prüfen" button to catch items
+ * that the periodic top-1000-by-DateCreated poll would miss (e.g. files imported
+ * with old file mtimes that land deep in the DateCreated-sorted list).
+ *
+ * Hard-caps at `maxNew` new items to prevent notification floods. When the cap is
+ * hit the scan stops early and `hitCap=true` is returned — the caller can show a
+ * warning and let the user re-run to find more.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {Set<string>} seenIds  Jellyfin Item IDs the caller already knows about
+ * @param {number} [maxNew=50]   abort scan once this many new items are found
+ * @param {Function} [onProgress] called as (scanned, newFound) after each page
+ * @returns {Promise<{ newItems: Array, totalScanned: number, hitCap: boolean }>}
+ */
+export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 50, onProgress = null, opts = {}) {
+  const base = baseUrl.replace(/\/$/, "");
+  const pageSize = 500;
+  const newItems = [];
+  let startIndex = 0;
+  let totalScanned = 0;
+  let hitCap = false;
+  let hitDateCutoff = false;
+
+  // Round 10: optional DateCreated cutoff. Items below this timestamp are
+  // skipped, AND because results are sorted by DateCreated DESC, the scan
+  // stops as soon as we encounter an item below the cutoff (every subsequent
+  // item is older). Massive performance win for users with 30k+ libraries.
+  const minDateCreated = Number.isFinite(opts.minDateCreated) ? opts.minDateCreated : null;
+
+  outer: while (true) {
+    let response;
+    try {
+      response = await axios.get(`${base}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series,Season,Episode",
+          Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber",
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          StartIndex: startIndex,
+          Limit: pageSize,
+        },
+        timeout: 30000,
+      });
+    } catch (err) {
+      logger.error(`[Jellyfin] scanAllItemsForUnseen page ${startIndex} failed: ${err?.message || err}`);
+      break;
+    }
+
+    const pageItems = response.data?.Items || [];
+    const total = response.data?.TotalRecordCount ?? Infinity;
+    if (pageItems.length === 0) break;
+
+    for (const item of pageItems) {
+      totalScanned++;
+
+      // Round 10: early-stop on date cutoff (items are sorted DESC, so once we
+      // see something older than the cutoff, everything else is older too).
+      if (minDateCreated !== null && item.DateCreated) {
+        const itemTs = new Date(item.DateCreated).getTime();
+        if (!Number.isNaN(itemTs) && itemTs < minDateCreated) {
+          hitDateCutoff = true;
+          break outer;
+        }
+      }
+
+      if (!seenIds.has(item.Id)) {
+        newItems.push(item);
+        if (newItems.length >= maxNew) {
+          hitCap = true;
+          break;
+        }
+      }
+    }
+
+    if (typeof onProgress === "function") {
+      try { onProgress(totalScanned, newItems.length); } catch { /* ignore */ }
+    }
+
+    if (hitCap) break;
+    if (pageItems.length < pageSize) break;        // last page
+    if (totalScanned >= total) break;
+    startIndex += pageItems.length;
+  }
+
+  return { newItems, totalScanned, hitCap, hitDateCutoff };
 }
 
 /**
@@ -511,6 +739,13 @@ export async function fetchItemDetails(itemId, apiKey, baseUrl) {
     const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
     const response = await axios.get(url, {
       headers: { "X-MediaBrowser-Token": apiKey },
+      // Round 10: explicitly request the fields needed for rich embeds.
+      // Without this, Jellyfin's /Items/{id} returns only the default field set
+      // (no ProviderIds, Overview, Genres) — which would strip metadata from
+      // the freshItem used for the delayed-notification path in jellyfinPoller.
+      params: {
+        Fields: "ProviderIds,Overview,Genres,ProductionYear,CommunityRating,DateCreated,SeriesName,ParentIndexNumber,IndexNumber,Path",
+      },
       timeout: 5000,
     });
 
@@ -520,6 +755,39 @@ export async function fetchItemDetails(itemId, apiKey, baseUrl) {
       `Failed to fetch item details for ${itemId}:`,
       err?.message || err
     );
+    return null;
+  }
+}
+
+/**
+ * Fetch ONLY the filesystem path for a Jellyfin item.
+ *
+ * Used by the Tier-3.5 channel-routing fallback in seerrWebhook.js when:
+ *   - Jellyseerr didn't populate rootFolder (Tier 1+2 null)
+ *   - Radarr/Sonarr don't have the movie/series (Tier 3 empty — typical when
+ *     the file was manually added to Jellyfin without going through the
+ *     download workflow)
+ * The item's Path then matches against SEERR_ROOT_FOLDER_CHANNELS directly.
+ *
+ * Lightweight version of fetchItemDetails — requests only the Path field.
+ *
+ * @param {string} itemId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @returns {Promise<string|null>}
+ */
+export async function fetchItemPath(itemId, apiKey, baseUrl) {
+  if (!itemId || !apiKey || !baseUrl) return null;
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
+    const response = await axios.get(url, {
+      headers: { "X-MediaBrowser-Token": apiKey },
+      params: { Fields: "Path" },
+      timeout: 10000,
+    });
+    return response.data?.Path || null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchItemPath(${itemId}) failed: ${err?.message || err}`);
     return null;
   }
 }
@@ -658,5 +926,353 @@ export async function findJellyfinItemByTmdbId(tmdbId, mediaType, title, apiKey,
   } catch (err) {
     logger.warn(`[Jellyfin] findJellyfinItemByTmdbId error: ${err.message}`);
     return null;
+  }
+}
+
+// ─── Watch-History & Cleanup Helpers ─────────────────────────────────────────
+
+/**
+ * Fetch a user's recently played items from Jellyfin.
+ * Returns Movies + Series sorted by DatePlayed descending.
+ *
+ * @param {string} jellyfinUserId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} limit
+ * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
+ */
+export async function fetchUserRecentlyPlayed(jellyfinUserId, apiKey, baseUrl, limit = 10) {
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + `/Users/${jellyfinUserId}/Items`;
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "DatePlayed",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Movie,Series",
+          Filters: "IsPlayed",
+          Limit: limit,
+          Fields: "ProviderIds,UserData",
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin user recently-played ${jellyfinUserId}` }
+    );
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchUserRecentlyPlayed error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Derive Series watch seeds from a user's recently-played Episodes.
+ *
+ * Background: Jellyfin's `Filters=IsPlayed` on Series only returns series where
+ * every single episode has been watched. For the /foryou command we want seeds
+ * from series the user is *currently watching* — i.e. partially watched.
+ *
+ * Approach:
+ *   1. Fetch up to 50 recently played Episodes for the user.
+ *   2. Collect unique SeriesIds (up to `limit`).
+ *   3. Batch-fetch the actual Series items (one /Items call) to get ProviderIds.
+ *
+ * @param {string} jellyfinUserId
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} [limit=10]  max number of unique series to return
+ * @returns {Promise<Array>}   Series items with { Id, Name, Type, ProviderIds }
+ */
+export async function fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, apiKey, baseUrl, limit = 10) {
+  try {
+    const safeBase = new URL(baseUrl);
+    const basePath = safeBase.origin + safeBase.pathname.replace(/\/$/, "");
+
+    // Step 1: get recently played episodes
+    const epResponse = await withRetry(
+      () => axios.get(`${basePath}/Users/${jellyfinUserId}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "DatePlayed",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Episode",
+          Filters: "IsPlayed",
+          Limit: 50,
+          Fields: "SeriesId,SeriesName",
+          EnableTotalRecordCount: false,
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin user episodes-played ${jellyfinUserId}` }
+    );
+
+    const episodes = epResponse.data?.Items || [];
+
+    // Step 2: collect unique SeriesIds in recency order
+    const seen = new Set();
+    const seriesIds = [];
+    for (const ep of episodes) {
+      if (ep.SeriesId && !seen.has(ep.SeriesId)) {
+        seen.add(ep.SeriesId);
+        seriesIds.push(ep.SeriesId);
+        if (seriesIds.length >= limit) break;
+      }
+    }
+    if (seriesIds.length === 0) return [];
+
+    // Step 3: batch-fetch Series items to get ProviderIds
+    const seriesResponse = await withRetry(
+      () => axios.get(`${basePath}/Items`, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Ids: seriesIds.join(","),
+          Fields: "ProviderIds",
+          EnableTotalRecordCount: false,
+        },
+        timeout: 8000,
+      }),
+      { label: `Jellyfin series batch-fetch (${seriesIds.length} ids)` }
+    );
+
+    return seriesResponse.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchUserRecentlyPlayedSeriesViaEpisodes error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch server-wide top-played items as fallback when no per-user history exists.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {number} limit
+ * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
+ */
+export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
+  // NOTE: SortBy=PlayCount without a userId causes HTTP 500 on Jellyfin's /Items endpoint
+  // (PlayCount is user-scoped data). We sort by DateCreated (recently added) as a reliable
+  // server-wide fallback that always works with an admin API key.
+  try {
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          SortBy: "DateCreated",
+          SortOrder: "Descending",
+          IncludeItemTypes: "Movie,Series",
+          Limit: limit,
+          Fields: "ProviderIds",
+        },
+        timeout: 8000,
+      }),
+      { label: "Jellyfin server recently-added" }
+    );
+    return response.data?.Items || [];
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchServerTopPlayed error: ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
+ * Resolve a Discord user ID to a Jellyfin user ID via:
+ *   Discord ID → USER_MAPPINGS → Seerr User ID → Seerr-User.jellyfinUserId
+ *
+ * @param {string} discordId
+ * @param {Array|Object|string} userMappings - USER_MAPPINGS config value
+ * @param {string} seerrUrl
+ * @param {string} seerrApiKey
+ * @returns {Promise<string|null>} Jellyfin user ID or null
+ */
+export async function resolveJellyfinUserId(discordId, userMappings, seerrUrl, seerrApiKey) {
+  try {
+    // Parse USER_MAPPINGS — array of { discordUserId, seerrUserId, ... } objects
+    // (see utils/userMappingStore.js for the canonical shape)
+    let mappings = userMappings;
+    if (typeof mappings === "string") {
+      try { mappings = JSON.parse(mappings); } catch { return null; }
+    }
+    if (!Array.isArray(mappings)) return null;
+
+    const entry = mappings.find(
+      (m) => String(m.discordUserId) === String(discordId)
+    );
+    const seerrUserId = entry?.seerrUserId;
+    if (!seerrUserId) return null;
+
+    // Look up Jellyfin user ID via Seerr
+    const { fetchSeerrUserById } = await import("./seerr.js");
+    const seerrUser = await fetchSeerrUserById(seerrUserId, seerrUrl, seerrApiKey);
+    return seerrUser?.jellyfinUserId || null;
+  } catch (err) {
+    logger.warn(`[Jellyfin] resolveJellyfinUserId error: ${err?.message || err}`);
+    return null;
+  }
+}
+
+/**
+ * Fetch a paged list of items for cleanup analysis.
+ * Returns Movie items with PlayCount, LastPlayedDate, DateCreated, file size.
+ *
+ * Uses server-aggregated UserData (Jellyfin returns aggregated playback stats
+ * across all users when querying without a userId).
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @param {Object} opts
+ * @param {number} [opts.limit=2000]
+ * @returns {Promise<Array>} Raw items with at least { Id, Name, ProductionYear,
+ *   DateCreated, UserData: { PlayCount, LastPlayedDate }, MediaSources: [{ Size }] }
+ */
+export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
+  const maxTotal = opts.limit ?? 5000;
+  const pageSize  = 500; // safe per-page size — avoids per-request timeouts
+  // Per-page timeout: configurable via opts.timeoutMs OR env CLEANUP_FETCH_TIMEOUT_SECONDS
+  const envTimeout = parseInt(process.env.CLEANUP_FETCH_TIMEOUT_SECONDS || "60", 10);
+  const timeoutMs  = opts.timeoutMs ?? (envTimeout > 0 ? envTimeout * 1000 : 60000);
+  const allItems  = [];
+
+  const safeBase = new URL(baseUrl);
+  safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+
+  let startIndex = 0;
+  let totalRecordCount = null;
+
+  // NOTE: We deliberately do NOT swallow errors here. Earlier behavior of
+  // returning `[]` on timeout caused cleanupAdvisor.js to post a misleading
+  // "✅ No cleanup candidates" message. Callers must catch and surface a
+  // visible warning to the user.
+  while (allItems.length < maxTotal) {
+    let response;
+    try {
+      response = await axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          Recursive: true,
+          IncludeItemTypes: "Movie",
+          SortBy: "DateCreated",
+          SortOrder: "Ascending",
+          StartIndex: startIndex,
+          Limit: Math.min(pageSize, maxTotal - allItems.length),
+          Fields: "DateCreated,UserData,MediaSources,ProductionYear",
+        },
+        timeout: timeoutMs,
+      });
+    } catch (err) {
+      const baseMsg = err?.message || String(err);
+      const detail = `(fetched ${allItems.length}${totalRecordCount != null ? ` of ${totalRecordCount}` : ""} so far, timeout ${Math.round(timeoutMs/1000)}s)`;
+      logger.warn(`[Jellyfin] fetchUnwatchedAggregateItems error: ${baseMsg} ${detail}`);
+      const wrapped = new Error(`${baseMsg} ${detail}`);
+      wrapped.cause = err;
+      wrapped.partialCount = allItems.length;
+      throw wrapped;
+    }
+
+    const page = response.data?.Items || [];
+    allItems.push(...page);
+
+    // Capture total on first page
+    if (totalRecordCount === null) {
+      totalRecordCount = response.data?.TotalRecordCount ?? 0;
+    }
+
+    // Stop when we've read everything available
+    if (page.length === 0 || allItems.length >= totalRecordCount) break;
+
+    startIndex += page.length;
+  }
+
+  logger.debug(`[Jellyfin] fetchUnwatchedAggregateItems: fetched ${allItems.length} / ${totalRecordCount} items`);
+  return allItems;
+}
+
+/**
+ * Fetch a high-level library summary for the Stats dashboard.
+ * Returns counts per IncludeItemType and a top-10 genre histogram.
+ *
+ * @param {string} apiKey
+ * @param {string} baseUrl
+ * @returns {Promise<{movies: number, series: number, totalRuntimeMinutes: number, topGenres: Array<{name: string, count: number}>}>}
+ */
+export async function fetchLibrarySummary(apiKey, baseUrl) {
+  try {
+    const rootUrl = new URL(baseUrl);
+    rootUrl.pathname = rootUrl.pathname.replace(/\/$/, "") + "/Items";
+
+    // Global counts — most reliable approach. A per-library aggregation via
+    // /Library/MediaFolders can under-count when CollectionType is missing or
+    // when Jellyfin stores items across nested virtual folders. The global
+    // IncludeItemTypes query matches Jellyfin's admin counts reliably.
+    const cacheBuster = Date.now();
+    const noCacheHeaders = { "X-MediaBrowser-Token": apiKey, "Cache-Control": "no-cache" };
+
+    const countParams = (type) => ({
+      Recursive: true,
+      IncludeItemTypes: type,
+      Limit: 0,
+      EnableTotalRecordCount: true,
+      _t: cacheBuster,
+    });
+
+    const [movieCountRes, seriesCountRes] = await Promise.all([
+      axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Movie"), timeout: 15000 }),
+      axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Series"), timeout: 15000 }),
+    ]);
+
+    let movies = movieCountRes.data?.TotalRecordCount ?? 0;
+    let series = seriesCountRes.data?.TotalRecordCount ?? 0;
+
+    // Aggregate genres + runtime across Movies AND Series. We need the actual
+    // items for these — do it in one bounded call (Jellyfin libraries above
+    // ~10k items are rare). Cache-busting param ensures recently-added items
+    // are reflected once Jellyfin has scanned them.
+    const aggResponse = await axios.get(rootUrl.href, {
+      headers: noCacheHeaders,
+      params: {
+        Recursive: true,
+        IncludeItemTypes: "Movie,Series",
+        Fields: "Genres,RunTimeTicks",
+        Limit: 10000,
+        _t: cacheBuster,
+      },
+      timeout: 30000,
+    });
+
+    const items = aggResponse.data?.Items || [];
+    let totalRuntimeTicks = 0;
+    const genreCount = new Map();
+
+    for (const it of items) {
+      if (typeof it.RunTimeTicks === "number") totalRuntimeTicks += it.RunTimeTicks;
+      if (Array.isArray(it.Genres)) {
+        for (const g of it.Genres) {
+          if (!g) continue;
+          genreCount.set(g, (genreCount.get(g) || 0) + 1);
+        }
+      }
+    }
+
+    const topGenres = [...genreCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
+
+    return {
+      movies,
+      series,
+      totalRuntimeMinutes: Math.round(totalRuntimeTicks / 600_000_000), // ticks=100ns
+      topGenres,
+    };
+  } catch (err) {
+    logger.warn(`[Jellyfin] fetchLibrarySummary error: ${err?.message || err}`);
+    return { movies: 0, series: 0, totalRuntimeMinutes: 0, topGenres: [] };
   }
 }

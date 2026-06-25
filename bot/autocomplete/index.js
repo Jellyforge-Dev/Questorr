@@ -1,6 +1,7 @@
 import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
+import { getSeriesByUser } from "../../utils/subscriptionStore.js";
 import logger from "../../utils/logger.js";
 
 // ─── Shared: build rich autocomplete choices from TMDB items ──────────────────
@@ -275,7 +276,9 @@ async function handleStatusAutocomplete(interaction, focusedValue) {
 
 // ─── Default Search Autocomplete ──────────────────────────────────────────────
 async function handleSearchAutocomplete(interaction, focusedValue) {
-  if (!focusedValue) return interaction.respond([]);
+  // Min-length guard: Discord fires autocomplete on every keystroke. Querying
+  // TMDB for 1-char input wastes calls and returns noise — wait for 2+ chars.
+  if (!focusedValue || focusedValue.trim().length < 2) return interaction.respond([]);
 
   try {
     const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
@@ -284,6 +287,34 @@ async function handleSearchAutocomplete(interaction, focusedValue) {
       .slice(0, 10);
 
     const choices = await buildDetailedChoices(filtered);
+    await interaction.respond(choices);
+  } catch (e) {
+    logger.error("Autocomplete error:", e);
+    return await interaction.respond([]);
+  }
+}
+
+// TV-only autocomplete for /subscribe series (subscribing to a movie makes no sense).
+async function handleSeriesAutocomplete(interaction, focusedValue) {
+  if (!focusedValue || focusedValue.trim().length < 2) return interaction.respond([]);
+  try {
+    const results = await tmdbApi.tmdbSearch(focusedValue, getTmdbApiKey());
+    const filtered = results.filter((r) => r.media_type === "tv").slice(0, 10);
+    await interaction.respond(await buildDetailedChoices(filtered));
+  } catch (e) {
+    logger.error("Autocomplete error:", e);
+    return await interaction.respond([]);
+  }
+}
+
+// Autocomplete for /subscribe remove — lists only the caller's own subscriptions.
+async function handleSubscriptionRemoveAutocomplete(interaction, focusedValue) {
+  try {
+    const q = (focusedValue || "").toLowerCase();
+    const choices = getSeriesByUser(interaction.user.id)
+      .filter((s) => !q || (s.title || "").toLowerCase().includes(q))
+      .slice(0, 25)
+      .map((s) => ({ name: (s.title || `TMDB ${s.tmdbId}`).slice(0, 100), value: `${s.tmdbId}|tv|${s.title || ""}`.slice(0, 100) }));
     await interaction.respond(choices);
   } catch (e) {
     logger.error("Autocomplete error:", e);
@@ -346,6 +377,11 @@ export async function handleAutocomplete(interaction) {
   if (interaction.commandName === "trending") return handleTrendingAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "status") return handleStatusAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "cast") return handlePersonAutocomplete(interaction, focusedValue);
+  if (interaction.commandName === "subscribe") {
+    return interaction.options.getSubcommand() === "remove"
+      ? handleSubscriptionRemoveAutocomplete(interaction, focusedValue)
+      : handleSeriesAutocomplete(interaction, focusedValue);
+  }
 
   // Default: search autocomplete (used by /search, /request, /collection)
   return handleSearchAutocomplete(interaction, focusedValue);

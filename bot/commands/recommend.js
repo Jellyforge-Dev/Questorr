@@ -8,7 +8,9 @@ import { isValidUrl } from "../../utils/url.js";
 import logger from "../../utils/logger.js";
 
 export async function handleRecommendCommand(interaction) {
-  await interaction.deferReply({ flags: 64 });
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ flags: 64 });
+  }
 
   const apiKey = getTmdbApiKey();
   if (!apiKey) {
@@ -117,7 +119,7 @@ export async function handleRecommendCommand(interaction) {
       if (rec.seerrStatus === 5 || rec.available) status = "✅";
       else if (rec.seerrStatus === 4) status = "📥";
       else if (rec.seerrStatus === 2 || rec.seerrStatus === 3) status = "⏳";
-      else status = "";
+      else status = "🔍"; // 🔍 not yet in library
       const ratingStr = rec.rating ? ` ⭐ ${rec.rating}` : "";
       const yearStr = rec.year ? ` (${rec.year})` : "";
       let line = `**${i + 1}. ${rec.title}${yearStr}**${ratingStr} ${status}`;
@@ -129,30 +131,41 @@ export async function handleRecommendCommand(interaction) {
       `${t("recommend_legend")}\n\n${lines.join("\n\n")}`
     );
 
-    // Build buttons for available items (Watch Now links)
-    const components = [];
+    // Per-item buttons: Watch (if available) OR Request (if missing & not pending)
+    const watchButtons = [];
+    const requestButtons = [];
     const _showRec = parseButtonConfig("NOTIF_BUTTONS_RANDOM");
 
     for (const rec of recommendations) {
       if (rec.available && rec.jellyfinItemId && _showRec("watch")) {
         const watchUrl = buildJellyfinUrl(rec.jellyfinItemId);
         if (watchUrl && isValidUrl(watchUrl)) {
-          const label = `▶ ${rec.title.substring(0, 70)}`;
-          components.push(
+          watchButtons.push(
             new ButtonBuilder()
               .setStyle(ButtonStyle.Link)
-              .setLabel(label)
+              .setLabel(`▶ ${rec.title.substring(0, 60)}`)
               .setURL(watchUrl)
           );
         }
+      } else if (!rec.available && (rec.seerrStatus === null || rec.seerrStatus === 1)) {
+        requestButtons.push(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId(`request_random_${rec.id}_${rec.type}`)
+            .setLabel(`📥 ${rec.title.substring(0, 60)}`)
+        );
       }
     }
 
-    // Limit to 5 buttons (Discord max per row)
     const replyOpts = { embeds: [embed] };
-    if (components.length > 0) {
-      replyOpts.components = [new ActionRowBuilder().addComponents(components.slice(0, 5))];
+    const rows = [];
+    if (watchButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(watchButtons.slice(0, 5)));
     }
+    if (requestButtons.length > 0) {
+      rows.push(new ActionRowBuilder().addComponents(requestButtons.slice(0, 5)));
+    }
+    if (rows.length > 0) replyOpts.components = rows;
 
     return interaction.editReply(replyOpts);
   } catch (err) {

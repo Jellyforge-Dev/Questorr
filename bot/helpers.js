@@ -35,3 +35,18 @@ export function parseButtonConfig(envKey) {
 export const getSeerrUrl = () => getSeerrApiUrl(process.env.SEERR_URL || "");
 export const getSeerrApiKey = () => process.env.SEERR_API_KEY;
 export const getTmdbApiKey = () => process.env.TMDB_API_KEY;
+
+/**
+ * Parse USER_MAPPINGS from the runtime env (the form bot commands resolve
+ * against). Shared by /foryou and /queue, which previously each re-implemented
+ * this. Returns [] on unset / malformed / non-array input.
+ */
+export function getUserMappingsFromEnv() {
+  try {
+    const raw = process.env.USER_MAPPINGS;
+    const mappings = typeof raw === "string" ? JSON.parse(raw) : raw || [];
+    return Array.isArray(mappings) ? mappings : [];
+  } catch {
+    return [];
+  }
+}

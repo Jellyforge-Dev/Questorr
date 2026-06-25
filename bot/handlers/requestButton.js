@@ -3,8 +3,9 @@ import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { fetchOMDbData } from "../../api/omdb.js";
 import { buildNotificationEmbed, buildButtons } from "../embeds.js";
-import { parseQualityAndServerOptions, getSeerrAutoApprove } from "../botUtils.js";
+import { parseQualityAndServerOptions, getSeerrAutoApprove, getQuotaDenial } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
+import { add as addToRequestStore } from "../../utils/requestStore.js";
 import { getUserMappings } from "../../utils/configFile.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
@@ -21,6 +22,11 @@ export async function handleRequestButton(interaction) {
   }
 
   await interaction.deferUpdate();
+
+  const quotaDenial = getQuotaDenial(interaction);
+  if (quotaDenial) {
+    return interaction.followUp({ content: quotaDenial, flags: 64 });
+  }
 
   try {
     const details = await tmdbApi.tmdbGetDetails(
@@ -114,7 +120,7 @@ export async function handleRequestButton(interaction) {
       mediaType
     );
 
-    await seerrApi.sendRequest({
+    const createdRequest = await seerrApi.sendRequest({
       tmdbId,
       mediaType,
       seasons: seasonsToRequest,
@@ -131,7 +137,22 @@ export async function handleRequestButton(interaction) {
       `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
     );
 
-    if (process.env.NOTIFY_ON_AVAILABLE === "true") {
+    // Record the request in the lifecycle store keyed on the Seerr requestId so
+    // /queue can show its status. Falls back to a null requestId (pseudo-key) on
+    // older Seerr that doesn't return an id.
+    addToRequestStore({
+      requestId: createdRequest?.id ?? null,
+      tmdbId,
+      mediaType,
+      title: details.title || details.name,
+      discordUserId: interaction.user.id,
+    });
+
+    // Always record the request in pendingRequests. The map serves as the
+    // source-of-truth for the Jellyfin poller to recognize "this title was
+    // requested via Questorr/Seerr" and suppress the duplicate "Neu in Jellyfin"
+    // post. The availability DM in seerrWebhook.js is gated by NOTIFY_ON_AVAILABLE.
+    {
       const requestKey = `${tmdbId}-${mediaType}`;
       if (!pendingRequests.has(requestKey)) {
         pendingRequests.set(requestKey, new Set());

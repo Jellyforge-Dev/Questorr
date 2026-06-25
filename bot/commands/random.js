@@ -78,6 +78,18 @@ export async function handleRandomCommand(interaction) {
     if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
       components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
     }
+    // Trailer (YouTube link from TMDB) — best-effort, swallowed on failure
+    if (_showRandom("trailer") && tmdbIdFromJf) {
+      try {
+        const tmdbType = itemType === "Movie" ? "movie" : "tv";
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        if (trailerUrl && isValidUrl(trailerUrl)) {
+          components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_trailer")).setURL(trailerUrl));
+        }
+      } catch (err) {
+        logger.debug("[random] trailer lookup failed:", err.message);
+      }
+    }
     const seerrBaseR = (process.env.SEERR_URL || "").replace(/\/$/, "");
     const tmdbIdForSeerr = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
     if (_showRandom("seerr") && seerrBaseR && tmdbIdForSeerr) {
@@ -99,7 +111,17 @@ export async function handleRandomCommand(interaction) {
       if (isValidUrl(imdbUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_imdb")).setURL(imdbUrlR));
     }
     const replyOptsR = { embeds: [embed] };
-    if (components.length > 0) replyOptsR.components = [new ActionRowBuilder().addComponents(components)];
+    const allRows = [];
+    if (components.length > 0) {
+      allRows.push(new ActionRowBuilder().addComponents(components));
+    }
+    // Append the contextual action buttons (🔗 Similar | 📦 Collection | 🎭 Cast | ⭐ Recommend)
+    if (tmdbIdForSeerr) {
+      const { buildActionButtons } = await import("../embeds.js");
+      const actionRow = buildActionButtons(tmdbIdForSeerr, item.Type === "Series" ? "tv" : "movie");
+      if (actionRow) allRows.push(actionRow);
+    }
+    if (allRows.length > 0) replyOptsR.components = allRows;
     return interaction.editReply(replyOptsR);
   } catch (err) {
     logger.error("Random command error:", err);

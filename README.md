@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.3.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -34,6 +34,15 @@
 | 📦 `/collection` | View all movies in a franchise/collection with availability |
 | 🎭 `/cast` | Browse an actor's full filmography with pagination |
 | 🔗 `/similar` | Find similar titles based on genre and keywords |
+| 📥 `/queue` | Track the status of **your own** requests — grouped by stage (waiting, downloading, available, declined, failed) |
+| 🔔 `/subscribe` | Subscribe to a series for a DM when a new season drops, plus an opt-in **personalised weekly recommendation DM** |
+| ✨ `/foryou` | Personalised recommendations based on your Jellyfin watch history |
+| 🔖 `/watchlist` | View recent media requests from Seerr |
+| 🕘 `/history` | View recently added movies and series on Jellyfin |
+| 📅 `/upcoming` | Browse upcoming movie releases and new TV shows from TMDB |
+| ❓ `/help` | Show all available commands with quick-action buttons |
+| 🆕 Weekly digest | Opt-in weekly post of new movies, series **and episodes** added to your Jellyfin library |
+| 🚦 Per-user quota | Optional rolling 7-day request limit per user, with bypass roles and unlimited users |
 | 🔔 Smart notifications | Rich Discord embeds for all Seerr events (pending, approved, available, declined, failed, issues) |
 | 📺 Channel routing | Notifications automatically routed to the correct channel based on Radarr/Sonarr root folder |
 | 🔕 Private events | New request and declined notifications go directly to the requester as a DM — not to the public channel |

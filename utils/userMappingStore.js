@@ -55,6 +55,23 @@ export function saveUserMapping(mapping) {
 }
 
 /**
+ * Delete every user mapping. Used by the dashboard "remove all" button.
+ * @returns {number} Number of mappings that were removed
+ * @throws {Error} If config write fails
+ */
+export function deleteAllUserMappings() {
+  const config = readConfig() || {};
+  const count = Array.isArray(config.USER_MAPPINGS) ? config.USER_MAPPINGS.length : 0;
+  if (count === 0) return 0;
+  config.USER_MAPPINGS = [];
+  if (!writeConfig(config)) {
+    throw new Error("Failed to save config after clearing all user mappings");
+  }
+  logger.info(`✅ Cleared all ${count} user mapping(s)`);
+  return count;
+}
+
+/**
  * Delete a user mapping by Discord user ID
  * @param {string} discordUserId - Discord user ID to remove
  * @returns {boolean} True if deleted, false if not found

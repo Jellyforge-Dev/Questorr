@@ -6,8 +6,12 @@ import {
 } from "discord.js";
 import { registerCommands } from "../discord/commands.js";
 import { botState, loadPendingRequests } from "./botState.js";
+import { load as loadRequestStore, prune as pruneRequestStore } from "../utils/requestStore.js";
 import { registerInteractions } from "./interactions.js";
-import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
+import { stopCleanupAdvisor } from "./cleanupAdvisor.js";
+import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
+import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
+import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -18,6 +22,8 @@ export async function startBot() {
   }
 
   loadPendingRequests();
+  loadRequestStore();
+  pruneRequestStore(); // drop completed entries older than 30 days on each start
 
   const configLoaded = loadConfigToEnv();
   if (!configLoaded) {
@@ -69,10 +75,9 @@ export async function startBot() {
       botState.isBotRunning = true;
       botState.botStartedAt = Date.now();
 
-      logger.info("ℹ️ Jellyfin notifications will be received via webhooks.");
-
-      scheduleDailyRandomPick(client);
-      scheduleDailyRecommendation(client);
+      rescheduleTimedJobs(client);
+      startJellyfinPoller(client);
+      startSeerrStatusPoller();
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

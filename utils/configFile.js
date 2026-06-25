@@ -17,21 +17,62 @@ const SENSITIVE_FIELDS = new Set([
 ]);
 
 // ─── AES-256-GCM Encryption ──────────────────────────────────────────────────
-// Derives a stable 256-bit key from the machine's hostname + config path.
-// This is NOT a master-password scheme — it ties config to THIS machine,
-// which is the right trade-off for a self-hosted Docker app.
+// Key is stored in <configDir>/.questorr.key (32 random bytes, mode 0o600).
+// On first run the key is generated and saved into the volume-mounted config
+// directory so it survives container restarts and re-creates.
+// Legacy fallback: if decryption fails with the key-file key, the old
+// hostname-derived key is tried automatically so existing installs migrate
+// without requiring credential re-entry.
 const ENC_PREFIX = "enc:";
 const B64_PREFIX = "b64:"; // legacy prefix — still recognized for migration
 
-function deriveKey() {
+function getKeyFilePath() {
+  return path.join(path.dirname(CONFIG_PATH), ".questorr.key");
+}
+
+// Legacy key — hostname + cwd, kept only as a decryption fallback.
+function deriveKeyLegacy() {
   const material = `questorr:${os.hostname()}:${process.cwd()}`;
   return crypto.createHash("sha256").update(material).digest();
 }
 
+function loadOrCreateKeyFile() {
+  const keyPath = getKeyFilePath();
+  if (fs.existsSync(keyPath)) {
+    try {
+      const key = fs.readFileSync(keyPath);
+      if (key.length === 32) return key;
+      logger.warn("[Config] Key file has unexpected length — regenerating");
+    } catch (err) {
+      logger.warn(`[Config] Cannot read key file: ${err.message} — regenerating`);
+    }
+  }
+  const key = crypto.randomBytes(32);
+  try {
+    const dir = path.dirname(keyPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+    fs.writeFileSync(keyPath, key, { mode: 0o600 });
+    logger.info(`[Config] Generated new encryption key → ${keyPath}`);
+  } catch (err) {
+    logger.warn(`[Config] Cannot save key file (${err.message}), falling back to host-derived key`);
+    return deriveKeyLegacy();
+  }
+  return key;
+}
+
 let _derivedKey = null;
 function getKey() {
-  if (!_derivedKey) _derivedKey = deriveKey();
+  if (!_derivedKey) _derivedKey = loadOrCreateKeyFile();
   return _derivedKey;
+}
+
+function tryDecryptWith(key, raw) {
+  const iv = raw.subarray(0, 12);
+  const tag = raw.subarray(12, 28);
+  const ciphertext = raw.subarray(28);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  return decipher.update(ciphertext, undefined, "utf8") + decipher.final("utf8");
 }
 
 function encrypt(plaintext) {
@@ -39,18 +80,16 @@ function encrypt(plaintext) {
   const cipher = crypto.createCipheriv("aes-256-gcm", getKey(), iv);
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  // Format: base64(iv + tag + ciphertext)
   return ENC_PREFIX + Buffer.concat([iv, tag, encrypted]).toString("base64");
 }
 
 function decrypt(blob) {
   const raw = Buffer.from(blob.slice(ENC_PREFIX.length), "base64");
-  const iv = raw.subarray(0, 12);
-  const tag = raw.subarray(12, 28);
-  const ciphertext = raw.subarray(28);
-  const decipher = crypto.createDecipheriv("aes-256-gcm", getKey(), iv);
-  decipher.setAuthTag(tag);
-  return decipher.update(ciphertext, undefined, "utf8") + decipher.final("utf8");
+  try {
+    return tryDecryptWith(getKey(), raw);
+  } catch (_) {}
+  // Fallback: value was encrypted by the old hostname-based key (migration path)
+  return tryDecryptWith(deriveKeyLegacy(), raw);
 }
 
 function encodeConfig(config) {
@@ -75,7 +114,10 @@ function decodeConfig(config) {
       try {
         out[field] = decrypt(out[field]);
       } catch (err) {
-        logger.error(`Failed to decrypt ${field} — config may have been moved between machines: ${err.message}`);
+        logger.error(
+          `Failed to decrypt ${field} — the encryption key has changed (e.g. config volume was replaced). ` +
+          `Please re-enter the value in the dashboard. Field cleared.`
+        );
         out[field] = "";
       }
     }
@@ -290,6 +332,24 @@ export function updateConfig(updates) {
 }
 
 /**
+ * One-time migration of NOTIFY_ON_AVAILABLE for installs that predate the
+ * availability-DM gate. The gate was never wired, so the DM always fired and a
+ * stored "false" reflected the old default — not a deliberate choice. Bump such
+ * a "false" to "true" to preserve the observed behaviour, and set a marker so a
+ * user's *future* deliberate "false" (now that the gate works) is never reverted.
+ *
+ * Mutates `config` in place. @returns {boolean} true if the caller should persist.
+ */
+export function migrateNotifyOnAvailable(config) {
+  if (config.NOTIFY_ON_AVAILABLE_MIGRATED !== undefined) return false;
+  if (config.NOTIFY_ON_AVAILABLE === "false" || config.NOTIFY_ON_AVAILABLE === false) {
+    config.NOTIFY_ON_AVAILABLE = "true";
+  }
+  config.NOTIFY_ON_AVAILABLE_MIGRATED = true;
+  return true;
+}
+
+/**
  * Loads config into process.env for compatibility with existing code
  * Includes automatic migrations for backwards compatibility
  * @returns {boolean} True if load succeeded
@@ -341,6 +401,17 @@ export function loadConfigToEnv() {
       config.SEERR_ROOT_FOLDER_CHANNELS = JSON.parse(config.SEERR_ROOT_FOLDER_CHANNELS);
     } catch (_) {
       config.SEERR_ROOT_FOLDER_CHANNELS = {};
+    }
+  }
+
+  // 1b. One-time NOTIFY_ON_AVAILABLE migration (see migrateNotifyOnAvailable).
+  if (migrateNotifyOnAvailable(config)) {
+    if (writeConfig(config)) {
+      logger.info(
+        `🔄 NOTIFY_ON_AVAILABLE migrated (now "${config.NOTIFY_ON_AVAILABLE}") and marker set`
+      );
+    } else {
+      logger.error("Failed to persist NOTIFY_ON_AVAILABLE migration");
     }
   }
 
@@ -439,6 +510,6 @@ export function loadConfigToEnv() {
 
 export { getUsers, saveUser } from "./userStore.js";
 
-export { getUserMappings, saveUserMapping, deleteUserMapping } from "./userMappingStore.js";
+export { getUserMappings, saveUserMapping, deleteUserMapping, deleteAllUserMappings } from "./userMappingStore.js";
 
 export { normalizeSeerrUrl, getSeerrApiUrl } from "./seerrUrl.js";

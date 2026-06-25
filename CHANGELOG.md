@@ -4,6 +4,24 @@
 
 ## English
 
+### 🎉 What's New in v2.4.0
+
+#### 🆕 Weekly Library Digest
+An opt-in weekly post listing what was added to your Jellyfin library in the last 7 days — new **movies**, new **series**, and **new episodes** of existing series (aggregated per series, e.g. "Breaking Bad — 8 new episodes"). Channel, day and time are configurable; nothing is posted on a quiet week. Includes a **"Send test digest now"** button with diagnostic output (how many items were found and why).
+
+#### 🔔 `/subscribe`
+Subscribe to a series and get a DM when a new season appears on Jellyfin. `/subscribe remove` unsubscribes (with autocomplete of your own subscriptions), `/subscribe list` shows your subscriptions, and `/subscribe weekly` opts into a **personalised weekly recommendation DM** based on your watch history. Also available as a button in the `/help` wizard.
+
+#### 🚦 Per-User Request Quota
+An optional rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; `0` disables it.
+
+#### 🎛️ Dashboard Improvements
+- **Role filter + Discord avatars** for member pickers (quota unlimited-users, user mapping) — pick a role to narrow a long member list
+- **Channel / member dropdowns** instead of raw ID fields
+- UI **language now persists per browser** — no more reverting to the default on reload/login
+- **Cache-busted assets** so dashboard updates are never served stale, even behind a reverse proxy
+- **Cron timing changes apply live on save** — no bot restart needed for digest/weekly/cleanup schedules
+
 ### 🎉 What's New in v2.3.0
 
 #### New Commands
@@ -80,6 +98,24 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🎉 Neues in v2.4.0
+
+#### 🆕 Wöchentlicher Library-Digest
+Ein optionaler Wochenpost mit allem, was in den letzten 7 Tagen zur Jellyfin-Library hinzugefügt wurde — neue **Filme**, neue **Serien** und **neue Folgen** bestehender Serien (pro Serie aggregiert, z.B. „Breaking Bad — 8 neue Folgen"). Channel, Tag und Uhrzeit sind konfigurierbar; in einer ruhigen Woche wird nichts gepostet. Inklusive **„Test-Digest jetzt senden"**-Button mit Diagnose-Ausgabe (wie viele Items gefunden wurden und warum).
+
+#### 🔔 `/subscribe`
+Eine Serie abonnieren und eine DM erhalten, sobald auf Jellyfin eine neue Staffel erscheint. `/subscribe remove` beendet das Abo (mit Autocomplete der eigenen Abos), `/subscribe list` zeigt deine Abos, und `/subscribe weekly` aktiviert eine **personalisierte Wochenempfehlung per DM** basierend auf deinem Sehverlauf. Auch als Button im `/help`-Wizard verfügbar.
+
+#### 🚦 Anfragelimit pro Benutzer
+Ein optionales rollierendes 7-Tage-Limit, wie viele Anfragen jeder Benutzer über Questorr stellen kann. Bypass-Rollen und einzelne unbegrenzte Benutzer sind konfigurierbar; `0` deaktiviert es.
+
+#### 🎛️ Dashboard-Verbesserungen
+- **Rollen-Filter + Discord-Avatare** für Benutzer-Auswahl (Quota-Unbegrenzt, Benutzer-Zuordnung) — Rolle wählen, um eine lange Liste einzugrenzen
+- **Channel-/Benutzer-Dropdowns** statt roher ID-Felder
+- UI-**Sprache bleibt jetzt pro Browser erhalten** — kein Zurückspringen auf den Standard beim Neuladen/Login
+- **Cache-Busting** für Dashboard-Assets — keine veralteten Auslieferungen mehr, auch hinter einem Reverse Proxy
+- **Cron-Zeitänderungen greifen sofort beim Speichern** — kein Bot-Neustart für Digest-/Weekly-/Cleanup-Zeitpläne nötig
 
 ### 🎉 Neues in v2.3.0
 

@@ -290,6 +290,37 @@
                         </div>
                       </div>
 
+                      <!-- Post Help Wizard Section -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
+                        <label style="font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 0.5rem; display: block;">
+                          <i class="bi bi-pin-angle-fill"></i> <span data-i18n="config.post_help_title">Post Help Wizard to Channel</span>
+                        </label>
+                        <div class="form-text" style="margin-bottom: 1rem;" data-i18n="config.post_help_desc">
+                          Post the /help wizard (embed + quick-action buttons) to a Discord channel so all users can access it without typing /help.
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.post_help_channel">Channel</label>
+                          <select
+                            id="POST_HELP_CHANNEL_ID"
+                            name="POST_HELP_CHANNEL_ID"
+                            class="form-select channel-select"
+                            data-channel-select="true"
+                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
+                          </select>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                          <input type="checkbox" id="post-help-pin" />
+                          <span data-i18n="config.post_help_pin">Pin message after posting</span>
+                        </label>
+                        <div>
+                          <button type="button" id="post-help-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="bi bi-pin-angle-fill"></i> <span data-i18n="config.post_help_btn">Post Help Wizard</span>
+                          </button>
+                          <span id="post-help-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
+                        </div>
+                      </div>
+
                     </fieldset>
                   </div>
 
@@ -412,11 +443,21 @@
 							<code id="seerr-webhook-secret-display" style="flex: 1; padding: 0.4rem 0.75rem; background: var(--surface0); border-radius: 6px; font-size: 0.9rem; min-width: 120px;">–</code>
 							<button type="button" id="copy-seerr-webhook-secret-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.seerr_webhook_copy_secret">Copy Secret</button>
 						</div>
-                        <div style="margin-top: 0.75rem;">
-                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">
-                            <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Webhook testen</span>
+						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(243, 139, 168, 0.10); border-left: 3px solid var(--red); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_warning">
+							⚠️ <strong>Wichtig:</strong> Trage das Secret in Seerr in das Feld <strong>"Authorization Header"</strong> ein — <em>nicht</em> in die URL. Ohne korrektes Secret werden alle Webhook-Events mit HTTP 401 abgewiesen und du erhältst keine DM- oder Channel-Benachrichtigungen.
+						</div>
+						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(137, 180, 250, 0.10); border-left: 3px solid var(--blue); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_notif_types_hint">
+							ℹ️ <strong>Tipp:</strong> Aktiviere in Seerr unter <em>Settings → Notifications → Webhook → Notification Types</em> mindestens <strong>Request Pending Approval</strong>, <strong>Request Approved</strong>, <strong>Request Auto-Approved</strong>, <strong>Request Declined</strong>, <strong>Request Available</strong> und <strong>Request Failed</strong> — sonst bekommen User keine Status-DMs, wenn ein Admin Anfragen direkt in der Seerr-UI genehmigt.
+						</div>
+                        <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Sendet eine Test-Notification direkt an Discord (umgeht die Auth-Prüfung)">
+                            <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Discord-Test</span>
                           </button>
-                          <span id="test-seerr-webhook-status" style="margin-left: 0.75rem; font-size: 0.9rem;"></span>
+                          <button type="button" id="test-seerr-roundtrip-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Triggert Seerr, einen Webhook an Questorr zu senden — testet die volle Kette inkl. Authorization-Header">
+                            <i class="bi bi-arrow-left-right"></i> <span data-i18n="config.test_seerr_roundtrip">Round-Trip Test</span>
+                          </button>
+                          <span id="test-seerr-webhook-status" style="font-size: 0.9rem;"></span>
+                          <div id="seerr-webhook-status-badge" style="display: none; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.82rem; margin-left: auto;" title=""></div>
                         </div>
                       </div>
 
@@ -617,6 +658,114 @@
                         </div>
                       </div>
 
+                      <!-- Jellyfin Auto-Detection of new content -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--green);">
+                        <p style="margin: 0 0 0.75rem; font-weight: 700; color: var(--green);" data-i18n="config.jellyfin_autodetect_title">🔍 Automatische Erkennung neuer Inhalte</p>
+                        <p style="margin: 0 0 1rem; font-size: 0.88rem; color: var(--subtext0);" data-i18n="config.jellyfin_autodetect_desc">
+                          Questorr prüft selbstständig in regelmäßigen Abständen, ob neue Filme oder Serien zu Jellyfin hinzugefügt wurden – auch wenn sie <strong>nicht</strong> über Seerr angefragt wurden. Beim ersten Start werden alle vorhandenen Inhalte still erfasst; Benachrichtigungen werden nur für danach hinzugefügte Inhalte gesendet.
+                        </p>
+                        <div class="form-group">
+                          <label for="JELLYFIN_POLL_INTERVAL_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_interval_label">Prüf-Intervall (Sekunden)</label>
+                          <input type="number" id="JELLYFIN_POLL_INTERVAL_SECONDS" name="JELLYFIN_POLL_INTERVAL_SECONDS"
+                            placeholder="300" min="0" max="86400" step="30"
+                            style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_interval_help">
+                            Wie oft Jellyfin auf neue Inhalte geprüft wird. Empfohlen: 60 (sehr aktive Bibliothek), 300 (Standard, 5 Minuten), 900 (große ruhige Bibliothek, 15 Minuten). <strong>0 = deaktiviert.</strong>
+                          </div>
+                          <div id="POLLER_STATUS_BLOCK" style="margin-top:0.75rem;padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);font-size:0.85em;color:var(--subtext1);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                              <span id="POLLER_STATUS_TEXT" data-i18n="config.poller_status_loading">Status: lädt…</span>
+                              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Sucht nach kürzlich hinzugefügten Items (letzte 7 Tage) und sendet Notifications für noch nicht gemeldete. Ältere Library-Inhalte werden NICHT benachrichtigt." data-i18n="config.btn_poll_now_tooltip" data-i18n-attr="title">
+                                  <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="form-group" style="margin-top:1rem;">
+                          <div id="PREFLIGHT_BLOCK" style="padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                              <span style="font-weight:600;" data-i18n="config.preflight_title">🩺 System-Check</span>
+                              <button type="button" id="BTN_PREFLIGHT" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
+                                <i class="bi bi-clipboard-check"></i> <span data-i18n="config.preflight_check_button">Alles prüfen</span>
+                              </button>
+                            </div>
+                            <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.preflight_description">Prüft Seerr, Jellyfin, TMDB, Bot-Status und User-Mappings auf einen Blick.</div>
+                            <div id="PREFLIGHT_BODY" style="font-size:0.85em;color:var(--subtext1);" data-i18n="config.preflight_not_checked">Noch nicht geprüft.</div>
+                          </div>
+                        </div>
+                        <div class="form-group" style="margin-top:1rem;">
+                          <div id="NOTIFICATION_AUDIT_BLOCK" style="padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                              <span style="font-weight:600;" data-i18n="config.audit_title">📋 Letzte Benachrichtigungen</span>
+                              <button type="button" id="BTN_REFRESH_AUDIT" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
+                                <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.audit_refresh">Aktualisieren</span>
+                              </button>
+                            </div>
+                            <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.audit_description">Was Questorr zuletzt gepostet oder übersprungen hat – inkl. Quelle, Ziel-Channel und Dedup-Grund.</div>
+                            <div id="NOTIFICATION_AUDIT_BODY" style="font-size:0.82em;color:var(--subtext1);overflow-x:auto;" data-i18n="config.audit_loading">Lädt…</div>
+                          </div>
+                        </div>
+                        <div class="form-group" style="margin-top:1rem;">
+                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_types_label">Benachrichtigungstypen</label>
+                          <div style="display:flex;flex-wrap:wrap;gap:1rem;">
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_NOTIFY_MOVIES" name="JELLYFIN_NOTIFY_MOVIES" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_movies">🎬 Filme</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_NOTIFY_SERIES" name="JELLYFIN_NOTIFY_SERIES" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_series">📺 Serien</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_NOTIFY_SEASONS" name="JELLYFIN_NOTIFY_SEASONS" value="true" style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_seasons">📀 Staffeln</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_NOTIFY_EPISODES" name="JELLYFIN_NOTIFY_EPISODES" value="true" style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_episodes">▶️ Episoden</span>
+                            </label>
+                          </div>
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_types_help">Für welche Inhaltstypen Benachrichtigungen gesendet werden sollen.</div>
+                        </div>
+
+                        <!-- Poller Button Configuration -->
+                        <div class="form-group" style="margin-top:1rem;">
+                          <label style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_buttons_label">Buttons in Benachrichtigung</label>
+                          <div style="display:flex;flex-wrap:wrap;gap:1rem;">
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" name="JELLYFIN_POLLER_SHOW_BUTTON_WATCH" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_btn_watch">▶️ Jetzt ansehen</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" name="JELLYFIN_POLLER_SHOW_BUTTON_IMDB" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_btn_imdb">🎬 IMDb</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                              <input type="checkbox" id="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" name="JELLYFIN_POLLER_SHOW_BUTTON_LETTERBOXD" value="true" checked style="width:1.1rem;height:1.1rem;" />
+                              <span data-i18n="config.jellyfin_autodetect_btn_letterboxd">📝 Letterboxd</span>
+                            </label>
+                          </div>
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_buttons_help">Welche Buttons in automatischen Jellyfin-Benachrichtigungen angezeigt werden.</div>
+                        </div>
+
+                        <!-- Metadata Delay -->
+                        <div class="form-group" style="margin-top:1rem;">
+                          <label for="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.jellyfin_autodetect_metadata_delay_label">Metadaten-Verzögerung (Sekunden)</label>
+                          <input type="number" id="JELLYFIN_POLLER_METADATA_DELAY_SECONDS" name="JELLYFIN_POLLER_METADATA_DELAY_SECONDS"
+                            placeholder="60" min="0" max="600" step="10"
+                            style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                          <div class="form-text" style="margin-top:0.5rem;" data-i18n="config.jellyfin_autodetect_metadata_delay_help">
+                            Wartezeit bevor eine Benachrichtigung gesendet wird, wenn Jellyfin noch keinen TMDB-Link gefunden hat (z. B. bei frisch importierten Inhalten). Standard: 60s. <strong>0 = sofort senden.</strong>
+                          </div>
+                        </div>
+
+                        <p style="margin: 0.75rem 0 0; font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.jellyfin_autodetect_routing_note">
+                          Die Bibliothek-→-Kanal-Zuordnung oben gilt auch für diese Benachrichtigungen. Der Fallback-Kanal (links oben) wird verwendet, wenn keine Bibliothek passt.
+                        </p>
+                      </div>
+
                       <!-- Info Box -->
                       <div style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--mauve);">
                         <p style="margin: 0; font-size: 0.95rem; color: var(--subtext0);">
@@ -652,6 +801,10 @@
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
                               <label for="discord-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_discord_label">Discord User</label>
                             </div>
+                            <select id="mapping-role-filter" aria-label="Filter members by role"
+                              style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
+                              <option value="" data-i18n="config.all_members">All members</option>
+                            </select>
                             <div class="custom-select" id="discord-user-select">
                               <input type="text" class="custom-select-trigger" placeholder="Discord-User suchen..." data-i18n="config.mappings_discord_search" data-i18n-attr="placeholder" readonly />
                               <i class="bi bi-chevron-down custom-select-chevron"></i>
@@ -683,6 +836,7 @@
                             </div>
                           </div>
                           <button type="button" id="add-mapping-btn" class="btn btn-primary" style="margin-left: 0;" data-i18n="config.mappings_add_btn">Add Mapping</button>
+                          <button type="button" id="remove-all-mappings-btn" class="btn btn-danger" style="margin-left: 0.75rem; display: none;" data-i18n="config.remove_all_mappings_btn">Alle Zuordnungen entfernen</button>
                         </div>
                       </div>
                     </fieldset>
@@ -716,16 +870,124 @@
                         </div>
                       </div>
                     </fieldset>
+
+                    <fieldset style="margin-top: 1.5rem;">
+                      <legend data-i18n="config.quota_section">Request Quota</legend>
+                      <div class="form-text" style="margin-bottom: 1rem;">
+                        <span data-i18n="config.quota_desc">Limit how many requests each user can make in a rolling 7-day window. 0 = unlimited (off). Counts only requests made through Questorr.</span>
+                      </div>
+                      <div class="form-group">
+                        <label for="QUOTA_WEEKLY_LIMIT" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.quota_limit_label">Requests per 7 days (0 = unlimited)</label>
+                        <input type="number" id="QUOTA_WEEKLY_LIMIT" name="QUOTA_WEEKLY_LIMIT" min="0" max="1000" placeholder="0"
+                          style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                      </div>
+                      <div class="form-group">
+                        <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_bypass_roles_label">Bypass roles (unlimited)</label>
+                        <div id="quota-bypass-roles" class="role-list">
+                          <p class="form-text" style="opacity:0.7;font-style:italic;" data-i18n="config.roles_loading">Loading roles...</p>
+                        </div>
+                        <div class="form-text"><span data-i18n="config.quota_bypass_roles_desc">Members with any of these roles are never limited.</span></div>
+                      </div>
+                      <div class="form-group">
+                        <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_unlimited_users_label">Unlimited users</label>
+                        <select id="quota-unlimited-role-filter" aria-label="Filter members by role"
+                          style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
+                          <option value="" data-i18n="config.all_members">All members</option>
+                        </select>
+                        <div id="quota-unlimited-users" class="role-list">
+                          <p class="form-text" style="opacity:0.7;font-style:italic;" data-i18n="config.members_load_hint">Select a server to load members.</p>
+                        </div>
+                        <div class="form-text"><span data-i18n="config.quota_unlimited_users_desc">These users can always request, regardless of the quota.</span></div>
+                      </div>
+                    </fieldset>
                   </div>
 
                   <!-- Miscellaneous Pane -->
                   <div id="config-pane-misc" class="config-pane">
                     <fieldset>
+                      <legend data-i18n="config.subscriptions_section">Subscriptions</legend>
+                      <div class="form-text" style="margin-bottom: 1rem;">
+                        <span data-i18n="config.subscriptions_desc">Settings for /subscribe — series new-season DMs and the weekly recommendation DM.</span>
+                      </div>
+                      <div class="form-group">
+                        <label for="SUBSCRIPTION_POLL_INTERVAL_MINUTES" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.subscription_interval_label">Series check interval (minutes, 0 = off)</label>
+                        <input type="number" id="SUBSCRIPTION_POLL_INTERVAL_MINUTES" name="SUBSCRIPTION_POLL_INTERVAL_MINUTES" min="0" max="10080" placeholder="60"
+                          style="width:100%;max-width:150px;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background:var(--surface0);color:var(--text);font-size:1rem;" />
+                        <div class="form-text"><span data-i18n="config.subscription_interval_help">How often Jellyfin is checked for new seasons of subscribed series.</span></div>
+                      </div>
+                      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                        <div class="form-group" style="margin:0;">
+                          <label for="WEEKLY_RECOMMENDATION_DAY" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.weekly_rec_day">Weekly recommendation — day</label>
+                          <select id="WEEKLY_RECOMMENDATION_DAY" name="WEEKLY_RECOMMENDATION_DAY" style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
+                            <option value="monday">Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                            <option value="sunday" selected>Sunday</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                          <label for="WEEKLY_RECOMMENDATION_TIME" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.weekly_rec_time">Time (HH:MM)</label>
+                          <input type="time" id="WEEKLY_RECOMMENDATION_TIME" name="WEEKLY_RECOMMENDATION_TIME"
+                            style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;" />
+                        </div>
+                      </div>
+                      <div class="form-text" style="margin-top:0.5rem;"><span data-i18n="config.weekly_rec_help">Personalised picks are sent only to users who enabled them via /subscribe weekly (mapped users only).</span></div>
+                    </fieldset>
+                    <fieldset>
+                      <legend data-i18n="config.digest_section">Weekly digest</legend>
+                      <div class="form-text" style="margin-bottom: 1rem;">
+                        <span data-i18n="config.digest_desc">Post a weekly summary of movies and series added to the library. Silent when nothing new.</span>
+                      </div>
+                      <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:0.5rem;font-weight:600;cursor:pointer;">
+                          <input type="checkbox" id="DIGEST_ENABLED" name="DIGEST_ENABLED" style="width:auto;" />
+                          <span data-i18n="config.digest_enabled_label">Enable weekly digest</span>
+                        </label>
+                      </div>
+                      <div class="form-group">
+                        <label for="DIGEST_CHANNEL_ID" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_channel_label">Digest channel (optional)</label>
+                        <select id="DIGEST_CHANNEL_ID" name="DIGEST_CHANNEL_ID" data-channel-select="true"
+                          style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
+                          <option value="" data-i18n="config.select_channel">Select a channel...</option>
+                        </select>
+                        <div class="form-text"><span data-i18n="config.digest_channel_help">Where the digest is posted. Falls back to the Jellyfin channel if empty.</span></div>
+                      </div>
+                      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                        <div class="form-group" style="margin:0;">
+                          <label for="DIGEST_DAY" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_day">Day</label>
+                          <select id="DIGEST_DAY" name="DIGEST_DAY" style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
+                            <option value="monday" selected>Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                            <option value="sunday">Sunday</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                          <label for="DIGEST_TIME" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_time">Time (HH:MM)</label>
+                          <input type="time" id="DIGEST_TIME" name="DIGEST_TIME"
+                            style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;" />
+                        </div>
+                      </div>
+                      <div class="form-group" style="margin-top:1rem;">
+                        <button type="button" id="digest-test-btn" class="btn btn-secondary"
+                          style="display:inline-flex;align-items:center;gap:0.4rem;">
+                          <i class="bi bi-send"></i> <span data-i18n="config.digest_test_btn">Send test digest now</span>
+                        </button>
+                        <div class="form-text"><span data-i18n="config.digest_test_help">Posts the digest immediately (even if disabled) so you can verify the channel and content.</span></div>
+                      </div>
+                    </fieldset>
+                    <fieldset>
                       <legend data-i18n="config.misc_section">Miscellaneous</legend>
                       <p class="form-text" style="margin-bottom: 1.5rem;">
                         <span data-i18n="config.misc_desc">Optional settings to enhance your bot experience.</span>
                       </p>
-                      
+
                       <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="AUTO_START_BOT" name="AUTO_START_BOT" />
@@ -749,7 +1011,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="PRIVATE_MESSAGE_MODE" name="PRIVATE_MESSAGE_MODE" />
-                          Ephemeral Message Mode
+                          <span data-i18n="config.misc_ephemeral">Ephemeral Message Mode (/search only)</span>
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_ephemeral_desc">When enabled, all bot responses are only visible to the user. When disabled, successful results are visible to everyone.</span>
@@ -763,6 +1025,35 @@
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_autoapprove_desc">When enabled, requests through the bot are automatically approved in Seerr.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="APPROVAL_DM_ONLY" name="APPROVAL_DM_ONLY" />
+                          <span data-i18n="config.approval_dm_only">Approval-Benachrichtigungen nur per DM</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.approval_dm_only_desc">Wenn aktiviert, werden MEDIA_APPROVED- und MEDIA_AUTO_APPROVED-Events nur als DM an den Anfrager gesendet — kein öffentlicher Channel-Post. Empfohlen, um Kanal-Spam zu reduzieren.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="SEERR_STATUS_POLLING_ENABLED" name="SEERR_STATUS_POLLING_ENABLED" />
+                          <span data-i18n="config.misc_status_polling">Seerr Status-Polling für Approve-DMs</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.misc_status_polling_desc">Sicherheitsnetz: pollt Seerr-Anfragen alle 2 Minuten und sendet eine DM, wenn eine Anfrage in der Seerr-UI genehmigt wurde — auch wenn Seerr keinen MEDIA_APPROVED-Webhook gesendet hat. Erhöht die API-Last leicht. Aktiviere dies, wenn Genehmigungen über die Seerr-Oberfläche keine DMs auslösen.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="SEERR_STATUS_POLL_INTERVAL_SECONDS" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_status_polling_interval">Status-Poller Intervall (Sekunden)</label>
+                        <input type="number" id="SEERR_STATUS_POLL_INTERVAL_SECONDS" name="SEERR_STATUS_POLL_INTERVAL_SECONDS" placeholder="120" min="30" max="3600"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_status_polling_interval_desc">Standard: 120s. Minimum 30s, Maximum 3600s.</span>
                         </div>
                       </div>
 
@@ -782,7 +1073,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label for="EMBED_FOOTER_TEXT" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.embed_footer_label">Embed Footer Text</label>
                         <input type="text" id="EMBED_FOOTER_TEXT" name="EMBED_FOOTER_TEXT" placeholder="Powered by Questorr" maxlength="200"
-                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
                         <div class="form-text" style="margin-top: 0.4rem;">
                           <span data-i18n="config.embed_footer_desc">Custom footer text shown on all Discord embeds. Leave empty for no footer.</span>
                         </div>
@@ -893,10 +1184,18 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (minutes)</label>
+                          <label for="DAILY_RANDOM_PICK_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_time_label">Uhrzeit (HH:MM)</label>
+                          <input type="time" id="DAILY_RANDOM_PICK_TIME" name="DAILY_RANDOM_PICK_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_random_time_help">
+                            Genaue Uhrzeit für den täglichen Versand (z.B. 08:00). Wenn gesetzt, wird der Interval ignoriert.
+                          </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
                           <input type="number" id="DAILY_RANDOM_PICK_INTERVAL" name="DAILY_RANDOM_PICK_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;">
-                            <span data-i18n="config.daily_random_interval_help">How often to send a pick in minutes (default: 1440 = 24 hours)</span>
+                            <span data-i18n="config.daily_random_interval_help">Intervall in Minuten (Standard: 1440 = 24h)</span>
                           </div>
                         </div>
 
@@ -932,7 +1231,21 @@
                           </div>
                         </div>
 
-                        
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RECOMMENDATION_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_time_label">Uhrzeit (HH:MM)</label>
+                          <input type="time" id="DAILY_RECOMMENDATION_TIME" name="DAILY_RECOMMENDATION_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_time_help">
+                            Genaue Uhrzeit für den täglichen Versand (z.B. 20:00). Wenn gesetzt, wird der Interval ignoriert.
+                          </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
+                          <input type="number" id="DAILY_RECOMMENDATION_INTERVAL" name="DAILY_RECOMMENDATION_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                          <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_interval_help">
+                            Intervall in Minuten (Standard: 1440 = 24h)
+                          </div>
+                        </div>
 
                         <div style="margin-top: 1rem;">
                           <button type="button" id="test-daily-recommendation-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -942,8 +1255,96 @@
                         </div>
                       </div>
 
+                      <!-- Cleanup Advisor Section -->
+                      <div class="form-group" style="margin-top: 2rem; padding: 1rem; background-color: var(--surface0); border-radius: 8px; border-left: 4px solid var(--peach);">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                          <input type="checkbox" id="CLEANUP_ADVISOR_ENABLED" name="CLEANUP_ADVISOR_ENABLED" />
+                          <strong data-i18n="config.cleanup_advisor_title">Enable Cleanup Advisor</strong>
+                        </label>
+                        <div class="form-text" style="margin-bottom: 1rem;">
+                          <span data-i18n="config.cleanup_advisor_desc">Weekly admin-channel post listing movies that haven't been watched in a long time, to help free up storage. Movies only.</span>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                          <label for="CLEANUP_ADVISOR_CHANNEL_ID" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_channel">Channel</label>
+                          <select
+                            id="CLEANUP_ADVISOR_CHANNEL_ID"
+                            name="CLEANUP_ADVISOR_CHANNEL_ID"
+                            class="form-select channel-select"
+                            data-channel-select="true"
+                            style="width: 100%; background-color: var(--background); border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                            <option value="" data-i18n="config.select_channel">— Kanal auswählen —</option>
+                          </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_ADVISOR_DAY" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_day">Day of week</label>
+                            <select id="CLEANUP_ADVISOR_DAY" name="CLEANUP_ADVISOR_DAY" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;">
+                              <option value="monday">Monday</option>
+                              <option value="tuesday">Tuesday</option>
+                              <option value="wednesday">Wednesday</option>
+                              <option value="thursday">Thursday</option>
+                              <option value="friday">Friday</option>
+                              <option value="saturday">Saturday</option>
+                              <option value="sunday" selected>Sunday</option>
+                            </select>
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_ADVISOR_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_time">Time (HH:MM)</label>
+                            <input type="time" id="CLEANUP_ADVISOR_TIME" name="CLEANUP_ADVISOR_TIME" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MIN_AGE_DAYS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_min_age">Min. age in library (days)</label>
+                            <input type="number" id="CLEANUP_MIN_AGE_DAYS" name="CLEANUP_MIN_AGE_DAYS" placeholder="365" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MAX_PLAYCOUNT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_play">Max. play count</label>
+                            <input type="number" id="CLEANUP_MAX_PLAYCOUNT" name="CLEANUP_MAX_PLAYCOUNT" placeholder="1" min="0" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MIN_DAYS_SINCE_PLAYED" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_since_played">Min. days since last play</label>
+                            <input type="number" id="CLEANUP_MIN_DAYS_SINCE_PLAYED" name="CLEANUP_MIN_DAYS_SINCE_PLAYED" placeholder="180" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_MAX_RESULTS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_max_results">Max. results per post</label>
+                            <input type="number" id="CLEANUP_MAX_RESULTS" name="CLEANUP_MAX_RESULTS" placeholder="25" min="1" max="50" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                          <div class="form-group" style="margin: 0;">
+                            <label for="CLEANUP_FETCH_TIMEOUT_PRESET" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_timeout_label">Fetch timeout</label>
+                            <select id="CLEANUP_FETCH_TIMEOUT_PRESET" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;">
+                              <option value="30" data-i18n="config.cleanup_timeout_preset_small">Small library (~500 titles) — 30s</option>
+                              <option value="60" selected data-i18n="config.cleanup_timeout_preset_medium">Medium library (~2000 titles) — 60s</option>
+                              <option value="120" data-i18n="config.cleanup_timeout_preset_large">Large library (~6000 titles) — 120s</option>
+                              <option value="custom" data-i18n="config.cleanup_timeout_preset_custom">Custom…</option>
+                            </select>
+                            <small style="display: block; margin-top: 0.4rem; color: var(--subtext0); font-size: 0.85em;" data-i18n="config.cleanup_timeout_help">Higher values prevent timeouts on large libraries but may delay the run.</small>
+                          </div>
+                          <div class="form-group" id="CLEANUP_FETCH_TIMEOUT_CUSTOM_WRAP" style="margin: 0; display: none;">
+                            <label for="CLEANUP_FETCH_TIMEOUT_SECONDS" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_timeout_custom_label">Custom timeout (seconds)</label>
+                            <input type="number" id="CLEANUP_FETCH_TIMEOUT_SECONDS" name="CLEANUP_FETCH_TIMEOUT_SECONDS" placeholder="60" min="5" max="600" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;" />
+                          </div>
+                        </div>
+
+                        <div style="margin-top: 1rem;">
+                          <button type="button" id="test-cleanup-advisor-btn" class="btn btn-secondary" style="padding: 0.75rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="bi bi-trash"></i> <span data-i18n="config.cleanup_test">Cleanup-Vorschlag jetzt senden</span>
+                          </button>
+                          <span id="test-cleanup-advisor-status" style="margin-left: 1rem; font-size: 0.9rem;"></span>
+                        </div>
+                      </div>
+
                       <!-- Discord Embed Colors Section -->
-                      
+
 
                       <!-- Language Section -->
                               <div class="form-group">
@@ -1014,12 +1415,14 @@
                           <button type="button" class="btn btn-secondary collapsible-btn" style="font-size:0.75rem;padding:0.2rem 0.65rem;" data-collapse-target="notif-buttons-body" data-open="false" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Mehr anzeigen</button>
                         </div>
                         <div id="notif-buttons-body" class="collapsible-body collapsible-closed" style="display:none !important;">
-                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 1rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
+                        <div style="font-size: 0.85rem; color: var(--subtext0); margin-bottom: 0.5rem;" data-i18n="config.notif_buttons_per_event_desc">Define which buttons appear for each event. Leave empty to use the global button settings above.</div>
+                        <div style="font-size: 0.78rem; color: var(--subtext0); margin-bottom: 1rem; padding: 0.4rem 0.6rem; background: rgba(137, 180, 250, 0.08); border-left: 2px solid var(--blue); border-radius: 3px;" data-i18n="config.notif_buttons_per_event_dm_hint">Channel row = buttons posted in the Discord channel. DM row = buttons in the direct message to the requester. Leave the DM row empty if an event should have no buttons in DM.</div>
                         <div style="overflow-x: auto;">
                           <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace;">
                             <thead>
                               <tr style="border-bottom: 1px solid var(--surface1); color: var(--subtext0);">
                                 <th style="text-align: left; padding: 0.4rem 0.5rem; font-weight: 600;" data-i18n="config.notif_btn_col_event">Event</th>
+                                <th style="text-align: center; padding: 0.4rem 0.5rem; font-weight: 600;" data-i18n="config.notif_btn_col_variant">Variant</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">Seerr</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">Watch</th>
                                 <th style="text-align: center; padding: 0.4rem 0.5rem;">Ltrbxd</th>
@@ -1049,6 +1452,31 @@
                         </select>
                         <div class="form-text" style="margin-top: 0.5rem;">
                           <span data-i18n="config.bot_language_help">Language for Discord notifications, bot messages and button labels.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
+                        <label for="DATE_FORMAT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.date_format_label">Date Format</label>
+                        <select id="DATE_FORMAT" name="DATE_FORMAT" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                          <option value="auto" data-i18n="config.date_format_auto">Auto (based on Bot Language)</option>
+                          <option value="dd.mm.yyyy">dd.mm.yyyy (07.05.2026)</option>
+                          <option value="yyyy-mm-dd">yyyy-mm-dd (2026-05-07)</option>
+                          <option value="mm/dd/yyyy">mm/dd/yyyy (05/07/2026)</option>
+                        </select>
+                        <div class="form-text" style="margin-top: 0.5rem;">
+                          <span data-i18n="config.date_format_help">Date display format used in /history, /upcoming, and /watchlist embeds.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label for="TIME_FORMAT" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.time_format_label">Time Format</label>
+                        <select id="TIME_FORMAT" name="TIME_FORMAT" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
+                          <option value="auto" data-i18n="config.time_format_auto">Auto (based on Bot Language)</option>
+                          <option value="24h" data-i18n="config.time_format_24h">24-hour (20:30)</option>
+                          <option value="12h" data-i18n="config.time_format_12h">12-hour (8:30 PM)</option>
+                        </select>
+                        <div class="form-text" style="margin-top: 0.5rem;">
+                          <span data-i18n="config.time_format_help">Time-of-day display format. "Auto" picks 24h for German/Swedish and 12h (AM/PM) for English.</span>
                         </div>
                       </div>
 
@@ -1109,6 +1537,64 @@
                       <div id="stats-top-users" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
                     </div>
 
+                    <!-- Library & Request Insights -->
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--surface1);">
+                      <h4 style="color: var(--text); margin-bottom: 0.75rem;" data-i18n="config.stats_insights_title">Library &amp; Request Insights</h4>
+                      <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                        <button type="button" id="stats-insights-load-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
+                          <i class="bi bi-graph-up"></i> <span data-i18n="config.stats_insights_load">Load Insights</span>
+                        </button>
+                        <button type="button" id="stats-insights-refresh-btn" class="btn btn-secondary" style="font-size: 0.85rem;" title="Umgeht den 5-Min-Cache und holt frische Daten direkt von Jellyfin/Seerr">
+                          <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.stats_insights_refresh">Refresh</span>
+                        </button>
+                        <span id="stats-insights-status" style="font-size: 0.85rem; color: var(--subtext0);"></span>
+                      </div>
+
+                      <!-- Library cards -->
+                      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-movies">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_movies">Movies</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-series">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_series">Series</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--mauve);" id="stats-lib-runtime">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lib_runtime">Total runtime — Movies + Series (h)</div>
+                        </div>
+                      </div>
+
+                      <!-- Top library genres -->
+                      <div style="margin-bottom: 1.25rem;">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text);" data-i18n="config.stats_lib_top_genres">Top genres in library</div>
+                        <div id="stats-lib-genres" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                          <div style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.stats_insights_no_data">No data yet — click "Load Insights".</div>
+                        </div>
+                      </div>
+
+                      <!-- Lifecycle -->
+                      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;">
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--yellow);" id="stats-lc-pending">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lc_pending">⌀ Pending → Approved (h)</div>
+                        </div>
+                        <div class="stats-card" style="padding: 1rem; background: var(--surface0); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 1.6rem; font-weight: 700; color: var(--yellow);" id="stats-lc-available">–</div>
+                          <div style="font-size: 0.8rem; color: var(--subtext0);" data-i18n="config.stats_lc_available">⌀ Approved → Available (h)</div>
+                        </div>
+                      </div>
+
+                      <!-- Top genres in requests -->
+                      <div>
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text);" data-i18n="config.stats_req_top_genres">Top genres in requests</div>
+                        <div id="stats-req-genres" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                          <div style="font-size: 0.85rem; color: var(--subtext0);" data-i18n="config.stats_insights_no_data">No data yet — click "Load Insights".</div>
+                        </div>
+                      </div>
+                    </div>
+
                     <!-- Reset Button -->
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface1);">
                       <button type="button" id="stats-reset-btn" class="btn btn-danger" style="font-size: 0.85rem;">
@@ -1143,8 +1629,11 @@
                   <li><i class="bi bi-patch-question-fill"></i><div data-i18n="about.feature_status"><code>/status &lt;title&gt;</code> Check the current <strong style="color: var(--blue);">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.</div></li>
                   <li><i class="bi bi-shuffle"></i><div data-i18n="about.feature_random"><code>/random movie</code> or <code>/random series</code> — get a <strong style="color: var(--blue);">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.</div></li>
                   <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
+                  <li><i class="bi bi-card-checklist"></i><div data-i18n="about.feature_queue"><code>/queue</code> Track the status of <strong style="color: var(--blue);">your own requests</strong> — grouped by stage (waiting for approval, downloading, available, declined, failed). Backfills older requests and resolves real titles. Also available as the "My Requests" button in the /help wizard.</div></li>
+                  <li><i class="bi bi-bell"></i><div data-i18n="about.feature_subscribe"><code>/subscribe</code> <strong style="color: var(--blue);">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the "Subscribe" button in the /help wizard.</div></li>
                   <li><i class="bi bi-calendar-event"></i><div data-i18n="about.feature_upcoming"><code>/upcoming</code> Browse <strong style="color: var(--blue);">upcoming releases</strong> from TMDB — movies and TV shows that haven't aired yet. Filter by type and see release dates at a glance.</div></li>
                   <li><i class="bi bi-clock-history"></i><div data-i18n="about.feature_history"><code>/history</code> See what was <strong style="color: var(--blue);">recently added</strong> to your Jellyfin library. Filter by movies or series — great for catching up on new content.</div></li>
+                  <li><i class="bi bi-magic"></i><div data-i18n="about.feature_foryou"><code>/foryou</code> Get <strong style="color: var(--blue);">personalised recommendations</strong> based on your Jellyfin watch history. Aggregates TMDB similarities across 5 random seeds from your recently played content, surfacing titles with the highest combined frequency × rating. Optional <code>filter</code> parameter to limit results to library-only.</div></li>
                   <li><i class="bi bi-stars"></i><div data-i18n="about.feature_recommend"><code>/recommend &lt;title&gt;</code> Get <strong style="color: var(--blue);">personalized recommendations</strong> based on any movie or TV show. Shows 5 similar titles with TMDB ratings and Jellyfin availability status — with Watch Now buttons for content already in your library.</div></li>
                   <li><i class="bi bi-compass-fill"></i><div data-i18n="about.feature_discover"><code>/discover</code> Explore movies and TV shows by <strong style="color: var(--blue);">genre, year and minimum rating</strong>. Results show Jellyfin availability — perfect for "I want to watch something but don't know what" moments.<br><strong style="color: var(--blue);">Options:</strong> <code>type</code> (required), <code>genre</code> (optional, autocomplete), <code>year</code> (optional), <code>rating</code> (optional).</div></li>
                   <li><i class="bi bi-collection-fill"></i><div data-i18n="about.feature_collection"><code>/collection &lt;title&gt;</code> View all movies in a <strong style="color: var(--blue);">franchise or collection</strong> (e.g. Lord of the Rings, Marvel). Shows which parts are available on Jellyfin with Watch Now buttons.</div></li>
@@ -1166,6 +1655,8 @@
                   <li><i class="bi bi-textarea-t"></i><div data-i18n="about.feature_embed_footer">Add a <strong style="color: var(--blue);">custom footer text</strong> to all Discord embeds — perfect for branding, server info or a personal touch.</div></li>
                   <!-- Administration -->
                   <li><i class="bi bi-sliders"></i><div data-i18n="about.feature_permissions">Control who can use bot commands via Discord <strong style="color: var(--blue);">role allowlist and blocklist</strong>. Link Discord accounts to Seerr accounts so every request is tracked to the correct user.</div></li>
+                  <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_quota">Set a <strong style="color: var(--blue);">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.</div></li>
+                  <li><i class="bi bi-calendar-week"></i><div data-i18n="about.feature_digest"><strong style="color: var(--blue);">Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                   <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
                   <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
