@@ -8,13 +8,10 @@ import { registerCommands } from "../discord/commands.js";
 import { botState, loadPendingRequests } from "./botState.js";
 import { load as loadRequestStore, prune as pruneRequestStore } from "../utils/requestStore.js";
 import { registerInteractions } from "./interactions.js";
-import { scheduleDailyRandomPick, scheduleDailyRecommendation } from "./dailyPick.js";
-import { scheduleCleanupAdvisor, stopCleanupAdvisor } from "./cleanupAdvisor.js";
+import { stopCleanupAdvisor } from "./cleanupAdvisor.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
-import { startSubscriptionPoller } from "./subscriptionPoller.js";
-import { scheduleWeeklyRecommendation } from "./weeklyRecommendation.js";
-import { scheduleWeeklyDigest } from "./weeklyDigest.js";
+import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
@@ -78,14 +75,9 @@ export async function startBot() {
       botState.isBotRunning = true;
       botState.botStartedAt = Date.now();
 
-      scheduleDailyRandomPick(client);
-      scheduleDailyRecommendation(client);
-      scheduleCleanupAdvisor(client);
-      scheduleWeeklyRecommendation(client);
-      scheduleWeeklyDigest(client);
+      rescheduleTimedJobs(client);
       startJellyfinPoller(client);
       startSeerrStatusPoller();
-      startSubscriptionPoller();
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

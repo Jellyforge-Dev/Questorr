@@ -31,6 +31,7 @@ import jellyfinRouter from "./routes/jellyfinRoutes.js";
 import { botState, pendingRequests, savePendingRequests } from "./bot/botState.js";
 import { createBotRoutes } from "./routes/botRoutes.js";
 import { startBot } from "./bot/botManager.js";
+import { rescheduleTimedJobs } from "./bot/jobScheduler.js";
 import { registerCommands } from "./discord/commands.js";
 import { REST } from "@discordjs/rest";
 import {
@@ -932,6 +933,13 @@ function configureWebServer() {
         oldToken !== process.env.DISCORD_TOKEN ||
         oldGuildId !== process.env.GUILD_ID ||
         jellyfinApiKeyChanged;
+
+      // Apply timing/cron config changes (digest, weekly, cleanup, daily,
+      // subscription interval) to the running bot without a full restart. The
+      // needsRestart path below calls startBot(), which reschedules anyway.
+      if (botState.isBotRunning && !needsRestart) {
+        rescheduleTimedJobs(botState.discordClient);
+      }
 
       // Check if /request command options changed → need to re-register commands
       const commandOptionsChanged =
