@@ -38,14 +38,47 @@ describe("buildDigestSummary", () => {
     expect(sum.series.map((s) => s.title)).toEqual(["A Show"]);
   });
 
-  it("ignores Season and Episode item types", () => {
+  it("ignores Season item types and bare episodes for movie/series buckets", () => {
     const items = [
       { Type: "Season", Name: "Season 2", DateCreated: recent },
-      { Type: "Episode", Name: "Pilot", DateCreated: recent },
+      { Type: "Episode", Name: "Pilot", SeriesName: "Show", DateCreated: recent },
     ];
     const sum = buildDigestSummary(items, now - 7 * DAY);
     expect(sum.movies).toHaveLength(0);
     expect(sum.series).toHaveLength(0);
+  });
+
+  it("aggregates new episodes per existing series", () => {
+    const items = [
+      { Type: "Episode", SeriesName: "Breaking Bad", DateCreated: recent },
+      { Type: "Episode", SeriesName: "Breaking Bad", DateCreated: recent },
+      { Type: "Episode", SeriesName: "The Office", DateCreated: recent },
+    ];
+    const sum = buildDigestSummary(items, now - 7 * DAY);
+    expect(sum.episodes).toEqual([
+      { title: "Breaking Bad", count: 2 },
+      { title: "The Office", count: 1 },
+    ]);
+  });
+
+  it("excludes episodes of a brand-new series (already listed under series)", () => {
+    const items = [
+      { Type: "Series", Name: "New Show", DateCreated: recent },
+      { Type: "Episode", SeriesName: "New Show", DateCreated: recent },
+      { Type: "Episode", SeriesName: "Old Show", DateCreated: recent },
+    ];
+    const sum = buildDigestSummary(items, now - 7 * DAY);
+    expect(sum.series.map((s) => s.title)).toEqual(["New Show"]);
+    expect(sum.episodes).toEqual([{ title: "Old Show", count: 1 }]);
+  });
+
+  it("ignores out-of-window episodes and episodes without a series name", () => {
+    const items = [
+      { Type: "Episode", SeriesName: "Old Show", DateCreated: old },
+      { Type: "Episode", DateCreated: recent }, // no SeriesName
+    ];
+    const sum = buildDigestSummary(items, now - 7 * DAY);
+    expect(sum.episodes).toEqual([]);
   });
 });
 
@@ -107,6 +140,19 @@ describe("sendWeeklyDigest", () => {
     const result = await sendWeeklyDigest(makeClient(send));
     expect(send).not.toHaveBeenCalled();
     expect(result).toMatchObject({ reason: "empty", fetched: 2, inWindowAll: 1, movies: 0, series: 0 });
+  });
+
+  it("posts when only new episodes of existing series were added", async () => {
+    const recent = new Date(Date.now() - DAY).toISOString();
+    fetchItemsAddedSince.mockResolvedValue([
+      { Type: "Episode", SeriesName: "Breaking Bad", DateCreated: recent },
+      { Type: "Episode", SeriesName: "Breaking Bad", DateCreated: recent },
+    ]);
+    const send = vi.fn();
+    const result = await sendWeeklyDigest(makeClient(send));
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(send.mock.calls[0][0])).toContain("Breaking Bad");
+    expect(result).toMatchObject({ posted: true, movies: 0, series: 0 });
   });
 
   it("reports when no channel is configured", async () => {

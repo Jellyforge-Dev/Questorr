@@ -667,7 +667,7 @@
     "feature_trailer": "<strong style=\"color: var(--blue);\">Trailer buttons</strong> are automatically added to <code>/search</code> and <code>/request</code> embeds when a YouTube trailer is available on TMDB — watch the trailer before requesting.",
     "feature_quota": "<code>Request Quota</code> Set a <strong style=\"color: var(--blue);\">per-user request quota</strong> — a rolling 7-day limit on how many requests each user can make through Questorr. Bypass roles and individual unlimited users are configurable; 0 disables it.",
     "feature_subscribe": "<code>/subscribe</code> <strong>Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the \"Subscribe\" button in the /help wizard.",
-    "feature_digest": "<strong>Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week."
+    "feature_digest": "<strong>Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days, plus new episodes of existing series (aggregated per series). Channel, day and time are configurable; nothing is posted on a quiet week."
   },
   "jellyfin_webhook": {
     "note": "If you're running Questorr in Docker, you may need to replace localhost with your server's IP address.",

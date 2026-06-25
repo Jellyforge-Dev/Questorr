@@ -22,23 +22,44 @@ let digestTimer = null;
 export function buildDigestSummary(items, sinceMs) {
   const movies = [];
   const series = [];
+  const newSeriesNames = new Set();
+  const episodeCounts = new Map(); // SeriesName -> count, insertion order preserved
+
   for (const item of items || []) {
     const created = Date.parse(item.DateCreated || "");
     if (!Number.isFinite(created) || created < sinceMs) continue;
-    const entry = { title: item.Name || "Unknown", year: item.ProductionYear || null };
-    if (item.Type === "Movie") movies.push(entry);
-    else if (item.Type === "Series") series.push(entry);
+    if (item.Type === "Movie") {
+      movies.push({ title: item.Name || "Unknown", year: item.ProductionYear || null });
+    } else if (item.Type === "Series") {
+      const title = item.Name || "Unknown";
+      series.push({ title, year: item.ProductionYear || null });
+      newSeriesNames.add(title);
+    } else if (item.Type === "Episode" && item.SeriesName) {
+      episodeCounts.set(item.SeriesName, (episodeCounts.get(item.SeriesName) || 0) + 1);
+    }
   }
-  return { movies, series };
+
+  // New episodes only count for series that aren't brand-new themselves
+  // (a new series is already represented in the series section).
+  const episodes = [...episodeCounts.entries()]
+    .filter(([title]) => !newSeriesNames.has(title))
+    .map(([title, count]) => ({ title, count }));
+
+  return { movies, series, episodes };
 }
 
 function formatList(entries) {
   return entries.map((e) => `• ${e.title}${e.year ? ` (${e.year})` : ""}`).join("\n");
 }
 
+function formatEpisodeList(entries) {
+  return entries.map((e) => `• ${e.title} — ${e.count} ${t("digest_episodes_word")}`).join("\n");
+}
+
 /** Build the digest embed, or null when there is nothing to report. */
 export function buildDigestEmbed(summary) {
-  if (summary.movies.length === 0 && summary.series.length === 0) return null;
+  const episodes = summary.episodes || [];
+  if (summary.movies.length === 0 && summary.series.length === 0 && episodes.length === 0) return null;
   const embed = new EmbedBuilder()
     .setTitle(t("digest_title"))
     .setColor(0x5865f2)
@@ -48,6 +69,9 @@ export function buildDigestEmbed(summary) {
   }
   if (summary.series.length > 0) {
     embed.addFields({ name: t("digest_series"), value: formatList(summary.series).slice(0, 1024) });
+  }
+  if (episodes.length > 0) {
+    embed.addFields({ name: t("digest_episodes"), value: formatEpisodeList(episodes).slice(0, 1024) });
   }
   return embed;
 }
@@ -82,10 +106,11 @@ export async function sendWeeklyDigest(client, { force = false } = {}) {
   const summary = buildDigestSummary(items, sinceMs);
   const movies = summary.movies.length;
   const series = summary.series.length;
-  const stats = { fetched, inWindowAll, movies, series };
+  const updatedSeries = summary.episodes.length;
+  const stats = { fetched, inWindowAll, movies, series, updatedSeries };
   const embed = buildDigestEmbed(summary);
   if (!embed) {
-    logger.info(`[Digest] Nothing to post — fetched ${fetched}, ${inWindowAll} added in last 7d, ${movies} movies + ${series} series qualify`);
+    logger.info(`[Digest] Nothing to post — fetched ${fetched}, ${inWindowAll} added in last 7d, ${movies} movies + ${series} series + ${updatedSeries} updated series qualify`);
     return { posted: false, reason: "empty", enabled, ...stats };
   }
 
@@ -102,7 +127,7 @@ export async function sendWeeklyDigest(client, { force = false } = {}) {
       return { posted: false, reason: "channel-invalid", enabled, ...stats, channelId };
     }
     await channel.send({ embeds: [embed] });
-    logger.info(`[Digest] Posted weekly digest (${movies} movies, ${series} series)`);
+    logger.info(`[Digest] Posted weekly digest (${movies} movies, ${series} series, ${updatedSeries} updated series)`);
     return { posted: true, reason: "posted", enabled, ...stats, channelId };
   } catch (err) {
     logger.warn(`[Digest] Failed to post: ${err.message}`);
