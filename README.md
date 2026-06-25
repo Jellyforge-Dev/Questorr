@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.3.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.0-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
