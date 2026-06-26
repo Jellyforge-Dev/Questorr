@@ -18,6 +18,7 @@
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Error",
+    "saved": "saved",
     "success": "Success",
     "username": "Username",
     "password": "Password"
@@ -170,6 +171,7 @@
     "test_batch_episodes_notification": "Test Episodes Batch",
     "save_button": "Save Settings",
     "test_seerr_webhook": "Test Webhook",
+    "test_seerr_webhook_title": "Sends a test notification straight to Discord (bypasses the auth check)",
     "seerr_webhook_url": "Seerr Webhook URL",
     "seerr_channels_title": "Seerr Notification Channels",
     "seerr_channels_desc": "Configure which Discord channels receive Seerr event notifications.",

@@ -2440,7 +2440,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } catch (err) {
         console.error("[LoadRootFolders] Error:", err);
-        if (loadRootFoldersStatus) loadRootFoldersStatus.textContent = "❌ Fehler: " + (err.message || err);
+        if (loadRootFoldersStatus) loadRootFoldersStatus.textContent = "❌ " + (t("common.error") || "Error") + ": " + (err.message || err);
       } finally {
         loadRootFoldersBtn.disabled = false;
         setTimeout(() => { if (loadRootFoldersStatus) loadRootFoldersStatus.textContent = ""; }, 6000);
@@ -2480,7 +2480,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (currentVal && !availableRootFolders.find(f => f.path === currentVal)) {
       const opt = document.createElement("option");
       opt.value = currentVal;
-      opt.textContent = currentVal + " (gespeichert)";
+      opt.textContent = currentVal + " (" + (t("common.saved") || "saved") + ")";
       sel.insertBefore(opt, sel.children[1] || null);
     }
     if (currentVal) sel.value = currentVal;

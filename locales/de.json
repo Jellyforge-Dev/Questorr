@@ -18,6 +18,7 @@
     "edit": "Bearbeiten",
     "loading": "Wird geladen...",
     "error": "Fehler",
+    "saved": "gespeichert",
     "success": "Erfolgreich",
     "username": "Benutzername",
     "password": "Passwort"
@@ -242,6 +243,7 @@
     "bot_started": "Bot erfolgreich gestartet!",
     "bot_restart_failed": "Bot Neustart fehlgeschlagen",
     "test_seerr_webhook": "Webhook testen",
+    "test_seerr_webhook_title": "Sendet eine Test-Notification direkt an Discord (umgeht die Auth-Prüfung)",
     "seerr_webhook_url": "Seerr Webhook URL",
     "seerr_channels_title": "Seerr Benachrichtigungskanäle",
     "seerr_channels_desc": "Konfiguriere welche Discord-Kanäle die Seerr-Events erhalten.",

@@ -450,7 +450,7 @@
 							ℹ️ <strong>Tipp:</strong> Aktiviere in Seerr unter <em>Settings → Notifications → Webhook → Notification Types</em> mindestens <strong>Request Pending Approval</strong>, <strong>Request Approved</strong>, <strong>Request Auto-Approved</strong>, <strong>Request Declined</strong>, <strong>Request Available</strong> und <strong>Request Failed</strong> — sonst bekommen User keine Status-DMs, wenn ein Admin Anfragen direkt in der Seerr-UI genehmigt.
 						</div>
                         <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Sendet eine Test-Notification direkt an Discord (umgeht die Auth-Prüfung)">
+                          <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" data-i18n="config.test_seerr_webhook_title" data-i18n-attr="title" title="Sends a test notification straight to Discord (bypasses the auth check)">
                             <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Discord-Test</span>
                           </button>
                           <button type="button" id="test-seerr-roundtrip-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Triggert Seerr, einen Webhook an Questorr zu senden — testet die volle Kette inkl. Authorization-Header">
