@@ -215,7 +215,7 @@
                             Select scopes: <code>bot</code> and <code>applications.commands</code>
                           </li>
                           <li data-i18n="config.discord_instructions_5">
-                            Select permissions: <code>Send Messages</code> and <code>Embed Links</code>
+                            Select permissions: <code>Send Messages</code>, <code>Embed Links</code> and <code>Pin Messages</code>
                           </li>
                           <li data-i18n="config.discord_instructions_6">
                             Copy the generated URL, open it in your browser, and authorize the bot on your Discord server
@@ -258,7 +258,7 @@
                           <span data-i18n="config.next_steps_title">Next Steps</span>
                         </p>
                         <ol style="margin: 0.75rem 0 0 0; padding-left: 1.5rem; line-height: 1.8;">
-                          <li data-i18n="config.next_step_1">Click <strong>Einstellungen speichern</strong> button at the bottom of the sidebar</li>
+                          <li data-i18n="config.next_step_1">Click the <strong>Save Settings</strong> button at the bottom of the sidebar</li>
                           <li data-i18n="config.next_step_2">Click the <strong>Start Bot</strong> button at the top of the page</li>
                           <li data-i18n="config.next_step_3">Once the bot is running, the dropdowns will automatically populate with your servers and channels</li>
                         </ol>
@@ -365,7 +365,7 @@
                       <!-- Default Quality Profiles Section -->
                       <div class="form-group" style="margin-top: 2rem;">
                         <label style="font-size: 1.1rem; font-weight: 700; color: var(--mauve);">
-                          <strong data-i18n="config.default_quality_profiles">Standard-Qualitätsprofile (Optional)</strong>
+                          <strong data-i18n="config.default_quality_profiles">Default Quality Profiles (Optional)</strong>
                         </label>
                         <div class="form-text" style="margin-bottom: 1rem;" data-i18n="config.default_quality_profiles_help">
                           Legt Standard-Qualitätsprofile und Server für Medienanfragen fest. Diese werden verwendet wenn User kein Profil über den <code>/request</code> Befehl angeben.
@@ -444,7 +444,7 @@
 							<button type="button" id="copy-seerr-webhook-secret-btn" class="btn btn-secondary" style="white-space: nowrap;" data-i18n="config.seerr_webhook_copy_secret">Copy Secret</button>
 						</div>
 						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(243, 139, 168, 0.10); border-left: 3px solid var(--red); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_warning">
-							⚠️ <strong>Wichtig:</strong> Trage das Secret in Seerr in das Feld <strong>"Authorization Header"</strong> ein — <em>nicht</em> in die URL. Ohne korrektes Secret werden alle Webhook-Events mit HTTP 401 abgewiesen und du erhältst keine DM- oder Channel-Benachrichtigungen.
+							⚠️ <strong>Important:</strong> Paste the secret into Seerr's <strong>"Authorization Header"</strong> field — <em>not</em> into the URL. Without the correct secret, all webhook events are rejected with HTTP 401 and you will not receive DM or channel notifications.
 						</div>
 						<div style="margin-top: 0.6rem; padding: 0.6rem 0.85rem; background: rgba(137, 180, 250, 0.10); border-left: 3px solid var(--blue); border-radius: 4px; font-size: 0.85rem;" data-i18n="config.seerr_webhook_notif_types_hint">
 							ℹ️ <strong>Tipp:</strong> Aktiviere in Seerr unter <em>Settings → Notifications → Webhook → Notification Types</em> mindestens <strong>Request Pending Approval</strong>, <strong>Request Approved</strong>, <strong>Request Auto-Approved</strong>, <strong>Request Declined</strong>, <strong>Request Available</strong> und <strong>Request Failed</strong> — sonst bekommen User keine Status-DMs, wenn ein Admin Anfragen direkt in der Seerr-UI genehmigt.
@@ -550,7 +550,7 @@
                       </div>
                       <div class="form-group">
                         <label for="OMDB_API_KEY" data-i18n="config.omdb_api_key"
-                          >OMDb API-Schlüssel (Optional)</label
+                          >OMDb API Key (Optional)</label
                         >
                         <input
                           type="text"
@@ -676,7 +676,7 @@
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                               <span id="POLLER_STATUS_TEXT" data-i18n="config.poller_status_loading">Status: lädt…</span>
                               <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Sucht nach kürzlich hinzugefügten Items (letzte 7 Tage) und sendet Notifications für noch nicht gemeldete. Ältere Library-Inhalte werden NICHT benachrichtigt." data-i18n="config.btn_poll_now_tooltip" data-i18n-attr="title">
+                                <button type="button" id="BTN_POLL_NOW" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;" title="Searches for recently added items (last 7 days) and sends notifications for those not yet announced. Older library content is NOT notified." data-i18n="config.btn_poll_now_tooltip" data-i18n-attr="title">
                                   <i class="bi bi-play-fill"></i> <span data-i18n="config.btn_poll_now">Jetzt prüfen</span>
                                 </button>
                               </div>
@@ -703,7 +703,7 @@
                                 <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.audit_refresh">Aktualisieren</span>
                               </button>
                             </div>
-                            <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.audit_description">Was Questorr zuletzt gepostet oder übersprungen hat – inkl. Quelle, Ziel-Channel und Dedup-Grund.</div>
+                            <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.audit_description">What Questorr last posted or skipped — including source, target channel and dedup reason.</div>
                             <div id="NOTIFICATION_AUDIT_BODY" style="font-size:0.82em;color:var(--subtext1);overflow-x:auto;" data-i18n="config.audit_loading">Lädt…</div>
                           </div>
                         </div>
@@ -1034,7 +1034,7 @@
                           <span data-i18n="config.approval_dm_only">Approval-Benachrichtigungen nur per DM</span>
                         </label>
                         <div class="form-text">
-                          <span data-i18n="config.approval_dm_only_desc">Wenn aktiviert, werden MEDIA_APPROVED- und MEDIA_AUTO_APPROVED-Events nur als DM an den Anfrager gesendet — kein öffentlicher Channel-Post. Empfohlen, um Kanal-Spam zu reduzieren.</span>
+                          <span data-i18n="config.approval_dm_only_desc">When enabled, MEDIA_APPROVED and MEDIA_AUTO_APPROVED events are sent as a DM to the requester only — no public channel post. Recommended to reduce channel noise.</span>
                         </div>
                       </div>
 
@@ -1044,7 +1044,7 @@
                           <span data-i18n="config.misc_status_polling">Seerr Status-Polling für Approve-DMs</span>
                         </label>
                         <div class="form-text">
-                          <span data-i18n="config.misc_status_polling_desc">Sicherheitsnetz: pollt Seerr-Anfragen alle 2 Minuten und sendet eine DM, wenn eine Anfrage in der Seerr-UI genehmigt wurde — auch wenn Seerr keinen MEDIA_APPROVED-Webhook gesendet hat. Erhöht die API-Last leicht. Aktiviere dies, wenn Genehmigungen über die Seerr-Oberfläche keine DMs auslösen.</span>
+                          <span data-i18n="config.misc_status_polling_desc">Safety net: periodically polls Seerr requests and sends a DM when a request is approved/declined in the Seerr UI — even if Seerr did not fire a MEDIA_APPROVED webhook. Adds slight API load. Enable this if approvals via the Seerr UI don't trigger DMs.</span>
                         </div>
                       </div>
 
@@ -1187,12 +1187,12 @@
                           <label for="DAILY_RANDOM_PICK_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_time_label">Uhrzeit (HH:MM)</label>
                           <input type="time" id="DAILY_RANDOM_PICK_TIME" name="DAILY_RANDOM_PICK_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_random_time_help">
-                            Genaue Uhrzeit für den täglichen Versand (z.B. 08:00). Wenn gesetzt, wird der Interval ignoriert.
+                            Exact time of day for the daily pick (e.g. 08:00). When set, the interval is ignored. (The dashboard always uses 24h format internally. TIME_FORMAT only affects how the bot displays times in Discord.)
                           </div>
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
+                          <label for="DAILY_RANDOM_PICK_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_random_interval_label">Interval (minutes) – fallback when no time is set</label>
                           <input type="number" id="DAILY_RANDOM_PICK_INTERVAL" name="DAILY_RANDOM_PICK_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;">
                             <span data-i18n="config.daily_random_interval_help">Intervall in Minuten (Standard: 1440 = 24h)</span>
@@ -1235,12 +1235,12 @@
                           <label for="DAILY_RECOMMENDATION_TIME" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_time_label">Uhrzeit (HH:MM)</label>
                           <input type="time" id="DAILY_RECOMMENDATION_TIME" name="DAILY_RECOMMENDATION_TIME" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_time_help">
-                            Genaue Uhrzeit für den täglichen Versand (z.B. 20:00). Wenn gesetzt, wird der Interval ignoriert.
+                            Exact time of day for the daily recommendation (e.g. 20:00). When set, the interval is ignored. (The dashboard always uses 24h format internally. TIME_FORMAT only affects how the bot displays times in Discord.)
                           </div>
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">
-                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_interval_label">Interval (Minuten) – Fallback wenn keine Uhrzeit gesetzt</label>
+                          <label for="DAILY_RECOMMENDATION_INTERVAL" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.daily_rec_interval_label">Interval (minutes) – fallback when no time is set</label>
                           <input type="number" id="DAILY_RECOMMENDATION_INTERVAL" name="DAILY_RECOMMENDATION_INTERVAL" placeholder="1440" min="1" max="525600" style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                           <div class="form-text" style="margin-top: 0.5rem;" data-i18n="config.daily_rec_interval_help">
                             Intervall in Minuten (Standard: 1440 = 24h)

@@ -1380,8 +1380,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       config.startBot = true;
       await saveConfig(config);
       
-      // Wait a moment for the bot to start, then reload Discord data
+      // Wait a moment for the bot to start, then refresh the status indicator
+      // (otherwise the button only flips to "running" on the next 30s poll) and
+      // reload Discord data.
       setTimeout(async () => {
+        await fetchStatus();
         await loadDiscordGuilds();
         // If a guild is already selected, reload its channels
         const guildSelect = document.getElementById("GUILD_ID");

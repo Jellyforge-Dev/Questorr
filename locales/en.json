@@ -101,7 +101,7 @@
     "discord_instructions_2": "In the \"Bot\" section, scroll down to \"Privileged Gateway Intents\" and enable <code>SERVER MEMBERS INTENT</code> (required for user mappings)",
     "discord_instructions_3": "Go to \"OAuth2\" → \"URL Generator\"",
     "discord_instructions_4": "Select scopes: <code>bot</code> and <code>applications.commands</code>",
-    "discord_instructions_5": "Select permissions: <code>Send Messages</code> and <code>Embed Links</code>",
+    "discord_instructions_5": "Select permissions: <code>Send Messages</code>, <code>Embed Links</code> and <code>Pin Messages</code>",
     "discord_instructions_6": "Copy the generated URL, open it in your browser, and authorize the bot on your Discord server",
     "discord_instructions_7": "Come back and enter the Discord Bot Token and Bot Client ID below, save your settings, start the bot, then select your server and channel from the dropdowns",
     "discord_token": "Discord Bot Token",
