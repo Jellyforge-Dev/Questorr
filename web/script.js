@@ -375,12 +375,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      // Uptime
-      const uptimeEl = document.getElementById("health-uptime");
-      if (uptimeEl) {
-        uptimeEl.textContent = data.bot?.running ? `⏱ ${data.uptimeFormatted}` : "";
+      // Uptime — drive a live 1s ticker instead of a value that only refreshes
+      // on the 30s poll. Re-sync the anchor from the server on every poll.
+      if (data.bot?.running) {
+        startUptimeTicker(data.uptime);
+      } else {
+        stopUptimeTicker();
       }
     } catch (_) {}
+  }
+
+  // ── Live uptime ticker (client-side, 1s) ─────────────────────────────────
+  // The health poll runs only every 30s, so without this the uptime would jump
+  // in 30s steps and not appear until the next tick after a start. We anchor a
+  // local epoch from the server's uptime and tick every second; loadHealthCheck
+  // re-syncs the anchor on each poll to prevent drift.
+  let _uptimeAnchor = null;
+  let _uptimeTicker = null;
+
+  function formatUptimeClient(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m ${String(s % 60).padStart(2, "0")}s`;
+  }
+
+  function renderUptime() {
+    const el = document.getElementById("health-uptime");
+    if (!el || _uptimeAnchor === null) return;
+    el.textContent = `⏱ ${formatUptimeClient((Date.now() - _uptimeAnchor) / 1000)}`;
+  }
+
+  function startUptimeTicker(uptimeSeconds) {
+    _uptimeAnchor = Date.now() - (uptimeSeconds || 0) * 1000;
+    renderUptime();
+    if (!_uptimeTicker) _uptimeTicker = setInterval(renderUptime, 1000);
+  }
+
+  function stopUptimeTicker() {
+    if (_uptimeTicker) { clearInterval(_uptimeTicker); _uptimeTicker = null; }
+    _uptimeAnchor = null;
+    const el = document.getElementById("health-uptime");
+    if (el) el.textContent = "";
   }
 
   // ─── Statistics Page ───────────────────────────────────────────────────────
@@ -1385,6 +1419,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // reload Discord data.
       setTimeout(async () => {
         await fetchStatus();
+        await loadHealthCheck();
         await loadDiscordGuilds();
         // If a guild is already selected, reload its channels
         const guildSelect = document.getElementById("GUILD_ID");
@@ -1489,6 +1524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast(result.message);
         setTimeout(() => {
           fetchStatus();
+          loadHealthCheck(); // refresh the status lamps + uptime ticker immediately
           // Also update logs page button if visible
           if (logsSection.style.display !== "none") {
             updateBotControlButtonLogs();
