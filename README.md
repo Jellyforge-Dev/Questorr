@@ -64,6 +64,10 @@
 | 🧩 Embeddable widget | HTML widget for Homarr/Homepage/Organizr with bot status and controls |
 | 🌍 Multi-language | English and German dashboard interface |
 
+> 📖 **New here?** The [**Full Usage & Configuration Guide**](docs/USAGE.md) explains
+> **every** command, feature and setting in plain language — including the Seerr
+> webhook status badge and the common Docker URL pitfall.
+
 ---
 
 ## 📋 Prerequisites
