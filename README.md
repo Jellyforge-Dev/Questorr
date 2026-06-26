@@ -240,18 +240,13 @@ Questorr v2.3.0 includes the following security hardening:
 
 ---
 
-## 🔮 Planned Features
+## 🔮 Roadmap
 
-These features are on the roadmap and may be added in future releases:
+Approved feature requests are tracked on the public project board:
 
-- **`/status <title>`** ✅ *Added in v2.1.1*
-- **`/random movie|series`** ✅ *Added in v2.2.0*
-- **Notification button toggles** ✅ *Added in v2.2.0*
-- **Webhook Test Log** ✅ *Added in v2.3.0*
-- **Config Export / Import** ✅ *Added in v2.3.0*
-- **Bot Status Widget** ✅ *Added in v2.3.0*
-- **Multi-language bot responses** ✅ *Added in v2.3.0*
-- **Statistics** ✅ *Added in v2.3.0*
+➡️ **[Questorr Roadmap →](https://github.com/orgs/Jellyforge-Dev/projects/1)**
+
+Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr/issues/new?template=feature_request.yml) — once it's reviewed and approved, it moves onto the board.
 
 ---
 

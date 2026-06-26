@@ -240,18 +240,13 @@ Questorr v2.3.0 enthält folgende Sicherheitshärtung:
 
 ---
 
-## 🔮 Geplante Funktionen
+## 🔮 Roadmap
 
-Diese Funktionen sind auf der Roadmap und werden möglicherweise in zukünftigen Versionen hinzugefügt:
+Genehmigte Feature-Requests werden auf dem öffentlichen Project-Board verfolgt:
 
-- **`/status <Titel>`** ✅ *Hinzugefügt in v2.1.1*
-- **`/random movie|series`** ✅ *Hinzugefügt in v2.2.0*
-- **Benachrichtigungs-Button-Toggles** ✅ *Hinzugefügt in v2.2.0*
-- **Webhook-Testprotokoll** ✅ *Hinzugefügt in v2.3.0*
-- **Konfigurations-Export / Import** ✅ *Hinzugefügt in v2.3.0*
-- **Bot-Status-Widget** ✅ *Hinzugefügt in v2.3.0*
-- **Mehrsprachige Bot-Antworten** ✅ *Hinzugefügt in v2.3.0*
-- **Statistiken** ✅ *Hinzugefügt in v2.3.0*
+➡️ **[Questorr Roadmap →](https://github.com/orgs/Jellyforge-Dev/projects/1)**
+
+Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-Dev/Questorr/issues/new?template=feature_request.yml) — nach Prüfung und Genehmigung wandert er auf das Board.
 
 ---
 
