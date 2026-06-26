@@ -622,7 +622,10 @@
   },
   "modals": {
     "start_bot_yes": "",
-    "start_bot_no": ""
+    "start_bot_no": "",
+    "start_bot_title": "",
+    "start_bot_desc": "",
+    "start_bot_desc2": ""
   },
   "about": {
     "title": "",

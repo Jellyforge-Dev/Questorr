@@ -624,7 +624,10 @@
   },
   "modals": {
     "start_bot_yes": "Yes, Start Bot",
-    "start_bot_no": "No, Save Only"
+    "start_bot_no": "No, Save Only",
+    "start_bot_title": "Start the bot?",
+    "start_bot_desc": "You've filled in all the bot requirements. Do you want to start the bot now?",
+    "start_bot_desc2": "The bot connects to Discord automatically and starts watching for notifications."
   },
   "about": {
     "title": "About Questorr",

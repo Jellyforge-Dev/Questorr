@@ -696,7 +696,7 @@
     "start_bot_no": "Nein, nur speichern",
     "start_bot_title": "Bot starten?",
     "start_bot_desc": "Du hast alle Bot-Anforderungen ausgefüllt. Möchtest du den Bot jetzt starten?",
-    "start_bot_desc2": "Der Bot verbindet sich automatisch mit Discord."
+    "start_bot_desc2": "Der Bot verbindet sich automatisch mit Discord und beginnt, Benachrichtigungen zu überwachen."
   },
   "about": {
     "title": "Über Questorr",
