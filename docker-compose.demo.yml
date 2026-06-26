@@ -1,0 +1,83 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Questorr DEMO stack — for capturing screenshots / GIFs with NO real user data.
+#
+# Spins up an isolated Jellyfin + Jellyseerr + Questorr on non-standard ports and
+# its own volumes/network, so it never clashes with a production instance running
+# on the same host.
+#
+#   docker compose -f docker-compose.demo.yml up -d
+#   docker compose -f docker-compose.demo.yml down        # stop
+#   docker compose -f docker-compose.demo.yml down -v      # stop + wipe demo data
+#
+# Access after start:
+#   Jellyfin    http://localhost:8097
+#   Jellyseerr  http://localhost:5056
+#   Questorr    http://localhost:8283
+#
+# One-time setup (see SCREENSHOTS.md for the full capture guide):
+#   1. Drop a few public-domain clips (e.g. Big Buck Bunny, Sintel) into
+#      ./demo-data/media/{movies,shows} so Jellyfin has something to show.
+#   2. Open Jellyfin (8097) → finish the setup wizard → add the two libraries.
+#   3. Open Jellyseerr (5056) → connect it to the demo Jellyfin → enable it.
+#   4. Create a throwaway Discord server + bot token, then open Questorr (8283)
+#      and run the setup wizard with the demo Jellyfin/Jellyseerr URLs + token.
+#
+# Everything here is disposable — use fake names everywhere so the README's
+# "no real user data" promise holds.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  jellyfin-demo:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin-demo
+    hostname: jellyfin-demo
+    restart: "no"
+    ports:
+      - "8097:8096"
+    volumes:
+      - ./demo-data/jellyfin/config:/config
+      - ./demo-data/jellyfin/cache:/cache
+      - ./demo-data/media:/media:ro
+    networks:
+      - questorr-demo
+
+  jellyseerr-demo:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr-demo
+    hostname: jellyseerr-demo
+    restart: "no"
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Berlin
+    ports:
+      - "5056:5055"
+    volumes:
+      - ./demo-data/jellyseerr:/app/config
+    networks:
+      - questorr-demo
+    depends_on:
+      - jellyfin-demo
+
+  questorr-demo:
+    image: jellyforge/questorr:latest
+    container_name: questorr-demo
+    hostname: questorr-demo
+    restart: "no"
+    environment:
+      - WEBHOOK_PORT=8282
+      - NODE_ENV=production
+      # Direct Docker access, no reverse proxy in the demo stack.
+      - TRUST_PROXY=false
+    ports:
+      - "8283:8282"
+    volumes:
+      - ./demo-data/questorr:/usr/src/app/config
+    networks:
+      - questorr-demo
+    depends_on:
+      - jellyfin-demo
+      - jellyseerr-demo
+
+networks:
+  questorr-demo:
+    name: questorr-demo

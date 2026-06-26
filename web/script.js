@@ -2150,18 +2150,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   // is configured correctly in Seerr.
   const seerrWebhookBadge = document.getElementById("seerr-webhook-status-badge");
   if (seerrWebhookBadge) {
+    const fill = (key, params) => {
+      let s = t("config." + key);
+      for (const k in params) s = s.split("{{" + k + "}}").join(String(params[k]));
+      return s;
+    };
+
     const formatRelativeTime = (iso) => {
       if (!iso) return "";
       const diffMs = Date.now() - new Date(iso).getTime();
       if (Number.isNaN(diffMs) || diffMs < 0) return "";
       const sec = Math.floor(diffMs / 1000);
-      if (sec < 60) return `vor ${sec}s`;
+      if (sec < 60) return fill("time_ago_seconds", { n: sec });
       const min = Math.floor(sec / 60);
-      if (min < 60) return `vor ${min} Min`;
+      if (min < 60) return fill("time_ago_minutes", { n: min });
       const hr = Math.floor(min / 60);
-      if (hr < 24) return `vor ${hr} h`;
+      if (hr < 24) return fill("time_ago_hours", { n: hr });
       const day = Math.floor(hr / 24);
-      return `vor ${day} d`;
+      return fill("time_ago_days", { n: day });
     };
 
     const renderBadge = (events) => {
@@ -2169,8 +2175,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         seerrWebhookBadge.style.display = "inline-flex";
         seerrWebhookBadge.style.background = "rgba(249, 226, 175, 0.15)";
         seerrWebhookBadge.style.color = "var(--yellow)";
-        seerrWebhookBadge.title = "Es wurde noch nie ein Webhook von Seerr empfangen. Trage URL und Secret in Seerr ein und sende einen Test.";
-        seerrWebhookBadge.innerHTML = "🟡 Noch nie empfangen";
+        seerrWebhookBadge.title = t("config.seerr_webhook_badge_never_title");
+        seerrWebhookBadge.innerHTML = t("config.seerr_webhook_badge_never");
         return;
       }
       const latest = events[0]; // events are unshifted, latest is index 0
@@ -2181,13 +2187,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         seerrWebhookBadge.style.background = "rgba(243, 139, 168, 0.15)";
         seerrWebhookBadge.style.color = "var(--red)";
         const subjectHint = latest.subject && latest.subject !== "—" ? ` · ${latest.subject}` : "";
-        seerrWebhookBadge.title = `Letzter Webhook-Versuch wurde mit ${latest.event} abgewiesen. Prüfe das Authorization-Header-Secret in Seerr.${subjectHint}`;
-        seerrWebhookBadge.innerHTML = `🔴 Auth-Fehler · ${rel}`;
+        seerrWebhookBadge.title = fill("seerr_webhook_badge_authfail_title", { event: latest.event, subject: subjectHint });
+        seerrWebhookBadge.innerHTML = fill("seerr_webhook_badge_authfail", { rel });
       } else {
         seerrWebhookBadge.style.background = "rgba(166, 227, 161, 0.15)";
         seerrWebhookBadge.style.color = "var(--green)";
-        seerrWebhookBadge.title = `Letzter Webhook empfangen (${latest.event || "ok"}) · ${latest.subject || ""}`;
-        seerrWebhookBadge.innerHTML = `🟢 OK · ${rel}`;
+        seerrWebhookBadge.title = fill("seerr_webhook_badge_ok_title", { event: latest.event || "ok", subject: latest.subject || "" });
+        seerrWebhookBadge.innerHTML = fill("seerr_webhook_badge_ok", { rel });
       }
     };
 

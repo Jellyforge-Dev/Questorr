@@ -64,6 +64,10 @@
 | 🧩 Einbettbares Widget | HTML-Widget für Homarr/Homepage/Organizr mit Bot-Status und Steuerung |
 | 🌍 Mehrsprachig | Englische und deutsche Dashboard-Oberfläche |
 
+> 📖 **Neu hier?** Die [**vollständige Bedienungs- & Konfigurationsanleitung**](docs/USAGE.de.md)
+> erklärt **jeden** Befehl, jedes Feature und jede Einstellung in einfacher Sprache
+> — inklusive der Seerr-Webhook-Ampel und der häufigen Docker-URL-Falle.
+
 ---
 
 ## 📋 Voraussetzungen
