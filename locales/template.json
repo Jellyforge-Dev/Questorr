@@ -18,6 +18,7 @@
     "edit": "",
     "loading": "",
     "error": "",
+    "saved": "",
     "success": "",
     "username": "",
     "password": ""
@@ -170,6 +171,7 @@
     "test_batch_episodes_notification": "",
     "save_button": "",
     "test_seerr_webhook": "",
+    "test_seerr_webhook_title": "",
     "seerr_webhook_url": "",
     "seerr_channels_title": "",
     "seerr_channels_desc": "",
@@ -622,7 +624,10 @@
   },
   "modals": {
     "start_bot_yes": "",
-    "start_bot_no": ""
+    "start_bot_no": "",
+    "start_bot_title": "",
+    "start_bot_desc": "",
+    "start_bot_desc2": ""
   },
   "about": {
     "title": "",

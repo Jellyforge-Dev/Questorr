@@ -18,6 +18,7 @@
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Error",
+    "saved": "saved",
     "success": "Success",
     "username": "Username",
     "password": "Password"
@@ -100,7 +101,7 @@
     "discord_instructions_2": "In the \"Bot\" section, scroll down to \"Privileged Gateway Intents\" and enable <code>SERVER MEMBERS INTENT</code> (required for user mappings)",
     "discord_instructions_3": "Go to \"OAuth2\" → \"URL Generator\"",
     "discord_instructions_4": "Select scopes: <code>bot</code> and <code>applications.commands</code>",
-    "discord_instructions_5": "Select permissions: <code>Send Messages</code> and <code>Embed Links</code>",
+    "discord_instructions_5": "Select permissions: <code>Send Messages</code>, <code>Embed Links</code> and <code>Pin Messages</code>",
     "discord_instructions_6": "Copy the generated URL, open it in your browser, and authorize the bot on your Discord server",
     "discord_instructions_7": "Come back and enter the Discord Bot Token and Bot Client ID below, save your settings, start the bot, then select your server and channel from the dropdowns",
     "discord_token": "Discord Bot Token",
@@ -170,6 +171,7 @@
     "test_batch_episodes_notification": "Test Episodes Batch",
     "save_button": "Save Settings",
     "test_seerr_webhook": "Test Webhook",
+    "test_seerr_webhook_title": "Sends a test notification straight to Discord (bypasses the auth check)",
     "seerr_webhook_url": "Seerr Webhook URL",
     "seerr_channels_title": "Seerr Notification Channels",
     "seerr_channels_desc": "Configure which Discord channels receive Seerr event notifications.",
@@ -624,7 +626,10 @@
   },
   "modals": {
     "start_bot_yes": "Yes, Start Bot",
-    "start_bot_no": "No, Save Only"
+    "start_bot_no": "No, Save Only",
+    "start_bot_title": "Start the bot?",
+    "start_bot_desc": "You've filled in all the bot requirements. Do you want to start the bot now?",
+    "start_bot_desc2": "The bot connects to Discord automatically and starts watching for notifications."
   },
   "about": {
     "title": "About Questorr",
