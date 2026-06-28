@@ -642,6 +642,19 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
+  // No-TMDB-id guard (#3): without a TMDB id we can neither enrich the embed
+  // (no overview/image — the bare "New in Jellyfin" card the user sees) nor
+  // verify the title against Seerr. When Seerr is configured, a freshly imported
+  // file with no metadata yet is almost always a Seerr download whose scan hasn't
+  // finished; posting now races — and loses to — the Seerr MEDIA_AVAILABLE
+  // webhook, producing the duplicate post. Defer to the webhook.
+  // (By this point the metadata-delay branch in notifyItem already gave Jellyfin
+  // time to scan, so this only fires when the id is still genuinely unavailable.)
+  if (!tmdbId && process.env.SEERR_URL && process.env.SEERR_API_KEY) {
+    logger.info(`[Jellyfin Poller] Skipping "${item.Name}" — no TMDB id yet and Seerr is configured; deferring to the Seerr webhook to avoid a duplicate "New in Jellyfin" post`);
+    return;
+  }
+
   // TERTIARY dedup (#3): if the title is tracked in Seerr (it was requested
   // there — by anyone, including directly in the Seerr UI), the poller must NOT
   // post. The Seerr MEDIA_AVAILABLE webhook will deliver the proper
