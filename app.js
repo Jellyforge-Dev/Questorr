@@ -1191,6 +1191,7 @@ function configureWebServer() {
       }
       const channel = await botState.discordClient.channels.fetch(channelId);
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
+      const { setEmbedThumbnail } = await import("./utils/embedImages.js");
 
       const eventType = (req.body && req.body.eventType) || "MEDIA_AVAILABLE";
 
@@ -1244,8 +1245,8 @@ function configureWebServer() {
         .setAuthor({ name: EVENT_LABELS[eventType] || eventType })
         .setTitle(item.title + " (" + item.year + ")")
         .setDescription(item.overview)
-        .setThumbnail(item.poster)
         .setTimestamp();
+      setEmbedThumbnail(embed, item.poster);
 
       const seerrBase = (process.env.SEERR_URL || "").replace(/\/$/, "");
       const jfBase    = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");

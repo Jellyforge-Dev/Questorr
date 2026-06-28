@@ -34,6 +34,7 @@ import {
 import axios from "axios";
 import logger from "./utils/logger.js";
 import { isValidUrl } from "./utils/url.js";
+import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
 import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
 
@@ -965,16 +966,16 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
 
   // Poster thumbnail
   if (tmdbDetails?.poster_path) {
-    embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
+    setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
   } else if (image && isValidUrl(image)) {
-    embed.setThumbnail(image);
+    setEmbedThumbnail(embed, image);
   }
 
   // Backdrop for media events
   if (["MEDIA_AVAILABLE", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED"].includes(eventType) && tmdbDetails) {
     const backdropPath = findBestBackdrop(tmdbDetails);
     if (backdropPath) {
-      embed.setImage(`https://image.tmdb.org/t/p/w1280${backdropPath}`);
+      setEmbedImage(embed, `https://image.tmdb.org/t/p/w1280${backdropPath}`);
     }
   }
 
@@ -1242,8 +1243,8 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
 
     if (footerText) dmEmbed.setFooter({ text: footerText });
     if (fields.length > 0) dmEmbed.addFields(...fields);
-    if (embed?.data?.thumbnail) dmEmbed.setThumbnail(embed.data.thumbnail.url);
-    if (embed?.data?.image && eventType === "MEDIA_AVAILABLE") dmEmbed.setImage(embed.data.image.url);
+    if (embed?.data?.thumbnail) setEmbedThumbnail(dmEmbed, embed.data.thumbnail.url);
+    if (embed?.data?.image && eventType === "MEDIA_AVAILABLE") setEmbedImage(dmEmbed, embed.data.image.url);
 
     // Build DM-specific buttons via the per-event "DM" variant config.
     const tmdbId = ctx.tmdbId ?? data.media?.tmdbId;

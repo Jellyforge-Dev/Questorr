@@ -183,6 +183,7 @@ export const configSchema = Joi.object({
   DEFAULT_QUALITY_PROFILE_TV: Joi.string().allow("").optional(),
   DEFAULT_SERVER_MOVIE: Joi.string().allow("").optional(),
   DEFAULT_SERVER_TV: Joi.string().allow("").optional(),
+  EMBED_SHOW_IMAGES: Joi.string().valid("true", "false").optional(),
   EMBED_SHOW_BACKDROP: Joi.string().valid("true", "false").optional(),
   EMBED_SHOW_OVERVIEW: Joi.string().valid("true", "false").optional(),
   EMBED_SHOW_GENRE: Joi.string().valid("true", "false").optional(),

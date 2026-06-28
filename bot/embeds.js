@@ -12,6 +12,7 @@ import { minutesToHhMm } from "../utils/time.js";
 import { COLORS } from "../lib/constants.js";
 import { getSeerrApiUrl, normalizeSeerrUrl } from "../utils/seerrUrl.js";
 import { isValidUrl } from "../utils/url.js";
+import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { parseButtonConfig } from "./helpers.js";
 import logger from "../utils/logger.js";
 
@@ -117,9 +118,9 @@ export function buildNotificationEmbed(
     : null;
 
   if (backdrop && isValidUrl(backdrop)) {
-    embed.setImage(backdrop);
+    setEmbedImage(embed, backdrop);
   } else if (poster && isValidUrl(poster)) {
-    embed.setThumbnail(poster);
+    setEmbedThumbnail(embed, poster);
   }
 
   embed.addFields(

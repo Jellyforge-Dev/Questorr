@@ -4,6 +4,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
 import { buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
+import { setEmbedThumbnail } from "../../utils/embedImages.js";
 import logger from "../../utils/logger.js";
 
 const PAGE_SIZE = 10;
@@ -82,7 +83,7 @@ function buildCastEmbed(person, items, page) {
     .setTimestamp();
 
   if (person.profile_path) {
-    embed.setThumbnail(`https://image.tmdb.org/t/p/w500${person.profile_path}`);
+    setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${person.profile_path}`);
   }
 
   const lines = shown.map((item, i) => {
