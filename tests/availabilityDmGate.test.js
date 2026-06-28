@@ -19,10 +19,13 @@ function makeClient(send) {
 }
 
 // Payload whose Discord ID resolves directly from the webhook (no mapping needed).
+// Must be a real Discord snowflake — the resolver rejects non-snowflake values
+// (e.g. unrendered "{{requestedBy_settings_discordId}}" placeholders).
+const DISCORD_ID = "123456789012345678";
 const data = {
   subject: "Dune",
   media: { media_type: "movie", tmdbId: 1 },
-  request: { requestedBy_settings_discordId: "u1", requestedBy_username: "bob" },
+  request: { requestedBy_settings_discordId: DISCORD_ID, requestedBy_username: "bob" },
 };
 
 beforeEach(() => {
@@ -50,7 +53,7 @@ describe("MEDIA_AVAILABLE DM gate (NOTIFY_ON_AVAILABLE)", () => {
     await sendRequesterDm(data, "MEDIA_DECLINED", {}, client, { data: {} }, null, {});
 
     // Declined must still resolve the user and attempt the DM.
-    expect(client.users.fetch).toHaveBeenCalledWith("u1");
+    expect(client.users.fetch).toHaveBeenCalledWith(DISCORD_ID);
   });
 
   it("sends the availability DM when NOTIFY_ON_AVAILABLE is unset (default on)", async () => {
@@ -59,6 +62,6 @@ describe("MEDIA_AVAILABLE DM gate (NOTIFY_ON_AVAILABLE)", () => {
 
     await sendRequesterDm(data, "MEDIA_AVAILABLE", {}, client, { data: {} }, null, {});
 
-    expect(client.users.fetch).toHaveBeenCalledWith("u1");
+    expect(client.users.fetch).toHaveBeenCalledWith(DISCORD_ID);
   });
 });

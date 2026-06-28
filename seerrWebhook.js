@@ -1278,10 +1278,29 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
  * Find the Discord ID for the user who made a Seerr request,
  * by looking up the Seerr user ID in USER_MAPPINGS.
  */
-async function findDiscordIdForSeerrUser(data) {
-  // First try: discordId directly in webhook payload
-  if (data.request?.requestedBy_settings_discordId) {
-    return data.request.requestedBy_settings_discordId;
+// Discord IDs are snowflakes: 17–20 digit numeric strings. Used to reject
+// unrendered template placeholders and other junk before hitting the Discord API.
+function isSnowflake(v) {
+  return typeof v === "string" && /^\d{17,20}$/.test(v.trim());
+}
+
+export async function findDiscordIdForSeerrUser(data) {
+  // First try: a real Discord ID embedded in the webhook payload. Discord IDs
+  // are snowflakes (17–20 digit numeric strings). Crucially we must NOT accept
+  // anything else here: Seerr leaves the {{requestedBy_settings_discordId}}
+  // template placeholder UNRENDERED when the requester has no Discord ID set in
+  // Seerr. Returning that literal string would (a) make client.users.fetch throw
+  // "not snowflake" and (b) short-circuit the USER_MAPPINGS fallback entirely —
+  // breaking DMs for everyone. So validate, and otherwise fall through.
+  const payloadDiscordId = data.request?.requestedBy_settings_discordId;
+  if (isSnowflake(payloadDiscordId)) {
+    return payloadDiscordId.trim();
+  }
+  if (payloadDiscordId) {
+    logger.warn(
+      `[SEERR WEBHOOK] Ignoring non-snowflake requestedBy_settings_discordId ("${payloadDiscordId}") from the webhook payload — ` +
+      "the requester has no Discord ID in Seerr, or the webhook JSON placeholder was not rendered. Falling back to USER_MAPPINGS."
+    );
   }
 
   // Second try: look up via USER_MAPPINGS by Seerr username or ID.
@@ -1317,9 +1336,13 @@ async function findDiscordIdForSeerrUser(data) {
         norm(m.seerrUserId) === target
     );
 
-    if (match?.discordUserId) {
+    if (match?.discordUserId && isSnowflake(String(match.discordUserId))) {
       logger.debug(`[SEERR WEBHOOK] Found Discord ID ${match.discordUserId} for Seerr user "${seerrUsername}"`);
-      return match.discordUserId;
+      return String(match.discordUserId).trim();
+    }
+    if (match?.discordUserId) {
+      logger.warn(`[SEERR WEBHOOK] USER_MAPPINGS entry for "${seerrUsername}" has an invalid discordUserId ("${match.discordUserId}") — not a Discord snowflake. Fix it in dashboard Step 5.`);
+      return null;
     }
 
     const known = mappings
