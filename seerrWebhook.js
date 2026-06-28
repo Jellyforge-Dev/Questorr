@@ -1179,11 +1179,11 @@ function chunkButtonsIntoRows(components) {
 // Per-event metadata for DM rendering. `dmKey` selects the i18n keys
 // (dm_<dmKey>_author / dm_<dmKey>_description); `color` is the embed color.
 const DM_EVENT_META = {
-  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500" },
-  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0" },
-  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0" },
-  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c" },
-  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71" },
+  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500", titleEnvKey: "NOTIF_TITLE_MEDIA_PENDING" },
+  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0", titleEnvKey: "NOTIF_TITLE_MEDIA_APPROVED" },
+  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0", titleEnvKey: "NOTIF_TITLE_MEDIA_AUTO_APPROVED" },
+  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c", titleEnvKey: "NOTIF_TITLE_MEDIA_DECLINED" },
+  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71", titleEnvKey: "NOTIF_TITLE_MEDIA_AVAILABLE" },
 };
 
 /**
@@ -1223,7 +1223,12 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
     const mediaTypeLabel = mediaType === "movie" ? t("field_type_movie") : t("field_type_tv");
     const footerText = process.env.EMBED_FOOTER_TEXT;
 
-    const authorText = t(`dm_${meta.dmKey}_author`);
+    // The configured per-event notification title (dashboard Step 7) applies to
+    // both the channel embed and the DM author. tNotif returns the custom title
+    // when set, otherwise the default DM author string.
+    const authorText = meta.titleEnvKey
+      ? tNotif(`dm_${meta.dmKey}_author`, meta.titleEnvKey)
+      : t(`dm_${meta.dmKey}_author`);
     const description = t(`dm_${meta.dmKey}_description`, { title });
 
     const fields = [];
