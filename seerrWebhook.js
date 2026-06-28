@@ -1284,26 +1284,54 @@ async function findDiscordIdForSeerrUser(data) {
     return data.request.requestedBy_settings_discordId;
   }
 
-  // Second try: look up via USER_MAPPINGS by Seerr username or ID
+  // Second try: look up via USER_MAPPINGS by Seerr username or ID.
+  // Match is case-insensitive and whitespace-trimmed because the Seerr webhook's
+  // requestedBy_username and the stored display name often differ only in casing.
   try {
     const raw = process.env.USER_MAPPINGS;
     const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
 
-    if (!Array.isArray(mappings) || mappings.length === 0) return null;
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      logger.warn(
+        "[SEERR WEBHOOK] DM skipped: no USER_MAPPINGS configured and the webhook payload carried no requestedBy_settings_discordId. " +
+        "Map the requester in dashboard Step 5, or add {{requestedBy_settings_discordId}} to the Seerr webhook JSON."
+      );
+      return null;
+    }
 
     const seerrUsername = data.request?.requestedBy_username;
-    if (!seerrUsername) return null;
+    if (!seerrUsername) {
+      logger.warn(
+        "[SEERR WEBHOOK] DM skipped: the webhook payload has no requestedBy_username (and no requestedBy_settings_discordId). " +
+        "Update the Seerr webhook JSON template to include {{requestedBy_username}}."
+      );
+      return null;
+    }
 
+    const norm = (v) => String(v ?? "").trim().toLowerCase();
+    const target = norm(seerrUsername);
     const match = mappings.find(
-      (m) => m.seerrDisplayName === seerrUsername || String(m.seerrUserId) === String(seerrUsername)
+      (m) =>
+        norm(m.seerrDisplayName) === target ||
+        norm(m.seerrUsername) === target ||
+        norm(m.seerrUserId) === target
     );
 
     if (match?.discordUserId) {
       logger.debug(`[SEERR WEBHOOK] Found Discord ID ${match.discordUserId} for Seerr user "${seerrUsername}"`);
       return match.discordUserId;
     }
+
+    const known = mappings
+      .map((m) => m.seerrDisplayName || m.seerrUsername || m.seerrUserId)
+      .filter(Boolean)
+      .join(", ");
+    logger.warn(
+      `[SEERR WEBHOOK] DM skipped: no USER_MAPPINGS entry matches Seerr requester "${seerrUsername}". ` +
+      `Mapped Seerr users: [${known}]. The mapped name must equal the Seerr requestedBy_username (dashboard Step 5).`
+    );
   } catch (e) {
-    logger.debug("[SEERR WEBHOOK] USER_MAPPINGS lookup failed:", e.message);
+    logger.warn("[SEERR WEBHOOK] USER_MAPPINGS lookup failed:", e.message);
   }
 
   return null;

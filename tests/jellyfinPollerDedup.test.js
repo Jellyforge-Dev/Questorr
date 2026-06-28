@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const markPosted = vi.fn();
 const shouldPost = vi.fn(() => ({ post: true }));
+const checkMediaStatus = vi.fn();
 
 vi.mock("../utils/notificationDispatcher.js", () => ({ markPosted, shouldPost }));
+vi.mock("../api/seerr.js", () => ({ checkMediaStatus }));
 // buildButtons dynamically imports seerrWebhook for the button matrix — stub it
 // so the heavy module (and its side effects) never load during the test.
 vi.mock("../seerrWebhook.js", () => ({
@@ -57,5 +59,70 @@ describe("jellyfinPoller doNotify → notifyDedup", () => {
 
     // markPosted still runs (audit), but with no tmdbId — dispatcher won't mark dedup.
     expect(markPosted).toHaveBeenCalledWith(expect.objectContaining({ tmdbId: null }));
+  });
+});
+
+describe("jellyfinPoller doNotify → Seerr-tracked dedup (#3)", () => {
+  beforeEach(() => {
+    process.env.SEERR_URL = "http://seerr";
+    process.env.SEERR_API_KEY = "k";
+  });
+  afterEach(() => {
+    delete process.env.SEERR_URL;
+    delete process.env.SEERR_API_KEY;
+  });
+
+  it("skips the poller post when the title is tracked in Seerr (mediaInfo status >= 2)", async () => {
+    checkMediaStatus.mockResolvedValue({ exists: true, status: 3 });
+    const send = vi.fn(async () => ({ id: "m" }));
+    const item = { Type: "Movie", Name: "Dune", Id: "jf", ProviderIds: { Tmdb: "693134" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(checkMediaStatus).toHaveBeenCalledWith("693134", "movie", [], "http://seerr", "k");
+    expect(send).not.toHaveBeenCalled();
+    expect(markPosted).not.toHaveBeenCalled();
+  });
+
+  it("posts when Seerr does not track the title (no mediaInfo status)", async () => {
+    checkMediaStatus.mockResolvedValue({ exists: true, status: undefined });
+    const send = vi.fn(async () => ({ id: "m" }));
+    const item = { Type: "Movie", Name: "HomeVideo", Id: "jf", ProviderIds: { Tmdb: "999" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("posts when the title is not in Seerr at all (404 → exists false)", async () => {
+    checkMediaStatus.mockResolvedValue({ exists: false, available: false });
+    const send = vi.fn(async () => ({ id: "m" }));
+    const item = { Type: "Series", Name: "HomeShow", Id: "jf", ProviderIds: { Tmdb: "888" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails open (posts) when the Seerr check throws", async () => {
+    checkMediaStatus.mockRejectedValue(new Error("timeout"));
+    const send = vi.fn(async () => ({ id: "m" }));
+    const item = { Type: "Movie", Name: "X", Id: "jf", ProviderIds: { Tmdb: "111" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call Seerr when SEERR_URL/API key are unset", async () => {
+    delete process.env.SEERR_URL;
+    delete process.env.SEERR_API_KEY;
+    const send = vi.fn(async () => ({ id: "m" }));
+    const item = { Type: "Movie", Name: "NoSeerr", Id: "jf", ProviderIds: { Tmdb: "222" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(checkMediaStatus).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
   });
 });

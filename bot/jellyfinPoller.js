@@ -37,6 +37,7 @@ import { t } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { shouldPost, markPosted } from "../utils/notificationDispatcher.js";
+import { checkMediaStatus } from "../api/seerr.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
 // (requestButton.js, randomRequestButton.js, commands/search.js). The poller
 // reads it to recognize "this title was requested via Questorr" and skip the
@@ -640,6 +641,25 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
+
+  // TERTIARY dedup (#3): if the title is tracked in Seerr (it was requested
+  // there — by anyone, including directly in the Seerr UI), the poller must NOT
+  // post. The Seerr MEDIA_AVAILABLE webhook will deliver the proper
+  // "Now Available!" notification (correct title, overview, Seerr button + DM).
+  // This catches the common race where the poller spots the file before Seerr
+  // flags availability — the source of the "📺 New in Jellyfin" + "🎉 Now
+  // Available!" double-post. Fail-open: any lookup error falls through to post.
+  if (tmdbId && process.env.SEERR_URL && process.env.SEERR_API_KEY) {
+    try {
+      const seerr = await checkMediaStatus(tmdbId, tmdbType, [], process.env.SEERR_URL, process.env.SEERR_API_KEY);
+      if (seerr && typeof seerr.status === "number" && seerr.status >= 2) {
+        logger.info(`[Jellyfin Poller] Skipping "${item.Name}" — tracked in Seerr (mediaInfo status ${seerr.status}); the Seerr webhook will deliver the notification`);
+        return;
+      }
+    } catch (err) {
+      logger.debug(`[Jellyfin Poller] Seerr status check failed for "${item.Name}" (TMDB ${tmdbId}): ${err.message} — proceeding with poller notification`);
+    }
+  }
 
   logger.info(`[Jellyfin Poller] New ${itemType}: "${item.Name}" (TMDB: ${tmdbId || "—"})`);
 
