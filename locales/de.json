@@ -366,6 +366,8 @@
     "widget_anonymize_help": "Wenn aktiviert, werden Benutzernamen und Avatare in den Widget-Statistiken durch \"User 1\", \"User 2\" usw. ersetzt, um die Privatsphäre zu schützen.",
     "rate_limit_label": "Command Rate-Limit",
     "rate_limit_desc": "Maximale Discord-Befehle pro Nutzer pro Minute. Auf 0 setzen um Rate-Limiting zu deaktivieren.",
+    "embed_show_images_label": "Bilder anzeigen",
+    "embed_show_images_desc": "Zentraler Schalter für Poster- und Hintergrundbilder in allen Discord-Nachrichten (Suchergebnisse, Anfragen, Benachrichtigungen, tägliche Empfehlungen). Ausschalten für kompakte, reine Text-Embeds.",
     "embed_footer_label": "Embed-Fußzeile",
     "embed_footer_desc": "Benutzerdefinierter Fußzeilentext für alle Discord-Embeds. Leer lassen für keine Fußzeile.",
     "embed_extra_title": "Zusätzliche Embed-Informationen",

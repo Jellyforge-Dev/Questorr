@@ -5,6 +5,7 @@ import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
 import { buildSeerrUrl, buildJellyfinUrl, getSeerrUrl, getSeerrApiKey, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
+import { setEmbedThumbnail } from "../../utils/embedImages.js";
 import logger from "../../utils/logger.js";
 
 function buildStatusDescription(tmdbDetails, statusLine) {
@@ -97,7 +98,7 @@ export async function handleStatusCommand(interaction) {
         .setDescription(nfDesc)
         .setTimestamp();
       if (tmdbDetails?.poster_path) {
-        embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
+        setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`);
       }
       const _footer = process.env.EMBED_FOOTER_TEXT;
       if (_footer) embed.setFooter({ text: _footer });
@@ -140,7 +141,7 @@ export async function handleStatusCommand(interaction) {
 
     const posterPath = tmdbDetails?.poster_path || result.data?.posterPath || result.data?.poster_path;
     if (posterPath) {
-      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${posterPath}`);
+      setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${posterPath}`);
     }
     const _footer2 = process.env.EMBED_FOOTER_TEXT;
     if (_footer2) embed.setFooter({ text: _footer2 });

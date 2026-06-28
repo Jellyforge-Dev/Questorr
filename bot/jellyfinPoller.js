@@ -35,6 +35,7 @@ import {
 import logger from "../utils/logger.js";
 import { t } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
+import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { shouldPost, markPosted } from "../utils/notificationDispatcher.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
 // (requestButton.js, randomRequestButton.js, commands/search.js). The poller
@@ -737,12 +738,12 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   }
 
   if (tmdbData?.poster_path) {
-    embed.setThumbnail(`https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`);
+    setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`);
   }
 
   if (tmdbData) {
     const backdrop = findBestBackdrop(tmdbData);
-    if (backdrop) embed.setImage(`https://image.tmdb.org/t/p/w1280${backdrop}`);
+    if (backdrop) setEmbedImage(embed, `https://image.tmdb.org/t/p/w1280${backdrop}`);
   }
 
   let overview = tmdbData?.overview || item.Overview || null;

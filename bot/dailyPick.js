@@ -6,7 +6,8 @@ import {
   ActionRowBuilder,
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
-import { isValidUrl } from "../utils/url.js";
+import { isValidUrl, isLikelyPublicUrl } from "../utils/url.js";
+import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { parseButtonConfig } from "./helpers.js";
 import { normalizeSeerrUrl } from "../utils/seerrUrl.js";
 import logger from "../utils/logger.js";
@@ -134,7 +135,7 @@ export async function sendDailyRandomPick(client) {
     }
 
     if (backdrop && isValidUrl(backdrop)) {
-      embed.setImage(backdrop);
+      setEmbedImage(embed, backdrop);
     }
 
     const footerText = process.env.EMBED_FOOTER_TEXT;
@@ -362,9 +363,12 @@ export async function sendDailyRecommendation(client) {
       }
     }
 
-    // Fallback to Jellyfin backdrop
-    if (!backdropUrl) {
-      backdropUrl = `${base}/Items/${item.Id}/Images/Backdrop`;
+    // Fallback to Jellyfin backdrop — but only if the Jellyfin base looks
+    // publicly reachable. A LAN/loopback URL can't be fetched by Discord's
+    // image proxy and would just render as a broken/empty image, so we skip it
+    // and let the TMDB poster thumbnail carry the embed instead.
+    if (!backdropUrl && isLikelyPublicUrl(base)) {
+      backdropUrl = `${base}/Items/${item.Id}/Images/Backdrop?maxWidth=1280`;
     }
 
     // Prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text
@@ -386,8 +390,8 @@ export async function sendDailyRecommendation(client) {
       .setColor("#1ec8a0")
       .setTimestamp();
 
-    if (posterUrl) embed.setThumbnail(posterUrl);
-    if (backdropUrl && isValidUrl(backdropUrl)) embed.setImage(backdropUrl);
+    if (posterUrl) setEmbedThumbnail(embed, posterUrl);
+    if (backdropUrl && isValidUrl(backdropUrl)) setEmbedImage(embed, backdropUrl);
     const recFooter = process.env.EMBED_FOOTER_TEXT;
     if (recFooter) embed.setFooter({ text: recFooter });
 

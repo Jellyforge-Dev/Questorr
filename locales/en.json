@@ -294,6 +294,8 @@
     "widget_anonymize_help": "When enabled, usernames and avatars in widget stats are replaced with \"User 1\", \"User 2\", etc. to protect privacy.",
     "rate_limit_label": "Command Rate Limit",
     "rate_limit_desc": "Maximum Discord commands per user per minute. Set to 0 to disable rate limiting.",
+    "embed_show_images_label": "Show Images",
+    "embed_show_images_desc": "Master switch for poster and backdrop images on all Discord messages (search results, requests, notifications, daily picks). Turn off for compact, text-only embeds.",
     "embed_footer_label": "Embed Footer Text",
     "embed_footer_desc": "Custom footer text shown on all Discord embeds. Leave empty for no footer.",
     "embed_extra_title": "Additional Embed Information",

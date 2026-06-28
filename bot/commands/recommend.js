@@ -5,6 +5,7 @@ import * as seerrApi from "../../api/seerr.js";
 import { findJellyfinItemByTmdbId } from "../../api/jellyfin.js";
 import { buildSeerrUrl, buildJellyfinUrl, getTmdbApiKey, getSeerrUrl, getSeerrApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
+import { setEmbedThumbnail } from "../../utils/embedImages.js";
 import logger from "../../utils/logger.js";
 
 export async function handleRecommendCommand(interaction) {
@@ -107,7 +108,7 @@ export async function handleRecommendCommand(interaction) {
       .setTimestamp();
 
     if (sourceDetails.poster_path) {
-      embed.setThumbnail(`https://image.tmdb.org/t/p/w500${sourceDetails.poster_path}`);
+      setEmbedThumbnail(embed, `https://image.tmdb.org/t/p/w500${sourceDetails.poster_path}`);
     }
 
     const footerText = process.env.EMBED_FOOTER_TEXT;

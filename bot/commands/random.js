@@ -4,6 +4,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import { fetchRandomJellyfinItem } from "../../api/jellyfin.js";
 import { buildJellyfinUrl, getTmdbApiKey, parseButtonConfig } from "../helpers.js";
 import { isValidUrl } from "../../utils/url.js";
+import { setEmbedThumbnail } from "../../utils/embedImages.js";
 import logger from "../../utils/logger.js";
 
 export async function handleRandomCommand(interaction) {
@@ -67,7 +68,7 @@ export async function handleRandomCommand(interaction) {
       .setTimestamp();
 
     if (tmdbDataR?.poster_path) {
-      embed.setThumbnail("https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
+      setEmbedThumbnail(embed, "https://image.tmdb.org/t/p/w500" + tmdbDataR.poster_path);
     }
     const footerText = process.env.EMBED_FOOTER_TEXT;
     if (footerText) embed.setFooter({ text: footerText });

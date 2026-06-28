@@ -294,6 +294,8 @@
     "widget_anonymize_help": "",
     "rate_limit_label": "",
     "rate_limit_desc": "",
+    "embed_show_images_label": "",
+    "embed_show_images_desc": "",
     "embed_footer_label": "",
     "embed_footer_desc": "",
     "embed_extra_title": "",
