@@ -114,15 +114,14 @@ describe("jellyfinPoller doNotify → Seerr-tracked dedup (#3)", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it("skips items with no TMDB id when Seerr is configured (defers to the webhook)", async () => {
+  it("posts a no-TMDB-id item (basic embed) even when Seerr is configured — deferral is the retry's job, not doNotify's", async () => {
     const send = vi.fn(async () => ({ id: "m" }));
-    const item = { Type: "Movie", Name: "Slanted", Id: "jf", ProviderIds: {} };
+    const item = { Type: "Movie", Name: "Layer Cake", Id: "jf", ProviderIds: {} };
 
     await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
 
-    expect(send).not.toHaveBeenCalled();
-    expect(markPosted).not.toHaveBeenCalled();
-    expect(checkMediaStatus).not.toHaveBeenCalled(); // cannot query Seerr without a tmdbId
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(checkMediaStatus).not.toHaveBeenCalled(); // no tmdbId to query
   });
 
   it("does not call Seerr when SEERR_URL/API key are unset", async () => {

@@ -614,23 +614,48 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     }
   }
 
-  // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish scanning metadata
+  // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish
+  // scanning metadata, retrying a few times. Once a TMDB id appears we notify —
+  // which lets the Seerr dedup run and suppress the duplicate for Seerr
+  // downloads. If the id never resolves we still post a basic notification, so
+  // genuine non-Seerr additions (a file dropped straight into the library) are
+  // announced rather than silently swallowed.
   const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
   if (!tmdbId && process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0) {
-    logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB ID yet – waiting ${delaySec}s for metadata scan`);
-    setTimeout(async () => {
-      const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
-      // Round 10 SAFETY: if the re-fetch somehow stripped the Id (shouldn't happen
-      // with the Fields-explicit call, but defensive), preserve it from the original.
-      if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
-      await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
-        logger.error(`[Jellyfin Poller] Delayed notify failed for "${item.Name}": ${err.message}`)
-      );
-    }, delaySec * 1000);
+    scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, 1);
     return;
   }
 
   await doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
+}
+
+// Number of times the poller re-checks an item whose TMDB id has not been
+// scanned by Jellyfin yet before giving up and posting a basic notification.
+const MAX_METADATA_ATTEMPTS = 5;
+
+function scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, attempt) {
+  const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
+  const waitMs = (!isNaN(delaySec) && delaySec > 0 ? delaySec : 60) * 1000;
+  logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB id yet – waiting ${waitMs / 1000}s for the metadata scan (attempt ${attempt}/${MAX_METADATA_ATTEMPTS})`);
+  setTimeout(async () => {
+    try {
+      const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
+      // Defensive: a re-fetch should never strip the Id, but preserve it if so.
+      if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
+      const freshTmdb = freshItem.ProviderIds?.Tmdb || freshItem.ProviderIds?.tmdb || null;
+
+      if (freshTmdb || attempt >= MAX_METADATA_ATTEMPTS) {
+        if (!freshTmdb) {
+          logger.info(`[Jellyfin Poller] "${item.Name}" still has no TMDB id after ${MAX_METADATA_ATTEMPTS} attempts – posting a basic notification (treated as a non-Seerr addition)`);
+        }
+        await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
+        return;
+      }
+      scheduleMetadataRetry(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, attempt + 1);
+    } catch (err) {
+      logger.error(`[Jellyfin Poller] Metadata retry failed for "${item.Name}": ${err.message}`);
+    }
+  }, waitMs);
 }
 
 export async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
@@ -641,19 +666,6 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
-
-  // No-TMDB-id guard (#3): without a TMDB id we can neither enrich the embed
-  // (no overview/image — the bare "New in Jellyfin" card the user sees) nor
-  // verify the title against Seerr. When Seerr is configured, a freshly imported
-  // file with no metadata yet is almost always a Seerr download whose scan hasn't
-  // finished; posting now races — and loses to — the Seerr MEDIA_AVAILABLE
-  // webhook, producing the duplicate post. Defer to the webhook.
-  // (By this point the metadata-delay branch in notifyItem already gave Jellyfin
-  // time to scan, so this only fires when the id is still genuinely unavailable.)
-  if (!tmdbId && process.env.SEERR_URL && process.env.SEERR_API_KEY) {
-    logger.info(`[Jellyfin Poller] Skipping "${item.Name}" — no TMDB id yet and Seerr is configured; deferring to the Seerr webhook to avoid a duplicate "New in Jellyfin" post`);
-    return;
-  }
 
   // TERTIARY dedup (#3): if the title is tracked in Seerr (it was requested
   // there — by anyone, including directly in the Seerr UI), the poller must NOT
