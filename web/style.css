@@ -1,20 +1,38 @@
 :root {
-  /* Questorr Brand – Dark Teal */
-  --background: #0d1117;
-  --foreground: #e6f1f5;
-  --mantle: #080d12;
-  --surface0: #161e26;
-  --surface1: #1f2d38;
-  --surface2: #2a3d4d;
-  --mauve: #1ec8a0;   /* primary brand teal */
-  --blue: #17b8c4;    /* secondary cyan */
-  --green: #2ecc8e;   /* success green */
-  --peach: #f0a05a;   /* warning orange */
-  --text: #e6f1f5;
-  --subtext0: #8ba8b8;
-  --border-color: #1f2d38;
+  /* Questorr Brand – Modern SaaS Clean (light, indigo) */
+  --background: #f5f6fb;
+  --foreground: #1b1f2a;
+  --mantle: #eceef5;
+  --surface0: #ffffff;
+  --surface1: #eef1f8;
+  --surface2: #e2e7f2;
+  --mauve: #5b5bd6;   /* primary brand indigo */
+  --blue: #4f6bed;    /* links / secondary */
+  --green: #15a36b;   /* success */
+  --peach: #d98324;   /* warning */
+  --text: #1b1f2a;
+  --subtext0: #646d85;
+  --border-color: #e3e7f1;
   --border-radius: 12px;
-  --code-bg: #1f2d38;
+  --code-bg: #eef1f8;
+
+  /* Extended tokens (used across the app, previously undefined) */
+  --subtext1: #3f4759;
+  --red: #e1495b;
+  --teal: #0fb5ba;    /* media / Jellyfin accent */
+  --yellow: #c99700;
+
+  /* Typography */
+  --display-font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Signature accent + elevation */
+  --accent-grad: linear-gradient(135deg, #5b5bd6, #7c6cf0);
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 24, 40, 0.08);
+  --shadow-lg: 0 18px 48px rgba(20, 24, 40, 0.12);
+  --ring: 0 0 0 3px rgba(91, 91, 214, 0.18);
 }
 
 /* Utility classes */
@@ -4226,4 +4244,347 @@ tr.notif-disabled td {
     font-weight: 600;
     color: var(--subtext0);
   }
+}
+
+/* ============================================================
+   MODERN SAAS CLEAN — theme layer
+   Light, indigo. Appended last so it overrides the legacy
+   dark-teal base AND the pixel/Tetris layer. Themes color /
+   type / border / shadow only; layout is left to earlier
+   rules so the responsive @media blocks stay intact.
+   ============================================================ */
+
+/* ── Kill the arcade decorations ─────────────────────────── */
+body {
+  font-family: var(--body-font) !important;
+  background-color: var(--background) !important;
+  background-image: none !important;
+  color: var(--text);
+  font-weight: 400;
+}
+body::before,
+body::after { content: none !important; display: none !important; }
+#tetris-bg,
+.tetris-piece,
+.hero-aurora { display: none !important; }
+.hero.full-screen::before,
+.dashboard-container::before { content: none !important; background: none !important; }
+.auth-container::before,
+.auth-container::after,
+.hero-title::after { content: none !important; }
+
+/* ── Typography ──────────────────────────────────────────── */
+h1, h2, h3, .hero-title, .dashboard-title, fieldset legend, .config-pane legend, .features-title {
+  font-family: var(--display-font) !important;
+}
+code, pre, .code-block, .mono, .log-entry, #logs-container {
+  font-family: var(--mono-font) !important;
+}
+
+/* ── Navbar ──────────────────────────────────────────────── */
+.navbar {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.navbar-brand .logo,
+.auth-logo {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  image-rendering: auto !important;
+  background: #1b1f2a;
+  border-radius: 10px;
+  padding: 5px 8px;
+  box-shadow: var(--shadow-sm);
+}
+.auth-logo {
+  width: 76px !important;
+  height: 76px !important;
+  padding: 12px !important;
+  border-radius: 18px !important;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 1rem !important;
+}
+.nav-links {
+  background: var(--surface1) !important;
+  border: 1px solid var(--border-color) !important;
+}
+.nav-links a { color: var(--subtext1) !important; }
+.nav-links a:hover {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+}
+
+/* ── Login / hero ────────────────────────────────────────── */
+.hero.full-screen { background: transparent !important; }
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: none !important;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+.hero-subtitle {
+  font-family: var(--body-font) !important;
+  color: var(--subtext0) !important;
+  opacity: 1 !important;
+  letter-spacing: 0 !important;
+  font-size: 0.95rem !important;
+}
+.auth-container {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-lg) !important;
+  clip-path: none !important;
+}
+.auth-form input,
+.language-selector-auth select {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+  font-family: var(--body-font) !important;
+}
+.auth-form input::placeholder { color: var(--subtext0) !important; }
+.auth-form input:focus,
+.language-selector-auth select:focus {
+  border-color: var(--mauve) !important;
+  box-shadow: var(--ring) !important;
+  outline: none !important;
+}
+.auth-form label,
+.language-selector-auth label {
+  font-family: var(--body-font) !important;
+  color: var(--subtext1) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-size: 0.85rem !important;
+}
+.auth-switch { font-family: var(--body-font) !important; color: var(--subtext0) !important; }
+.auth-switch a { color: var(--mauve) !important; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn-primary,
+.auth-form .btn-primary,
+.dashboard-nav .btn-primary {
+  background: var(--mauve) !important;
+  color: #fff !important;
+  font-family: var(--body-font) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  letter-spacing: 0 !important;
+  clip-path: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease !important;
+}
+.btn-primary:hover,
+.auth-form .btn-primary:hover,
+.dashboard-nav .btn-primary:hover {
+  background: var(--accent-grad) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(91, 91, 214, 0.3) !important;
+}
+.btn-secondary {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text) !important;
+  font-family: var(--body-font) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+.btn-secondary:hover {
+  background: var(--surface1) !important;
+  border-color: var(--surface2) !important;
+  transform: none !important;
+}
+.btn-danger,
+[class*="stop"],
+#stop-bot-btn {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  clip-path: none !important;
+}
+
+/* ── Forms ───────────────────────────────────────────────── */
+input[type="text"],
+input[type="url"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+  font-family: var(--body-font) !important;
+  font-size: 0.92rem !important;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--mauve) !important;
+  box-shadow: var(--ring) !important;
+  outline: none !important;
+}
+input[type="checkbox"] { accent-color: var(--mauve) !important; }
+label,
+.form-group label {
+  font-family: var(--body-font) !important;
+  color: var(--subtext1) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-size: 0.85rem !important;
+}
+.form-text {
+  font-family: var(--body-font) !important;
+  color: var(--subtext0) !important;
+  font-size: 0.8rem !important;
+}
+fieldset legend,
+.config-pane legend {
+  color: var(--text) !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+.config-pane strong,
+.config-pane b { color: var(--text) !important; }
+.webhook-box {
+  background: var(--surface1) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
+}
+code, .code-block, pre {
+  background: var(--code-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--mauve) !important;
+  border-radius: 6px !important;
+}
+
+/* ── Cards / surfaces ────────────────────────────────────── */
+.feature-card,
+.about-card,
+.features-list,
+.dev-footer,
+.dashboard-actions,
+.dashboard-header,
+.dashboard-sidebar,
+.modal-content,
+.custom-select-dropdown {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.dashboard-header { clip-path: none !important; border-radius: 14px !important; }
+.dashboard-title {
+  color: var(--text) !important;
+  text-shadow: none !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+}
+.features-list li { background: var(--surface1) !important; }
+.features-list li:hover { background: var(--surface2) !important; }
+
+/* ── Signature: the 8-step setup journey rail ────────────── */
+.dashboard-nav .nav-item {
+  font-family: var(--body-font) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  color: var(--subtext1) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  padding: 0.6rem 0.85rem !important;
+  letter-spacing: 0 !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+}
+.dashboard-nav .nav-item::before { content: "" !important; opacity: 0 !important; }
+.dashboard-nav .nav-item:hover {
+  background: var(--surface1) !important;
+  color: var(--text) !important;
+  border-color: var(--border-color) !important;
+}
+.dashboard-nav .nav-item.active {
+  background: var(--accent-grad) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px rgba(91, 91, 214, 0.28) !important;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.footer {
+  background: var(--mantle) !important;
+  border-top: 1px solid var(--border-color) !important;
+  font-family: var(--body-font) !important;
+  color: var(--subtext0) !important;
+}
+.footer a { color: var(--subtext0) !important; }
+.footer a:hover { color: var(--mauve) !important; }
+
+/* ── Logs ────────────────────────────────────────────────── */
+#logs-container {
+  background: var(--surface0) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: inset 0 1px 3px rgba(20, 24, 40, 0.05) !important;
+}
+.log-entry { border-bottom: 1px solid var(--border-color) !important; }
+.log-timestamp { color: var(--subtext0) !important; }
+.log-level.info { color: var(--blue) !important; }
+.log-level.warn { color: var(--peach) !important; }
+.log-level.error { color: var(--red) !important; }
+.log-level.debug { color: var(--subtext0) !important; }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar-track { background: var(--surface1) !important; }
+::-webkit-scrollbar-thumb { background: var(--surface2) !important; border-radius: 8px !important; }
+::-webkit-scrollbar-thumb:hover { background: var(--mauve) !important; }
+
+/* ── Repoint legacy pixel tokens so stray var(--pixel-*) stay on-theme ── */
+:root {
+  --pixel-teal: #5b5bd6;
+  --pixel-cyan: #4f6bed;
+  --pixel-green: #15a36b;
+  --pixel-dark: #ffffff;
+  --pixel-grid: rgba(91, 91, 214, 0.05);
+  --pixel-border: var(--border-color);
+  --pixel-glow: var(--shadow-sm);
+  --pixel-font: var(--display-font);
+  --mono-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+/* ── Accessibility ───────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--mauve) !important; outline-offset: 2px !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Mobile: strip remaining pixel artifacts ─────────────── */
+@media (max-width: 768px) {
+  .mobile-save-btn {
+    clip-path: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(91, 91, 214, 0.35) !important;
+    font-family: var(--body-font) !important;
+  }
+  .dashboard-header { clip-path: none !important; }
+  .dashboard-nav .nav-item { font-family: var(--body-font) !important; }
 }
