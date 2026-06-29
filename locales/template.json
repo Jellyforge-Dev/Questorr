@@ -549,7 +549,18 @@
     "errors": "",
     "refresh": "",
     "loading": "",
-    "webhook": ""
+    "webhook": "",
+    "level_all": "",
+    "level_error": "",
+    "level_warn": "",
+    "level_info": "",
+    "level_debug": "",
+    "source_all": "",
+    "search_placeholder": "",
+    "load_more": "",
+    "showing": "",
+    "no_results": "",
+    "no_webhook": ""
   },
   "bot": {
     "start": "",

@@ -620,7 +620,18 @@
     "errors": "Fehler",
     "refresh": "Aktualisieren",
     "loading": "Lade Protokolle...",
-    "webhook": "Webhook"
+    "webhook": "Webhook",
+    "level_all": "Alle Stufen",
+    "level_error": "Fehler",
+    "level_warn": "Warnung",
+    "level_info": "Info",
+    "level_debug": "Debug",
+    "source_all": "Alle Quellen",
+    "search_placeholder": "Meldungen durchsuchen…",
+    "load_more": "Mehr laden",
+    "showing": "Zeige {{shown}} von {{total}}",
+    "no_results": "Keine Protokolle passen zu den aktuellen Filtern.",
+    "no_webhook": "Noch keine Webhook-Ereignisse im Protokoll."
   },
   "bot": {
     "start": "Bot starten",

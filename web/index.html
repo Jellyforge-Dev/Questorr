@@ -1761,10 +1761,36 @@
             </div>
           </div>
 
+          <div id="logs-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.75rem;">
+            <select id="logs-level-filter" class="form-control" style="max-width: 160px;">
+              <option value="all" data-i18n="logs.level_all">All levels</option>
+              <option value="error" data-i18n="logs.level_error">Error</option>
+              <option value="warn" data-i18n="logs.level_warn">Warning</option>
+              <option value="info" data-i18n="logs.level_info">Info</option>
+              <option value="debug" data-i18n="logs.level_debug">Debug</option>
+            </select>
+            <select id="logs-source-filter" class="form-control" style="max-width: 200px;">
+              <option value="all" data-i18n="logs.source_all">All sources</option>
+              <option value="[Jellyfin Poller]">Jellyfin Poller</option>
+              <option value="[SEERR WEBHOOK]">Seerr Webhook</option>
+              <option value="[Seerr]">Seerr</option>
+              <option value="[Jellyfin]">Jellyfin</option>
+              <option value="[TMDB]">TMDB</option>
+              <option value="[Discord]">Discord</option>
+              <option value="[Cache]">Cache</option>
+            </select>
+            <input type="text" id="logs-search" class="form-control" style="flex: 1; min-width: 160px;" placeholder="Search messages…" data-i18n="logs.search_placeholder" data-i18n-attr="placeholder" />
+            <span id="logs-count" style="font-size: 0.82rem; color: var(--subtext0); white-space: nowrap;"></span>
+          </div>
+
           <div id="logs-container">
             <div style="text-align: center; color: var(--subtext0); padding: 2rem;" data-i18n="logs.loading">
               Lade Protokolle...
             </div>
+          </div>
+
+          <div id="logs-loadmore-row" style="text-align: center; padding: 1rem; display: none;">
+            <button type="button" id="logs-loadmore-btn" class="btn btn-secondary" data-i18n="logs.load_more">Load more</button>
           </div>
         </div>
       </section>

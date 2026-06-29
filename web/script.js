@@ -4945,86 +4945,131 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Load and display logs
-  async function loadLogs(type) {
-    try {
-      logsContainer.innerHTML =
-        '<div style="text-align: center; color: var(--subtext0); padding: 2rem;">Loading logs...</div>';
-      // Webhook filter uses all logs endpoint, then filters client-side
-      const endpoint = type === "error" ? "/api/logs/error" : "/api/logs/all";
-      const response = await fetch(endpoint);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+  const LOGS_PAGE_LIMIT = 2000;
+  let logsOffset = 0;
 
-      // Webhook tab: use structured webhook event log API for better display
-      if (type === "webhook") {
-        try {
-          const whRes = await fetch("/api/webhook-log", {
-            credentials: "include",
-          });
-          if (whRes.ok) {
-            const whData = await whRes.json();
-            if (whData.events && whData.events.length > 0) {
-              const whHtml = whData.events.map(e => {
-                const statusClass = e.status === "unauthorized" ? "error" : (e.status === "received" ? "info" : "warn");
-                return `<div class="log-entry">
-                  <span class="log-timestamp">${e.ts || ""}</span>
-                  <span class="log-level ${statusClass}">${(e.event || "?").toUpperCase()}</span>
-                  <span class="log-message">${escapeHtml(e.subject || "—")} <span style="color:var(--subtext0);font-size:0.85em">· ${e.status || ""} · ${e.ip || ""}</span></span>
-                </div>`;
-              }).join("");
-              const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button id="clear-webhook-log-btn" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
-              logsContainer.innerHTML = clearBtn + whHtml;
-              document.getElementById("clear-webhook-log-btn")?.addEventListener("click", clearWebhookLog);
-              return;
-            }
-          }
-        } catch (_) {}
-        // Fallback: filter general logs
-      }
+  function getLogFilterParams() {
+    return {
+      level: document.getElementById("logs-level-filter")?.value || "all",
+      source: document.getElementById("logs-source-filter")?.value || "all",
+      q: (document.getElementById("logs-search")?.value || "").trim(),
+    };
+  }
 
-      let entries = data.entries;
-      if (type === "webhook") {
-        entries = entries.filter(e => e.message && e.message.includes("[SEERR WEBHOOK]"));
-      }
+  function setLogsControlsVisible(show) {
+    const f = document.getElementById("logs-filters");
+    if (f) f.style.display = show ? "flex" : "none";
+  }
 
-      if (entries.length === 0) {
-        const emptyMessage =
-          type === "error" ? "No errors found" :
-          type === "webhook" ? "No webhook events in log yet." :
-          "No logs available";
-        logsContainer.innerHTML = `<div class="logs-empty">${emptyMessage}</div>`;
-        return;
-      }
+  function updateLogsCount(shown, total) {
+    const el = document.getElementById("logs-count");
+    if (!el) return;
+    if (!total) { el.textContent = ""; return; }
+    const tpl = t("logs.showing") || "Showing {{shown}} of {{total}}";
+    el.textContent = tpl.split("{{shown}}").join(shown).split("{{total}}").join(total);
+  }
 
-      // Build log entries HTML
-      const logsHtml = entries
-        .map(
-          (entry) => `
+  function renderLogRows(entries) {
+    return entries
+      .map(
+        (entry) => `
         <div class="log-entry">
           <span class="log-timestamp">${entry.timestamp}</span>
-          <span class="log-level ${
-            entry.level
-          }">${entry.level.toUpperCase()}</span>
+          <span class="log-level ${entry.level}">${entry.level.toUpperCase()}</span>
           <span class="log-message">${escapeHtml(entry.message)}</span>
         </div>
       `
-        )
-        .join("");
+      )
+      .join("");
+  }
 
-      // Add truncation notice if needed
-      let truncationNotice = "";
-      if (data.truncated) {
-        truncationNotice = `<div style="padding: 1rem; background-color: var(--surface1); border-bottom: 1px solid var(--border); text-align: center; color: var(--text); font-size: 0.9rem;">
-          <i class="bi bi-info-circle" style="margin-right: 0.5rem;"></i>Showing last 1,000 entries. Older logs are archived for space efficiency.
-        </div>`;
+  async function loadWebhookLog() {
+    try {
+      const whRes = await fetch("/api/webhook-log", { credentials: "include" });
+      if (whRes.ok) {
+        const whData = await whRes.json();
+        if (whData.events && whData.events.length > 0) {
+          const whHtml = whData.events.map(e => {
+            const statusClass = e.status === "unauthorized" ? "error" : (e.status === "received" ? "info" : "warn");
+            return `<div class="log-entry">
+              <span class="log-timestamp">${e.ts || ""}</span>
+              <span class="log-level ${statusClass}">${(e.event || "?").toUpperCase()}</span>
+              <span class="log-message">${escapeHtml(e.subject || "—")} <span style="color:var(--subtext0);font-size:0.85em">· ${e.status || ""} · ${e.ip || ""}</span></span>
+            </div>`;
+          }).join("");
+          const clearBtn = `<div style="padding:0.5rem 1rem;text-align:right;"><button id="clear-webhook-log-btn" class="btn btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Clear Webhook Log</button></div>`;
+          logsContainer.innerHTML = clearBtn + whHtml;
+          document.getElementById("clear-webhook-log-btn")?.addEventListener("click", clearWebhookLog);
+          return;
+        }
+      }
+    } catch (_) {}
+    logsContainer.innerHTML = `<div class="logs-empty">${t("logs.no_webhook") || "No webhook events in log yet."}</div>`;
+  }
+
+  // Load and display logs with server-side level/source/text filtering + paging.
+  async function loadLogs(type, append = false) {
+    const loadMoreRow = document.getElementById("logs-loadmore-row");
+    try {
+      // Webhook tab keeps its dedicated structured view (no filters/paging).
+      if (type === "webhook") {
+        setLogsControlsVisible(false);
+        if (loadMoreRow) loadMoreRow.style.display = "none";
+        updateLogsCount(0, 0);
+        await loadWebhookLog();
+        return;
+      }
+      setLogsControlsVisible(true);
+
+      if (!append) {
+        logsOffset = 0;
+        logsContainer.innerHTML =
+          '<div style="text-align: center; color: var(--subtext0); padding: 2rem;">' +
+          (t("logs.loading") || "Loading logs...") + "</div>";
       }
 
-      logsContainer.innerHTML = truncationNotice + logsHtml;
+      const { level, source, q } = getLogFilterParams();
+      const endpoint = type === "error" ? "/api/logs/error" : "/api/logs/all";
+      const params = new URLSearchParams({ level, source, q, limit: String(LOGS_PAGE_LIMIT), offset: String(logsOffset) });
+      const response = await fetch(`${endpoint}?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+
+      const entries = data.entries || [];
+      const rowsHtml = renderLogRows(entries);
+
+      if (!append) {
+        logsContainer.innerHTML = entries.length === 0
+          ? `<div class="logs-empty">${t("logs.no_results") || "No logs available"}</div>`
+          : rowsHtml;
+      } else if (rowsHtml) {
+        logsContainer.insertAdjacentHTML("beforeend", rowsHtml);
+      }
+
+      const shown = (data.offset || 0) + entries.length;
+      updateLogsCount(shown, data.total || 0);
+      if (loadMoreRow) loadMoreRow.style.display = data.hasMore ? "block" : "none";
     } catch (error) {
       logsContainer.innerHTML = `<div class="logs-empty">${t('errors.loading_logs')}: ${escapeHtml(error.message)}</div>`;
     }
   }
+
+  // Log filter controls
+  const _logsLevelSel = document.getElementById("logs-level-filter");
+  const _logsSourceSel = document.getElementById("logs-source-filter");
+  const _logsSearchInput = document.getElementById("logs-search");
+  const _logsLoadMoreBtn = document.getElementById("logs-loadmore-btn");
+  _logsLevelSel?.addEventListener("change", () => loadLogs(currentLogsTab));
+  _logsSourceSel?.addEventListener("change", () => loadLogs(currentLogsTab));
+  let _logsSearchTimer = null;
+  _logsSearchInput?.addEventListener("input", () => {
+    clearTimeout(_logsSearchTimer);
+    _logsSearchTimer = setTimeout(() => loadLogs(currentLogsTab), 300);
+  });
+  _logsLoadMoreBtn?.addEventListener("click", () => {
+    logsOffset += LOGS_PAGE_LIMIT;
+    loadLogs(currentLogsTab, true);
+  });
 
   // Helper function to escape HTML
   function escapeHtml(text) {
