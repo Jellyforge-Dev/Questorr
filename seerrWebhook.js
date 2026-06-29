@@ -94,74 +94,85 @@ export function removeAdminPendingMsg(requestId) {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// `label` is a getter so it is resolved LIVE on every access — reflecting the
+// current BOT_LANGUAGE and any NOTIF_TITLE_* override without a restart. (It used
+// to be a plain string evaluated once at module import, which froze the channel
+// title to the language/value present at startup — the DM path already resolved
+// it live, hence DM and channel could disagree.)
 const EVENT_CONFIG = {
   MEDIA_PENDING: {
     emoji: "⏳",
-    label: tNotif("event_pending",       "NOTIF_TITLE_MEDIA_PENDING"),
+    get label() { return tNotif("event_pending", "NOTIF_TITLE_MEDIA_PENDING"); },
     color: "#f9e2af",
     adminOnly: true,
   },
   MEDIA_APPROVED: {
     emoji: "✅",
-    label: tNotif("event_approved",       "NOTIF_TITLE_MEDIA_APPROVED"),
+    get label() { return tNotif("event_approved", "NOTIF_TITLE_MEDIA_APPROVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AUTO_APPROVED: {
     emoji: "⚡",
-    label: tNotif("event_auto_approved",  "NOTIF_TITLE_MEDIA_AUTO_APPROVED"),
+    get label() { return tNotif("event_auto_approved", "NOTIF_TITLE_MEDIA_AUTO_APPROVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AVAILABLE: {
     emoji: "🎉",
-    label: tNotif("event_available",      "NOTIF_TITLE_MEDIA_AVAILABLE"),
+    get label() { return tNotif("event_available", "NOTIF_TITLE_MEDIA_AVAILABLE"); },
     color: "#1ec8a0",
     adminOnly: false,
   },
   MEDIA_DECLINED: {
     emoji: "❌",
-    label: tNotif("event_declined",       "NOTIF_TITLE_MEDIA_DECLINED"),
+    get label() { return tNotif("event_declined", "NOTIF_TITLE_MEDIA_DECLINED"); },
     color: "#f38ba8",
     adminOnly: false,
   },
   MEDIA_FAILED: {
     emoji: "💥",
-    label: tNotif("event_failed",         "NOTIF_TITLE_MEDIA_FAILED"),
+    get label() { return tNotif("event_failed", "NOTIF_TITLE_MEDIA_FAILED"); },
     color: "#f38ba8",
     adminOnly: true,
   },
   ISSUE_CREATED: {
     emoji: "🐛",
-    label: tNotif("event_issue_created",  "NOTIF_TITLE_ISSUE_CREATED"),
+    get label() { return tNotif("event_issue_created", "NOTIF_TITLE_ISSUE_CREATED"); },
     color: "#ef9f76",
     adminOnly: false,
   },
   ISSUE_COMMENT: {
     emoji: "💬",
-    label: tNotif("event_issue_comment",  "NOTIF_TITLE_ISSUE_COMMENT"),
+    get label() { return tNotif("event_issue_comment", "NOTIF_TITLE_ISSUE_COMMENT"); },
     color: "#89b4fa",
     adminOnly: false,
   },
   ISSUE_RESOLVED: {
     emoji: "✔️",
-    label: tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"),
+    get label() { return tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   ISSUE_REOPENED: {
     emoji: "🔄",
-    label: tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"),
+    get label() { return tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"); },
     color: "#ef9f76",
     adminOnly: false,
   },
   TEST_NOTIFICATION: {
     emoji: "🔔",
-    label: tNotif("event_test",           "NOTIF_TITLE_TEST"),
+    get label() { return tNotif("event_test", "NOTIF_TITLE_TEST"); },
     color: "#89b4fa",
     adminOnly: false,
   },
 };
+
+// Live-resolved channel title for an event (emoji + label). Exported for tests.
+export function getEventLabel(eventType) {
+  const c = EVENT_CONFIG[eventType];
+  return c ? c.label : null;
+}
 
 // TMDB cache
 const tmdbCache = new Map();
