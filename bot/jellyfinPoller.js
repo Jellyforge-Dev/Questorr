@@ -33,7 +33,7 @@ import {
   ActionRowBuilder,
 } from "discord.js";
 import logger from "../utils/logger.js";
-import { t } from "../utils/botStrings.js";
+import { t, tNotif } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { shouldPost, markPosted } from "../utils/notificationDispatcher.js";
@@ -760,7 +760,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
 
   const embed = new EmbedBuilder()
     .setColor(typeSettings.color)
-    .setAuthor({ name: `${typeSettings.emoji} ${t("jellyfin_new_item")}` })
+    .setAuthor({ name: `${typeSettings.emoji} ${tNotif("jellyfin_new_item", "NOTIF_TITLE_JELLYFIN_NEW")}` })
     .setTitle(title)
     .setTimestamp();
 

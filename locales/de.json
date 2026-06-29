@@ -504,6 +504,7 @@
     "notif_test": "Test-Benachrichtigung",
     "notif_daily_random": "Täglicher Zufallstitel",
     "notif_daily_recommendation": "Tägliche Empfehlung",
+    "notif_jellyfin_new": "Zur Mediathek hinzugefügt (ohne Seerr)",
     "bot_language_label": "Bot-Sprache",
     "bot_language_help": "Sprache für Discord-Benachrichtigungen, Bot-Nachrichten und Button-Beschriftungen.",
     "date_format_label": "Datumsformat",

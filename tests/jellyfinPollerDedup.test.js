@@ -62,6 +62,31 @@ describe("jellyfinPoller doNotify → notifyDedup", () => {
   });
 });
 
+describe("jellyfinPoller header title", () => {
+  afterEach(() => { delete process.env.NOTIF_TITLE_JELLYFIN_NEW; });
+
+  it("uses the default localized header when no override is set", async () => {
+    let captured;
+    const send = vi.fn(async (opts) => { captured = opts; return { id: "m" }; });
+    const item = { Type: "Movie", Name: "Layer Cake", Id: "jf", ProviderIds: { Tmdb: "10804" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(captured.embeds[0].data.author.name).toContain("Added to the Library");
+  });
+
+  it("applies the NOTIF_TITLE_JELLYFIN_NEW override to the poller header", async () => {
+    process.env.NOTIF_TITLE_JELLYFIN_NEW = "Extern hinzugefügt";
+    let captured;
+    const send = vi.fn(async (opts) => { captured = opts; return { id: "m" }; });
+    const item = { Type: "Movie", Name: "Layer Cake", Id: "jf", ProviderIds: { Tmdb: "10804" } };
+
+    await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
+
+    expect(captured.embeds[0].data.author.name).toContain("Extern hinzugefügt");
+  });
+});
+
 describe("jellyfinPoller doNotify → Seerr-tracked dedup (#3)", () => {
   beforeEach(() => {
     process.env.SEERR_URL = "http://seerr";
