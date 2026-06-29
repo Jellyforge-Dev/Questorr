@@ -614,14 +614,18 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     }
   }
 
-  // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish
-  // scanning metadata, retrying a few times. Once a TMDB id appears we notify —
-  // which lets the Seerr dedup run and suppress the duplicate for Seerr
-  // downloads. If the id never resolves we still post a basic notification, so
-  // genuine non-Seerr additions (a file dropped straight into the library) are
-  // announced rather than silently swallowed.
+  // Hold the notification until the item has full metadata — a TMDB id that
+  // yields both an image and a description — so we never post a bare card.
+  // Jellyfin can take a while to scan/match a freshly imported file, so we
+  // re-check on an interval for up to ~30 minutes. Once metadata is ready we
+  // notify (which also lets the Seerr dedup run and suppress the duplicate for
+  // Seerr downloads). Only movies/series are gated this way; episodes/seasons
+  // post immediately as before. If metadata never arrives within the window we
+  // post a basic notification anyway, so nothing is silently lost.
   const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
-  if (!tmdbId && process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0) {
+  const canEnrich = process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0 &&
+    (itemType === "Movie" || itemType === "Series");
+  if (canEnrich && !(await hasFullMetadata(item))) {
     scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, 1);
     return;
   }
@@ -629,24 +633,50 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   await doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
 }
 
-// Number of times the poller re-checks an item whose TMDB id has not been
-// scanned by Jellyfin yet before giving up and posting a basic notification.
-const MAX_METADATA_ATTEMPTS = 5;
+// Maximum time the poller waits for Jellyfin/TMDB to populate full metadata
+// (image + description) before falling back to a basic notification.
+const METADATA_MAX_WAIT_MS = 30 * 60 * 1000;
+
+// True when the item resolves to a TMDB entry that has BOTH an image
+// (poster/backdrop) and a description — i.e. the embed will look complete.
+// A description may come from Jellyfin's own Overview, but the poller embed only
+// uses TMDB images, so a TMDB id is required for the image either way.
+export async function hasFullMetadata(item) {
+  const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || null;
+  if (!tmdbId || !process.env.TMDB_API_KEY) return false;
+  const tmdbType = item.Type === "Movie" ? "movie" : "tv";
+  try {
+    const endpoint = tmdbType === "movie"
+      ? `https://api.themoviedb.org/3/movie/${tmdbId}`
+      : `https://api.themoviedb.org/3/tv/${tmdbId}`;
+    const res = await axios.get(endpoint, {
+      params: { api_key: process.env.TMDB_API_KEY, language: getTmdbLanguage(), append_to_response: "images" },
+      timeout: 8000,
+    });
+    const d = res.data || {};
+    const hasImage = !!(d.poster_path || d.backdrop_path || findBestBackdrop(d));
+    const hasOverview = !!((d.overview && d.overview.trim()) || (item.Overview && String(item.Overview).trim()));
+    return hasImage && hasOverview;
+  } catch {
+    return false;
+  }
+}
 
 function scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, attempt) {
   const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
   const waitMs = (!isNaN(delaySec) && delaySec > 0 ? delaySec : 60) * 1000;
-  logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB id yet – waiting ${waitMs / 1000}s for the metadata scan (attempt ${attempt}/${MAX_METADATA_ATTEMPTS})`);
+  const maxAttempts = Math.max(5, Math.ceil(METADATA_MAX_WAIT_MS / waitMs));
+  logger.info(`[Jellyfin Poller] "${item.Name}" – waiting for full metadata (image + description), re-check in ${waitMs / 1000}s (attempt ${attempt}/${maxAttempts})`);
   setTimeout(async () => {
     try {
       const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
       // Defensive: a re-fetch should never strip the Id, but preserve it if so.
       if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
-      const freshTmdb = freshItem.ProviderIds?.Tmdb || freshItem.ProviderIds?.tmdb || null;
 
-      if (freshTmdb || attempt >= MAX_METADATA_ATTEMPTS) {
-        if (!freshTmdb) {
-          logger.info(`[Jellyfin Poller] "${item.Name}" still has no TMDB id after ${MAX_METADATA_ATTEMPTS} attempts – posting a basic notification (treated as a non-Seerr addition)`);
+      const ready = await hasFullMetadata(freshItem);
+      if (ready || attempt >= maxAttempts) {
+        if (!ready) {
+          logger.info(`[Jellyfin Poller] "${item.Name}" still lacks full metadata after ~${Math.round((maxAttempts * waitMs) / 60000)} min – posting a basic notification`);
         }
         await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
         return;

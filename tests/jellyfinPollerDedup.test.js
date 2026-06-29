@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const markPosted = vi.fn();
 const shouldPost = vi.fn(() => ({ post: true }));
 const checkMediaStatus = vi.fn();
+const axiosGet = vi.fn();
 
 vi.mock("../utils/notificationDispatcher.js", () => ({ markPosted, shouldPost }));
 vi.mock("../api/seerr.js", () => ({ checkMediaStatus }));
+vi.mock("axios", () => ({ default: { get: axiosGet } }));
 // buildButtons dynamically imports seerrWebhook for the button matrix — stub it
 // so the heavy module (and its side effects) never load during the test.
 vi.mock("../seerrWebhook.js", () => ({
@@ -15,7 +17,7 @@ vi.mock("../utils/logger.js", () => ({
   default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-const { doNotify } = await import("../bot/jellyfinPoller.js");
+const { doNotify, hasFullMetadata } = await import("../bot/jellyfinPoller.js");
 
 function makeClient(send) {
   return { channels: { fetch: vi.fn(async () => ({ send })) } };
@@ -59,6 +61,41 @@ describe("jellyfinPoller doNotify → notifyDedup", () => {
 
     // markPosted still runs (audit), but with no tmdbId — dispatcher won't mark dedup.
     expect(markPosted).toHaveBeenCalledWith(expect.objectContaining({ tmdbId: null }));
+  });
+});
+
+describe("hasFullMetadata", () => {
+  beforeEach(() => { process.env.TMDB_API_KEY = "tk"; });
+  afterEach(() => { delete process.env.TMDB_API_KEY; });
+
+  it("is true when TMDB returns both an image and an overview", async () => {
+    axiosGet.mockResolvedValue({ data: { poster_path: "/p.jpg", overview: "A heist goes wrong." } });
+    const ready = await hasFullMetadata({ Type: "Movie", ProviderIds: { Tmdb: "10804" } });
+    expect(ready).toBe(true);
+  });
+
+  it("is false when TMDB has no image or overview", async () => {
+    axiosGet.mockResolvedValue({ data: {} });
+    const ready = await hasFullMetadata({ Type: "Movie", ProviderIds: { Tmdb: "10804" } });
+    expect(ready).toBe(false);
+  });
+
+  it("accepts a Jellyfin Overview when TMDB has an image but no overview", async () => {
+    axiosGet.mockResolvedValue({ data: { backdrop_path: "/b.jpg", overview: "" } });
+    const ready = await hasFullMetadata({ Type: "Movie", Overview: "From Jellyfin.", ProviderIds: { Tmdb: "10804" } });
+    expect(ready).toBe(true);
+  });
+
+  it("is false without a TMDB id (cannot fetch an image)", async () => {
+    const ready = await hasFullMetadata({ Type: "Movie", Overview: "x", ProviderIds: {} });
+    expect(ready).toBe(false);
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it("is false when the TMDB request throws (fail-closed → keep waiting)", async () => {
+    axiosGet.mockRejectedValue(new Error("timeout"));
+    const ready = await hasFullMetadata({ Type: "Movie", ProviderIds: { Tmdb: "10804" } });
+    expect(ready).toBe(false);
   });
 });
 
