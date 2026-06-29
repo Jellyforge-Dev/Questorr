@@ -434,6 +434,7 @@
     "notif_test": "Test Notification",
     "notif_daily_random": "Daily Random Pick",
     "notif_daily_recommendation": "Daily Recommendation",
+    "notif_jellyfin_new": "Added to Library (non-Seerr)",
     "bot_language_label": "Bot Language",
     "bot_language_help": "Language for Discord notifications, bot messages and button labels.",
     "date_format_label": "Date Format",
@@ -550,7 +551,18 @@
     "errors": "Errors",
     "refresh": "Refresh logs",
     "loading": "Loading logs...",
-    "webhook": "Webhook"
+    "webhook": "Webhook",
+    "level_all": "All levels",
+    "level_error": "Error",
+    "level_warn": "Warning",
+    "level_info": "Info",
+    "level_debug": "Debug",
+    "source_all": "All sources",
+    "search_placeholder": "Search messages…",
+    "load_more": "Load more",
+    "showing": "Showing {{shown}} of {{total}}",
+    "no_results": "No logs match the current filters.",
+    "no_webhook": "No webhook events in log yet."
   },
   "bot": {
     "start": "Start Bot",

@@ -94,74 +94,85 @@ export function removeAdminPendingMsg(requestId) {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// `label` is a getter so it is resolved LIVE on every access — reflecting the
+// current BOT_LANGUAGE and any NOTIF_TITLE_* override without a restart. (It used
+// to be a plain string evaluated once at module import, which froze the channel
+// title to the language/value present at startup — the DM path already resolved
+// it live, hence DM and channel could disagree.)
 const EVENT_CONFIG = {
   MEDIA_PENDING: {
     emoji: "⏳",
-    label: tNotif("event_pending",       "NOTIF_TITLE_MEDIA_PENDING"),
+    get label() { return tNotif("event_pending", "NOTIF_TITLE_MEDIA_PENDING"); },
     color: "#f9e2af",
     adminOnly: true,
   },
   MEDIA_APPROVED: {
     emoji: "✅",
-    label: tNotif("event_approved",       "NOTIF_TITLE_MEDIA_APPROVED"),
+    get label() { return tNotif("event_approved", "NOTIF_TITLE_MEDIA_APPROVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AUTO_APPROVED: {
     emoji: "⚡",
-    label: tNotif("event_auto_approved",  "NOTIF_TITLE_MEDIA_AUTO_APPROVED"),
+    get label() { return tNotif("event_auto_approved", "NOTIF_TITLE_MEDIA_AUTO_APPROVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   MEDIA_AVAILABLE: {
     emoji: "🎉",
-    label: tNotif("event_available",      "NOTIF_TITLE_MEDIA_AVAILABLE"),
+    get label() { return tNotif("event_available", "NOTIF_TITLE_MEDIA_AVAILABLE"); },
     color: "#1ec8a0",
     adminOnly: false,
   },
   MEDIA_DECLINED: {
     emoji: "❌",
-    label: tNotif("event_declined",       "NOTIF_TITLE_MEDIA_DECLINED"),
+    get label() { return tNotif("event_declined", "NOTIF_TITLE_MEDIA_DECLINED"); },
     color: "#f38ba8",
     adminOnly: false,
   },
   MEDIA_FAILED: {
     emoji: "💥",
-    label: tNotif("event_failed",         "NOTIF_TITLE_MEDIA_FAILED"),
+    get label() { return tNotif("event_failed", "NOTIF_TITLE_MEDIA_FAILED"); },
     color: "#f38ba8",
     adminOnly: true,
   },
   ISSUE_CREATED: {
     emoji: "🐛",
-    label: tNotif("event_issue_created",  "NOTIF_TITLE_ISSUE_CREATED"),
+    get label() { return tNotif("event_issue_created", "NOTIF_TITLE_ISSUE_CREATED"); },
     color: "#ef9f76",
     adminOnly: false,
   },
   ISSUE_COMMENT: {
     emoji: "💬",
-    label: tNotif("event_issue_comment",  "NOTIF_TITLE_ISSUE_COMMENT"),
+    get label() { return tNotif("event_issue_comment", "NOTIF_TITLE_ISSUE_COMMENT"); },
     color: "#89b4fa",
     adminOnly: false,
   },
   ISSUE_RESOLVED: {
     emoji: "✔️",
-    label: tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"),
+    get label() { return tNotif("event_issue_resolved", "NOTIF_TITLE_ISSUE_RESOLVED"); },
     color: "#2eb87e",
     adminOnly: false,
   },
   ISSUE_REOPENED: {
     emoji: "🔄",
-    label: tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"),
+    get label() { return tNotif("event_issue_reopened", "NOTIF_TITLE_ISSUE_REOPENED"); },
     color: "#ef9f76",
     adminOnly: false,
   },
   TEST_NOTIFICATION: {
     emoji: "🔔",
-    label: tNotif("event_test",           "NOTIF_TITLE_TEST"),
+    get label() { return tNotif("event_test", "NOTIF_TITLE_TEST"); },
     color: "#89b4fa",
     adminOnly: false,
   },
 };
+
+// Live-resolved channel title for an event (emoji + label). Exported for tests.
+export function getEventLabel(eventType) {
+  const c = EVENT_CONFIG[eventType];
+  return c ? c.label : null;
+}
 
 // TMDB cache
 const tmdbCache = new Map();
@@ -1179,11 +1190,11 @@ function chunkButtonsIntoRows(components) {
 // Per-event metadata for DM rendering. `dmKey` selects the i18n keys
 // (dm_<dmKey>_author / dm_<dmKey>_description); `color` is the embed color.
 const DM_EVENT_META = {
-  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500" },
-  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0" },
-  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0" },
-  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c" },
-  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71" },
+  MEDIA_PENDING:       { dmKey: "pending",        color: "#f0a500", titleEnvKey: "NOTIF_TITLE_MEDIA_PENDING" },
+  MEDIA_APPROVED:      { dmKey: "approved",       color: "#1ec8a0", titleEnvKey: "NOTIF_TITLE_MEDIA_APPROVED" },
+  MEDIA_AUTO_APPROVED: { dmKey: "auto_approved",  color: "#1ec8a0", titleEnvKey: "NOTIF_TITLE_MEDIA_AUTO_APPROVED" },
+  MEDIA_DECLINED:      { dmKey: "declined",       color: "#e74c3c", titleEnvKey: "NOTIF_TITLE_MEDIA_DECLINED" },
+  MEDIA_AVAILABLE:     { dmKey: "available",      color: "#2ecc71", titleEnvKey: "NOTIF_TITLE_MEDIA_AVAILABLE" },
 };
 
 /**
@@ -1223,7 +1234,12 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
     const mediaTypeLabel = mediaType === "movie" ? t("field_type_movie") : t("field_type_tv");
     const footerText = process.env.EMBED_FOOTER_TEXT;
 
-    const authorText = t(`dm_${meta.dmKey}_author`);
+    // The configured per-event notification title (dashboard Step 7) applies to
+    // both the channel embed and the DM author. tNotif returns the custom title
+    // when set, otherwise the default DM author string.
+    const authorText = meta.titleEnvKey
+      ? tNotif(`dm_${meta.dmKey}_author`, meta.titleEnvKey)
+      : t(`dm_${meta.dmKey}_author`);
     const description = t(`dm_${meta.dmKey}_description`, { title });
 
     const fields = [];
@@ -1278,32 +1294,83 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
  * Find the Discord ID for the user who made a Seerr request,
  * by looking up the Seerr user ID in USER_MAPPINGS.
  */
-async function findDiscordIdForSeerrUser(data) {
-  // First try: discordId directly in webhook payload
-  if (data.request?.requestedBy_settings_discordId) {
-    return data.request.requestedBy_settings_discordId;
+// Discord IDs are snowflakes: 17–20 digit numeric strings. Used to reject
+// unrendered template placeholders and other junk before hitting the Discord API.
+function isSnowflake(v) {
+  return typeof v === "string" && /^\d{17,20}$/.test(v.trim());
+}
+
+export async function findDiscordIdForSeerrUser(data) {
+  // First try: a real Discord ID embedded in the webhook payload. Discord IDs
+  // are snowflakes (17–20 digit numeric strings). Crucially we must NOT accept
+  // anything else here: Seerr leaves the {{requestedBy_settings_discordId}}
+  // template placeholder UNRENDERED when the requester has no Discord ID set in
+  // Seerr. Returning that literal string would (a) make client.users.fetch throw
+  // "not snowflake" and (b) short-circuit the USER_MAPPINGS fallback entirely —
+  // breaking DMs for everyone. So validate, and otherwise fall through.
+  const payloadDiscordId = data.request?.requestedBy_settings_discordId;
+  if (isSnowflake(payloadDiscordId)) {
+    return payloadDiscordId.trim();
+  }
+  if (payloadDiscordId) {
+    logger.warn(
+      `[SEERR WEBHOOK] Ignoring non-snowflake requestedBy_settings_discordId ("${payloadDiscordId}") from the webhook payload — ` +
+      "the requester has no Discord ID in Seerr, or the webhook JSON placeholder was not rendered. Falling back to USER_MAPPINGS."
+    );
   }
 
-  // Second try: look up via USER_MAPPINGS by Seerr username or ID
+  // Second try: look up via USER_MAPPINGS by Seerr username or ID.
+  // Match is case-insensitive and whitespace-trimmed because the Seerr webhook's
+  // requestedBy_username and the stored display name often differ only in casing.
   try {
     const raw = process.env.USER_MAPPINGS;
     const mappings = typeof raw === "string" ? JSON.parse(raw) : (raw || []);
 
-    if (!Array.isArray(mappings) || mappings.length === 0) return null;
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      logger.warn(
+        "[SEERR WEBHOOK] DM skipped: no USER_MAPPINGS configured and the webhook payload carried no requestedBy_settings_discordId. " +
+        "Map the requester in dashboard Step 5, or add {{requestedBy_settings_discordId}} to the Seerr webhook JSON."
+      );
+      return null;
+    }
 
     const seerrUsername = data.request?.requestedBy_username;
-    if (!seerrUsername) return null;
+    if (!seerrUsername) {
+      logger.warn(
+        "[SEERR WEBHOOK] DM skipped: the webhook payload has no requestedBy_username (and no requestedBy_settings_discordId). " +
+        "Update the Seerr webhook JSON template to include {{requestedBy_username}}."
+      );
+      return null;
+    }
 
+    const norm = (v) => String(v ?? "").trim().toLowerCase();
+    const target = norm(seerrUsername);
     const match = mappings.find(
-      (m) => m.seerrDisplayName === seerrUsername || String(m.seerrUserId) === String(seerrUsername)
+      (m) =>
+        norm(m.seerrDisplayName) === target ||
+        norm(m.seerrUsername) === target ||
+        norm(m.seerrUserId) === target
     );
 
-    if (match?.discordUserId) {
+    if (match?.discordUserId && isSnowflake(String(match.discordUserId))) {
       logger.debug(`[SEERR WEBHOOK] Found Discord ID ${match.discordUserId} for Seerr user "${seerrUsername}"`);
-      return match.discordUserId;
+      return String(match.discordUserId).trim();
     }
+    if (match?.discordUserId) {
+      logger.warn(`[SEERR WEBHOOK] USER_MAPPINGS entry for "${seerrUsername}" has an invalid discordUserId ("${match.discordUserId}") — not a Discord snowflake. Fix it in dashboard Step 5.`);
+      return null;
+    }
+
+    const known = mappings
+      .map((m) => m.seerrDisplayName || m.seerrUsername || m.seerrUserId)
+      .filter(Boolean)
+      .join(", ");
+    logger.warn(
+      `[SEERR WEBHOOK] DM skipped: no USER_MAPPINGS entry matches Seerr requester "${seerrUsername}". ` +
+      `Mapped Seerr users: [${known}]. The mapped name must equal the Seerr requestedBy_username (dashboard Step 5).`
+    );
   } catch (e) {
-    logger.debug("[SEERR WEBHOOK] USER_MAPPINGS lookup failed:", e.message);
+    logger.warn("[SEERR WEBHOOK] USER_MAPPINGS lookup failed:", e.message);
   }
 
   return null;

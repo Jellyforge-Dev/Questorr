@@ -50,6 +50,7 @@ export const configSchema = Joi.object({
   NOTIF_TITLE_TEST: Joi.string().allow("").optional(),
   NOTIF_TITLE_DAILY_RANDOM: Joi.string().allow("").optional(),
   NOTIF_TITLE_DAILY_RECOMMENDATION: Joi.string().allow("").optional(),
+  NOTIF_TITLE_JELLYFIN_NEW: Joi.string().allow("").optional(),
   NOTIF_BUTTONS_MEDIA_PENDING: Joi.string().allow("").optional(),
   NOTIF_BUTTONS_MEDIA_APPROVED: Joi.string().allow("").optional(),
   NOTIF_BUTTONS_MEDIA_AUTO_APPROVED: Joi.string().allow("").optional(),

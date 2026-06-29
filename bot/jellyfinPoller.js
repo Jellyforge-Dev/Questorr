@@ -33,10 +33,11 @@ import {
   ActionRowBuilder,
 } from "discord.js";
 import logger from "../utils/logger.js";
-import { t } from "../utils/botStrings.js";
+import { t, tNotif } from "../utils/botStrings.js";
 import { isValidUrl } from "../utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { shouldPost, markPosted } from "../utils/notificationDispatcher.js";
+import { checkMediaStatus } from "../api/seerr.js";
 // Round 12: pendingRequests is populated by the Questorr/Seerr request paths
 // (requestButton.js, randomRequestButton.js, commands/search.js). The poller
 // reads it to recognize "this title was requested via Questorr" and skip the
@@ -106,6 +107,37 @@ function saveSeenItems() {
     renameSync(tmp, SEEN_ITEMS_FILE);
   } catch (err) {
     logger.warn(`[Jellyfin Poller] Could not save seen-items: ${err.message}`);
+  }
+}
+
+// ─── Pending-metadata queue ───────────────────────────────────────────────────
+// Items spotted by the poller that don't have full metadata (image + description)
+// yet. Persisted to disk so a restart/deploy does NOT lose them — the previous
+// in-memory setTimeout approach dropped these on every restart while the item was
+// already recorded as "seen", so it was never announced. Map<itemId, firstSeenMs>.
+const PENDING_META_FILE = path.join(path.dirname(CONFIG_PATH), "pending-metadata.json");
+const pendingMetadata = new Map();
+
+function loadPendingMetadata() {
+  try {
+    if (!existsSync(PENDING_META_FILE)) return;
+    const data = JSON.parse(readFileSync(PENDING_META_FILE, "utf-8"));
+    if (Array.isArray(data.items)) {
+      for (const [id, ts] of data.items) pendingMetadata.set(id, ts);
+      if (pendingMetadata.size > 0) logger.info(`[Jellyfin Poller] Restored ${pendingMetadata.size} item(s) awaiting metadata from disk`);
+    }
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Could not load pending-metadata: ${err.message}`);
+  }
+}
+
+function savePendingMetadata() {
+  try {
+    const tmp = PENDING_META_FILE + ".tmp";
+    writeFileSync(tmp, JSON.stringify({ savedAt: Date.now(), items: [...pendingMetadata.entries()] }), "utf-8");
+    renameSync(tmp, PENDING_META_FILE);
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Could not save pending-metadata: ${err.message}`);
   }
 }
 
@@ -219,6 +251,10 @@ export function startJellyfinPoller(client) {
   savedClient = client;
   savedApiKey = apiKey;
   savedBaseUrl = baseUrl;
+
+  // Restore items that were waiting for metadata when the bot last stopped, so
+  // a restart/deploy resumes (rather than loses) their pending notifications.
+  loadPendingMetadata();
 
   logger.info(`[Jellyfin Poller] Starting – polling every ${intervalSec}s`);
 
@@ -382,18 +418,22 @@ async function poll(client, apiKey, baseUrl) {
     deduplicator.cleanup();
     saveSeenItems();
 
-    if (newItems.length === 0) return { fetched: items.length, new: 0 };
+    if (newItems.length > 0) {
+      logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
+      await notifyBatch(client, newItems, apiKey, baseUrl);
 
-    logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
-    await notifyBatch(client, newItems, apiKey, baseUrl);
+      // Round 9: new items mean the library counts changed — invalidate the
+      // dashboard's library stats cache so the next /stats/insights call fetches
+      // live data instead of stale 5-min cache.
+      try {
+        const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
+        invalidateLibraryCache();
+      } catch { /* not critical — the cache will refresh on its own TTL */ }
+    }
 
-    // Round 9: new items mean the library counts changed — invalidate the
-    // dashboard's library stats cache so the next /stats/insights call fetches
-    // live data instead of stale 5-min cache.
-    try {
-      const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
-      invalidateLibraryCache();
-    } catch { /* not critical — the cache will refresh on its own TTL */ }
+    // Fire notifications for items that were waiting for full metadata and are
+    // now ready (or have aged out). Runs every cycle, independent of new finds.
+    await processPendingMetadata(client, apiKey, baseUrl);
 
     return { fetched: items.length, new: newItems.length };
   } catch (err) {
@@ -613,23 +653,104 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
     }
   }
 
-  // If no TMDB ID yet and TMDB API is configured, wait for Jellyfin to finish scanning metadata
+  // Hold the notification until the item has full metadata — a TMDB id that
+  // yields both an image and a description — so we never post a bare card.
+  // Jellyfin can take a while to scan/match a freshly imported file, so we
+  // re-check on an interval for up to ~30 minutes. Once metadata is ready we
+  // notify (which also lets the Seerr dedup run and suppress the duplicate for
+  // Seerr downloads). Only movies/series are gated this way; episodes/seasons
+  // post immediately as before. If metadata never arrives within the window we
+  // post a basic notification anyway, so nothing is silently lost.
   const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
-  if (!tmdbId && process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0) {
-    logger.info(`[Jellyfin Poller] "${item.Name}" has no TMDB ID yet – waiting ${delaySec}s for metadata scan`);
-    setTimeout(async () => {
-      const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
-      // Round 10 SAFETY: if the re-fetch somehow stripped the Id (shouldn't happen
-      // with the Fields-explicit call, but defensive), preserve it from the original.
-      if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
-      await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
-        logger.error(`[Jellyfin Poller] Delayed notify failed for "${item.Name}": ${err.message}`)
-      );
-    }, delaySec * 1000);
+  const canEnrich = process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0 &&
+    (itemType === "Movie" || itemType === "Series");
+  if (canEnrich && !(await hasFullMetadata(item))) {
+    if (!pendingMetadata.has(item.Id)) {
+      pendingMetadata.set(item.Id, Date.now());
+      savePendingMetadata();
+      logger.info(`[Jellyfin Poller] "${item.Name}" queued – waiting for full metadata (image + description) before notifying`);
+    }
     return;
   }
 
   await doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
+}
+
+// Maximum time the poller waits for Jellyfin/TMDB to populate full metadata
+// (image + description) before falling back to a basic notification.
+const METADATA_MAX_WAIT_MS = 30 * 60 * 1000;
+
+// True when the item resolves to a TMDB entry that has BOTH an image
+// (poster/backdrop) and a description — i.e. the embed will look complete.
+// A description may come from Jellyfin's own Overview, but the poller embed only
+// uses TMDB images, so a TMDB id is required for the image either way.
+export async function hasFullMetadata(item) {
+  const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || null;
+  if (!tmdbId || !process.env.TMDB_API_KEY) return false;
+  const tmdbType = item.Type === "Movie" ? "movie" : "tv";
+  try {
+    const endpoint = tmdbType === "movie"
+      ? `https://api.themoviedb.org/3/movie/${tmdbId}`
+      : `https://api.themoviedb.org/3/tv/${tmdbId}`;
+    const res = await axios.get(endpoint, {
+      params: { api_key: process.env.TMDB_API_KEY, language: getTmdbLanguage(), append_to_response: "images" },
+      timeout: 8000,
+    });
+    const d = res.data || {};
+    const hasImage = !!(d.poster_path || d.backdrop_path || findBestBackdrop(d));
+    const hasOverview = !!((d.overview && d.overview.trim()) || (item.Overview && String(item.Overview).trim()));
+    return hasImage && hasOverview;
+  } catch {
+    return false;
+  }
+}
+
+// Re-check every queued item each poll cycle. As soon as Jellyfin/TMDB has
+// populated full metadata we notify (which also runs the Seerr dedup). If an
+// item has waited longer than METADATA_MAX_WAIT_MS we post a basic notification
+// so nothing is lost. Because the queue is persisted, this survives restarts —
+// unlike the old in-memory setTimeout, which dropped pending items on deploy.
+// Test-only accessor for the in-memory pending queue.
+export function _pendingMetadataForTests() {
+  return pendingMetadata;
+}
+
+export async function processPendingMetadata(client, apiKey, baseUrl) {
+  if (pendingMetadata.size === 0) return;
+
+  const { libraries, libraryIdMap } = await fetchLibraryMap().catch(() => ({ libraries: [], libraryIdMap: new Map() }));
+  const libraryMap = new Map();
+  for (const lib of libraries) {
+    libraryMap.set(lib.CollectionId, lib);
+    if (lib.ItemId !== lib.CollectionId) libraryMap.set(lib.ItemId, lib);
+  }
+  const libraryChannels = getLibraryChannels();
+
+  let changed = false;
+  for (const [id, firstSeen] of [...pendingMetadata.entries()]) {
+    const aged = Date.now() - firstSeen >= METADATA_MAX_WAIT_MS;
+    const freshItem = await fetchItemDetails(id, apiKey, baseUrl).catch(() => null);
+
+    if (!freshItem) {
+      // Item no longer in Jellyfin (deleted/moved). Drop it once it has aged out.
+      if (aged) { pendingMetadata.delete(id); changed = true; }
+      continue;
+    }
+    if (!freshItem.Id) freshItem.Id = id;
+
+    const ready = await hasFullMetadata(freshItem);
+    if (ready || aged) {
+      if (!ready) {
+        logger.info(`[Jellyfin Poller] "${freshItem.Name}" still lacks full metadata after ~${Math.round(METADATA_MAX_WAIT_MS / 60000)} min – posting a basic notification`);
+      }
+      await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
+        logger.error(`[Jellyfin Poller] Pending notify failed for "${freshItem.Name}": ${err.message}`)
+      );
+      pendingMetadata.delete(id);
+      changed = true;
+    }
+  }
+  if (changed) savePendingMetadata();
 }
 
 export async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
@@ -640,6 +761,25 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
+
+  // TERTIARY dedup (#3): if the title is tracked in Seerr (it was requested
+  // there — by anyone, including directly in the Seerr UI), the poller must NOT
+  // post. The Seerr MEDIA_AVAILABLE webhook will deliver the proper
+  // "Now Available!" notification (correct title, overview, Seerr button + DM).
+  // This catches the common race where the poller spots the file before Seerr
+  // flags availability — the source of the "📺 New in Jellyfin" + "🎉 Now
+  // Available!" double-post. Fail-open: any lookup error falls through to post.
+  if (tmdbId && process.env.SEERR_URL && process.env.SEERR_API_KEY) {
+    try {
+      const seerr = await checkMediaStatus(tmdbId, tmdbType, [], process.env.SEERR_URL, process.env.SEERR_API_KEY);
+      if (seerr && typeof seerr.status === "number" && seerr.status >= 2) {
+        logger.info(`[Jellyfin Poller] Skipping "${item.Name}" — tracked in Seerr (mediaInfo status ${seerr.status}); the Seerr webhook will deliver the notification`);
+        return;
+      }
+    } catch (err) {
+      logger.debug(`[Jellyfin Poller] Seerr status check failed for "${item.Name}" (TMDB ${tmdbId}): ${err.message} — proceeding with poller notification`);
+    }
+  }
 
   logger.info(`[Jellyfin Poller] New ${itemType}: "${item.Name}" (TMDB: ${tmdbId || "—"})`);
 
@@ -715,7 +855,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
 
   const embed = new EmbedBuilder()
     .setColor(typeSettings.color)
-    .setAuthor({ name: `${typeSettings.emoji} ${t("jellyfin_new_item")}` })
+    .setAuthor({ name: `${typeSettings.emoji} ${tNotif("jellyfin_new_item", "NOTIF_TITLE_JELLYFIN_NEW")}` })
     .setTitle(title)
     .setTimestamp();
 

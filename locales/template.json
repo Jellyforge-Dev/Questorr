@@ -432,6 +432,7 @@
     "notif_test": "",
     "notif_daily_random": "",
     "notif_daily_recommendation": "",
+    "notif_jellyfin_new": "",
     "bot_language_label": "",
     "bot_language_help": "",
     "date_format_label": "",
@@ -548,7 +549,18 @@
     "errors": "",
     "refresh": "",
     "loading": "",
-    "webhook": ""
+    "webhook": "",
+    "level_all": "",
+    "level_error": "",
+    "level_warn": "",
+    "level_info": "",
+    "level_debug": "",
+    "source_all": "",
+    "search_placeholder": "",
+    "load_more": "",
+    "showing": "",
+    "no_results": "",
+    "no_webhook": ""
   },
   "bot": {
     "start": "",
