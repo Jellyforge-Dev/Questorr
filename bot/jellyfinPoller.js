@@ -110,6 +110,37 @@ function saveSeenItems() {
   }
 }
 
+// ─── Pending-metadata queue ───────────────────────────────────────────────────
+// Items spotted by the poller that don't have full metadata (image + description)
+// yet. Persisted to disk so a restart/deploy does NOT lose them — the previous
+// in-memory setTimeout approach dropped these on every restart while the item was
+// already recorded as "seen", so it was never announced. Map<itemId, firstSeenMs>.
+const PENDING_META_FILE = path.join(path.dirname(CONFIG_PATH), "pending-metadata.json");
+const pendingMetadata = new Map();
+
+function loadPendingMetadata() {
+  try {
+    if (!existsSync(PENDING_META_FILE)) return;
+    const data = JSON.parse(readFileSync(PENDING_META_FILE, "utf-8"));
+    if (Array.isArray(data.items)) {
+      for (const [id, ts] of data.items) pendingMetadata.set(id, ts);
+      if (pendingMetadata.size > 0) logger.info(`[Jellyfin Poller] Restored ${pendingMetadata.size} item(s) awaiting metadata from disk`);
+    }
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Could not load pending-metadata: ${err.message}`);
+  }
+}
+
+function savePendingMetadata() {
+  try {
+    const tmp = PENDING_META_FILE + ".tmp";
+    writeFileSync(tmp, JSON.stringify({ savedAt: Date.now(), items: [...pendingMetadata.entries()] }), "utf-8");
+    renameSync(tmp, PENDING_META_FILE);
+  } catch (err) {
+    logger.warn(`[Jellyfin Poller] Could not save pending-metadata: ${err.message}`);
+  }
+}
+
 // ─── Type config ──────────────────────────────────────────────────────────────
 
 const TYPE_SETTINGS = {
@@ -220,6 +251,10 @@ export function startJellyfinPoller(client) {
   savedClient = client;
   savedApiKey = apiKey;
   savedBaseUrl = baseUrl;
+
+  // Restore items that were waiting for metadata when the bot last stopped, so
+  // a restart/deploy resumes (rather than loses) their pending notifications.
+  loadPendingMetadata();
 
   logger.info(`[Jellyfin Poller] Starting – polling every ${intervalSec}s`);
 
@@ -383,18 +418,22 @@ async function poll(client, apiKey, baseUrl) {
     deduplicator.cleanup();
     saveSeenItems();
 
-    if (newItems.length === 0) return { fetched: items.length, new: 0 };
+    if (newItems.length > 0) {
+      logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
+      await notifyBatch(client, newItems, apiKey, baseUrl);
 
-    logger.info(`[Jellyfin Poller] Found ${newItems.length} new item(s)`);
-    await notifyBatch(client, newItems, apiKey, baseUrl);
+      // Round 9: new items mean the library counts changed — invalidate the
+      // dashboard's library stats cache so the next /stats/insights call fetches
+      // live data instead of stale 5-min cache.
+      try {
+        const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
+        invalidateLibraryCache();
+      } catch { /* not critical — the cache will refresh on its own TTL */ }
+    }
 
-    // Round 9: new items mean the library counts changed — invalidate the
-    // dashboard's library stats cache so the next /stats/insights call fetches
-    // live data instead of stale 5-min cache.
-    try {
-      const { invalidateLibraryCache } = await import("../routes/botRoutes.js");
-      invalidateLibraryCache();
-    } catch { /* not critical — the cache will refresh on its own TTL */ }
+    // Fire notifications for items that were waiting for full metadata and are
+    // now ready (or have aged out). Runs every cycle, independent of new finds.
+    await processPendingMetadata(client, apiKey, baseUrl);
 
     return { fetched: items.length, new: newItems.length };
   } catch (err) {
@@ -626,7 +665,11 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   const canEnrich = process.env.TMDB_API_KEY && !isNaN(delaySec) && delaySec > 0 &&
     (itemType === "Movie" || itemType === "Series");
   if (canEnrich && !(await hasFullMetadata(item))) {
-    scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, 1);
+    if (!pendingMetadata.has(item.Id)) {
+      pendingMetadata.set(item.Id, Date.now());
+      savePendingMetadata();
+      logger.info(`[Jellyfin Poller] "${item.Name}" queued – waiting for full metadata (image + description) before notifying`);
+    }
     return;
   }
 
@@ -662,30 +705,52 @@ export async function hasFullMetadata(item) {
   }
 }
 
-function scheduleMetadataRetry(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, attempt) {
-  const delaySec = parseInt(process.env.JELLYFIN_POLLER_METADATA_DELAY_SECONDS ?? "60", 10);
-  const waitMs = (!isNaN(delaySec) && delaySec > 0 ? delaySec : 60) * 1000;
-  const maxAttempts = Math.max(5, Math.ceil(METADATA_MAX_WAIT_MS / waitMs));
-  logger.info(`[Jellyfin Poller] "${item.Name}" – waiting for full metadata (image + description), re-check in ${waitMs / 1000}s (attempt ${attempt}/${maxAttempts})`);
-  setTimeout(async () => {
-    try {
-      const freshItem = await fetchItemDetails(item.Id, apiKey, baseUrl).catch(() => null) || item;
-      // Defensive: a re-fetch should never strip the Id, but preserve it if so.
-      if (freshItem && !freshItem.Id) freshItem.Id = item.Id;
+// Re-check every queued item each poll cycle. As soon as Jellyfin/TMDB has
+// populated full metadata we notify (which also runs the Seerr dedup). If an
+// item has waited longer than METADATA_MAX_WAIT_MS we post a basic notification
+// so nothing is lost. Because the queue is persisted, this survives restarts —
+// unlike the old in-memory setTimeout, which dropped pending items on deploy.
+// Test-only accessor for the in-memory pending queue.
+export function _pendingMetadataForTests() {
+  return pendingMetadata;
+}
 
-      const ready = await hasFullMetadata(freshItem);
-      if (ready || attempt >= maxAttempts) {
-        if (!ready) {
-          logger.info(`[Jellyfin Poller] "${item.Name}" still lacks full metadata after ~${Math.round((maxAttempts * waitMs) / 60000)} min – posting a basic notification`);
-        }
-        await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels);
-        return;
-      }
-      scheduleMetadataRetry(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels, attempt + 1);
-    } catch (err) {
-      logger.error(`[Jellyfin Poller] Metadata retry failed for "${item.Name}": ${err.message}`);
+export async function processPendingMetadata(client, apiKey, baseUrl) {
+  if (pendingMetadata.size === 0) return;
+
+  const { libraries, libraryIdMap } = await fetchLibraryMap().catch(() => ({ libraries: [], libraryIdMap: new Map() }));
+  const libraryMap = new Map();
+  for (const lib of libraries) {
+    libraryMap.set(lib.CollectionId, lib);
+    if (lib.ItemId !== lib.CollectionId) libraryMap.set(lib.ItemId, lib);
+  }
+  const libraryChannels = getLibraryChannels();
+
+  let changed = false;
+  for (const [id, firstSeen] of [...pendingMetadata.entries()]) {
+    const aged = Date.now() - firstSeen >= METADATA_MAX_WAIT_MS;
+    const freshItem = await fetchItemDetails(id, apiKey, baseUrl).catch(() => null);
+
+    if (!freshItem) {
+      // Item no longer in Jellyfin (deleted/moved). Drop it once it has aged out.
+      if (aged) { pendingMetadata.delete(id); changed = true; }
+      continue;
     }
-  }, waitMs);
+    if (!freshItem.Id) freshItem.Id = id;
+
+    const ready = await hasFullMetadata(freshItem);
+    if (ready || aged) {
+      if (!ready) {
+        logger.info(`[Jellyfin Poller] "${freshItem.Name}" still lacks full metadata after ~${Math.round(METADATA_MAX_WAIT_MS / 60000)} min – posting a basic notification`);
+      }
+      await doNotify(client, freshItem, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels).catch((err) =>
+        logger.error(`[Jellyfin Poller] Pending notify failed for "${freshItem.Name}": ${err.message}`)
+      );
+      pendingMetadata.delete(id);
+      changed = true;
+    }
+  }
+  if (changed) savePendingMetadata();
 }
 
 export async function doNotify(client, item, apiKey, baseUrl, libraryMap, libraryIdMap, libraryChannels) {
