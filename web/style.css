@@ -1,38 +1,67 @@
 :root {
-  /* Questorr Brand – Modern SaaS Clean (light, indigo) */
-  --background: #f5f6fb;
-  --foreground: #1b1f2a;
-  --mantle: #eceef5;
-  --surface0: #ffffff;
-  --surface1: #eef1f8;
-  --surface2: #e2e7f2;
-  --mauve: #5b5bd6;   /* primary brand indigo */
-  --blue: #4f6bed;    /* links / secondary */
-  --green: #15a36b;   /* success */
-  --peach: #d98324;   /* warning */
-  --text: #1b1f2a;
-  --subtext0: #646d85;
-  --border-color: #e3e7f1;
+  /* Shared, theme-independent tokens */
   --border-radius: 12px;
-  --code-bg: #eef1f8;
-
-  /* Extended tokens (used across the app, previously undefined) */
-  --subtext1: #3f4759;
-  --red: #e1495b;
-  --teal: #0fb5ba;    /* media / Jellyfin accent */
-  --yellow: #c99700;
-
-  /* Typography */
   --display-font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  /* Signature accent + elevation */
-  --accent-grad: linear-gradient(135deg, #5b5bd6, #7c6cf0);
-  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.06);
-  --shadow-md: 0 8px 24px rgba(20, 24, 40, 0.08);
-  --shadow-lg: 0 18px 48px rgba(20, 24, 40, 0.12);
-  --ring: 0 0 0 3px rgba(91, 91, 214, 0.18);
+  /* ── Default = DARK (Near-Black + Teal, clean) ───────────── */
+  --background: #0d1117;
+  --foreground: #e6f1f5;
+  --mantle: #080d12;
+  --surface0: #161e26;
+  --surface1: #1f2d38;
+  --surface2: #2a3d4d;
+  --mauve: #1ec8a0;   /* primary brand teal */
+  --blue: #17b8c4;    /* secondary cyan / links */
+  --green: #2ecc8e;
+  --peach: #f0a05a;
+  --text: #e6f1f5;
+  --subtext0: #8ba8b8;
+  --subtext1: #c3d2db;
+  --border-color: #243443;
+  --code-bg: #1f2d38;
+  --red: #f0596b;
+  --teal: #1ec8a0;
+  --yellow: #e0b341;
+
+  --accent-grad: linear-gradient(135deg, #1ec8a0, #17b8c4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+  --ring: 0 0 0 3px rgba(30, 200, 160, 0.28);
+  --nav-bg: rgba(13, 17, 23, 0.82);
+  --logo-chip: transparent;
+}
+
+/* ── LIGHT theme (toned down, not glaring) ─────────────────── */
+:root[data-theme="light"] {
+  --background: #e7eaf1;
+  --foreground: #1b1f2a;
+  --mantle: #dce0ea;
+  --surface0: #f3f5fa;
+  --surface1: #e8ecf4;
+  --surface2: #dbe1ed;
+  --mauve: #0e9e80;
+  --blue: #0e8fa0;
+  --green: #15a36b;
+  --peach: #c9761d;
+  --text: #1b1f2a;
+  --subtext0: #5c6373;
+  --subtext1: #3f4759;
+  --border-color: #cfd6e3;
+  --code-bg: #e8ecf4;
+  --red: #d83f50;
+  --teal: #0e9e80;
+  --yellow: #b8870b;
+
+  --accent-grad: linear-gradient(135deg, #0e9e80, #0e8fa0);
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.08);
+  --shadow-md: 0 8px 24px rgba(20, 24, 40, 0.10);
+  --shadow-lg: 0 18px 48px rgba(20, 24, 40, 0.14);
+  --ring: 0 0 0 3px rgba(14, 158, 128, 0.20);
+  --nav-bg: rgba(243, 245, 250, 0.85);
+  --logo-chip: #1b1f2a;
 }
 
 /* Utility classes */
@@ -4283,7 +4312,7 @@ code, pre, .code-block, .mono, .log-entry, #logs-container {
 
 /* ── Navbar ──────────────────────────────────────────────── */
 .navbar {
-  background: rgba(255, 255, 255, 0.82) !important;
+  background: var(--nav-bg) !important;
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   border-bottom: 1px solid var(--border-color) !important;
@@ -4294,10 +4323,10 @@ code, pre, .code-block, .mono, .log-entry, #logs-container {
   mix-blend-mode: normal !important;
   filter: none !important;
   image-rendering: auto !important;
-  background: #1b1f2a;
+  background: var(--logo-chip);
   border-radius: 10px;
   padding: 5px 8px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 .auth-logo {
   width: 76px !important;
@@ -4315,6 +4344,26 @@ code, pre, .code-block, .mono, .log-entry, #logs-container {
 .nav-links a:hover {
   background: var(--surface2) !important;
   color: var(--text) !important;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  color: var(--subtext1) !important;
+  cursor: pointer;
+  padding: 0.45rem 0.6rem !important;
+  border-radius: 8px !important;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.theme-toggle:hover {
+  background: var(--surface2) !important;
+  color: var(--mauve) !important;
 }
 
 /* ── Login / hero ────────────────────────────────────────── */
@@ -4555,15 +4604,14 @@ code, .code-block, pre {
 
 /* ── Repoint legacy pixel tokens so stray var(--pixel-*) stay on-theme ── */
 :root {
-  --pixel-teal: #5b5bd6;
-  --pixel-cyan: #4f6bed;
-  --pixel-green: #15a36b;
-  --pixel-dark: #ffffff;
-  --pixel-grid: rgba(91, 91, 214, 0.05);
+  --pixel-teal: var(--mauve);
+  --pixel-cyan: var(--blue);
+  --pixel-green: var(--green);
+  --pixel-dark: var(--surface0);
+  --pixel-grid: var(--border-color);
   --pixel-border: var(--border-color);
   --pixel-glow: var(--shadow-sm);
   --pixel-font: var(--display-font);
-  --mono-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 /* ── Accessibility ───────────────────────────────────────── */

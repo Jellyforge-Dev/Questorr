@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Questorr</title>
+    <script>
+      // Apply saved theme before paint to avoid a flash. Default: dark.
+      (function () {
+        try {
+          var t = localStorage.getItem("questorr-theme") || "dark";
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css"
@@ -55,6 +66,11 @@
             <li id="mobile-save-li" class="mobile-save-nav-item mobile-save-hidden">
               <button type="submit" form="config-form" class="mobile-save-nav-btn" title="Save Settings">
                 <i class="material-icons">save</i>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                <i class="bi bi-sun nav-icon" aria-hidden="true"></i>
               </button>
             </li>
             <li>
@@ -1848,6 +1864,29 @@
         </div>
       </div>
     </div>
+    <script>
+      // Theme toggle: flip data-theme, persist, swap icon.
+      (function () {
+        var root = document.documentElement;
+        var btn = document.getElementById("theme-toggle");
+        function syncIcon() {
+          if (!btn) return;
+          var isLight = root.getAttribute("data-theme") === "light";
+          var i = btn.querySelector("i");
+          if (i) i.className = "bi nav-icon " + (isLight ? "bi-moon-stars" : "bi-sun");
+          btn.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
+        }
+        syncIcon();
+        if (btn) {
+          btn.addEventListener("click", function () {
+            var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+            root.setAttribute("data-theme", next);
+            try { localStorage.setItem("questorr-theme", next); } catch (e) {}
+            syncIcon();
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
 
