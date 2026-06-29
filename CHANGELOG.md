@@ -4,6 +4,24 @@
 
 ## English
 
+### 🛠️ v2.4.1
+
+#### 🆕 New
+
+- **Central image on/off switch** — `EMBED_SHOW_IMAGES` toggles backdrops **and** posters on *all* Discord messages at once, plus a hardened Jellyfin backdrop fallback so daily picks keep their artwork.
+- **Filterable, paginated log viewer** in the dashboard — filter by level, source tag and free text, with a running "showing X of Y" count and a *Load more* button instead of the old fixed last-1000 dump.
+- **Clearer "Added to the Library" header** for new-in-Jellyfin notifications — localized per bot language and overridable via `NOTIF_TITLE_JELLYFIN_NEW`.
+- **Notifications now wait** until poster/backdrop *and* description are ready (up to ~30 min, then a basic post), so new items no longer arrive bare.
+
+#### 🐛 Fixes
+
+- **DMs were completely broken** — Questorr tried to send to the unrendered `{{requestedBy_settings_discordId}}` placeholder. Now rejected, with the `USER_MAPPINGS` fallback restored, so request/approve/decline/available DMs arrive again.
+- **Custom notification title** is now applied to the DM author line too, not only the channel embed.
+- **Duplicate channel posts** for Seerr-tracked titles eliminated — the Jellyfin poller no longer double-announces what the Seerr webhook also reports. Externally added titles (not in Seerr) are still announced via a persistent metadata-wait queue that survives restarts.
+- **Channel notification titles resolve live** instead of being frozen at startup — they now follow the configured bot language (e.g. German "Verfügbar" instead of English "Now Available!").
+
+---
+
 ### 🎉 What's New in v2.4.0
 
 #### 🆕 Weekly Library Digest
@@ -98,6 +116,24 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🛠️ v2.4.1
+
+#### 🆕 Neu
+
+- **Zentraler Bild-Schalter** — `EMBED_SHOW_IMAGES` aktiviert/deaktiviert Backdrops **und** Poster auf *allen* Discord-Nachrichten auf einen Schlag, plus gehärteter Jellyfin-Backdrop-Fallback, damit Tagesempfehlungen ihr Artwork behalten.
+- **Filterbarer, paginierter Log-Viewer** im Dashboard — Filter nach Level, Quelle-Tag und Freitext, mit laufender „Zeige X von Y"-Anzeige und *Mehr laden*-Button statt des alten festen Last-1000-Dumps.
+- **Klarerer „Neu in der Mediathek"-Header** für Neu-in-Jellyfin-Benachrichtigungen — pro Bot-Sprache lokalisiert und über `NOTIF_TITLE_JELLYFIN_NEW` überschreibbar.
+- **Benachrichtigungen warten** jetzt, bis Poster/Backdrop *und* Beschreibung bereit sind (bis ~30 Min, dann ein Basis-Post), damit neue Titel nicht mehr nackt ankommen.
+
+#### 🐛 Fixes
+
+- **DMs waren komplett kaputt** — Questorr versuchte an den nicht gerenderten Platzhalter `{{requestedBy_settings_discordId}}` zu senden. Wird nun abgewiesen, der `USER_MAPPINGS`-Fallback wurde wiederhergestellt, sodass DMs für Anfrage/Genehmigung/Ablehnung/Verfügbarkeit wieder ankommen.
+- **Eigener Benachrichtigungs-Titel** wird jetzt auch in der DM-Author-Zeile angewendet, nicht nur im Channel-Embed.
+- **Doppelte Channel-Posts** für Seerr-getrackte Titel beseitigt — der Jellyfin-Poller kündigt nicht mehr doppelt an, was auch der Seerr-Webhook meldet. Extern hinzugefügte Titel (nicht in Seerr) werden weiterhin angekündigt, über eine persistente Metadaten-Warteschlange, die Neustarts übersteht.
+- **Channel-Titel werden live aufgelöst** statt beim Start eingefroren — sie folgen jetzt der konfigurierten Bot-Sprache (z.B. deutsch „Verfügbar" statt englisch „Now Available!").
+
+---
 
 ### 🎉 Neues in v2.4.0
 
