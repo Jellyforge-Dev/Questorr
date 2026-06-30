@@ -1,6 +1,7 @@
 import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
 import { handleReportCommand } from "./commands/report.js";
+import { handleIssueButton, handleIssueModal } from "./handlers/issueActions.js";
 import { handleRandomCommand } from "./commands/random.js";
 import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
 import { handleUpcomingCommand, handleUpcomingPagination } from "./commands/upcoming.js";
@@ -78,6 +79,12 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("wizard_modal_submit|")) {
           return handleWizardModalSubmit(interaction);
         }
+        if (
+          interaction.customId.startsWith("issue_comment_modal|") ||
+          interaction.customId.startsWith("issue_resolve_modal|")
+        ) {
+          return handleIssueModal(interaction);
+        }
       }
 
       // ─── Buttons ───────────────────────────────────────────────────
@@ -86,6 +93,14 @@ export function registerInteractions(client) {
         if (interaction.customId.startsWith("dym_yes|"))  return handleDymYes(interaction);
         if (interaction.customId.startsWith("dym_no|"))   return handleDymNo(interaction);
         if (interaction.customId.startsWith("dym_pick|")) return handleDymPick(interaction);
+
+        // Admin issue actions (comment / resolve) → open a modal
+        if (
+          interaction.customId.startsWith("issue_comment|") ||
+          interaction.customId.startsWith("issue_resolve|")
+        ) {
+          return handleIssueButton(interaction);
+        }
 
         // Contextual action buttons (Similar / Collection / Cast / Recommend) on result embeds
         if (

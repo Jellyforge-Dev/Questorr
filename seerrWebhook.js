@@ -38,6 +38,7 @@ import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
 import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
 import { getIssueReporter, removeIssueReporter } from "./utils/issueReporters.js";
+import { buildIssueAdminButtons } from "./bot/handlers/issueActions.js";
 
 // ─── Admin Pending Messages persistence ──────────────────────────────────────
 // Maps requestId → { channelId, messageId } so the status poller can edit the
@@ -734,7 +735,9 @@ async function processEvent(data, eventType, cfg, client) {
               if (issue?.issue_type) e.addFields({ name: t("report_field_type"), value: String(issue.issue_type), inline: true });
               if (issue?.reportedBy_username) e.addFields({ name: t("report_field_reporter"), value: issue.reportedBy_username, inline: true });
               if (message) e.addFields({ name: t("report_field_message"), value: message, inline: false });
-              await adminChannel.send({ embeds: [e] });
+              const sendOpts = { embeds: [e] };
+              if (issueId) sendOpts.components = [buildIssueAdminButtons(issueId)];
+              await adminChannel.send(sendOpts);
             }
           }
         }

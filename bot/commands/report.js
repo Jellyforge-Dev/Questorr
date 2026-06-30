@@ -3,6 +3,7 @@ import { EmbedBuilder } from "discord.js";
 import * as seerrApi from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey, getUserMappingsFromEnv } from "../helpers.js";
 import { recordIssueReporter } from "../../utils/issueReporters.js";
+import { buildIssueAdminButtons } from "../handlers/issueActions.js";
 import logger from "../../utils/logger.js";
 
 // Overseerr/Jellyseerr issue types: 1=Video, 2=Audio, 3=Subtitle, 4=Other
@@ -93,7 +94,9 @@ export async function handleReportCommand(interaction) {
             embed.addFields({ name: t("report_field_episode"), value: se, inline: true });
           }
           if (message) embed.addFields({ name: t("report_field_message"), value: message, inline: false });
-          await channel.send({ embeds: [embed] });
+          const sendOpts = { embeds: [embed] };
+          if (created?.id) sendOpts.components = [buildIssueAdminButtons(created.id)];
+          await channel.send(sendOpts);
         }
       }
     } catch (notifyErr) {

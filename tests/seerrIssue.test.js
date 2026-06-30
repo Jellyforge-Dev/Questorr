@@ -10,7 +10,7 @@ vi.mock("axios", () => ({
 vi.mock("../utils/axiosRetry.js", () => ({ withRetry: (fn) => fn() }));
 
 import axios from "axios";
-import { createIssue } from "../api/seerr.js";
+import { createIssue, createIssueComment, updateIssueStatus } from "../api/seerr.js";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -60,5 +60,19 @@ describe("createIssue", () => {
     axios.post.mockResolvedValue({ data: { id: 2 } });
     await createIssue(5, 1, "m", "http://seerr.local/api/v1", "k", {});
     expect(axios.post.mock.calls[0][2].headers["x-api-user"]).toBeUndefined();
+  });
+
+  it("createIssueComment posts the message to /issue/:id/comment", async () => {
+    axios.post.mockResolvedValue({ data: {} });
+    await createIssueComment(33, "Looking into it", "http://seerr.local/api/v1", "k");
+    const [url, body] = axios.post.mock.calls[0];
+    expect(url).toMatch(/\/issue\/33\/comment$/);
+    expect(body).toEqual({ message: "Looking into it" });
+  });
+
+  it("updateIssueStatus posts to /issue/:id/:status", async () => {
+    axios.post.mockResolvedValue({ data: {} });
+    await updateIssueStatus(33, "resolved", "http://seerr.local/api/v1", "k");
+    expect(axios.post.mock.calls[0][0]).toMatch(/\/issue\/33\/resolved$/);
   });
 });

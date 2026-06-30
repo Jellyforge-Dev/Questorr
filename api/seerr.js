@@ -598,6 +598,38 @@ export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey,
 }
 
 /**
+ * Post a comment on a Seerr issue. Triggers Seerr's ISSUE_COMMENT webhook,
+ * which is how the reporter is DM'd.
+ */
+export async function createIssueComment(issueId, message, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue/${issueId}/comment`, { message: message || "" }, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr comment issue ${issueId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Set a Seerr issue's status ("resolved" or "open"). Triggers the matching
+ * ISSUE_RESOLVED / ISSUE_REOPENED webhook.
+ */
+export async function updateIssueStatus(issueId, status, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue/${issueId}/${status}`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr issue ${issueId} → ${status}` }
+  );
+  return response.data;
+}
+
+/**
  * Fetch pending requests from Seerr
  * @param {string} seerrUrl - Seerr API URL
  * @param {string} apiKey - Seerr API key
