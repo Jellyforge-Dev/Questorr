@@ -4630,9 +4630,105 @@ code, .code-block, pre {
   .mobile-save-btn {
     clip-path: none !important;
     border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(91, 91, 214, 0.35) !important;
+    box-shadow: 0 8px 24px rgba(30, 200, 160, 0.35) !important;
     font-family: var(--body-font) !important;
   }
   .dashboard-header { clip-path: none !important; }
   .dashboard-nav .nav-item { font-family: var(--body-font) !important; }
+}
+
+/* ============================================================
+   COMPONENT POLISH (Track 1a) — states & microinteractions.
+   Pure CSS, no markup/JS changes. .is-loading / .is-success
+   classes are toggled by Track 1b JS.
+   ============================================================ */
+
+/* Consistent interactive transitions */
+.btn,
+.nav-item,
+input,
+select,
+textarea,
+.feature-card,
+.stats-card,
+.theme-toggle {
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+
+/* Button press feedback */
+.btn:active:not(:disabled):not(.is-loading) {
+  transform: translateY(0) scale(0.985) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Disabled buttons */
+.btn:disabled,
+.btn[disabled],
+.btn.is-disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(0.15);
+}
+
+/* Loading spinner (reuses existing @keyframes spin) */
+.btn.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+  position: relative;
+}
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1em;
+  height: 1em;
+  margin: -0.5em 0 0 -0.5em;
+  border: 2px solid #fff;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.btn-secondary.is-loading::after { border-color: var(--mauve); border-right-color: transparent; }
+
+/* Transient success flash (Track 1b: copy/save) */
+.btn.is-success {
+  background: var(--green) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* Input / select hover (when not focused) */
+input:hover:not(:focus):not(:disabled),
+select:hover:not(:focus):not(:disabled),
+textarea:hover:not(:focus):not(:disabled) {
+  border-color: var(--surface2) !important;
+}
+
+/* Card hover lift (feature + stats; about-cards keep their scroll transform) */
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md) !important;
+}
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Toast: stronger lift + accent edge */
+.toast {
+  box-shadow: var(--shadow-lg) !important;
+  border: 1px solid var(--border-color) !important;
+  border-left: 3px solid var(--mauve) !important;
+}
+
+/* Crisp keyboard focus on interactive controls */
+.btn:focus-visible,
+.nav-item:focus-visible,
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--mauve) !important;
+  outline-offset: 2px !important;
 }
