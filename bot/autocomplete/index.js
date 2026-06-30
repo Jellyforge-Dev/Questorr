@@ -2,6 +2,7 @@ import * as tmdbApi from "../../api/tmdb.js";
 import * as seerrApi from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
 import { getSeriesByUser } from "../../utils/subscriptionStore.js";
+import { searchJellyfinByName } from "../../api/jellyfin.js";
 import logger from "../../utils/logger.js";
 
 // ─── Shared: build rich autocomplete choices from TMDB items ──────────────────
@@ -274,6 +275,30 @@ async function handleStatusAutocomplete(interaction, focusedValue) {
   }
 }
 
+// /report: suggest only titles that actually exist on the Jellyfin server, so
+// users can't open issues on content that isn't there.
+async function handleReportAutocomplete(interaction, focusedValue) {
+  if (!focusedValue || focusedValue.trim().length < 2) return interaction.respond([]);
+  try {
+    const apiKey = process.env.JELLYFIN_API_KEY;
+    const baseUrl = process.env.JELLYFIN_BASE_URL;
+    if (!apiKey || !baseUrl) return interaction.respond([]);
+    const results = await searchJellyfinByName(focusedValue, apiKey, baseUrl, 25);
+    const choices = results.slice(0, 10).map((r) => {
+      const typeEmoji = r.type === "movie" ? "🎬" : "📺";
+      const label = `${typeEmoji} ${r.name}${r.year ? ` (${r.year})` : ""}`;
+      return {
+        name: label.length > 100 ? label.substring(0, 97) + "..." : label,
+        value: `${r.tmdbId}|${r.type}|${r.name}`,
+      };
+    });
+    return await interaction.respond(choices);
+  } catch (e) {
+    logger.error("Report autocomplete error:", e);
+    return interaction.respond([]);
+  }
+}
+
 // ─── Default Search Autocomplete ──────────────────────────────────────────────
 async function handleSearchAutocomplete(interaction, focusedValue) {
   // Min-length guard: Discord fires autocomplete on every keystroke. Querying
@@ -376,7 +401,7 @@ export async function handleAutocomplete(interaction) {
   // Route by command name
   if (interaction.commandName === "trending") return handleTrendingAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "status") return handleStatusAutocomplete(interaction, focusedValue);
-  if (interaction.commandName === "report") return handleStatusAutocomplete(interaction, focusedValue);
+  if (interaction.commandName === "report") return handleReportAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "cast") return handlePersonAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "subscribe") {
     return interaction.options.getSubcommand() === "remove"

@@ -156,6 +156,52 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
 }
 
 /**
+ * Search the Jellyfin library by title and return movies/series that are
+ * actually present (and carry a TMDB id, so they can be mapped to Seerr).
+ * Used by /report autocomplete so users can only report issues on content
+ * that really exists on the server.
+ * @returns {Promise<Array<{id:string,name:string,year:string,type:'movie'|'tv',tmdbId:string}>>}
+ */
+export async function searchJellyfinByName(query, apiKey, baseUrl, limit = 25) {
+  try {
+    if (!query || !apiKey || !baseUrl) return [];
+    const safeBase = new URL(baseUrl);
+    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
+    const response = await withRetry(
+      () => axios.get(safeBase.href, {
+        headers: { "X-MediaBrowser-Token": apiKey },
+        params: {
+          SearchTerm: query,
+          Recursive: true,
+          IncludeItemTypes: "Movie,Series",
+          Limit: limit,
+          Fields: "ProviderIds,ProductionYear",
+        },
+        timeout: 5000,
+      }),
+      { label: `Jellyfin search "${query}"` }
+    );
+    const items = response.data?.Items || [];
+    return items
+      .map((item) => {
+        const tmdbId = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
+        if (!tmdbId) return null;
+        return {
+          id: item.Id,
+          name: item.Name,
+          year: item.ProductionYear ? String(item.ProductionYear) : "",
+          type: item.Type === "Movie" ? "movie" : "tv",
+          tmdbId: String(tmdbId),
+        };
+      })
+      .filter(Boolean);
+  } catch (err) {
+    logger.warn(`[searchJellyfinByName] Jellyfin search failed for "${query}": ${err?.message || err}`);
+    return [];
+  }
+}
+
+/**
  * Count the real seasons (excluding Specials / index 0) of a series in Jellyfin,
  * identified by its TMDB id. Returns the count, or null if the series isn't in
  * the library or the lookup fails. Used by the subscription poller to detect a
