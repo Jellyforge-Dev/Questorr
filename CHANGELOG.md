@@ -4,6 +4,23 @@
 
 ## English
 
+### 🎨 v2.4.2
+
+#### 🆕 Dashboard redesign + dark/light theme
+- **Dark/light toggle** in the navbar, persisted per browser and applied
+  before paint (no flash). Dark keeps the retro neon/pixel identity; light is
+  a new **Paper-Terminal** palette (parchment background, dark ink, deepened
+  teal accent, pixel fonts kept).
+- **Toggle switches** for boolean settings (multi-select lists stay native
+  checkboxes), a **loading spinner** on the Save button, and a **pulse** on
+  connected service status dots.
+- **Motion layer** (GSAP, vendored locally so it works offline): login and
+  dashboard entrance, About scroll reveals, and randomized falling Tetris
+  pieces in the background. `prefers-reduced-motion` is honored.
+- **Stats count-up** animation on the statistics summary numbers.
+
+---
+
 ### 🛠️ v2.4.1
 
 #### 🆕 New
@@ -116,6 +133,23 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🎨 v2.4.2
+
+#### 🆕 Dashboard-Redesign + Dark/Light-Theme
+- **Dark/Light-Umschalter** in der Navbar, pro Browser gemerkt und vor dem
+  Paint angewendet (kein Flackern). Dark behält die Retro-Neon/Pixel-Identität;
+  Light ist ein neues **Paper-Terminal** (Pergament-BG, dunkle Tinte,
+  abgedunkelter Teal-Akzent, Pixel-Fonts bleiben).
+- **Toggle-Switches** für Boolean-Einstellungen (Mehrfach-Auswahl-Listen
+  bleiben native Checkboxen), **Lade-Spinner** am Speichern-Button und ein
+  **Puls** auf verbundenen Service-Status-Punkten.
+- **Animations-Layer** (GSAP, lokal gebündelt → offline lauffähig): Login-
+  und Dashboard-Entrance, About-Scroll-Reveals und zufällig fallende
+  Tetris-Blöcke im Hintergrund. `prefers-reduced-motion` wird respektiert.
+- **Count-Up** auf den Statistik-Zahlen.
+
+---
 
 ### 🛠️ v2.4.1
 
