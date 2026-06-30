@@ -29,6 +29,7 @@
 | 🔥 `/trending` | Die meistgesehenen Filme und Serien der Woche durchsuchen |
 | 🔎 `/status` | Seerr-Anfragestatus eines Titels abfragen — mit Poster, Zusammenfassung, Genre, Laufzeit, Bewertung und Altersfreigabe. Zeigt einen Request-Button wenn noch nicht angefragt |
 | 🎲 `/random` | Zufälligen Film oder Serie aus der Jellyfin-Bibliothek anzeigen — mit Poster, Zusammenfassung, Genre, Laufzeit und Bewertung. Nur für den Ausführenden sichtbar |
+| 🐛 `/report` | Ein Problem (Video / Ton / Untertitel) zu einem Jellyfin-Titel melden (`/report movie` · `/report series`). Öffnet ein Seerr-Issue; Admins kommentieren & lösen direkt aus Discord, der Melder erhält DMs |
 | 💡 `/recommend` | Empfehlungen basierend auf einem Film oder einer Serie via TMDB |
 | 🧭 `/discover` | Medien nach Genre, Jahr und Mindestbewertung entdecken |
 | 📦 `/collection` | Alle Filme einer Filmreihe/Kollektion mit Verfügbarkeit anzeigen |
@@ -54,6 +55,8 @@
 | 🎲 Tägliche Zufallsauswahl | Täglich einen zufälligen Vorschlag von TMDB posten |
 | 🎨 Benutzerdefinierte Embed-Farben | Embed-Farben für jeden Event-Typ individuell anpassen |
 | ⚙️ Web-Dashboard | Vollständige Konfiguration unter `http://dein-server:8282` — Tetris-Style-Oberfläche |
+| 🎨 Dark- / Light-Theme | Retro-dunkel als Standard plus ein Paper-Terminal-Light-Theme; der Umschalter wird pro Browser gemerkt |
+| 🛡️ Audit-Log | Dashboard-**Audit**-Tab: wer hat genehmigt/abgelehnt, Config geändert, Bot gestartet/gestoppt oder sich eingeloggt |
 | 📱 Mobil-freundlich | Responsives Dashboard, funktioniert auf Smartphones und Tablets |
 | ✅ Verfügbarkeitsstatus | Alle Embed-Listen zeigen Seerr-Status: ✅ verfügbar, ⏳ angefragt, 📥 teilweise |
 | 🎬 Altersfreigabe | FSK/MPAA-Bewertungen in Such-Embeds, konfigurierbar nach Land |

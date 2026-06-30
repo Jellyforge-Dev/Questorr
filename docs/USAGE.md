@@ -59,6 +59,22 @@ Get a random title **from your own Jellyfin library** — a "what should I watch
 tonight" pick. The reply is **only visible to you** (ephemeral).
 - **`type`** *(required)* — `🎬 Movie` or `📺 Series`.
 
+### 🐛 `/report movie` · `/report series`  *(only if enabled)*
+Report a playback problem with a title that's **on your Jellyfin server**. Title
+suggestions come **only from the Jellyfin library** (you can't report something
+that isn't there), and the issue is opened in Seerr under **your** mapped user.
+You get a **summary DM** of what you filed, and another DM when an admin
+comments or resolves it.
+- **`/report movie`** — `title` *(required, autocomplete)*, `type`
+  *(required: Video / Audio / Subtitle)*, `message` *(required)*.
+- **`/report series`** — `title`, `season`, `episode`, `type` and `message`
+  are **all required**.
+
+Admins handle issues straight from the **admin channel**: the post carries
+**💬 Comment** and **✅ Resolve** buttons (no Seerr web UI needed). The whole
+conversation stays private between the reporter and the admins/Seerr.
+Toggle the command in **Step 7 → Misc** (`SHOW_REPORT_COMMAND`).
+
 ### 💡 `/recommend <title>`
 Get TMDB recommendations based on a movie or show you like.
 - **`title`** *(required, autocomplete)* — the title to base recommendations on.
@@ -244,6 +260,28 @@ and start/stop controls. Protect it with `WIDGET_API_KEY`, restrict embedding wi
 The dashboard shows a real-time health bar (is Discord/Seerr/Jellyfin/TMDB
 reachable?) and a statistics panel with command usage broken down per user.
 
+### 🐛 Issue reporting & resolution
+Users file playback problems with `/report` (see Part 1). Issues are **private**:
+they go to the **admin channel** only and are opened in Seerr under the reporter's
+mapped user. The admin post carries **💬 Comment** and **✅ Resolve** buttons, so
+admins handle everything from Discord. Commenting / resolving flows back through
+Seerr's `ISSUE_COMMENT` / `ISSUE_RESOLVED` webhooks, which **DM the reporter** — so
+enable those issue events on your Seerr webhook. Toggle the command with
+`SHOW_REPORT_COMMAND`.
+
+### 🛡️ Admin audit log
+The dashboard log viewer has an **Audit** tab recording security-relevant admin
+actions: request **approve/decline** (which Discord user), **config saves**
+(changed key names only — never secret values), **bot start/stop**, and
+**dashboard logins** (success + failure with IP). Stored in a bounded
+`config/admin-audit.json`.
+
+### 🎨 Dashboard themes (dark / light)
+The dashboard ships a **retro neon/pixel dark** theme (default) and a
+**Paper-Terminal light** theme. The navbar toggle is applied before paint (no
+flash) and remembered per browser. Motion (entrance, scroll reveals, the falling
+Tetris background) honors `prefers-reduced-motion`.
+
 ### 🌍 Multi-language
 The dashboard and bot speak **English** and **German**. UI language is remembered
 per browser; bot language is set separately (`BOT_LANGUAGE`).
@@ -397,6 +435,7 @@ important ones for you.
 | `SHOW_QUALITY_SELECTION` | `"true"` | Show the `quality` option on `/request`. |
 | `SHOW_STATUS_COMMAND` | `"true"` | Register the `/status` command. |
 | `SHOW_RANDOM_COMMAND` | `"true"` | Register the `/random` command. |
+| `SHOW_REPORT_COMMAND` | `"true"` | Register the `/report` command (issue reporting). |
 | `DEFAULT_QUALITY_PROFILE_MOVIE` | `""` | Default quality profile for movie requests. |
 | `DEFAULT_QUALITY_PROFILE_TV` | `""` | Default quality profile for TV requests. |
 | `DEFAULT_SERVER_MOVIE` | `""` | Default Radarr server for movies. |

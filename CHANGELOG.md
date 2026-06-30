@@ -19,6 +19,26 @@
   pieces in the background. `prefers-reduced-motion` is honored.
 - **Stats count-up** animation on the statistics summary numbers.
 
+#### 🐛 Issue reporting (`/report`)
+- New **`/report movie`** / **`/report series`** command opens a Seerr issue
+  (video / audio / subtitle). Series requires season, episode and a
+  description; both require a description. Title suggestions come **only from
+  your Jellyfin library**, so you can't report content that isn't there.
+- The issue is attributed to the **real reporter** in Seerr (not "Admin"), and
+  the reporter gets a **summary DM** of what they filed.
+- Issue communication stays **private**: it goes to the **admin channel** only
+  (never library/public channels), and follow-ups (comment / resolved /
+  reopened) are **DM'd to the reporter**.
+- Admins can **comment on and resolve issues straight from Discord** (buttons +
+  modal) — no Seerr web UI needed.
+- Toggle the command on/off in **Step 7 → Misc** (`SHOW_REPORT_COMMAND`).
+
+#### 🛡️ Admin audit log
+- New **Audit** tab in the dashboard log viewer records who did what: request
+  **approve/decline** (Discord user), **config changes** (changed key names
+  only — never secret values), **bot start/stop**, and **dashboard logins**
+  (success + failure with IP). Bounded and persisted.
+
 ---
 
 ### 🛠️ v2.4.1
@@ -148,6 +168,26 @@ The browser now warns before navigating away from the dashboard when there are u
   und Dashboard-Entrance, About-Scroll-Reveals und zufällig fallende
   Tetris-Blöcke im Hintergrund. `prefers-reduced-motion` wird respektiert.
 - **Count-Up** auf den Statistik-Zahlen.
+
+#### 🐛 Problem-Meldungen (`/report`)
+- Neuer Befehl **`/report movie`** / **`/report series`** öffnet ein Seerr-Issue
+  (Video / Ton / Untertitel). Serie verlangt Staffel, Folge und Beschreibung;
+  beide verlangen eine Beschreibung. Titel-Vorschläge kommen **nur aus deiner
+  Jellyfin-Bibliothek** — keine Meldungen auf nicht vorhandene Inhalte.
+- Das Issue wird in Seerr dem **echten Melder** zugeordnet (nicht „Admin"), und
+  der Melder bekommt eine **Zusammenfassungs-DM** seiner Meldung.
+- Die Issue-Kommunikation bleibt **privat**: nur in den **Admin-Channel** (nie
+  Library-/Public-Channels), Folgenachrichten (Kommentar / gelöst / wieder
+  geöffnet) gehen als **DM an den Melder**.
+- Admins können Issues **direkt aus Discord kommentieren und lösen** (Buttons +
+  Modal) — ohne Seerr-WebUI.
+- An-/Abschaltbar in **Schritt 7 → Verschiedenes** (`SHOW_REPORT_COMMAND`).
+
+#### 🛡️ Admin-Audit-Log
+- Neuer **Audit**-Tab im Dashboard-Log-Viewer protokolliert, wer was getan hat:
+  Request **Approve/Decline** (Discord-User), **Config-Änderungen** (nur
+  geänderte Key-Namen — keine Secret-Werte), **Bot Start/Stop** und
+  **Dashboard-Logins** (Erfolg + Fehlversuch mit IP). Begrenzt und persistiert.
 
 ---
 

@@ -62,6 +62,22 @@ gucke ich heute Abend"-Vorschlag. Die Antwort ist **nur für dich sichtbar**
 (ephemeral).
 - **`type`** *(Pflicht)* — `🎬 Film` oder `📺 Serie`.
 
+### 🐛 `/report movie` · `/report series`  *(nur wenn aktiviert)*
+Melde ein Wiedergabe-Problem zu einem Titel, der **auf deinem Jellyfin-Server**
+liegt. Titel-Vorschläge kommen **nur aus der Jellyfin-Bibliothek** (du kannst nichts
+melden, was nicht da ist), und das Issue wird in Seerr unter **deinem** gemappten
+User geöffnet. Du erhältst eine **Zusammenfassungs-DM** deiner Meldung und eine
+weitere DM, sobald ein Admin kommentiert oder das Problem löst.
+- **`/report movie`** — `title` *(Pflicht, Autocomplete)*, `type`
+  *(Pflicht: Video / Ton / Untertitel)*, `message` *(Pflicht)*.
+- **`/report series`** — `title`, `season`, `episode`, `type` und `message`
+  sind **alle Pflicht**.
+
+Admins bearbeiten Issues direkt im **Admin-Channel**: der Post hat **💬 Kommentieren**-
+und **✅ Lösen**-Buttons (keine Seerr-WebUI nötig). Die gesamte Kommunikation bleibt
+privat zwischen Melder und Admins/Seerr. Schalter in **Schritt 7 → Verschiedenes**
+(`SHOW_REPORT_COMMAND`).
+
 ### 💡 `/recommend <titel>`
 TMDB-Empfehlungen basierend auf einem Film/einer Serie, die du magst.
 - **`title`** *(Pflicht, Autovervollständigung)* — Grundlage der Empfehlungen.
@@ -254,6 +270,28 @@ das Einbetten beschränken, mit `WIDGET_ANONYMIZE_STATS` echte Namen verbergen.
 Das Dashboard zeigt eine Echtzeit-Health-Leiste (sind Discord/Seerr/Jellyfin/TMDB
 erreichbar?) und ein Statistik-Panel mit Befehlsnutzung pro Nutzer.
 
+### 🐛 Problem-Meldungen & Lösung
+Nutzer melden Wiedergabe-Probleme mit `/report` (siehe Teil 1). Issues sind
+**privat**: sie gehen nur in den **Admin-Channel** und werden in Seerr unter dem
+gemappten User des Melders geöffnet. Der Admin-Post hat **💬 Kommentieren**- und
+**✅ Lösen**-Buttons, sodass Admins alles aus Discord erledigen. Kommentieren /
+Lösen läuft über Seerrs `ISSUE_COMMENT` / `ISSUE_RESOLVED`-Webhooks zurück, die den
+**Melder per DM** benachrichtigen — aktiviere diese Issue-Events also an deinem
+Seerr-Webhook. Befehl schaltbar über `SHOW_REPORT_COMMAND`.
+
+### 🛡️ Admin-Audit-Log
+Der Dashboard-Log-Viewer hat einen **Audit**-Tab, der sicherheitsrelevante
+Admin-Aktionen protokolliert: Request **Approve/Decline** (welcher Discord-User),
+**Config-Speicherungen** (nur geänderte Key-Namen — keine Secret-Werte),
+**Bot Start/Stop** und **Dashboard-Logins** (Erfolg + Fehlversuch mit IP).
+Gespeichert in einer begrenzten `config/admin-audit.json`.
+
+### 🎨 Dashboard-Themes (Dark / Light)
+Das Dashboard bringt ein **Retro-Neon/Pixel-Dark**-Theme (Standard) und ein
+**Paper-Terminal-Light**-Theme mit. Der Navbar-Umschalter wird vor dem Paint
+angewendet (kein Flackern) und pro Browser gemerkt. Animationen (Entrance,
+Scroll-Reveals, fallende Tetris-Blöcke) respektieren `prefers-reduced-motion`.
+
 ### 🌍 Mehrsprachigkeit
 Dashboard und Bot sprechen **Englisch** und **Deutsch**. Die UI-Sprache wird pro
 Browser gemerkt; die Bot-Sprache wird separat gesetzt (`BOT_LANGUAGE`).
@@ -407,6 +445,7 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 | `SHOW_QUALITY_SELECTION` | `"true"` | `quality`-Option bei `/request` zeigen. |
 | `SHOW_STATUS_COMMAND` | `"true"` | Den `/status`-Befehl registrieren. |
 | `SHOW_RANDOM_COMMAND` | `"true"` | Den `/random`-Befehl registrieren. |
+| `SHOW_REPORT_COMMAND` | `"true"` | Den `/report`-Befehl registrieren (Problem-Meldungen). |
 | `DEFAULT_QUALITY_PROFILE_MOVIE` | `""` | Standard-Qualitätsprofil für Filmanfragen. |
 | `DEFAULT_QUALITY_PROFILE_TV` | `""` | Standard-Qualitätsprofil für Serienanfragen. |
 | `DEFAULT_SERVER_MOVIE` | `""` | Standard-Radarr-Server für Filme. |

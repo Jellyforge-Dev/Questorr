@@ -29,6 +29,7 @@
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
 | 🔎 `/status` | Check the Seerr request status of any title — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested |
 | 🎲 `/random` | Get a random movie or series from your Jellyfin library — with poster, summary, genre, runtime and rating. Only visible to the user who ran the command |
+| 🐛 `/report` | Report a problem (video / audio / subtitle) with a Jellyfin title (`/report movie` · `/report series`). Opens a Seerr issue; admins comment & resolve straight from Discord, and the reporter gets DMs |
 | 💡 `/recommend` | Get recommendations based on a movie or TV show via TMDB |
 | 🧭 `/discover` | Discover media by genre, year and minimum rating |
 | 📦 `/collection` | View all movies in a franchise/collection with availability |
@@ -54,6 +55,8 @@
 | 🎲 Daily random pick | Post a daily random suggestion from TMDB |
 | 🎨 Custom embed colors | Customize notification embed colors per event type |
 | ⚙️ Web dashboard | Full configuration at `http://your-server:8282` — Tetris-style UI |
+| 🎨 Dark / light theme | Retro-dark default plus a Paper-Terminal light theme; the toggle is persisted per browser |
+| 🛡️ Audit log | Dashboard **Audit** tab: who approved/declined a request, changed config, started/stopped the bot, or logged in |
 | 📱 Mobile-friendly | Responsive dashboard, works on smartphones and tablets |
 | ✅ Availability status | All embed lists show Seerr status: ✅ available, ⏳ requested, 📥 partial |
 | 🎬 Content ratings | FSK/MPAA age ratings in search embeds, configurable by country |
