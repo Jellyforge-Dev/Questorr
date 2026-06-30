@@ -4499,3 +4499,24 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
   background: var(--code-bg) !important;
   color: var(--mauve) !important;
 }
+
+/* Save spinner must win over the light-mode button text color */
+[data-theme="light"] .btn.is-loading {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Make the decorative login blocks feel alive (reduced-motion is honored
+   by the global guard above). */
+@keyframes heroBlocksFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.12; }
+  50% { transform: translateY(-14px); opacity: 0.22; }
+}
+.hero.full-screen::before { animation: heroBlocksFloat 6s ease-in-out infinite; }
+
+@keyframes cornerBlink {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.15; }
+}
+.auth-container::before,
+.auth-container::after { animation: cornerBlink 1.6s step-end infinite; }
