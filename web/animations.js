@@ -41,24 +41,57 @@
     }, 120);
   }
 
-  // ── 1. Login entrance timeline (runs once on load) ──────────────────
-  // The login card + logo are gated by an async auth-check in script.js, so
-  // they are animated with TRANSFORMS ONLY — never opacity/visibility — so a
-  // timing race can never leave the login UI hidden. Only the (always-present)
-  // hero text fades, and it clears its props on completion.
-  function loginIntro() {
-    if (!document.body.classList.contains("auth-mode")) return;
+  // ── 1. Login entrance ───────────────────────────────────────────────
+  // script.js reveals the auth card only after an async auth check. Playing
+  // at DOMContentLoaded races that and looks half-done, so we wait until the
+  // card is actually visible, THEN run a full fade+slide timeline. Everything
+  // uses clearProps + a failsafe so the login UI can never stay hidden.
+  function playLoginIntro() {
+    var card = $(".auth-container");
+    if (!card) return;
     var tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    if ($(".auth-logo")) tl.from(".auth-logo", { y: -24, duration: 0.6, clearProps: "transform" });
-    if ($(".hero-title")) tl.from(".hero-title", { y: 22, autoAlpha: 0, duration: 0.6, clearProps: "opacity,visibility,transform" }, "-=0.30");
-    if ($(".hero-subtitle")) tl.from(".hero-subtitle", { y: 16, autoAlpha: 0, duration: 0.5, clearProps: "opacity,visibility,transform" }, "-=0.35");
-    if ($(".auth-container")) tl.from(".auth-container", { y: 28, scale: 0.985, duration: 0.7, clearProps: "transform" }, "-=0.30");
+    if ($(".auth-logo")) tl.from(".auth-logo", { y: -30, autoAlpha: 0, duration: 0.55, clearProps: "all" });
+    if ($(".hero-title")) tl.from(".hero-title", { y: 26, autoAlpha: 0, duration: 0.55, clearProps: "all" }, "-=0.25");
+    if ($(".hero-subtitle")) tl.from(".hero-subtitle", { y: 18, autoAlpha: 0, duration: 0.5, clearProps: "all" }, "-=0.30");
+    tl.from(card, { y: 36, autoAlpha: 0, duration: 0.6, clearProps: "all" }, "-=0.25");
+    var fields = all(".auth-form:not([style*='display: none']) .form-group, .auth-switch, .language-selector-auth");
+    if (fields.length) tl.from(fields, { y: 16, autoAlpha: 0, duration: 0.4, stagger: 0.07, clearProps: "all" }, "-=0.2");
 
-    // Failsafe: whatever happens, never leave login UI hidden.
-    gsap.delayedCall(2.4, function () {
-      var el = document.querySelectorAll(".auth-logo, .auth-container, .hero-title, .hero-subtitle");
+    // Failsafe: never leave login UI hidden.
+    gsap.delayedCall(2.8, function () {
+      var el = document.querySelectorAll(
+        ".auth-logo, .auth-container, .hero-title, .hero-subtitle, .auth-form .form-group, .auth-switch, .language-selector-auth"
+      );
       if (el.length) gsap.set(el, { clearProps: "opacity,visibility" });
     });
+  }
+
+  function loginIntro() {
+    if (!document.body.classList.contains("auth-mode")) return;
+    var card = $(".auth-container");
+    if (!card) return;
+    function visible() {
+      var cs = getComputedStyle(card);
+      return cs.display !== "none" && cs.visibility !== "hidden";
+    }
+    if (visible()) { playLoginIntro(); return; }
+    if (window.MutationObserver) {
+      var played = false;
+      var mo = new MutationObserver(function () {
+        if (!played && visible()) {
+          played = true;
+          mo.disconnect();
+          playLoginIntro();
+        }
+      });
+      mo.observe(card, { attributes: true, attributeFilter: ["style", "class"] });
+      mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      setTimeout(function () {
+        if (!played) { played = true; mo.disconnect(); playLoginIntro(); }
+      }, 1500);
+    } else {
+      setTimeout(playLoginIntro, 400);
+    }
   }
 
   // ── 2. Config pane fade on tab switch (NOT scroll-driven) ───────────

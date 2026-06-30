@@ -4245,17 +4245,17 @@ tr.notif-disabled td {
   --surface0: #f5f1e4;
   --surface1: #e9e2cf;
   --surface2: #ddd4ba;
-  --mauve: #0c8f74;
-  --blue: #0a7d86;
-  --green: #1c7f55;
-  --peach: #b06a14;
-  --text: #1d2421;
-  --subtext0: #5c645d;
-  --border-color: #c9bfa3;
+  --mauve: #0a7d5f;
+  --blue: #0a6e80;
+  --green: #16744a;
+  --peach: #a05c0d;
+  --text: #19201d;
+  --subtext0: #4f574f;
+  --border-color: #c4b99b;
   --code-bg: #e3dcc6;
-  --pixel-teal: #0c8f74;
-  --pixel-cyan: #0a7d86;
-  --pixel-green: #1c7f55;
+  --pixel-teal: #0a7d5f;
+  --pixel-cyan: #0a6e80;
+  --pixel-green: #16744a;
   --pixel-dark: #efe9d8;
   --pixel-grid: rgba(29, 36, 33, 0.05);
   --pixel-border: rgba(12, 143, 116, 0.5);
@@ -4356,7 +4356,7 @@ input[type="checkbox"] {
   height: 20px !important;
   min-width: 42px;
   border-radius: 0 !important;
-  background: rgba(30, 200, 160, 0.08) !important;
+  background: var(--surface1) !important;
   border: 1px solid var(--pixel-border) !important;
   position: relative;
   cursor: pointer;
@@ -4364,7 +4364,7 @@ input[type="checkbox"] {
   vertical-align: middle;
   margin: 0 0.4rem 0 0;
   image-rendering: pixelated;
-  transition: background-color 0.1s ease, border-color 0.1s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 input[type="checkbox"]::before {
   content: "";
@@ -4373,15 +4373,20 @@ input[type="checkbox"]::before {
   left: 2px;
   width: 14px;
   height: 14px;
-  background: var(--pixel-teal);
-  opacity: 0.45;
-  transition: left 0.1s ease, opacity 0.1s ease;
+  background: var(--subtext0);
+  opacity: 0.85;
+  transition: left 0.12s ease, background-color 0.12s ease;
 }
 input[type="checkbox"]:checked {
-  background: rgba(30, 200, 160, 0.18) !important;
+  background: var(--pixel-teal) !important;
   border-color: var(--pixel-teal) !important;
 }
-input[type="checkbox"]:checked::before { left: 26px; opacity: 1; box-shadow: var(--pixel-glow); }
+input[type="checkbox"]:checked::before {
+  left: 26px;
+  background: #ffffff;
+  opacity: 1;
+  box-shadow: var(--pixel-glow);
+}
 input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); outline-offset: 2px; }
 
 /* Multi-select list checkboxes stay native */
@@ -4442,4 +4447,52 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ── LIGHT fixes: logo legibility, About readability, contrast ── */
+/* The wordmark logo is light art (uses mix-blend on dark). On paper give
+   it a dark chip so "Questorr" reads clearly. */
+[data-theme="light"] .navbar-brand .logo,
+[data-theme="light"] .auth-logo {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  background: #19201d;
+  padding: 4px 7px;
+  border-radius: 0;
+}
+[data-theme="light"] .dashboard-title { color: var(--mauve) !important; }
+
+/* Accent texts follow the deepened light tokens */
+[data-theme="light"] .hero-title,
+[data-theme="light"] fieldset legend,
+[data-theme="light"] .config-pane legend,
+[data-theme="light"] .config-pane strong,
+[data-theme="light"] .config-pane b { color: var(--mauve) !important; }
+
+/* About page readability on paper */
+[data-theme="light"] #about,
+[data-theme="light"] #about p,
+[data-theme="light"] #about li,
+[data-theme="light"] #about span,
+[data-theme="light"] #about div,
+[data-theme="light"] .about-card,
+[data-theme="light"] .features-list li { color: var(--text) !important; }
+[data-theme="light"] #about h2,
+[data-theme="light"] #about h3,
+[data-theme="light"] .features-title {
+  color: var(--mauve) !important;
+  text-shadow: none !important;
+}
+[data-theme="light"] .about-card,
+[data-theme="light"] .features-list,
+[data-theme="light"] .dev-footer {
+  background: var(--surface0) !important;
+  border-color: var(--border-color) !important;
+}
+[data-theme="light"] .features-list li { background: #ece4cf !important; }
+[data-theme="light"] #about a,
+[data-theme="light"] #about strong { color: var(--blue) !important; }
+[data-theme="light"] #about code {
+  background: var(--code-bg) !important;
+  color: var(--mauve) !important;
 }
