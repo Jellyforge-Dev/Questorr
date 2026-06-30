@@ -4732,3 +4732,65 @@ textarea:hover:not(:focus):not(:disabled) {
   outline: 2px solid var(--mauve) !important;
   outline-offset: 2px !important;
 }
+
+/* ============================================================
+   TOGGLE SWITCHES (Track 1c) — boolean settings only.
+   Multi-select list checkboxes (.library-item / .role-item)
+   are explicitly reset back to native checkboxes below.
+   ============================================================ */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px !important;
+  height: 22px !important;
+  min-width: 40px;
+  border-radius: 999px !important;
+  background: var(--surface2) !important;
+  border: 1px solid var(--border-color) !important;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin: 0 0.35rem 0 0;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%);
+  box-shadow: var(--shadow-sm);
+  transition: left 0.18s ease;
+}
+input[type="checkbox"]:checked {
+  background: var(--mauve) !important;
+  border-color: var(--mauve) !important;
+}
+input[type="checkbox"]:checked::before { left: 21px; }
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--mauve);
+  outline-offset: 2px;
+}
+
+/* Reset multi-select list checkboxes back to native controls */
+.library-item input[type="checkbox"],
+.library-label input[type="checkbox"],
+.role-item input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-width: 0;
+  border-radius: 3px !important;
+  background: initial !important;
+  border: initial !important;
+  accent-color: var(--mauve);
+}
+.library-item input[type="checkbox"]::before,
+.library-label input[type="checkbox"]::before,
+.role-item input[type="checkbox"]::before { content: none !important; }
