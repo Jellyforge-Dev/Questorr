@@ -42,56 +42,85 @@
   }
 
   // ── 1. Login entrance ───────────────────────────────────────────────
-  // script.js reveals the auth card only after an async auth check. Playing
-  // at DOMContentLoaded races that and looks half-done, so we wait until the
-  // card is actually visible, THEN run a full fade+slide timeline. Everything
-  // uses clearProps + a failsafe so the login UI can never stay hidden.
+  // script.js runs its OWN login→dashboard transition on these same elements.
+  // To avoid fighting it, the intro: (a) only plays while in auth-mode and the
+  // card is actually visible, and (b) is killed + stripped of all inline gsap
+  // styles the instant login starts or the dashboard appears, so nothing leaks
+  // into the dashboard layout.
+  var LOGIN_TARGETS =
+    ".auth-logo, .hero-title, .hero-subtitle, .auth-container, .auth-form .form-group, .auth-switch, .language-selector-auth";
+  var _loginTL = null;
+
   function playLoginIntro() {
     var card = $(".auth-container");
     if (!card) return;
-    var tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    if ($(".auth-logo")) tl.from(".auth-logo", { y: -30, autoAlpha: 0, duration: 0.55, clearProps: "all" });
-    if ($(".hero-title")) tl.from(".hero-title", { y: 26, autoAlpha: 0, duration: 0.55, clearProps: "all" }, "-=0.25");
-    if ($(".hero-subtitle")) tl.from(".hero-subtitle", { y: 18, autoAlpha: 0, duration: 0.5, clearProps: "all" }, "-=0.30");
-    tl.from(card, { y: 36, autoAlpha: 0, duration: 0.6, clearProps: "all" }, "-=0.25");
+    _loginTL = gsap.timeline({ defaults: { ease: "power3.out" } });
+    if ($(".auth-logo")) _loginTL.from(".auth-logo", { y: -30, autoAlpha: 0, duration: 0.5 });
+    if ($(".hero-title")) _loginTL.from(".hero-title", { y: 26, autoAlpha: 0, duration: 0.5 }, "-=0.22");
+    if ($(".hero-subtitle")) _loginTL.from(".hero-subtitle", { y: 18, autoAlpha: 0, duration: 0.45 }, "-=0.28");
+    _loginTL.from(card, { y: 34, autoAlpha: 0, duration: 0.55 }, "-=0.22");
     var fields = all(".auth-form:not([style*='display: none']) .form-group, .auth-switch, .language-selector-auth");
-    if (fields.length) tl.from(fields, { y: 16, autoAlpha: 0, duration: 0.4, stagger: 0.07, clearProps: "all" }, "-=0.2");
-
-    // Failsafe: never leave login UI hidden.
-    gsap.delayedCall(2.8, function () {
-      var el = document.querySelectorAll(
-        ".auth-logo, .auth-container, .hero-title, .hero-subtitle, .auth-form .form-group, .auth-switch, .language-selector-auth"
-      );
-      if (el.length) gsap.set(el, { clearProps: "opacity,visibility" });
+    if (fields.length)
+      _loginTL.from(fields, { y: 14, autoAlpha: 0, duration: 0.38, stagger: 0.06 }, "-=0.18");
+    _loginTL.eventCallback("onComplete", function () {
+      gsap.set(document.querySelectorAll(LOGIN_TARGETS), {
+        clearProps: "opacity,visibility,transform",
+      });
     });
+  }
+
+  function killLoginIntro() {
+    if (_loginTL) { _loginTL.kill(); _loginTL = null; }
+    var els = document.querySelectorAll(LOGIN_TARGETS);
+    if (els.length) gsap.set(els, { clearProps: "opacity,visibility,transform" });
   }
 
   function loginIntro() {
     if (!document.body.classList.contains("auth-mode")) return;
     var card = $(".auth-container");
     if (!card) return;
+
     function visible() {
       var cs = getComputedStyle(card);
       return cs.display !== "none" && cs.visibility !== "hidden";
     }
-    if (visible()) { playLoginIntro(); return; }
-    if (window.MutationObserver) {
-      var played = false;
+    var played = false;
+    function play() {
+      if (played) return;
+      if (!document.body.classList.contains("auth-mode") || !visible()) return;
+      played = true;
+      playLoginIntro();
+    }
+
+    if (visible()) {
+      play();
+    } else if (window.MutationObserver) {
       var mo = new MutationObserver(function () {
-        if (!played && visible()) {
-          played = true;
-          mo.disconnect();
-          playLoginIntro();
-        }
+        if (visible()) { mo.disconnect(); play(); }
       });
       mo.observe(card, { attributes: true, attributeFilter: ["style", "class"] });
-      mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-      setTimeout(function () {
-        if (!played) { played = true; mo.disconnect(); playLoginIntro(); }
-      }, 1500);
+      setTimeout(function () { try { mo.disconnect(); } catch (e) {} play(); }, 1200);
     } else {
-      setTimeout(playLoginIntro, 400);
+      setTimeout(play, 400);
     }
+
+    // Stop fighting script.js: kill + clean the intro when login begins or the
+    // dashboard is shown.
+    document.addEventListener(
+      "submit",
+      function (e) {
+        if (e.target && (e.target.id === "login-form" || e.target.id === "register-form"))
+          killLoginIntro();
+      },
+      true
+    );
+    var bodyMo = new MutationObserver(function () {
+      if (!document.body.classList.contains("auth-mode")) {
+        killLoginIntro();
+        bodyMo.disconnect();
+      }
+    });
+    bodyMo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
   }
 
   // ── 2. Config pane fade on tab switch (NOT scroll-driven) ───────────

@@ -4409,6 +4409,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
 /* ── Save button loading spinner (reuses @keyframes spin) ── */
 .btn.is-loading {
   color: transparent !important;
+  text-shadow: none !important;
   pointer-events: none;
   position: relative;
 }
@@ -4456,8 +4457,10 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
 [data-theme="light"] .auth-logo {
   mix-blend-mode: normal !important;
   filter: none !important;
-  background: #19201d;
-  padding: 4px 7px;
+  background: #1b2420;
+  padding: 3px 6px;
+  border: 1px solid var(--pixel-border);
+  box-shadow: 2px 2px 0 rgba(10, 125, 95, 0.25);
   border-radius: 0;
 }
 [data-theme="light"] .dashboard-title { color: var(--mauve) !important; }
