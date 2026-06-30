@@ -2,6 +2,7 @@ import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder } from "discord.js";
 import * as seerrApi from "../../api/seerr.js";
 import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import { recordIssueReporter } from "../../utils/issueReporters.js";
 import logger from "../../utils/logger.js";
 
 // Overseerr/Jellyseerr issue types: 1=Video, 2=Audio, 3=Subtitle, 4=Other
@@ -44,10 +45,15 @@ export async function handleReportCommand(interaction) {
     }
 
     const issueOpts = mediaType === "tv" ? { season, episode } : {};
-    await seerrApi.createIssue(mediaId, issueType, message, seerrUrl, seerrApiKey, issueOpts);
+    const created = await seerrApi.createIssue(mediaId, issueType, message, seerrUrl, seerrApiKey, issueOpts);
 
     const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
     const typeLabel = t(TYPE_LABELS[issueType] || "report_type_other");
+
+    // Remember who reported it so we can DM them when an admin resolves it.
+    if (created?.id) {
+      recordIssueReporter(created.id, interaction.user.id, `${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}`);
+    }
 
     // Notify the admin channel.
     try {

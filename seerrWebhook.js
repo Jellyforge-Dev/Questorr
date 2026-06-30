@@ -37,6 +37,7 @@ import { isValidUrl } from "./utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
 import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
+import { getIssueReporter, removeIssueReporter } from "./utils/issueReporters.js";
 
 // ─── Admin Pending Messages persistence ──────────────────────────────────────
 // Maps requestId → { channelId, messageId } so the status poller can edit the
@@ -708,6 +709,35 @@ async function processEvent(data, eventType, cfg, client) {
   const mediaType = media?.media_type || null;
   const tmdbId = media?.tmdbId || null;
   let rootFolder = request?.rootFolder || null;
+
+  // Issue resolved → DM the original /report reporter with the admin's comment.
+  // Seerr attributes the issue to the API-key owner, so the Discord reporter is
+  // only known from our own issue→reporter mapping recorded at /report time.
+  if (eventType === "ISSUE_RESOLVED") {
+    const issueId = issue?.issue_id || issue?.id;
+    if (issueId) {
+      try {
+        const reporter = getIssueReporter(issueId);
+        if (reporter?.discordUserId) {
+          const user = await client.users.fetch(reporter.discordUserId);
+          if (user) {
+            const resolvedEmbed = new EmbedBuilder()
+              .setColor("#2ecc8e")
+              .setTitle(t("dm_issue_resolved_title"))
+              .setDescription(t("dm_issue_resolved_body", { title: reporter.title || subject || "" }));
+            if (comment?.comment_message) {
+              resolvedEmbed.addFields({ name: t("dm_issue_resolved_comment"), value: comment.comment_message });
+            }
+            await user.send({ embeds: [resolvedEmbed] });
+            logger.info(`[SEERR WEBHOOK] DM'd issue ${issueId} reporter ${reporter.discordUserId} about resolution`);
+          }
+        }
+        removeIssueReporter(issueId);
+      } catch (e) {
+        logger.warn(`[SEERR WEBHOOK] Failed to DM issue reporter: ${e.message}`);
+      }
+    }
+  }
 
   // Drop identical webhooks fired within the dedup window. Seerr sometimes sends
   // the same MEDIA_* event twice in quick succession (observed in production logs
