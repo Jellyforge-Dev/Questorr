@@ -569,13 +569,18 @@ export async function declineRequest(requestId, seerrUrl, apiKey) {
  * @param {string} apiKey - Seerr API key
  * @returns {Promise<Object>} Created issue
  */
-export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey) {
+export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey, opts = {}) {
   const apiUrl = normalizeApiUrl(seerrUrl);
   const payload = {
     issueType: parseInt(issueType, 10),
     message: message || "",
     mediaId: parseInt(mediaId, 10),
   };
+  // TV: optionally scope the issue to a specific season/episode (0 = all).
+  const season = parseInt(opts.season, 10);
+  const episode = parseInt(opts.episode, 10);
+  if (Number.isFinite(season) && season > 0) payload.problemSeason = season;
+  if (Number.isFinite(episode) && episode > 0) payload.problemEpisode = episode;
   const response = await withRetry(
     () => axios.post(`${apiUrl}/issue`, payload, {
       headers: { "X-Api-Key": apiKey },

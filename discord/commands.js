@@ -112,6 +112,12 @@ export function getCommands() {
             { name: "❓ Other", value: "4" }
           )
       )
+      .addIntegerOption((opt) =>
+        opt.setName("season").setDescription("Season number (series only, optional)").setRequired(false).setMinValue(0)
+      )
+      .addIntegerOption((opt) =>
+        opt.setName("episode").setDescription("Episode number (series only, optional)").setRequired(false).setMinValue(0)
+      )
       .addStringOption((opt) =>
         opt.setName("message").setDescription("Describe the problem (optional)").setRequired(false)
       ),

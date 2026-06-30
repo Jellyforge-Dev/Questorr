@@ -25,6 +25,8 @@ export async function handleReportCommand(interaction) {
   const titleFromOption = parts.slice(2).join("|");
   const issueType = parseInt(interaction.options.getString("type"), 10) || 4;
   const message = (interaction.options.getString("message") || "").slice(0, 500);
+  const season = interaction.options.getInteger("season");
+  const episode = interaction.options.getInteger("episode");
 
   const seerrUrl = getSeerrUrl();
   const seerrApiKey = getSeerrApiKey();
@@ -41,14 +43,18 @@ export async function handleReportCommand(interaction) {
       return interaction.editReply({ content: t("report_not_in_seerr") });
     }
 
-    await seerrApi.createIssue(mediaId, issueType, message, seerrUrl, seerrApiKey);
+    const issueOpts = mediaType === "tv" ? { season, episode } : {};
+    await seerrApi.createIssue(mediaId, issueType, message, seerrUrl, seerrApiKey, issueOpts);
 
     const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
     const typeLabel = t(TYPE_LABELS[issueType] || "report_type_other");
 
     // Notify the admin channel.
     try {
-      const channelId = process.env.SEERR_CHANNEL_ID || process.env.JELLYFIN_CHANNEL_ID;
+      const channelId =
+        process.env.SEERR_ADMIN_CHANNEL_ID ||
+        process.env.SEERR_CHANNEL_ID ||
+        process.env.JELLYFIN_CHANNEL_ID;
       if (channelId) {
         const channel = await interaction.client.channels.fetch(channelId);
         if (channel) {
@@ -61,6 +67,12 @@ export async function handleReportCommand(interaction) {
               { name: t("report_field_reporter"), value: `<@${interaction.user.id}>`, inline: true }
             )
             .setTimestamp();
+          if (mediaType === "tv" && (season || episode)) {
+            const se =
+              (season ? `S${String(season).padStart(2, "0")}` : "") +
+              (episode ? `E${String(episode).padStart(2, "0")}` : "");
+            embed.addFields({ name: t("report_field_episode"), value: se, inline: true });
+          }
           if (message) embed.addFields({ name: t("report_field_message"), value: message, inline: false });
           await channel.send({ embeds: [embed] });
         }

@@ -37,5 +37,17 @@ describe("createIssue", () => {
     expect(body.mediaId).toBe(99);
     expect(body.issueType).toBe(4);
     expect(body.message).toBe("");
+    expect(body.problemSeason).toBeUndefined();
+    expect(body.problemEpisode).toBeUndefined();
+  });
+
+  it("includes problemSeason/problemEpisode for a TV issue when provided", async () => {
+    axios.post.mockResolvedValue({ data: { id: 9 } });
+
+    await createIssue(5, 1, "Subs out of sync", "http://seerr.local/api/v1", "k", { season: 2, episode: 5 });
+
+    const [, body] = axios.post.mock.calls[0];
+    expect(body.problemSeason).toBe(2);
+    expect(body.problemEpisode).toBe(5);
   });
 });
