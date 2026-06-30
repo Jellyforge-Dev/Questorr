@@ -42,13 +42,23 @@
   }
 
   // ── 1. Login entrance timeline (runs once on load) ──────────────────
+  // The login card + logo are gated by an async auth-check in script.js, so
+  // they are animated with TRANSFORMS ONLY — never opacity/visibility — so a
+  // timing race can never leave the login UI hidden. Only the (always-present)
+  // hero text fades, and it clears its props on completion.
   function loginIntro() {
     if (!document.body.classList.contains("auth-mode")) return;
     var tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    if ($(".auth-logo")) tl.from(".auth-logo", { y: -24, autoAlpha: 0, duration: 0.6 });
-    if ($(".hero-title")) tl.from(".hero-title", { y: 22, autoAlpha: 0, duration: 0.6 }, "-=0.30");
-    if ($(".hero-subtitle")) tl.from(".hero-subtitle", { y: 16, autoAlpha: 0, duration: 0.5 }, "-=0.35");
-    if ($(".auth-container")) tl.from(".auth-container", { y: 28, autoAlpha: 0, scale: 0.985, duration: 0.7 }, "-=0.30");
+    if ($(".auth-logo")) tl.from(".auth-logo", { y: -24, duration: 0.6, clearProps: "transform" });
+    if ($(".hero-title")) tl.from(".hero-title", { y: 22, autoAlpha: 0, duration: 0.6, clearProps: "opacity,visibility,transform" }, "-=0.30");
+    if ($(".hero-subtitle")) tl.from(".hero-subtitle", { y: 16, autoAlpha: 0, duration: 0.5, clearProps: "opacity,visibility,transform" }, "-=0.35");
+    if ($(".auth-container")) tl.from(".auth-container", { y: 28, scale: 0.985, duration: 0.7, clearProps: "transform" }, "-=0.30");
+
+    // Failsafe: whatever happens, never leave login UI hidden.
+    gsap.delayedCall(2.4, function () {
+      var el = document.querySelectorAll(".auth-logo, .auth-container, .hero-title, .hero-subtitle");
+      if (el.length) gsap.set(el, { clearProps: "opacity,visibility" });
+    });
   }
 
   // ── 2. Config pane fade on tab switch (NOT scroll-driven) ───────────
