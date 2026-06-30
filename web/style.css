@@ -1,11 +1,5 @@
 :root {
-  /* Shared, theme-independent tokens */
-  --border-radius: 12px;
-  --display-font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --mono-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-
-  /* ── Default = DARK (Near-Black + Teal, clean) ───────────── */
+  /* Questorr Brand – Dark Teal */
   --background: #0d1117;
   --foreground: #e6f1f5;
   --mantle: #080d12;
@@ -13,55 +7,14 @@
   --surface1: #1f2d38;
   --surface2: #2a3d4d;
   --mauve: #1ec8a0;   /* primary brand teal */
-  --blue: #17b8c4;    /* secondary cyan / links */
-  --green: #2ecc8e;
-  --peach: #f0a05a;
+  --blue: #17b8c4;    /* secondary cyan */
+  --green: #2ecc8e;   /* success green */
+  --peach: #f0a05a;   /* warning orange */
   --text: #e6f1f5;
   --subtext0: #8ba8b8;
-  --subtext1: #c3d2db;
-  --border-color: #243443;
+  --border-color: #1f2d38;
+  --border-radius: 12px;
   --code-bg: #1f2d38;
-  --red: #f0596b;
-  --teal: #1ec8a0;
-  --yellow: #e0b341;
-
-  --accent-grad: linear-gradient(135deg, #1ec8a0, #17b8c4);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
-  --ring: 0 0 0 3px rgba(30, 200, 160, 0.28);
-  --nav-bg: rgba(13, 17, 23, 0.82);
-  --logo-chip: transparent;
-}
-
-/* ── LIGHT theme (toned down, not glaring) ─────────────────── */
-:root[data-theme="light"] {
-  --background: #e7eaf1;
-  --foreground: #1b1f2a;
-  --mantle: #dce0ea;
-  --surface0: #f3f5fa;
-  --surface1: #e8ecf4;
-  --surface2: #dbe1ed;
-  --mauve: #0e9e80;
-  --blue: #0e8fa0;
-  --green: #15a36b;
-  --peach: #c9761d;
-  --text: #1b1f2a;
-  --subtext0: #5c6373;
-  --subtext1: #3f4759;
-  --border-color: #cfd6e3;
-  --code-bg: #e8ecf4;
-  --red: #d83f50;
-  --teal: #0e9e80;
-  --yellow: #b8870b;
-
-  --accent-grad: linear-gradient(135deg, #0e9e80, #0e8fa0);
-  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.08);
-  --shadow-md: 0 8px 24px rgba(20, 24, 40, 0.10);
-  --shadow-lg: 0 18px 48px rgba(20, 24, 40, 0.14);
-  --ring: 0 0 0 3px rgba(14, 158, 128, 0.20);
-  --nav-bg: rgba(243, 245, 250, 0.85);
-  --logo-chip: #1b1f2a;
 }
 
 /* Utility classes */
@@ -4276,404 +4229,179 @@ tr.notif-disabled td {
 }
 
 /* ============================================================
-   MODERN SAAS CLEAN — theme layer
-   Light, indigo. Appended last so it overrides the legacy
-   dark-teal base AND the pixel/Tetris layer. Themes color /
-   type / border / shadow only; layout is left to earlier
-   rules so the responsive @media blocks stay intact.
+   RETRO + FEATURES MERGE LAYER
+   Keeps the dark neon/pixel identity as default and adds:
+   a Paper-Terminal LIGHT theme, a theme toggle, pixel toggle
+   switches, save spinner, and connected-status pulse.
+   Appended last so light overrides beat the pixel layer's
+   hardcoded !important dark surfaces.
    ============================================================ */
 
-/* ── Kill the arcade decorations ─────────────────────────── */
-body {
-  font-family: var(--body-font) !important;
-  background-color: var(--background) !important;
-  background-image: none !important;
-  color: var(--text);
-  font-weight: 400;
-}
-body::before,
-body::after { content: none !important; display: none !important; }
-#tetris-bg,
-.tetris-piece,
-.hero-aurora { display: none !important; }
-.hero.full-screen::before,
-.dashboard-container::before { content: none !important; background: none !important; }
-.auth-container::before,
-.auth-container::after,
-.hero-title::after { content: none !important; }
-
-/* ── Typography ──────────────────────────────────────────── */
-h1, h2, h3, .hero-title, .dashboard-title, fieldset legend, .config-pane legend, .features-title {
-  font-family: var(--display-font) !important;
-}
-code, pre, .code-block, .mono, .log-entry, #logs-container {
-  font-family: var(--mono-font) !important;
+/* ── Paper-Terminal LIGHT tokens ─────────────────────────── */
+:root[data-theme="light"] {
+  --background: #efe9d8;
+  --foreground: #1d2421;
+  --mantle: #e4ddc9;
+  --surface0: #f5f1e4;
+  --surface1: #e9e2cf;
+  --surface2: #ddd4ba;
+  --mauve: #0c8f74;
+  --blue: #0a7d86;
+  --green: #1c7f55;
+  --peach: #b06a14;
+  --text: #1d2421;
+  --subtext0: #5c645d;
+  --border-color: #c9bfa3;
+  --code-bg: #e3dcc6;
+  --pixel-teal: #0c8f74;
+  --pixel-cyan: #0a7d86;
+  --pixel-green: #1c7f55;
+  --pixel-dark: #efe9d8;
+  --pixel-grid: rgba(29, 36, 33, 0.05);
+  --pixel-border: rgba(12, 143, 116, 0.5);
+  --pixel-glow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
-/* ── Navbar ──────────────────────────────────────────────── */
-.navbar {
-  background: var(--nav-bg) !important;
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-bottom: 1px solid var(--border-color) !important;
-  box-shadow: var(--shadow-sm) !important;
+/* ── LIGHT: override the pixel layer's hardcoded dark surfaces ── */
+[data-theme="light"] body {
+  background-color: #efe9d8 !important;
+  color: #1d2421;
 }
-.navbar-brand .logo,
-.auth-logo {
-  mix-blend-mode: normal !important;
-  filter: none !important;
-  image-rendering: auto !important;
-  background: var(--logo-chip);
-  border-radius: 10px;
-  padding: 5px 8px;
-  box-shadow: none;
+[data-theme="light"] body::before {
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0, 0, 0, 0.035) 2px, rgba(0, 0, 0, 0.035) 4px
+  ) !important;
 }
-.auth-logo {
-  width: 76px !important;
-  height: 76px !important;
-  padding: 12px !important;
-  border-radius: 18px !important;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 1rem !important;
+[data-theme="light"] .navbar { background: rgba(239, 233, 216, 0.95) !important; }
+[data-theme="light"] .auth-container { background: #f5f1e4 !important; }
+[data-theme="light"] .dashboard-header { background: #f5f1e4 !important; }
+[data-theme="light"] .dashboard-sidebar { background: rgba(245, 241, 228, 0.85) !important; }
+[data-theme="light"] .footer { background: rgba(239, 233, 216, 0.95) !important; color: #5c645d !important; }
+[data-theme="light"] ::-webkit-scrollbar-track { background: #e4ddc9 !important; }
+
+[data-theme="light"] .hero-title { color: #0c8f74 !important; text-shadow: none !important; }
+[data-theme="light"] .hero-subtitle { color: #5c645d !important; }
+[data-theme="light"] .dashboard-title { color: #0c8f74 !important; text-shadow: none !important; }
+
+[data-theme="light"] .dashboard-nav .nav-item { color: #3a443d !important; }
+[data-theme="light"] .dashboard-nav .nav-item:hover,
+[data-theme="light"] .dashboard-nav .nav-item.active { color: #0c8f74 !important; }
+[data-theme="light"] label,
+[data-theme="light"] .form-group label { color: #3f4a42 !important; }
+[data-theme="light"] .form-text { color: #6a7167 !important; }
+[data-theme="light"] .config-pane strong,
+[data-theme="light"] .config-pane b { color: #0c6f59 !important; }
+[data-theme="light"] fieldset legend,
+[data-theme="light"] .config-pane legend { text-shadow: none !important; }
+
+/* Inputs in light */
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="url"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+[data-theme="light"] .auth-form input {
+  background: #fbf8ef !important;
+  color: #1d2421 !important;
+  border-color: rgba(12, 143, 116, 0.4) !important;
 }
-.nav-links {
-  background: var(--surface1) !important;
-  border: 1px solid var(--border-color) !important;
-}
-.nav-links a { color: var(--subtext1) !important; }
-.nav-links a:hover {
-  background: var(--surface2) !important;
-  color: var(--text) !important;
+[data-theme="light"] .auth-form input::placeholder { color: rgba(29, 36, 33, 0.4) !important; }
+
+/* Code blocks in light */
+[data-theme="light"] code,
+[data-theme="light"] pre,
+[data-theme="light"] .code-block {
+  background: #e3dcc6 !important;
+  color: #0c6f59 !important;
 }
 
-/* Theme toggle button */
+/* Pixel buttons: readable text on teal in light */
+[data-theme="light"] .auth-form .btn-primary,
+[data-theme="light"] .dashboard-nav .btn-primary,
+[data-theme="light"] .btn-primary {
+  color: #f3efe2 !important;
+}
+[data-theme="light"] .btn-secondary { color: #0c8f74 !important; border-color: rgba(12, 143, 116, 0.5) !important; }
+
+/* ── Theme toggle button (pixel style) ───────────────────── */
 .theme-toggle {
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent !important;
-  border: none !important;
-  color: var(--subtext1) !important;
+  background: transparent;
+  border: 1px solid var(--pixel-border);
+  color: var(--pixel-teal);
   cursor: pointer;
-  padding: 0.45rem 0.6rem !important;
-  border-radius: 8px !important;
+  padding: 0.4rem 0.55rem;
   font-size: 1rem;
   line-height: 1;
-  transition: background 0.15s ease, color 0.15s ease;
+  border-radius: 0;
+  font-family: var(--mono-font);
+  transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
 }
 .theme-toggle:hover {
-  background: var(--surface2) !important;
-  color: var(--mauve) !important;
+  background: rgba(30, 200, 160, 0.12);
+  box-shadow: 2px 2px 0 rgba(30, 200, 160, 0.3);
+  transform: translate(-1px, -1px);
 }
 
-/* ── Login / hero ────────────────────────────────────────── */
-.hero.full-screen { background: transparent !important; }
-.hero-title {
-  font-size: clamp(2rem, 5vw, 3rem) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.02em !important;
-  text-shadow: none !important;
-  background: var(--accent-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent !important;
+/* ── Pixel toggle switches (boolean settings only) ───────── */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 42px !important;
+  height: 20px !important;
+  min-width: 42px;
+  border-radius: 0 !important;
+  background: rgba(30, 200, 160, 0.08) !important;
+  border: 1px solid var(--pixel-border) !important;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin: 0 0.4rem 0 0;
+  image-rendering: pixelated;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
 }
-.hero-subtitle {
-  font-family: var(--body-font) !important;
-  color: var(--subtext0) !important;
-  opacity: 1 !important;
-  letter-spacing: 0 !important;
-  font-size: 0.95rem !important;
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--pixel-teal);
+  opacity: 0.45;
+  transition: left 0.1s ease, opacity 0.1s ease;
 }
-.auth-container {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
-  box-shadow: var(--shadow-lg) !important;
-  clip-path: none !important;
+input[type="checkbox"]:checked {
+  background: rgba(30, 200, 160, 0.18) !important;
+  border-color: var(--pixel-teal) !important;
 }
-.auth-form input,
-.language-selector-auth select {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 10px !important;
-  color: var(--text) !important;
-  font-family: var(--body-font) !important;
-}
-.auth-form input::placeholder { color: var(--subtext0) !important; }
-.auth-form input:focus,
-.language-selector-auth select:focus {
-  border-color: var(--mauve) !important;
-  box-shadow: var(--ring) !important;
-  outline: none !important;
-}
-.auth-form label,
-.language-selector-auth label {
-  font-family: var(--body-font) !important;
-  color: var(--subtext1) !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
-  font-size: 0.85rem !important;
-}
-.auth-switch { font-family: var(--body-font) !important; color: var(--subtext0) !important; }
-.auth-switch a { color: var(--mauve) !important; }
+input[type="checkbox"]:checked::before { left: 26px; opacity: 1; box-shadow: var(--pixel-glow); }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); outline-offset: 2px; }
 
-/* ── Buttons ─────────────────────────────────────────────── */
-.btn-primary,
-.auth-form .btn-primary,
-.dashboard-nav .btn-primary {
-  background: var(--mauve) !important;
-  color: #fff !important;
-  font-family: var(--body-font) !important;
-  font-size: 0.9rem !important;
-  font-weight: 600 !important;
-  border: none !important;
-  border-radius: 10px !important;
-  letter-spacing: 0 !important;
-  clip-path: none !important;
-  box-shadow: var(--shadow-sm) !important;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease !important;
+/* Multi-select list checkboxes stay native */
+.library-item input[type="checkbox"],
+.library-label input[type="checkbox"],
+.role-item input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-width: 0;
+  background: initial !important;
+  border: initial !important;
+  accent-color: var(--pixel-teal);
 }
-.btn-primary:hover,
-.auth-form .btn-primary:hover,
-.dashboard-nav .btn-primary:hover {
-  background: var(--accent-grad) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 8px 20px rgba(91, 91, 214, 0.3) !important;
-}
-.btn-secondary {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--text) !important;
-  font-family: var(--body-font) !important;
-  border-radius: 10px !important;
-  box-shadow: none !important;
-}
-.btn-secondary:hover {
-  background: var(--surface1) !important;
-  border-color: var(--surface2) !important;
-  transform: none !important;
-}
-.btn-danger,
-[class*="stop"],
-#stop-bot-btn {
-  background: var(--red) !important;
-  color: #fff !important;
-  border-radius: 10px !important;
-  clip-path: none !important;
-}
+.library-item input[type="checkbox"]::before,
+.library-label input[type="checkbox"]::before,
+.role-item input[type="checkbox"]::before { content: none !important; }
 
-/* ── Forms ───────────────────────────────────────────────── */
-input[type="text"],
-input[type="url"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-select,
-textarea {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 10px !important;
-  color: var(--text) !important;
-  font-family: var(--body-font) !important;
-  font-size: 0.92rem !important;
-}
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--mauve) !important;
-  box-shadow: var(--ring) !important;
-  outline: none !important;
-}
-input[type="checkbox"] { accent-color: var(--mauve) !important; }
-label,
-.form-group label {
-  font-family: var(--body-font) !important;
-  color: var(--subtext1) !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
-  font-size: 0.85rem !important;
-}
-.form-text {
-  font-family: var(--body-font) !important;
-  color: var(--subtext0) !important;
-  font-size: 0.8rem !important;
-}
-fieldset legend,
-.config-pane legend {
-  color: var(--text) !important;
-  text-shadow: none !important;
-  text-transform: none !important;
-  letter-spacing: -0.01em !important;
-  font-size: 1.15rem !important;
-  font-weight: 600 !important;
-  border-bottom: 1px solid var(--border-color) !important;
-}
-.config-pane strong,
-.config-pane b { color: var(--text) !important; }
-.webhook-box {
-  background: var(--surface1) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 12px !important;
-}
-code, .code-block, pre {
-  background: var(--code-bg) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--mauve) !important;
-  border-radius: 6px !important;
-}
-
-/* ── Cards / surfaces ────────────────────────────────────── */
-.feature-card,
-.about-card,
-.features-list,
-.dev-footer,
-.dashboard-actions,
-.dashboard-header,
-.dashboard-sidebar,
-.modal-content,
-.custom-select-dropdown {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-.dashboard-header { clip-path: none !important; border-radius: 14px !important; }
-.dashboard-title {
-  color: var(--text) !important;
-  text-shadow: none !important;
-  font-size: 1.05rem !important;
-  font-weight: 600 !important;
-}
-.features-list li { background: var(--surface1) !important; }
-.features-list li:hover { background: var(--surface2) !important; }
-
-/* ── Signature: the 8-step setup journey rail ────────────── */
-.dashboard-nav .nav-item {
-  font-family: var(--body-font) !important;
-  font-size: 0.9rem !important;
-  font-weight: 500 !important;
-  color: var(--subtext1) !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
-  border-radius: 10px !important;
-  padding: 0.6rem 0.85rem !important;
-  letter-spacing: 0 !important;
-  box-shadow: none !important;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
-}
-.dashboard-nav .nav-item::before { content: "" !important; opacity: 0 !important; }
-.dashboard-nav .nav-item:hover {
-  background: var(--surface1) !important;
-  color: var(--text) !important;
-  border-color: var(--border-color) !important;
-}
-.dashboard-nav .nav-item.active {
-  background: var(--accent-grad) !important;
-  color: #fff !important;
-  border-color: transparent !important;
-  box-shadow: 0 6px 16px rgba(91, 91, 214, 0.28) !important;
-}
-
-/* ── Footer ──────────────────────────────────────────────── */
-.footer {
-  background: var(--mantle) !important;
-  border-top: 1px solid var(--border-color) !important;
-  font-family: var(--body-font) !important;
-  color: var(--subtext0) !important;
-}
-.footer a { color: var(--subtext0) !important; }
-.footer a:hover { color: var(--mauve) !important; }
-
-/* ── Logs ────────────────────────────────────────────────── */
-#logs-container {
-  background: var(--surface0) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: inset 0 1px 3px rgba(20, 24, 40, 0.05) !important;
-}
-.log-entry { border-bottom: 1px solid var(--border-color) !important; }
-.log-timestamp { color: var(--subtext0) !important; }
-.log-level.info { color: var(--blue) !important; }
-.log-level.warn { color: var(--peach) !important; }
-.log-level.error { color: var(--red) !important; }
-.log-level.debug { color: var(--subtext0) !important; }
-
-/* ── Scrollbar ───────────────────────────────────────────── */
-::-webkit-scrollbar-track { background: var(--surface1) !important; }
-::-webkit-scrollbar-thumb { background: var(--surface2) !important; border-radius: 8px !important; }
-::-webkit-scrollbar-thumb:hover { background: var(--mauve) !important; }
-
-/* ── Repoint legacy pixel tokens so stray var(--pixel-*) stay on-theme ── */
-:root {
-  --pixel-teal: var(--mauve);
-  --pixel-cyan: var(--blue);
-  --pixel-green: var(--green);
-  --pixel-dark: var(--surface0);
-  --pixel-grid: var(--border-color);
-  --pixel-border: var(--border-color);
-  --pixel-glow: var(--shadow-sm);
-  --pixel-font: var(--display-font);
-}
-
-/* ── Accessibility ───────────────────────────────────────── */
-:focus-visible { outline: 2px solid var(--mauve) !important; outline-offset: 2px !important; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* ── Mobile: strip remaining pixel artifacts ─────────────── */
-@media (max-width: 768px) {
-  .mobile-save-btn {
-    clip-path: none !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(30, 200, 160, 0.35) !important;
-    font-family: var(--body-font) !important;
-  }
-  .dashboard-header { clip-path: none !important; }
-  .dashboard-nav .nav-item { font-family: var(--body-font) !important; }
-}
-
-/* ============================================================
-   COMPONENT POLISH (Track 1a) — states & microinteractions.
-   Pure CSS, no markup/JS changes. .is-loading / .is-success
-   classes are toggled by Track 1b JS.
-   ============================================================ */
-
-/* Consistent interactive transitions */
-.btn,
-.nav-item,
-input,
-select,
-textarea,
-.feature-card,
-.stats-card,
-.theme-toggle {
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-    color 0.15s ease, box-shadow 0.18s ease, transform 0.12s ease;
-}
-
-/* Button press feedback */
-.btn:active:not(:disabled):not(.is-loading) {
-  transform: translateY(0) scale(0.985) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-/* Disabled buttons */
-.btn:disabled,
-.btn[disabled],
-.btn.is-disabled {
-  opacity: 0.5 !important;
-  cursor: not-allowed !important;
-  transform: none !important;
-  box-shadow: none !important;
-  filter: grayscale(0.15);
-}
-
-/* Loading spinner (reuses existing @keyframes spin) */
+/* ── Save button loading spinner (reuses @keyframes spin) ── */
 .btn.is-loading {
   color: transparent !important;
   pointer-events: none;
@@ -4687,176 +4415,31 @@ textarea,
   width: 1em;
   height: 1em;
   margin: -0.5em 0 0 -0.5em;
-  border: 2px solid #fff;
+  border: 2px solid rgba(0, 0, 0, 0.65);
   border-right-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
-.btn-secondary.is-loading::after { border-color: var(--mauve); border-right-color: transparent; }
+.btn-secondary.is-loading::after { border-color: var(--pixel-teal); border-right-color: transparent; }
 
-/* Transient success flash (Track 1b: copy/save) */
-.btn.is-success {
-  background: var(--green) !important;
-  color: #fff !important;
-  border-color: transparent !important;
+/* ── Connected service status: neon pulse ────────────────── */
+@keyframes statusPulseRetro {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(30, 200, 160, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(30, 200, 160, 0); }
 }
+.status-dot.status-connected { animation: statusPulseRetro 2s ease-out infinite; }
 
-/* Input / select hover (when not focused) */
-input:hover:not(:focus):not(:disabled),
-select:hover:not(:focus):not(:disabled),
-textarea:hover:not(:focus):not(:disabled) {
-  border-color: var(--surface2) !important;
-}
-
-/* Card hover lift (feature + stats; about-cards keep their scroll transform) */
-.feature-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md) !important;
-}
-.stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md) !important;
-}
-
-/* Toast: stronger lift + accent edge */
-.toast {
-  box-shadow: var(--shadow-lg) !important;
-  border: 1px solid var(--border-color) !important;
-  border-left: 3px solid var(--mauve) !important;
-}
-
-/* Crisp keyboard focus on interactive controls */
+/* ── Keyboard focus + reduced motion ─────────────────────── */
+.theme-toggle:focus-visible,
 .btn:focus-visible,
-.nav-item:focus-visible,
-.theme-toggle:focus-visible {
-  outline: 2px solid var(--mauve) !important;
-  outline-offset: 2px !important;
-}
-
-/* ============================================================
-   TOGGLE SWITCHES (Track 1c) — boolean settings only.
-   Multi-select list checkboxes (.library-item / .role-item)
-   are explicitly reset back to native checkboxes below.
-   ============================================================ */
-input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 40px !important;
-  height: 22px !important;
-  min-width: 40px;
-  border-radius: 999px !important;
-  background: var(--surface2) !important;
-  border: 1px solid var(--border-color) !important;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-  vertical-align: middle;
-  margin: 0 0.35rem 0 0;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
-}
-input[type="checkbox"]::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  transform: translateY(-50%);
-  box-shadow: var(--shadow-sm);
-  transition: left 0.18s ease;
-}
-input[type="checkbox"]:checked {
-  background: var(--mauve) !important;
-  border-color: var(--mauve) !important;
-}
-input[type="checkbox"]:checked::before { left: 21px; }
-input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--mauve);
+.nav-item:focus-visible {
+  outline: 2px solid var(--pixel-teal);
   outline-offset: 2px;
 }
-
-/* Reset multi-select list checkboxes back to native controls */
-.library-item input[type="checkbox"],
-.library-label input[type="checkbox"],
-.role-item input[type="checkbox"] {
-  appearance: auto;
-  -webkit-appearance: auto;
-  width: 1.05rem !important;
-  height: 1.05rem !important;
-  min-width: 0;
-  border-radius: 3px !important;
-  background: initial !important;
-  border: initial !important;
-  accent-color: var(--mauve);
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
-.library-item input[type="checkbox"]::before,
-.library-label input[type="checkbox"]::before,
-.role-item input[type="checkbox"]::before { content: none !important; }
-
-/* ============================================================
-   SETUP JOURNEY RAIL (Track 2) — desktop sidebar only.
-   A connecting track with a dot per step; the active step's
-   dot fills teal. Mobile keeps the horizontal scrolling pills.
-   ============================================================ */
-@media (min-width: 769px) {
-  /* The dot is centered on the track deterministically:
-     nav padding-left = 1.6rem, track center = 8px from nav's left,
-     dot (11px) left = calc(2.5px - 1.6rem) so its center lands on 8px,
-     independent of root font-size. */
-  .dashboard-nav {
-    position: relative;
-    padding-left: 1.6rem;
-  }
-  .dashboard-nav::before {
-    content: "";
-    position: absolute;
-    left: 7px; /* 2px-wide track → center at 8px */
-    top: 0.95rem;
-    bottom: 0.95rem;
-    width: 2px;
-    background: var(--border-color);
-    border-radius: 2px;
-  }
-  .dashboard-nav .nav-item { position: relative; }
-  .dashboard-nav .nav-item::before {
-    content: "" !important;
-    opacity: 1 !important;
-    position: absolute;
-    left: calc(2.5px - 1.6rem); /* dot center → 8px from nav left */
-    top: 50%;
-    width: 11px;
-    height: 11px;
-    margin-top: -5.5px;
-    border-radius: 50%;
-    background: var(--surface0) !important;
-    border: 2px solid var(--border-color) !important;
-    box-shadow: 0 0 0 3px var(--background);
-    transition: background-color 0.18s ease, border-color 0.18s ease,
-      box-shadow 0.18s ease;
-  }
-  .dashboard-nav .nav-item:hover::before {
-    border-color: var(--mauve) !important;
-  }
-  .dashboard-nav .nav-item.active::before {
-    background: var(--mauve) !important;
-    border-color: var(--mauve) !important;
-    box-shadow: 0 0 0 3px var(--background), 0 0 10px rgba(30, 200, 160, 0.5);
-  }
-  /* Keep buttons that also live in the nav off the rail */
-  .dashboard-nav .btn-primary::before,
-  .dashboard-nav .btn.about-button::before { display: none !important; }
-}
-
-/* ============================================================
-   DATA-VIZ / STATUS POLISH (Track 4) — additive.
-   ============================================================ */
-@keyframes statusPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 142, 0.45); }
-  50% { box-shadow: 0 0 0 5px rgba(46, 204, 142, 0); }
-}
-.status-dot.status-connected { animation: statusPulse 2s ease-out infinite; }
-
-/* Smooth fill when the app updates a stats command bar width */
-#stats-command-bars [style*="width"] { transition: width 0.6s ease; }
