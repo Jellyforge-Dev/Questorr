@@ -103,6 +103,29 @@ export async function handleReportCommand(interaction) {
       logger.warn(`[report] Failed to notify admin channel: ${notifyErr.message}`);
     }
 
+    // DM the reporter a summary so they remember what they reported when an
+    // admin follows up later (mirrors the request-confirmation DM).
+    try {
+      const dmEmbed = new EmbedBuilder()
+        .setColor("#17b8c4")
+        .setTitle(t("dm_report_created_title"))
+        .addFields(
+          { name: t("report_field_title"), value: `${mediaType === "movie" ? "🎬" : "📺"} ${mediaTitle}`, inline: false },
+          { name: t("report_field_type"), value: typeLabel, inline: true }
+        )
+        .setTimestamp();
+      if (mediaType === "tv" && (season || episode)) {
+        const se =
+          (season ? `S${String(season).padStart(2, "0")}` : "") +
+          (episode ? `E${String(episode).padStart(2, "0")}` : "");
+        dmEmbed.addFields({ name: t("report_field_episode"), value: se, inline: true });
+      }
+      if (message) dmEmbed.addFields({ name: t("report_field_message"), value: message, inline: false });
+      await interaction.user.send({ embeds: [dmEmbed] });
+    } catch (dmErr) {
+      logger.warn(`[report] Could not DM reporter summary: ${dmErr.message}`);
+    }
+
     return interaction.editReply({ content: t("report_success") });
   } catch (err) {
     logger.error("[report] Failed to create issue:", err.message);
