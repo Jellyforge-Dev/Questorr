@@ -95,6 +95,27 @@ export function getCommands() {
         ),
     ] : []),
     new SlashCommandBuilder()
+      .setName("report")
+      .setDescription("Report a problem (audio, video, subtitle…) with a movie or show")
+      .addStringOption((opt) =>
+        opt.setName("title").setDescription("Title to report").setRequired(true).setAutocomplete(true)
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("type")
+          .setDescription("Type of problem")
+          .setRequired(true)
+          .addChoices(
+            { name: "🎞️ Video", value: "1" },
+            { name: "🔊 Audio", value: "2" },
+            { name: "💬 Subtitle", value: "3" },
+            { name: "❓ Other", value: "4" }
+          )
+      )
+      .addStringOption((opt) =>
+        opt.setName("message").setDescription("Describe the problem (optional)").setRequired(false)
+      ),
+    new SlashCommandBuilder()
       .setName("history")
       .setDescription("View recently added movies and series on Jellyfin")
       .addStringOption((opt) =>

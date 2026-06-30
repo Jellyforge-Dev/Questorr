@@ -376,6 +376,7 @@ export async function handleAutocomplete(interaction) {
   // Route by command name
   if (interaction.commandName === "trending") return handleTrendingAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "status") return handleStatusAutocomplete(interaction, focusedValue);
+  if (interaction.commandName === "report") return handleStatusAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "cast") return handlePersonAutocomplete(interaction, focusedValue);
   if (interaction.commandName === "subscribe") {
     return interaction.options.getSubcommand() === "remove"

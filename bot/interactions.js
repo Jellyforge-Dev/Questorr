@@ -1,5 +1,6 @@
 import { handleSearchOrRequest } from "./commands/search.js";
 import { handleStatusCommand } from "./commands/status.js";
+import { handleReportCommand } from "./commands/report.js";
 import { handleRandomCommand } from "./commands/random.js";
 import { handleWatchlistCommand, handleWatchlistPagination } from "./commands/watchlist.js";
 import { handleUpcomingCommand, handleUpcomingPagination } from "./commands/upcoming.js";
@@ -216,6 +217,9 @@ export function registerInteractions(client) {
         }
         if (interaction.commandName === "status") {
           return handleStatusCommand(interaction);
+        }
+        if (interaction.commandName === "report") {
+          return handleReportCommand(interaction);
         }
         if (interaction.commandName === "random") {
           return handleRandomCommand(interaction);

@@ -561,6 +561,32 @@ export async function declineRequest(requestId, seerrUrl, apiKey) {
 }
 
 /**
+ * Create a Seerr issue on a media item.
+ * @param {number|string} mediaId - Seerr internal media id (mediaInfo.id)
+ * @param {number|string} issueType - 1=Video, 2=Audio, 3=Subtitle, 4=Other
+ * @param {string} message - Free-text description
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Created issue
+ */
+export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const payload = {
+    issueType: parseInt(issueType, 10),
+    message: message || "",
+    mediaId: parseInt(mediaId, 10),
+  };
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue`, payload, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr create issue media ${mediaId}` }
+  );
+  return response.data;
+}
+
+/**
  * Fetch pending requests from Seerr
  * @param {string} seerrUrl - Seerr API URL
  * @param {string} apiKey - Seerr API key
