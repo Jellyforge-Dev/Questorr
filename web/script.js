@@ -5369,28 +5369,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!bg) return;
     if (bg.children.length > 0) return; // already spawned
     const pieces = [
-      { cls: "tp-i",   count: 4, minDur: 7,  maxDur: 14 },
-      { cls: "tp-o",   count: 3, minDur: 8,  maxDur: 16 },
-      { cls: "tp-t",   count: 4, minDur: 9,  maxDur: 18 },
-      { cls: "tp-l",   count: 4, minDur: 6,  maxDur: 13 },
-      { cls: "tp-s",   count: 3, minDur: 10, maxDur: 20 },
-      { cls: "tp-z",   count: 3, minDur: 11, maxDur: 17 },
-      { cls: "tp-dot", count: 8, minDur: 5,  maxDur: 12 },
+      { cls: "tp-i",   count: 4, minDur: 13, maxDur: 24 },
+      { cls: "tp-o",   count: 3, minDur: 14, maxDur: 26 },
+      { cls: "tp-t",   count: 4, minDur: 15, maxDur: 28 },
+      { cls: "tp-l",   count: 4, minDur: 13, maxDur: 24 },
+      { cls: "tp-s",   count: 3, minDur: 16, maxDur: 30 },
+      { cls: "tp-z",   count: 3, minDur: 15, maxDur: 27 },
+      { cls: "tp-dot", count: 8, minDur: 11, maxDur: 22 },
     ];
     pieces.forEach(({ cls, count, minDur, maxDur }) => {
       for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "tetris-piece " + cls;
-        // Re-roll position + speed on every fall so the field never repeats
-        // the same order.
-        const reroll = () => {
-          const dur = minDur + Math.random() * (maxDur - minDur);
+        // Duration is fixed per piece. Changing it on iteration cascades into
+        // a storm of instant re-fires, so only the horizontal position is
+        // re-rolled each fall — the field still never repeats the same order.
+        const dur = minDur + Math.random() * (maxDur - minDur);
+        el.style.animationDuration = dur + "s";
+        el.style.animationDelay = -(Math.random() * dur) + "s";
+        el.style.left = Math.random() * 97 + "%";
+        el.addEventListener("animationiteration", () => {
           el.style.left = Math.random() * 97 + "%";
-          el.style.animationDuration = dur + "s";
-        };
-        reroll();
-        el.style.animationDelay = -(Math.random() * maxDur) + "s";
-        el.addEventListener("animationiteration", reroll);
+        });
         bg.appendChild(el);
       }
     });
