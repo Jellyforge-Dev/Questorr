@@ -107,11 +107,10 @@ export function getCommands() {
               o.setName("type").setDescription("Type of problem").setRequired(true).addChoices(
                 { name: "🎞️ Video", value: "1" },
                 { name: "🔊 Audio", value: "2" },
-                { name: "💬 Subtitle", value: "3" },
-                { name: "❓ Other", value: "4" }
+                { name: "💬 Subtitle", value: "3" }
               )
             )
-            .addStringOption((o) => o.setName("message").setDescription("Describe the problem (optional)").setRequired(false))
+            .addStringOption((o) => o.setName("message").setDescription("Describe the problem").setRequired(true))
         )
         .addSubcommand((sub) =>
           sub
@@ -124,8 +123,7 @@ export function getCommands() {
               o.setName("type").setDescription("Type of problem").setRequired(true).addChoices(
                 { name: "🎞️ Video", value: "1" },
                 { name: "🔊 Audio", value: "2" },
-                { name: "💬 Subtitle", value: "3" },
-                { name: "❓ Other", value: "4" }
+                { name: "💬 Subtitle", value: "3" }
               )
             )
             .addStringOption((o) => o.setName("message").setDescription("Describe the problem").setRequired(true))

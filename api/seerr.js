@@ -581,9 +581,15 @@ export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey,
   const episode = parseInt(opts.episode, 10);
   if (Number.isFinite(season) && season > 0) payload.problemSeason = season;
   if (Number.isFinite(episode) && episode > 0) payload.problemEpisode = episode;
+  // Attribute the issue to the mapped Seerr user (like requests) instead of the
+  // API-key owner, so Seerr shows the real reporter — not "Admin".
+  const headers = { "X-Api-Key": apiKey };
+  if (opts.seerrUserId != null && opts.seerrUserId !== "") {
+    headers["x-api-user"] = String(opts.seerrUserId);
+  }
   const response = await withRetry(
     () => axios.post(`${apiUrl}/issue`, payload, {
-      headers: { "X-Api-Key": apiKey },
+      headers,
       timeout: TIMEOUTS.SEERR_POST,
     }),
     { label: `Seerr create issue media ${mediaId}` }

@@ -50,4 +50,15 @@ describe("createIssue", () => {
     expect(body.problemSeason).toBe(2);
     expect(body.problemEpisode).toBe(5);
   });
+
+  it("sets x-api-user when a mapped Seerr user id is provided, and omits it otherwise", async () => {
+    axios.post.mockResolvedValue({ data: { id: 1 } });
+    await createIssue(5, 1, "m", "http://seerr.local/api/v1", "k", { seerrUserId: 12 });
+    expect(axios.post.mock.calls[0][2].headers["x-api-user"]).toBe("12");
+
+    axios.post.mockClear();
+    axios.post.mockResolvedValue({ data: { id: 2 } });
+    await createIssue(5, 1, "m", "http://seerr.local/api/v1", "k", {});
+    expect(axios.post.mock.calls[0][2].headers["x-api-user"]).toBeUndefined();
+  });
 });

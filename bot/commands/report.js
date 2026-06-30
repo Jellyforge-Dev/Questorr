@@ -1,7 +1,7 @@
 import { t } from "../../utils/botStrings.js";
 import { EmbedBuilder } from "discord.js";
 import * as seerrApi from "../../api/seerr.js";
-import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
+import { getSeerrUrl, getSeerrApiKey, getUserMappingsFromEnv } from "../helpers.js";
 import { recordIssueReporter } from "../../utils/issueReporters.js";
 import logger from "../../utils/logger.js";
 
@@ -49,7 +49,15 @@ export async function handleReportCommand(interaction) {
       return interaction.editReply({ content: t("report_not_in_seerr") });
     }
 
-    const issueOpts = mediaType === "tv" ? { season, episode } : {};
+    // Attribute the issue to the mapped Seerr user so Seerr shows the real
+    // reporter instead of "Admin".
+    const mapping = getUserMappingsFromEnv().find(
+      (m) => String(m.discordUserId) === String(interaction.user.id)
+    );
+    const issueOpts = {
+      seerrUserId: mapping ? mapping.seerrUserId : null,
+      ...(mediaType === "tv" ? { season, episode } : {}),
+    };
     const created = await seerrApi.createIssue(mediaId, issueType, message, seerrUrl, seerrApiKey, issueOpts);
 
     const mediaTitle = result.data?.title || result.data?.name || titleFromOption;
