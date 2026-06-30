@@ -192,7 +192,14 @@ In **Seerr → Settings → Notifications → Webhook**, configure the following
 | Media available | Posts to the matching root folder channel · sends DM to requester |
 | Request declined | Sends DM to the requester only |
 | Download failed | Posts to admin channel |
-| Issue created / commented | Posts to default channel |
+| Issue created | Posts to the **admin channel** (with Comment / Resolve buttons) |
+| Issue comment / resolved / reopened | Sends a **DM to the reporter** (for `/report` follow-ups) |
+
+> **For `/report` to work**, enable issues in **Seerr → Settings → General**
+> (*Enable Issue Reporting*) and tick the **Issue** webhook events above.
+> Because Questorr acts as the **mapped Seerr user** (Step 5), that user needs
+> the matching Seerr permission for each action — **Request** to request,
+> **Auto-Approve** for instant approval, **Report Issues** for `/report`.
 
 ### 4. Channel Routing
 

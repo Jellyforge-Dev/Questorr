@@ -192,7 +192,15 @@ In **Seerr → Einstellungen → Benachrichtigungen → Webhook** folgendes eint
 | Medium verfügbar | Postet in den passenden Root-Folder-Kanal · sendet DM an Anfrager |
 | Anfrage abgelehnt | Sendet DM nur an den Anfrager |
 | Download fehlgeschlagen | Postet in Admin-Kanal |
-| Problem gemeldet / kommentiert | Postet in Standard-Kanal |
+| Problem gemeldet (Issue) | Postet in den **Admin-Kanal** (mit Kommentieren-/Lösen-Buttons) |
+| Problem kommentiert / gelöst / wieder geöffnet | Sendet eine **DM an den Melder** (für `/report`-Folgenachrichten) |
+
+> **Damit `/report` funktioniert**, in **Seerr → Einstellungen → Allgemein** die
+> Issues aktivieren (*Problem-Meldungen aktivieren*) und oben die **Issue**-
+> Webhook-Events anhaken. Da Questorr als der **gemappte Seerr-User** (Schritt 5)
+> handelt, braucht dieser User je Aktion die passende Seerr-Berechtigung —
+> **Anfragen** zum Requesten, **Auto-Genehmigen** für sofortige Freigabe,
+> **Probleme melden** für `/report`.
 
 ### 4. Channel-Routing
 

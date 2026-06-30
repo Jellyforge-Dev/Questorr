@@ -78,6 +78,15 @@ und **✅ Lösen**-Buttons (keine Seerr-WebUI nötig). Die gesamte Kommunikation
 privat zwischen Melder und Admins/Seerr. Schalter in **Schritt 7 → Verschiedenes**
 (`SHOW_REPORT_COMMAND`).
 
+> **Seerr-Voraussetzungen.** Issues sind ein Seerr-Feature, daher:
+> - **Issues aktivieren** in **Seerr → Einstellungen → Allgemein** (der globale
+>   Schalter *Problem-Meldungen aktivieren*).
+> - Der Melder muss (Schritt 5) einem Seerr-User **zugeordnet** sein, und dieser
+>   User braucht in Seerr die Berechtigung **Probleme melden** — sonst kann das
+>   Issue nicht in seinem Namen erstellt werden.
+> - Die **Issue**-Webhook-Events aktivieren (siehe oben), damit Kommentar-/Lösungs-
+>   DMs beim Melder ankommen.
+
 ### 💡 `/recommend <titel>`
 TMDB-Empfehlungen basierend auf einem Film/einer Serie, die du magst.
 - **`title`** *(Pflicht, Autovervollständigung)* — Grundlage der Empfehlungen.
@@ -162,7 +171,9 @@ Benachrichtigungen → Webhook**:
 - **Webhook-URL** → die in Questorr angezeigte URL.
 - **Authorization Header** → das Secret einfügen (exakt, keine Leerzeichen — eine
   Abweichung wird mit HTTP 401 / `AUTH_FAIL` abgewiesen).
-- Webhook aktivieren und die gewünschten Notification Types anhaken.
+- Webhook aktivieren und die gewünschten Notification Types anhaken. Damit
+  `/report`-Folgenachrichten beim Melder ankommen, auch die **Issue**-Events
+  aktivieren (Issue Created / Comment / Resolved / Reopened).
 
 > ⚠️ **Docker-URL-Falle (Ursache Nr. 1 für „nichts kommt an").** Die URL, die
 > Questorr zeigt, nutzt die Adresse, mit der *du* das Dashboard geöffnet hast, z. B.
@@ -231,6 +242,12 @@ Verknüpft ein Discord-Konto mit einem Seerr-Konto, damit Anfragen unter dem
 richtigen Seerr-Nutzer erscheinen (und Seerrs eigene Pro-Nutzer-Quotas greifen).
 Einrichten unter Benutzerzuordnung; die Mitgliederauswahl lässt sich erst nach
 einer Discord-Rolle filtern.
+
+> **Seerr-Berechtigungen sind entscheidend.** Questorr handelt *als der gemappte
+> Seerr-User* (über den `x-api-user`-Header). Dieser User braucht in Seerr die
+> jeweilige Berechtigung, damit die Aktion klappt: **Anfragen** zum Requesten,
+> **Auto-Genehmigen** für sofortige Freigabe und **Probleme melden** für
+> `/report`. Ein nicht zugeordneter User fällt auf den API-Key-Owner (Admin) zurück.
 
 ### 🔐 Rollen-Berechtigungen
 Steuere, wer Questorrs Befehle nutzen darf:

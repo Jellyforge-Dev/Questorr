@@ -75,6 +75,15 @@ Admins handle issues straight from the **admin channel**: the post carries
 conversation stays private between the reporter and the admins/Seerr.
 Toggle the command in **Step 7 → Misc** (`SHOW_REPORT_COMMAND`).
 
+> **Seerr requirements.** Issues are a Seerr feature, so:
+> - **Enable Issues** in **Seerr → Settings → General** (the global *Enable Issue
+>   Reporting* toggle).
+> - The reporter must be **mapped** (Step 5) to a Seerr user, and that user needs
+>   the **Report Issues** permission in Seerr — otherwise the issue can't be
+>   created on their behalf.
+> - Enable the **Issue** webhook events (see above) so comment/resolve DMs reach
+>   the reporter.
+
 ### 💡 `/recommend <title>`
 Get TMDB recommendations based on a movie or show you like.
 - **`title`** *(required, autocomplete)* — the title to base recommendations on.
@@ -156,7 +165,9 @@ Webhook**:
 - **Webhook URL** → the URL shown in Questorr.
 - **Authorization Header** → paste the secret (exactly, no extra spaces — a
   mismatch is rejected with HTTP 401 / `AUTH_FAIL`).
-- Enable the webhook and tick the notification types you want.
+- Enable the webhook and tick the notification types you want. For `/report`
+  follow-ups to reach the reporter, also enable the **Issue** events
+  (Issue Created / Comment / Resolved / Reopened).
 
 > ⚠️ **Docker URL gotcha (the #1 cause of "nothing arrives").** The URL Questorr
 > shows uses the address *you* opened the dashboard with, e.g.
@@ -222,6 +233,12 @@ An optional **rolling 7-day** limit on how many requests each user may make.
 Links a Discord account to a Seerr account so requests show up under the correct
 Seerr user (and Seerr's own per-user quotas apply). Configure under user mapping;
 you can filter the member picker by a Discord role first.
+
+> **Seerr permissions matter.** Questorr acts *as the mapped Seerr user* (via the
+> `x-api-user` header). That user must have the relevant Seerr permission for the
+> action to succeed: **Request** to send requests, **Auto-Approve** if you want
+> instant approval, and **Report Issues** for `/report`. An unmapped user falls
+> back to the API-key owner (admin).
 
 ### 🔐 Role permissions
 Control who may use Questorr's commands:
