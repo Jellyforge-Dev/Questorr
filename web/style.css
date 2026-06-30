@@ -4506,23 +4506,6 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
   text-shadow: none !important;
 }
 
-/* Make the decorative login blocks feel alive (reduced-motion is honored
-   by the global guard above). */
-@keyframes heroBlocksFloat {
-  0%   { transform: translate(0, 0); opacity: 0.12; }
-  25%  { opacity: 0.3; }
-  50%  { transform: translate(8px, -24px); opacity: 0.32; }
-  75%  { opacity: 0.18; }
-  100% { transform: translate(0, 0); opacity: 0.12; }
-}
-.hero.full-screen::before {
-  animation: heroBlocksFloat 5s ease-in-out infinite !important;
-  will-change: transform, opacity;
-}
-
-@keyframes cornerBlink {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.15; }
-}
-.auth-container::before,
-.auth-container::after { animation: cornerBlink 1.6s step-end infinite; }
+/* The flanking static tetris blocks read as frozen. Hide them and let the
+   randomized falling #tetris-bg pieces be the motion instead. */
+.hero.full-screen::before { display: none !important; }

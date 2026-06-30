@@ -5381,9 +5381,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "tetris-piece " + cls;
-        const dur = minDur + Math.random() * (maxDur - minDur);
-        const delay = -(Math.random() * maxDur);
-        el.style.cssText = "left:" + (Math.random()*97) + "%;animation-duration:" + dur + "s;animation-delay:" + delay + "s;";
+        // Re-roll position + speed on every fall so the field never repeats
+        // the same order.
+        const reroll = () => {
+          const dur = minDur + Math.random() * (maxDur - minDur);
+          el.style.left = Math.random() * 97 + "%";
+          el.style.animationDuration = dur + "s";
+        };
+        reroll();
+        el.style.animationDelay = -(Math.random() * maxDur) + "s";
+        el.addEventListener("animationiteration", reroll);
         bg.appendChild(el);
       }
     });
