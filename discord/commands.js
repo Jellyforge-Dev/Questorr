@@ -94,33 +94,43 @@ export function getCommands() {
           opt.setName("title").setDescription("Title to check").setRequired(true).setAutocomplete(true)
         ),
     ] : []),
-    new SlashCommandBuilder()
-      .setName("report")
-      .setDescription("Report a problem (audio, video, subtitle…) with a movie or show")
-      .addStringOption((opt) =>
-        opt.setName("title").setDescription("Title to report").setRequired(true).setAutocomplete(true)
-      )
-      .addStringOption((opt) =>
-        opt
-          .setName("type")
-          .setDescription("Type of problem")
-          .setRequired(true)
-          .addChoices(
-            { name: "🎞️ Video", value: "1" },
-            { name: "🔊 Audio", value: "2" },
-            { name: "💬 Subtitle", value: "3" },
-            { name: "❓ Other", value: "4" }
-          )
-      )
-      .addIntegerOption((opt) =>
-        opt.setName("season").setDescription("Season number (series only, optional)").setRequired(false).setMinValue(0)
-      )
-      .addIntegerOption((opt) =>
-        opt.setName("episode").setDescription("Episode number (series only, optional)").setRequired(false).setMinValue(0)
-      )
-      .addStringOption((opt) =>
-        opt.setName("message").setDescription("Describe the problem (optional)").setRequired(false)
-      ),
+    ...(process.env.SHOW_REPORT_COMMAND !== "false" ? [
+      new SlashCommandBuilder()
+        .setName("report")
+        .setDescription("Report a problem with a movie or show on Jellyfin")
+        .addSubcommand((sub) =>
+          sub
+            .setName("movie")
+            .setDescription("Report a problem with a movie")
+            .addStringOption((o) => o.setName("title").setDescription("Movie title").setRequired(true).setAutocomplete(true))
+            .addStringOption((o) =>
+              o.setName("type").setDescription("Type of problem").setRequired(true).addChoices(
+                { name: "🎞️ Video", value: "1" },
+                { name: "🔊 Audio", value: "2" },
+                { name: "💬 Subtitle", value: "3" },
+                { name: "❓ Other", value: "4" }
+              )
+            )
+            .addStringOption((o) => o.setName("message").setDescription("Describe the problem (optional)").setRequired(false))
+        )
+        .addSubcommand((sub) =>
+          sub
+            .setName("series")
+            .setDescription("Report a problem with a series episode")
+            .addStringOption((o) => o.setName("title").setDescription("Series title").setRequired(true).setAutocomplete(true))
+            .addIntegerOption((o) => o.setName("season").setDescription("Season number").setRequired(true).setMinValue(1))
+            .addIntegerOption((o) => o.setName("episode").setDescription("Episode number").setRequired(true).setMinValue(1))
+            .addStringOption((o) =>
+              o.setName("type").setDescription("Type of problem").setRequired(true).addChoices(
+                { name: "🎞️ Video", value: "1" },
+                { name: "🔊 Audio", value: "2" },
+                { name: "💬 Subtitle", value: "3" },
+                { name: "❓ Other", value: "4" }
+              )
+            )
+            .addStringOption((o) => o.setName("message").setDescription("Describe the problem").setRequired(true))
+        ),
+    ] : []),
     new SlashCommandBuilder()
       .setName("history")
       .setDescription("View recently added movies and series on Jellyfin")

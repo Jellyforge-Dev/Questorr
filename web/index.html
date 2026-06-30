@@ -1006,6 +1006,16 @@
 
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="SHOW_REPORT_COMMAND" name="SHOW_REPORT_COMMAND" />
+                          <span data-i18n="config.misc_report_command">Enable /report command</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.misc_report_command_desc">Let users report a problem (audio, video, subtitle…) with a Jellyfin title, which opens an issue in Seerr. Disable to remove the command.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="NOTIFY_ON_AVAILABLE" name="NOTIFY_ON_AVAILABLE" />
                           Send DM when request is available
                         </label>
@@ -1648,6 +1658,7 @@
                   <li><i class="bi bi-fire"></i><div data-i18n="about.feature_trending"><code>/trending</code> Browse the week's most popular movies and TV shows from TMDB — discover what's hot right now and request directly.</div></li>
                   <li><i class="bi bi-patch-question-fill"></i><div data-i18n="about.feature_status"><code>/status &lt;title&gt;</code> Check the current <strong style="color: var(--blue);">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.</div></li>
                   <li><i class="bi bi-shuffle"></i><div data-i18n="about.feature_random"><code>/random movie</code> or <code>/random series</code> — get a <strong style="color: var(--blue);">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.</div></li>
+                  <li><i class="bi bi-flag-fill"></i><div data-i18n="about.feature_report"><code>/report movie</code> or <code>/report series</code> — <strong style="color: var(--blue);">report a problem</strong> (audio, video, subtitle…) with a Jellyfin title. Opens a Seerr issue, posts it to the admin channel, and DMs the reporter when an admin resolves it (with their comment). Suggestions come only from your Jellyfin library; can be toggled off in settings.</div></li>
                   <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
                   <li><i class="bi bi-card-checklist"></i><div data-i18n="about.feature_queue"><code>/queue</code> Track the status of <strong style="color: var(--blue);">your own requests</strong> — grouped by stage (waiting for approval, downloading, available, declined, failed). Backfills older requests and resolves real titles. Also available as the "My Requests" button in the /help wizard.</div></li>
                   <li><i class="bi bi-bell"></i><div data-i18n="about.feature_subscribe"><code>/subscribe</code> <strong style="color: var(--blue);">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the "Subscribe" button in the /help wizard.</div></li>

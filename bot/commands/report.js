@@ -14,7 +14,13 @@ const TYPE_LABELS = {
 };
 
 export async function handleReportCommand(interaction) {
+  if (process.env.SHOW_REPORT_COMMAND === "false") {
+    return interaction.reply({ content: t("report_disabled"), flags: 64 });
+  }
   await interaction.deferReply({ flags: 64 });
+
+  const sub = interaction.options.getSubcommand();
+  const mediaType = sub === "series" ? "tv" : "movie";
 
   const raw = interaction.options.getString("title") || "";
   const parts = raw.split("|");
@@ -22,12 +28,11 @@ export async function handleReportCommand(interaction) {
     return interaction.editReply({ content: t("report_select_title") });
   }
   const tmdbId = parseInt(parts[0], 10);
-  const mediaType = parts[1];
   const titleFromOption = parts.slice(2).join("|");
   const issueType = parseInt(interaction.options.getString("type"), 10) || 4;
   const message = (interaction.options.getString("message") || "").slice(0, 500);
-  const season = interaction.options.getInteger("season");
-  const episode = interaction.options.getInteger("episode");
+  const season = sub === "series" ? interaction.options.getInteger("season") : null;
+  const episode = sub === "series" ? interaction.options.getInteger("episode") : null;
 
   const seerrUrl = getSeerrUrl();
   const seerrApiKey = getSeerrApiKey();

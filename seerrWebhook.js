@@ -710,33 +710,60 @@ async function processEvent(data, eventType, cfg, client) {
   const tmdbId = media?.tmdbId || null;
   let rootFolder = request?.rootFolder || null;
 
-  // Issue resolved → DM the original /report reporter with the admin's comment.
-  // Seerr attributes the issue to the API-key owner, so the Discord reporter is
-  // only known from our own issue→reporter mapping recorded at /report time.
-  if (eventType === "ISSUE_RESOLVED") {
+  // Issue events are private: the conversation is reporter ⇄ Seerr/admins only.
+  // They must NEVER be routed to public/library channels. /report already posts
+  // ISSUE_CREATED to the admin channel with the correct Discord reporter, so the
+  // webhook only: (a) surfaces direct-in-Seerr issues (no /report mapping) to the
+  // admin channel, and (b) DMs the reporter about follow-ups. Then it returns.
+  if (typeof eventType === "string" && eventType.startsWith("ISSUE_")) {
     const issueId = issue?.issue_id || issue?.id;
-    if (issueId) {
-      try {
+    try {
+      if (eventType === "ISSUE_CREATED") {
+        // Only surface issues that did NOT originate from /report (those already
+        // posted to admin) — i.e. issues filed directly in Seerr.
+        if (!issueId || !getIssueReporter(issueId)) {
+          const adminChannelId = resolveAdminChannel();
+          if (adminChannelId) {
+            const adminChannel = await client.channels.fetch(adminChannelId);
+            if (adminChannel) {
+              const e = new EmbedBuilder()
+                .setColor("#f0a05a")
+                .setTitle(t("report_admin_title"))
+                .setDescription(subject || "")
+                .setTimestamp();
+              if (issue?.issue_type) e.addFields({ name: t("report_field_type"), value: String(issue.issue_type), inline: true });
+              if (issue?.reportedBy_username) e.addFields({ name: t("report_field_reporter"), value: issue.reportedBy_username, inline: true });
+              if (message) e.addFields({ name: t("report_field_message"), value: message, inline: false });
+              await adminChannel.send({ embeds: [e] });
+            }
+          }
+        }
+      } else if (issueId) {
+        // ISSUE_COMMENT / ISSUE_RESOLVED / ISSUE_REOPENED → DM the reporter only.
         const reporter = getIssueReporter(issueId);
         if (reporter?.discordUserId) {
           const user = await client.users.fetch(reporter.discordUserId);
           if (user) {
-            const resolvedEmbed = new EmbedBuilder()
-              .setColor("#2ecc8e")
-              .setTitle(t("dm_issue_resolved_title"))
-              .setDescription(t("dm_issue_resolved_body", { title: reporter.title || subject || "" }));
-            if (comment?.comment_message) {
-              resolvedEmbed.addFields({ name: t("dm_issue_resolved_comment"), value: comment.comment_message });
+            const titleStr = reporter.title || subject || "";
+            const e = new EmbedBuilder();
+            if (eventType === "ISSUE_RESOLVED") {
+              e.setColor("#2ecc8e").setTitle(t("dm_issue_resolved_title")).setDescription(t("dm_issue_resolved_body", { title: titleStr }));
+            } else if (eventType === "ISSUE_REOPENED") {
+              e.setColor("#f0a05a").setTitle(t("dm_issue_reopened_title")).setDescription(t("dm_issue_reopened_body", { title: titleStr }));
+            } else {
+              e.setColor("#17b8c4").setTitle(t("dm_issue_comment_title")).setDescription(t("dm_issue_comment_body", { title: titleStr }));
             }
-            await user.send({ embeds: [resolvedEmbed] });
-            logger.info(`[SEERR WEBHOOK] DM'd issue ${issueId} reporter ${reporter.discordUserId} about resolution`);
+            if (comment?.comment_message) e.addFields({ name: t("dm_issue_resolved_comment"), value: comment.comment_message });
+            await user.send({ embeds: [e] });
+            logger.info(`[SEERR WEBHOOK] DM'd issue ${issueId} reporter about ${eventType}`);
           }
         }
-        removeIssueReporter(issueId);
-      } catch (e) {
-        logger.warn(`[SEERR WEBHOOK] Failed to DM issue reporter: ${e.message}`);
+        if (eventType === "ISSUE_RESOLVED") removeIssueReporter(issueId);
       }
+    } catch (e) {
+      logger.warn(`[SEERR WEBHOOK] Issue event ${eventType} handling failed: ${e.message}`);
     }
+    return; // issue events never reach channel routing
   }
 
   // Drop identical webhooks fired within the dedup window. Seerr sometimes sends

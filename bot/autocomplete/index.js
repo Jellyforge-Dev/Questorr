@@ -283,7 +283,9 @@ async function handleReportAutocomplete(interaction, focusedValue) {
     const apiKey = process.env.JELLYFIN_API_KEY;
     const baseUrl = process.env.JELLYFIN_BASE_URL;
     if (!apiKey || !baseUrl) return interaction.respond([]);
-    const results = await searchJellyfinByName(focusedValue, apiKey, baseUrl, 25);
+    const sub = interaction.options.getSubcommand(false);
+    const typeFilter = sub === "movie" ? "movie" : sub === "series" ? "tv" : null;
+    const results = await searchJellyfinByName(focusedValue, apiKey, baseUrl, 25, typeFilter);
     const choices = results.slice(0, 10).map((r) => {
       const typeEmoji = r.type === "movie" ? "🎬" : "📺";
       const label = `${typeEmoji} ${r.name}${r.year ? ` (${r.year})` : ""}`;

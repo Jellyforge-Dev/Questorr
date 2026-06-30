@@ -162,9 +162,11 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
  * that really exists on the server.
  * @returns {Promise<Array<{id:string,name:string,year:string,type:'movie'|'tv',tmdbId:string}>>}
  */
-export async function searchJellyfinByName(query, apiKey, baseUrl, limit = 25) {
+export async function searchJellyfinByName(query, apiKey, baseUrl, limit = 25, mediaType = null) {
   try {
     if (!query || !apiKey || !baseUrl) return [];
+    const includeTypes =
+      mediaType === "movie" ? "Movie" : mediaType === "tv" ? "Series" : "Movie,Series";
     const safeBase = new URL(baseUrl);
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
     const response = await withRetry(
@@ -173,7 +175,7 @@ export async function searchJellyfinByName(query, apiKey, baseUrl, limit = 25) {
         params: {
           SearchTerm: query,
           Recursive: true,
-          IncludeItemTypes: "Movie,Series",
+          IncludeItemTypes: includeTypes,
           Limit: limit,
           Fields: "ProviderIds,ProductionYear",
         },
