@@ -5007,6 +5007,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     logsContainer.innerHTML = `<div class="logs-empty">${t("logs.no_webhook") || "No webhook events in log yet."}</div>`;
   }
 
+  async function loadAuditLog() {
+    try {
+      const res = await fetch("/api/audit", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.entries || [];
+        if (list.length) {
+          logsContainer.innerHTML = list.map((e) => {
+            const lvl = e.action === "login_fail" ? "error"
+              : e.action === "decline" ? "warn"
+              : (e.action === "approve" || e.action === "login_ok") ? "info" : "debug";
+            const at = (e.at || "").replace("T", " ").slice(0, 19);
+            const extra = [e.target, e.detail].filter(Boolean).map(escapeHtml).join(" · ");
+            return `<div class="log-entry">
+              <span class="log-timestamp">${at}</span>
+              <span class="log-level ${lvl}">${escapeHtml((e.action || "?").toUpperCase())}</span>
+              <span class="log-message"><strong>${escapeHtml(e.actor || "—")}</strong>${extra ? " · " + extra : ""}</span>
+            </div>`;
+          }).join("");
+          return;
+        }
+      }
+    } catch (_) {}
+    logsContainer.innerHTML = `<div class="logs-empty">${t("logs.no_audit") || "No audit entries yet."}</div>`;
+  }
+
   // Load and display logs with server-side level/source/text filtering + paging.
   async function loadLogs(type, append = false) {
     const loadMoreRow = document.getElementById("logs-loadmore-row");
@@ -5017,6 +5043,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (loadMoreRow) loadMoreRow.style.display = "none";
         updateLogsCount(0, 0);
         await loadWebhookLog();
+        return;
+      }
+      // Audit tab: dedicated structured view (no filters/paging).
+      if (type === "audit") {
+        setLogsControlsVisible(false);
+        if (loadMoreRow) loadMoreRow.style.display = "none";
+        updateLogsCount(0, 0);
+        await loadAuditLog();
         return;
       }
       setLogsControlsVisible(true);

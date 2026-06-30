@@ -621,6 +621,8 @@
     "refresh": "Aktualisieren",
     "loading": "Lade Protokolle...",
     "webhook": "Webhook",
+    "audit": "Audit",
+    "no_audit": "Noch keine Audit-Einträge.",
     "level_all": "Alle Stufen",
     "level_error": "Fehler",
     "level_warn": "Warnung",

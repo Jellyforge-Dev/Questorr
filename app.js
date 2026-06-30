@@ -41,6 +41,7 @@ import {
   loadConfigToEnv,
 } from "./utils/configFile.js";
 import { SENSITIVE_FIELDS, isMaskedValue } from "./utils/configSanitize.js";
+import { recordAudit } from "./utils/adminAudit.js";
 
 // --- Helper Functions ---
 // --- CONFIGURATION ---
@@ -941,6 +942,19 @@ function configureWebServer() {
         }
 
         logger.info("✅ Configuration saved successfully");
+
+        // Audit: who changed which settings (key names only, never values).
+        try {
+          const changedKeys = Object.keys(configData || {}).filter(
+            (k) => JSON.stringify(configData[k]) !== JSON.stringify(existingConfig[k])
+          );
+          recordAudit({
+            actor: req.user?.username || "unknown",
+            action: "config_update",
+            target: changedKeys.slice(0, 20).join(", ") || "(no changes)",
+            detail: req.ip,
+          });
+        } catch (_) {}
       } catch (writeErr) {
         logger.error("Error saving config.json:", writeErr);
         return res.status(500).json({

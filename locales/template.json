@@ -550,6 +550,8 @@
     "refresh": "",
     "loading": "",
     "webhook": "",
+    "audit": "",
+    "no_audit": "",
     "level_all": "",
     "level_error": "",
     "level_warn": "",
