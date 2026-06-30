@@ -4509,10 +4509,16 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
 /* Make the decorative login blocks feel alive (reduced-motion is honored
    by the global guard above). */
 @keyframes heroBlocksFloat {
-  0%, 100% { transform: translateY(0); opacity: 0.12; }
-  50% { transform: translateY(-14px); opacity: 0.22; }
+  0%   { transform: translate(0, 0); opacity: 0.12; }
+  25%  { opacity: 0.3; }
+  50%  { transform: translate(8px, -24px); opacity: 0.32; }
+  75%  { opacity: 0.18; }
+  100% { transform: translate(0, 0); opacity: 0.12; }
 }
-.hero.full-screen::before { animation: heroBlocksFloat 6s ease-in-out infinite; }
+.hero.full-screen::before {
+  animation: heroBlocksFloat 5s ease-in-out infinite !important;
+  will-change: transform, opacity;
+}
 
 @keyframes cornerBlink {
   0%, 100% { opacity: 0.55; }
