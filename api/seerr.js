@@ -997,13 +997,9 @@ export async function sendRequest({
 
       if (seerrUserId !== null && seerrUserId !== undefined) {
         logger.info(`[SEERR] 👤 Requesting as Seerr User ID: ${seerrUserId}`);
-
-        // If auto-approve is ON, add userId to payload for tracking
-        // This helps identify who made the request in Seerr's history
-        if (isAutoApproved === true) {
-          payload.userId = parseInt(seerrUserId, 10);
-          logger.info(`[SEERR] 📝 Adding userId to payload for tracking: ${payload.userId}`);
-        }
+        // Attribution is done via the x-api-user header (set below). Do NOT also
+        // put userId in the body — combining the two makes Seerr reject the
+        // request with "You do not have permission to modify the request user".
       } else {
         logger.warn(`[SEERR] ❌ No mapping found for Discord user ${discordUserId}. Requesting as API Key Owner (ADMIN).`);
       }
