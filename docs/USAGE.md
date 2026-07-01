@@ -159,11 +159,13 @@ then work automatically.
   Default Quality / Default Server dropdowns and Root-Folder → Channel mapping are
   empty, it means **Seerr has no Radarr/Sonarr connected yet** (set them up in
   Seerr first, then reload). This is expected on a fresh Seerr.
-- **"Send DM when available" + Seerr Auto-Approve.** With **Auto-Approve** enabled,
-  Questorr creates the request as the **API-key owner** (admin), so the original
-  Discord requester is no longer attached — the *available* DM may not reach them.
-  If you need that DM, prefer per-user auto-approve **in Seerr** instead of
-  Questorr's global Auto-Approve.
+- **"Send DM when available" + Seerr Auto-Approve.** Questorr creates every request
+  as the **mapped Seerr user** (so the *available* DM always reaches the right
+  person, even with auto-approve). The consequence: under Questorr's global
+  Auto-Approve, a request is only auto-approved if that **mapped user has
+  auto-approve permission in Seerr** — otherwise it stays pending. Grant your
+  mapped users auto-approve in Seerr, or approve manually. Unmapped users still
+  request as the API-key owner (admin).
 - **Images need TMDB.** `EMBED_SHOW_IMAGES` (posters/backdrops on messages)
   requires the TMDB key; without it there's nothing to fetch artwork from.
 
@@ -320,6 +322,11 @@ outage before users do. The **first** check after start only records a baseline
 - `HEALTH_ALERT_INTERVAL_SECONDS` — how often to check (default `120`, min 30).
 - `HEALTH_ALERT_CHANNEL_ID` — where to post; empty falls back to the admin
   channel (`SEERR_ADMIN_CHANNEL_ID` → `SEERR_CHANNEL_ID` → `JELLYFIN_CHANNEL_ID`).
+
+> **Not to be confused with the container health check.** The Docker image also
+> ships a built-in **`HEALTHCHECK`** that hits the public `GET /api/health`
+> endpoint, so **Portainer / Docker / Uptime Kuma** show Questorr as *healthy*
+> when the web server is responding — no configuration needed.
 
 ### 🎨 Dashboard themes (dark / light)
 The dashboard ships a **retro neon/pixel dark** theme (default) and a

@@ -165,11 +165,13 @@ sie automatisch.
   Default-Quality-/Default-Server-Dropdowns und das Root-Folder → Channel-Mapping
   leer sind, hat **Seerr noch kein Radarr/Sonarr** angebunden (erst in Seerr
   einrichten, dann neu laden). Bei frischem Seerr ist das normal.
-- **„DM bei Verfügbarkeit" + Seerr Auto-Approve.** Mit aktivem **Auto-Approve**
-  erstellt Questorr die Anfrage als **API-Key-Owner** (Admin), sodass der
-  ursprüngliche Discord-Melder nicht mehr hängt — die *Verfügbar*-DM erreicht ihn
-  ggf. nicht. Wenn du diese DM brauchst, nutze lieber Auto-Approve **pro User in
-  Seerr** statt Questorrs globalem Auto-Approve.
+- **„DM bei Verfügbarkeit" + Seerr Auto-Approve.** Questorr erstellt jede Anfrage
+  als der **gemappte Seerr-User** (damit die *Verfügbar*-DM immer den richtigen
+  trifft, auch bei Auto-Approve). Die Folge: bei Questorrs globalem Auto-Approve
+  wird eine Anfrage nur automatisch genehmigt, wenn dieser **gemappte User in
+  Seerr die Auto-Approve-Berechtigung** hat — sonst bleibt sie pending. Gib deinen
+  gemappten Usern in Seerr Auto-Approve oder genehmige manuell. Nicht gemappte
+  User laufen weiter als API-Key-Owner (Admin).
 - **Bilder brauchen TMDB.** `EMBED_SHOW_IMAGES` (Poster/Backdrops in Nachrichten)
   benötigt den TMDB-Key; ohne ihn gibt es keine Bildquelle.
 
@@ -331,6 +333,11 @@ Einstellungen:
 - `HEALTH_ALERT_INTERVAL_SECONDS` — Prüfintervall (Standard `120`, min. 30).
 - `HEALTH_ALERT_CHANNEL_ID` — wohin gepostet wird; leer = Admin-Channel
   (`SEERR_ADMIN_CHANNEL_ID` → `SEERR_CHANNEL_ID` → `JELLYFIN_CHANNEL_ID`).
+
+> **Nicht verwechseln mit dem Container-Healthcheck.** Das Docker-Image bringt
+> zusätzlich einen eingebauten **`HEALTHCHECK`** mit, der den öffentlichen
+> `GET /api/health`-Endpoint abfragt — so zeigen **Portainer / Docker / Uptime
+> Kuma** Questorr als *healthy*, sobald der Webserver antwortet. Ohne Konfiguration.
 
 ### 🎨 Dashboard-Themes (Dark / Light)
 Das Dashboard bringt ein **Retro-Neon/Pixel-Dark**-Theme (Standard) und ein

@@ -27,7 +27,7 @@ LABEL org.opencontainers.image.title="Questorr" \
       org.opencontainers.image.url="https://github.com/Jellyforge-Dev/Questorr" \
       org.opencontainers.image.documentation="https://github.com/Jellyforge-Dev/Questorr/blob/main/README.md" \
       org.opencontainers.image.source="https://github.com/Jellyforge-Dev/Questorr" \
-      org.opencontainers.image.version="2.3.0" \
+      org.opencontainers.image.version="2.4.2" \
       org.opencontainers.image.icon="https://raw.githubusercontent.com/Jellyforge-Dev/Questorr/main/assets/logo.png" \
       org.unraid.icon="https://raw.githubusercontent.com/Jellyforge-Dev/Questorr/main/assets/logo.png" \
       org.unraid.category="MediaServer:Other" \
@@ -43,6 +43,11 @@ ENV NODE_ENV=production
 # Create config directory for persistent storage
 RUN mkdir -p /usr/src/app/config && chown app:app /usr/src/app/config
 VOLUME ["/usr/src/app/config"]
+
+# Container health check (Portainer / Docker / Uptime Kuma). Hits the public
+# /api/health endpoint; healthy = the Questorr web server is responding.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.WEBHOOK_PORT||8282)+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # Entrypoint fixes mounted volume permissions then drops to non-root user
 COPY entrypoint.sh /entrypoint.sh

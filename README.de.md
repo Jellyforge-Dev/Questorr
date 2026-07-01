@@ -58,6 +58,7 @@
 | 🎨 Dark- / Light-Theme | Retro-dunkel als Standard plus ein Paper-Terminal-Light-Theme; der Umschalter wird pro Browser gemerkt |
 | 🛡️ Audit-Log | Dashboard-**Audit**-Tab: wer hat genehmigt/abgelehnt, Config geändert, Bot gestartet/gestoppt oder sich eingeloggt |
 | 🚨 Health-Alerts | Optional: postet in einen Admin-Channel, wenn Seerr oder Jellyfin **ausfällt** oder **wiederkommt** |
+| ❤️ Container-Healthcheck | Eingebauter Docker-`HEALTHCHECK` auf `/api/health` — Portainer / Docker / Uptime Kuma sehen den Container als healthy |
 | 📱 Mobil-freundlich | Responsives Dashboard, funktioniert auf Smartphones und Tablets |
 | ✅ Verfügbarkeitsstatus | Alle Embed-Listen zeigen Seerr-Status: ✅ verfügbar, ⏳ angefragt, 📥 teilweise |
 | 🎬 Altersfreigabe | FSK/MPAA-Bewertungen in Such-Embeds, konfigurierbar nach Land |

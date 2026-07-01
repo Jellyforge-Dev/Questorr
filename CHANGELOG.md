@@ -39,6 +39,17 @@
   only — never secret values), **bot start/stop**, and **dashboard logins**
   (success + failure with IP). Bounded and persisted.
 
+#### 🔔 Notifications & ops
+- **Proactive health alerts** — optional watchdog posts to an admin channel when
+  **Seerr** or **Jellyfin** goes down or recovers.
+- **Container health check** — the Docker image now ships a built-in `HEALTHCHECK`
+  on `/api/health` (Portainer / Docker / Uptime Kuma).
+- **All command replies are private** (ephemeral) — only visible to the user who
+  ran them; the redundant "Ephemeral Message Mode" toggle was removed.
+- **Auto-approve keeps the requester** — requests are attributed to the mapped
+  Seerr user (`x-api-user`) even when auto-approving, so the "available" DM
+  reaches the right person (that user then needs auto-approve permission in Seerr).
+
 ---
 
 ### 🛠️ v2.4.1
@@ -188,6 +199,17 @@ The browser now warns before navigating away from the dashboard when there are u
   Request **Approve/Decline** (Discord-User), **Config-Änderungen** (nur
   geänderte Key-Namen — keine Secret-Werte), **Bot Start/Stop** und
   **Dashboard-Logins** (Erfolg + Fehlversuch mit IP). Begrenzt und persistiert.
+
+#### 🔔 Benachrichtigungen & Betrieb
+- **Proaktive Health-Alerts** — optionaler Watchdog postet in einen Admin-Channel,
+  wenn **Seerr** oder **Jellyfin** ausfällt oder wiederkommt.
+- **Container-Healthcheck** — das Docker-Image bringt jetzt einen eingebauten
+  `HEALTHCHECK` auf `/api/health` mit (Portainer / Docker / Uptime Kuma).
+- **Alle Command-Antworten sind privat** (ephemeral) — nur für den ausführenden
+  Nutzer sichtbar; der überflüssige „Ephemeral Message Mode"-Schalter wurde entfernt.
+- **Auto-Approve behält den Melder** — Anfragen werden dem gemappten Seerr-User
+  (`x-api-user`) zugeordnet, auch bei Auto-Approve, sodass die „Verfügbar"-DM den
+  richtigen erreicht (dieser User braucht dann Auto-Approve-Recht in Seerr).
 
 ---
 

@@ -1024,27 +1024,22 @@ export async function sendRequest({
       "Content-Type": "application/json"
     };
 
-    // CRITICAL: x-api-user header logic based on auto-approve setting
-    // 
-    // When isAutoApproved === true:
-    //   - DO NOT set x-api-user header
-    //   - Request will use API key owner's permissions (admin with auto-approve)
-    //   - Result: Request is auto-approved immediately
+    // Always attribute the request to the mapped Seerr user (x-api-user) when we
+    // have a mapping — including when auto-approving. Otherwise the request is
+    // created by the API-key owner (admin), and the "available" DM can't find the
+    // original Discord requester.
     //
-    // When isAutoApproved === false:
-    //   - SET x-api-user header to mapped user ID
-    //   - Request will use mapped user's permissions (no auto-approve)
-    //   - Result: Request is created as PENDING, requires manual approval
-
-    if (isAutoApproved === false && seerrUserId !== null && seerrUserId !== undefined) {
+    // Trade-off: under Questorr Auto-Approve, the request now runs as the mapped
+    // user, so Seerr only auto-approves it if THAT user has auto-approve
+    // permission in Seerr (otherwise it stays pending). Without a mapping we fall
+    // back to the API-key owner, preserving the old admin-auto-approve behaviour.
+    if (seerrUserId !== null && seerrUserId !== undefined) {
       headers["x-api-user"] = String(seerrUserId);
-      logger.info(`[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request will use this user's permissions - no auto-approve)`);
-    } else if (isAutoApproved === false) {
-      // No user mapping — request goes as API key owner but with isAutoApproved: false
-      // and without serverId/profileId, so Seerr should keep it PENDING
-      logger.info("[SEERR] ✋ No user mapping found — requesting as API key owner with isAutoApproved: false");
-    } else if (isAutoApproved === true) {
-      logger.info(`[SEERR] 🔓 NOT setting x-api-user header (request will use API key owner's permissions - auto-approve enabled)`);
+      logger.info(
+        `[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request created as this user${isAutoApproved ? " — auto-approve needs this user's Seerr permission" : ""})`
+      );
+    } else {
+      logger.info(`[SEERR] ✋ No user mapping — requesting as API key owner (isAutoApproved: ${isAutoApproved})`);
     }
 
     const response = await withRetry(
