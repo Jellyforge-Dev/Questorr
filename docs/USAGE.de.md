@@ -407,7 +407,7 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 |---|---|---|
 | `NOTIFY_ON_AVAILABLE` | `"true"` | Benachrichtigen, wenn ein Medium verfügbar wird. |
 | `APPROVAL_DM_ONLY` | `"true"` | Genehmigungs-Ereignisse nur als DM, nicht in öffentlichen Channel. |
-| `PRIVATE_MESSAGE_MODE` | `"false"` | Mehr Ereignisse als DM statt in Channels leiten. |
+| `PRIVATE_MESSAGE_MODE` | `"false"` | Veraltet / ohne Funktion — **alle** Command-Antworten sind jetzt immer privat (ephemeral, nur für den ausführenden Nutzer sichtbar). |
 
 ### Seerr-Status-Poller
 | Einstellung | Standard | Bedeutung |

@@ -396,7 +396,7 @@ important ones for you.
 |---|---|---|
 | `NOTIFY_ON_AVAILABLE` | `"true"` | Send a notification when media becomes available. |
 | `APPROVAL_DM_ONLY` | `"true"` | Send approval events only as a DM, not to a public channel. |
-| `PRIVATE_MESSAGE_MODE` | `"false"` | Route more events to DMs instead of channels. |
+| `PRIVATE_MESSAGE_MODE` | `"false"` | Deprecated / no-op — **all** command replies are now always private (ephemeral, only visible to the user who ran the command). |
 
 ### Seerr status poller
 | Setting | Default | Meaning |
