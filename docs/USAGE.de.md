@@ -156,6 +156,23 @@ Zeigt alle verfügbaren Befehle mit Schnellzugriff-Buttons. Guter Startpunkt fü
 Diese laufen im Hintergrund oder leben im Dashboard. Einmal konfiguriert, arbeiten
 sie automatisch.
 
+### ⚠️ Häufige Stolperfallen (zuerst lesen)
+- **TMDB-API-Key ist Pflicht.** Suche, Anfragen, Poster und Bilder hängen alle an
+  TMDB. **OMDb allein reicht nicht** — ohne TMDB-Key lassen sich nicht einmal
+  Anfragen erstellen. OMDb liefert nur zusätzliche Bewertungen.
+- **Quality-Profile & Server kommen von Radarr/Sonarr — konfiguriert *in* Seerr.**
+  Wenn **Load Profiles & Servers** *0 profiles, 0 servers* liefert, oder die
+  Default-Quality-/Default-Server-Dropdowns und das Root-Folder → Channel-Mapping
+  leer sind, hat **Seerr noch kein Radarr/Sonarr** angebunden (erst in Seerr
+  einrichten, dann neu laden). Bei frischem Seerr ist das normal.
+- **„DM bei Verfügbarkeit" + Seerr Auto-Approve.** Mit aktivem **Auto-Approve**
+  erstellt Questorr die Anfrage als **API-Key-Owner** (Admin), sodass der
+  ursprüngliche Discord-Melder nicht mehr hängt — die *Verfügbar*-DM erreicht ihn
+  ggf. nicht. Wenn du diese DM brauchst, nutze lieber Auto-Approve **pro User in
+  Seerr** statt Questorrs globalem Auto-Approve.
+- **Bilder brauchen TMDB.** `EMBED_SHOW_IMAGES` (Poster/Backdrops in Nachrichten)
+  benötigt den TMDB-Key; ohne ihn gibt es keine Bildquelle.
+
 ### 🔔 Seerr-Webhook & die Status-„Ampel"
 
 So erfährt Questorr von Seerr-Ereignissen (Anfrage genehmigt, Medium verfügbar,

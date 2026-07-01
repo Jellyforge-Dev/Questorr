@@ -150,6 +150,23 @@ Show all available commands with quick-action buttons. Good starting point for n
 These run in the background or live in the dashboard. They are configured once and
 then work automatically.
 
+### ⚠️ Common gotchas (read this first)
+- **TMDB API key is mandatory.** Search, requests, posters and images all rely on
+  TMDB. **OMDb alone is not enough** — without a TMDB key you can't even create
+  requests. OMDb only adds extra ratings.
+- **Quality profiles & servers come from Radarr/Sonarr — configured *inside*
+  Seerr.** If **Load Profiles & Servers** returns *0 profiles, 0 servers*, or the
+  Default Quality / Default Server dropdowns and Root-Folder → Channel mapping are
+  empty, it means **Seerr has no Radarr/Sonarr connected yet** (set them up in
+  Seerr first, then reload). This is expected on a fresh Seerr.
+- **"Send DM when available" + Seerr Auto-Approve.** With **Auto-Approve** enabled,
+  Questorr creates the request as the **API-key owner** (admin), so the original
+  Discord requester is no longer attached — the *available* DM may not reach them.
+  If you need that DM, prefer per-user auto-approve **in Seerr** instead of
+  Questorr's global Auto-Approve.
+- **Images need TMDB.** `EMBED_SHOW_IMAGES` (posters/backdrops on messages)
+  requires the TMDB key; without it there's nothing to fetch artwork from.
+
 ### 🔔 Seerr Webhook & the status "traffic light"
 
 This is how Questorr learns about Seerr events (request approved, media available,
