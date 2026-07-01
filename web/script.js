@@ -456,14 +456,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           const avatar = u.avatarUrl
             ? `<img src="${u.avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" />`
             : `<div style="width:24px;height:24px;border-radius:50%;background:var(--surface1);"></div>`;
-          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1]).slice(0, 3)
-            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);">/${c} ${n}</span>`).join(" ");
-          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
-            <span style="min-width:24px;text-align:center;">${medal}</span>
-            ${avatar}
-            <span style="font-weight:600;color:var(--text);flex:1;">${u.username}</span>
-            <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">${cmdTags}</div>
+          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1])
+            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);white-space:nowrap;">/${c} ${n}</span>`).join(" ");
+          return `<div style="padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
+            <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
+              <span style="min-width:24px;text-align:center;">${medal}</span>
+              ${avatar}
+              <span style="font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.username}</span>
+              <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:0.35rem;">${cmdTags}</div>
           </div>`;
         }).join("");
       }

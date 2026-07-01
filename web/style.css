@@ -4509,3 +4509,29 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); out
 /* The flanking static tetris blocks read as frozen. Hide them and let the
    randomized falling #tetris-bg pieces be the motion instead. */
 .hero.full-screen::before { display: none !important; }
+
+/* ── Layout fixes (mobile + overflow) ─────────────────────── */
+/* Form controls never overflow their container (fixes cut-off number fields
+   like Jellyfin "Retry Delay"). */
+input, select, textarea, .form-select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Flex/grid children must be allowed to shrink, so a wide table (e.g. the
+   per-notification buttons table) scrolls inside its own wrapper instead of
+   stretching the whole page width. */
+.dashboard-layout > *,
+.dashboard-sidebar,
+.config-pane,
+#config-section,
+#config-section .container {
+  min-width: 0;
+}
+.config-pane table { max-width: 100%; }
+
+@media (max-width: 768px) {
+  /* User-Mapping actions stack directly under each other */
+  .mapping-actions { flex-direction: column; align-items: stretch; }
+  .mapping-actions .btn { width: 100%; }
+}
