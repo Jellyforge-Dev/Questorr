@@ -164,6 +164,12 @@ export const configSchema = Joi.object({
     Joi.string().allow(""),
     Joi.number().integer().min(30).max(3600)
   ).optional(),
+  HEALTH_ALERTS_ENABLED: Joi.string().valid("true", "false").optional(),
+  HEALTH_ALERT_INTERVAL_SECONDS: Joi.alternatives(
+    Joi.string().allow(""),
+    Joi.number().integer().min(30).max(3600)
+  ).optional(),
+  HEALTH_ALERT_CHANNEL_ID: Joi.string().allow("").optional(),
   JELLYFIN_POLLER_METADATA_DELAY_SECONDS: Joi.alternatives(
     Joi.string().allow(""),
     Joi.number().integer().min(0).max(600)

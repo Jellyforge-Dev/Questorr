@@ -303,6 +303,18 @@ Admin-Aktionen protokolliert: Request **Approve/Decline** (welcher Discord-User)
 **Bot Start/Stop** und **Dashboard-Logins** (Erfolg + Fehlversuch mit IP).
 Gespeichert in einer begrenzten `config/admin-audit.json`.
 
+### 🚨 Proaktive Health-Alerts
+Optionaler Watchdog (**Schritt 7 → Verschiedenes**, standardmäßig aus). Aktiviert
+prüft Questorr regelmäßig, ob **Seerr** und **Jellyfin** erreichbar sind, und
+postet in einen Admin-Channel, wenn ein Dienst **ausfällt** oder **wiederkommt** —
+so merkst du einen Ausfall vor den Nutzern. Die **erste** Prüfung nach dem Start
+setzt nur eine Basislinie (kein Alert), damit ein Neustart nicht spammt.
+Einstellungen:
+- `HEALTH_ALERTS_ENABLED` — Hauptschalter.
+- `HEALTH_ALERT_INTERVAL_SECONDS` — Prüfintervall (Standard `120`, min. 30).
+- `HEALTH_ALERT_CHANNEL_ID` — wohin gepostet wird; leer = Admin-Channel
+  (`SEERR_ADMIN_CHANNEL_ID` → `SEERR_CHANNEL_ID` → `JELLYFIN_CHANNEL_ID`).
+
 ### 🎨 Dashboard-Themes (Dark / Light)
 Das Dashboard bringt ein **Retro-Neon/Pixel-Dark**-Theme (Standard) und ein
 **Paper-Terminal-Light**-Theme mit. Der Navbar-Umschalter wird vor dem Paint
@@ -402,6 +414,9 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 |---|---|---|
 | `SEERR_STATUS_POLLING_ENABLED` | `"false"` | Seerr pollen, um verpasste Genehmigungs-/Ablehnungs-Webhooks zu fangen. |
 | `SEERR_STATUS_POLL_INTERVAL_SECONDS` | `"120"` | Poll-Intervall. |
+| `HEALTH_ALERTS_ENABLED` | `"false"` | In einen Admin-Channel posten, wenn Seerr/Jellyfin ausfällt oder wiederkommt. |
+| `HEALTH_ALERT_INTERVAL_SECONDS` | `"120"` | Prüfintervall (min. 30, max. 3600). |
+| `HEALTH_ALERT_CHANNEL_ID` | `""` | Health-Alert-Channel; leer = Admin-Channel. |
 
 ### Pro-Nutzer-Quota
 | Einstellung | Standard | Bedeutung |

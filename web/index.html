@@ -1073,6 +1073,34 @@
                         </div>
                       </div>
 
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="HEALTH_ALERTS_ENABLED" name="HEALTH_ALERTS_ENABLED" />
+                          <span data-i18n="config.misc_health_alerts">Proactive health alerts</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.misc_health_alerts_desc">Periodically checks whether Seerr and Jellyfin are reachable and posts to an admin channel when a service goes down or recovers. The first check after start only records a baseline (no alert).</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="HEALTH_ALERT_INTERVAL_SECONDS" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_health_interval">Health-check interval (seconds)</label>
+                        <input type="number" id="HEALTH_ALERT_INTERVAL_SECONDS" name="HEALTH_ALERT_INTERVAL_SECONDS" placeholder="120" min="30" max="3600"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_health_interval_desc">Default: 120s. Minimum 30s, maximum 3600s.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="HEALTH_ALERT_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_health_channel">Health-alert channel</label>
+                        <select id="HEALTH_ALERT_CHANNEL_ID" name="HEALTH_ALERT_CHANNEL_ID" class="form-select channel-select" data-channel-select="true"
+                          style="width: 100%; max-width: 300px;"></select>
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_health_channel_desc">Where to post health alerts. If left empty, the admin channel is used (Seerr admin → Seerr → Jellyfin channel).</span>
+                        </div>
+                      </div>
+
                       <!-- Bot Command Options -->
 
                       <!-- Command Rate Limiting -->

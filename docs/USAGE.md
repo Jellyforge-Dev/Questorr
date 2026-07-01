@@ -293,6 +293,17 @@ actions: request **approve/decline** (which Discord user), **config saves**
 **dashboard logins** (success + failure with IP). Stored in a bounded
 `config/admin-audit.json`.
 
+### 🚨 Proactive health alerts
+Optional watchdog (**Step 7 → Misc**, off by default). When enabled, Questorr
+periodically checks whether **Seerr** and **Jellyfin** are reachable and posts to
+an admin channel when a service **goes down** or **recovers** — so you notice an
+outage before users do. The **first** check after start only records a baseline
+(no alert), so a restart never spams. Settings:
+- `HEALTH_ALERTS_ENABLED` — master switch.
+- `HEALTH_ALERT_INTERVAL_SECONDS` — how often to check (default `120`, min 30).
+- `HEALTH_ALERT_CHANNEL_ID` — where to post; empty falls back to the admin
+  channel (`SEERR_ADMIN_CHANNEL_ID` → `SEERR_CHANNEL_ID` → `JELLYFIN_CHANNEL_ID`).
+
 ### 🎨 Dashboard themes (dark / light)
 The dashboard ships a **retro neon/pixel dark** theme (default) and a
 **Paper-Terminal light** theme. The navbar toggle is applied before paint (no
@@ -392,6 +403,9 @@ important ones for you.
 |---|---|---|
 | `SEERR_STATUS_POLLING_ENABLED` | `"false"` | Poll Seerr to catch missed approval/decline webhooks. |
 | `SEERR_STATUS_POLL_INTERVAL_SECONDS` | `"120"` | How often to poll. |
+| `HEALTH_ALERTS_ENABLED` | `"false"` | Post to an admin channel when Seerr/Jellyfin goes down or recovers. |
+| `HEALTH_ALERT_INTERVAL_SECONDS` | `"120"` | How often to check reachability (min 30, max 3600). |
+| `HEALTH_ALERT_CHANNEL_ID` | `""` | Health-alert channel; empty falls back to the admin channel. |
 
 ### Per-user quota
 | Setting | Default | Meaning |

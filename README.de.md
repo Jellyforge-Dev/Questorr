@@ -57,6 +57,7 @@
 | ⚙️ Web-Dashboard | Vollständige Konfiguration unter `http://dein-server:8282` — Tetris-Style-Oberfläche |
 | 🎨 Dark- / Light-Theme | Retro-dunkel als Standard plus ein Paper-Terminal-Light-Theme; der Umschalter wird pro Browser gemerkt |
 | 🛡️ Audit-Log | Dashboard-**Audit**-Tab: wer hat genehmigt/abgelehnt, Config geändert, Bot gestartet/gestoppt oder sich eingeloggt |
+| 🚨 Health-Alerts | Optional: postet in einen Admin-Channel, wenn Seerr oder Jellyfin **ausfällt** oder **wiederkommt** |
 | 📱 Mobil-freundlich | Responsives Dashboard, funktioniert auf Smartphones und Tablets |
 | ✅ Verfügbarkeitsstatus | Alle Embed-Listen zeigen Seerr-Status: ✅ verfügbar, ⏳ angefragt, 📥 teilweise |
 | 🎬 Altersfreigabe | FSK/MPAA-Bewertungen in Such-Embeds, konfigurierbar nach Land |
