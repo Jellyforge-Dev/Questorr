@@ -18,6 +18,7 @@ import { updateConfig } from "../utils/configFile.js";
 import { recordAudit } from "../utils/adminAudit.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
+import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 
 const require = createRequire(import.meta.url);
 const { version: APP_VERSION } = require("../package.json");
@@ -121,7 +122,7 @@ async function collectHealthData() {
     const jfBase = process.env.JELLYFIN_BASE_URL.replace(/\/+$/, "");
     checks.push(
       axios.get(`${jfBase}/System/Info`, {
-        headers: { "X-Emby-Token": process.env.JELLYFIN_API_KEY },
+        headers: jellyfinAuthHeaders(process.env.JELLYFIN_API_KEY),
         timeout: 3000,
       }).then(() => { services.jellyfin = "reachable"; })
         .catch(() => { services.jellyfin = "unreachable"; })

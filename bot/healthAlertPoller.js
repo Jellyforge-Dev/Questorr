@@ -2,6 +2,7 @@ import axios from "axios";
 import { EmbedBuilder } from "discord.js";
 import logger from "../utils/logger.js";
 import { t } from "../utils/botStrings.js";
+import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 
 /**
  * Proactive health alerts. Periodically checks whether Seerr and Jellyfin are
@@ -42,7 +43,7 @@ async function checkServices() {
   if (process.env.JELLYFIN_BASE_URL && process.env.JELLYFIN_API_KEY) {
     const base = process.env.JELLYFIN_BASE_URL.replace(/\/+$/, "");
     checks.push(
-      axios.get(`${base}/System/Info`, { headers: { "X-Emby-Token": process.env.JELLYFIN_API_KEY }, timeout: 5000 })
+      axios.get(`${base}/System/Info`, { headers: jellyfinAuthHeaders(process.env.JELLYFIN_API_KEY), timeout: 5000 })
         .then(() => { state.jellyfin = "reachable"; })
         .catch(() => { state.jellyfin = "unreachable"; })
     );
