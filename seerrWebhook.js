@@ -36,6 +36,7 @@ import logger from "./utils/logger.js";
 import { isValidUrl } from "./utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
 import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
+import { jellyfinAuthHeaders } from "./api/jellyfin.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
 import { getIssueReporter, removeIssueReporter } from "./utils/issueReporters.js";
 import { buildIssueAdminButtons } from "./bot/handlers/issueActions.js";
@@ -490,7 +491,7 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
     let items;
     try {
       const res = await axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           searchTerm: title,

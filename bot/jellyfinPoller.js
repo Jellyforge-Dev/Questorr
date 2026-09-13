@@ -52,7 +52,7 @@ import {
   resolveConfigLibraryId,
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
-import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, scanAllItemsForUnseen, seedAllItemIds, fetchItemDetails } from "../api/jellyfin.js";
+import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, scanAllItemsForUnseen, seedAllItemIds, fetchItemDetails, jellyfinAuthHeaders } from "../api/jellyfin.js";
 import { findBestBackdrop } from "../api/tmdb.js";
 import { CONFIG_PATH } from "../utils/configFile.js";
 
@@ -213,7 +213,7 @@ async function triggerJellyfinLibraryScan(apiKey, baseUrl) {
   try {
     const url = `${baseUrl.replace(/\/$/, "")}/Library/Refresh`;
     await axios.post(url, null, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       timeout: 5000,
     });
     _lastLibraryScanTrigger = Date.now();

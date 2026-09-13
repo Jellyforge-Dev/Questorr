@@ -6,6 +6,7 @@ import {
   ActionRowBuilder,
 } from "discord.js";
 import * as tmdbApi from "../api/tmdb.js";
+import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 import { isValidUrl, isLikelyPublicUrl } from "../utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "../utils/embedImages.js";
 import { parseButtonConfig } from "./helpers.js";
@@ -302,7 +303,7 @@ export async function sendDailyRecommendation(client) {
 
     // Get total count first
     const countRes = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         Recursive: true,
         IncludeItemTypes: "Movie,Series",
@@ -321,7 +322,7 @@ export async function sendDailyRecommendation(client) {
     const startIndex = Math.floor(Math.random() * Math.max(1, total - 1));
 
     const itemsRes = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         Recursive: true,
         IncludeItemTypes: "Movie,Series",

@@ -3,6 +3,19 @@ import logger from "../utils/logger.js";
 import { withRetry } from "../utils/axiosRetry.js";
 
 /**
+ * Build the Jellyfin auth header. Jellyfin 12.0 removed the legacy
+ * X-MediaBrowser-Token / X-Emby-Token headers — only the standard
+ * Authorization: MediaBrowser Token="..." scheme is accepted now.
+ * This format has always worked on older (10.x) servers too, so it's
+ * safe to use unconditionally.
+ * @param {string} apiKey
+ * @returns {{Authorization: string}}
+ */
+export function jellyfinAuthHeaders(apiKey) {
+  return { Authorization: `MediaBrowser Token="${apiKey}"` };
+}
+
+/**
  * Fetch all libraries from Jellyfin
  * @param {string} apiKey - Jellyfin API key
  * @param {string} baseUrl - Jellyfin base URL
@@ -16,7 +29,7 @@ export async function fetchLibraries(apiKey, baseUrl) {
     const url = safeBase.href;
     const response = await withRetry(
       () => axios.get(url, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         timeout: 5000,
       }),
       { label: "Jellyfin libraries" }
@@ -36,7 +49,7 @@ export async function fetchLibraries(apiKey, baseUrl) {
         itemsUrlObj.pathname = basePathNoSlash + "/Items";
         const itemsUrl = itemsUrlObj.href;
         const itemsResponse = await axios.get(itemsUrl, {
-          headers: { "X-MediaBrowser-Token": apiKey },
+          headers: jellyfinAuthHeaders(apiKey),
           params: {
             Ids: vf.ItemId,
             Fields: "Path,LibraryOptions",
@@ -112,7 +125,7 @@ export async function findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl) {
     const url = safeBase.href;
     const response = await withRetry(
       () => axios.get(url, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           AnyProviderIdEquals: `Tmdb.${tmdbId}`,
@@ -171,7 +184,7 @@ export async function searchJellyfinByName(query, apiKey, baseUrl, limit = 25, m
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
     const response = await withRetry(
       () => axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           SearchTerm: query,
           Recursive: true,
@@ -217,7 +230,7 @@ export async function countSeriesSeasonsInJellyfin(tmdbId, apiKey, baseUrl) {
     const base = baseUrl.replace(/\/$/, "");
     const res = await withRetry(
       () => axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: { ParentId: seriesId, IncludeItemTypes: "Season", Fields: "IndexNumber", Limit: 100 },
         timeout: 8000,
       }),
@@ -255,7 +268,7 @@ export async function findLibraryByAncestors(
     )}/Items/${itemId}/Ancestors`;
 
     const response = await axios.get(ancestorsUrl, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       timeout: 5000,
     });
 
@@ -334,7 +347,7 @@ export async function findLibraryByAncestors(
         try {
           const libItemsUrl = `${baseUrl.replace(/\/$/, "")}/Items`;
           const libResponse = await axios.get(libItemsUrl, {
-            headers: { "X-MediaBrowser-Token": apiKey },
+            headers: jellyfinAuthHeaders(apiKey),
             params: {
               ParentId: library.ItemId,
               Recursive: true,
@@ -391,7 +404,7 @@ export async function findLibraryId(
     // Use the /Items endpoint without userId to avoid 400 errors
     const url = `${baseUrl.replace(/\/$/, "")}/Items`;
     const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         Ids: itemId,
         Fields: "ParentId,Path", // Request Path to help identify library
@@ -464,7 +477,7 @@ export async function findLibraryId(
       for (const [collectionId, library] of libraryMap.entries()) {
         try {
           const libResponse = await axios.get(url, {
-            headers: { "X-MediaBrowser-Token": apiKey },
+            headers: jellyfinAuthHeaders(apiKey),
             params: { Ids: library.ItemId, Fields: "ParentId" },
             timeout: 5000,
           });
@@ -523,7 +536,7 @@ export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
     const url = safeBase.href;
     const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         SortBy: "DateCreated",
         SortOrder: "Descending",
@@ -576,7 +589,7 @@ export async function fetchLatestAdditions(apiKey, baseUrl, limit = 10, type = "
       type === "series" ? "Series" :
       "Movie,Series,Season,Episode";
     const response = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         SortBy: "DateCreated",
         SortOrder: "Descending",
@@ -609,7 +622,7 @@ export async function seedAllItemIds(apiKey, baseUrl, onBatch) {
 
   while (true) {
     const response = await axios.get(`${base}/Items`, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: {
         Recursive: true,
         IncludeItemTypes: "Movie,Series,Season,Episode",
@@ -657,7 +670,7 @@ export async function fetchItemsAddedSince(apiKey, baseUrl, opts = {}) {
     const all = [];
     for (let page = 0; page < maxPages; page++) {
       const response = await axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie,Series,Season,Episode",
@@ -719,7 +732,7 @@ export async function scanAllItemsForUnseen(apiKey, baseUrl, seenIds, maxNew = 5
     let response;
     try {
       response = await axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie,Series,Season,Episode",
@@ -786,7 +799,7 @@ export async function fetchItemDetails(itemId, apiKey, baseUrl) {
   try {
     const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
     const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       // Round 10: explicitly request the fields needed for rich embeds.
       // Without this, Jellyfin's /Items/{id} returns only the default field set
       // (no ProviderIds, Overview, Genres) — which would strip metadata from
@@ -829,7 +842,7 @@ export async function fetchItemPath(itemId, apiKey, baseUrl) {
   try {
     const url = `${baseUrl.replace(/\/$/, "")}/Items/${itemId}`;
     const response = await axios.get(url, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       params: { Fields: "Path" },
       timeout: 10000,
     });
@@ -917,7 +930,7 @@ export async function fetchRandomJellyfinItem(apiKey, baseUrl, type = "Movie") {
     const base = baseUrl.replace(/\/$/, "");
     const response = await withRetry(
       () => axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           SortBy: "Random",
@@ -953,7 +966,7 @@ export async function findJellyfinItemByTmdbId(tmdbId, mediaType, title, apiKey,
     const itemType = mediaType === "movie" ? "Movie" : "Series";
     const res = await withRetry(
       () => axios.get(`${base}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           searchTerm: title,
@@ -995,7 +1008,7 @@ export async function fetchUserRecentlyPlayed(jellyfinUserId, apiKey, baseUrl, l
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + `/Users/${jellyfinUserId}/Items`;
     const response = await withRetry(
       () => axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           SortBy: "DatePlayed",
@@ -1042,7 +1055,7 @@ export async function fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, a
     // Step 1: get recently played episodes
     const epResponse = await withRetry(
       () => axios.get(`${basePath}/Users/${jellyfinUserId}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           SortBy: "DatePlayed",
@@ -1075,7 +1088,7 @@ export async function fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, a
     // Step 3: batch-fetch Series items to get ProviderIds
     const seriesResponse = await withRetry(
       () => axios.get(`${basePath}/Items`, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Ids: seriesIds.join(","),
           Fields: "ProviderIds",
@@ -1110,7 +1123,7 @@ export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
     safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
     const response = await withRetry(
       () => axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           SortBy: "DateCreated",
@@ -1202,7 +1215,7 @@ export async function fetchUnwatchedAggregateItems(apiKey, baseUrl, opts = {}) {
     let response;
     try {
       response = await axios.get(safeBase.href, {
-        headers: { "X-MediaBrowser-Token": apiKey },
+        headers: jellyfinAuthHeaders(apiKey),
         params: {
           Recursive: true,
           IncludeItemTypes: "Movie",
@@ -1260,7 +1273,7 @@ export async function fetchLibrarySummary(apiKey, baseUrl) {
     // when Jellyfin stores items across nested virtual folders. The global
     // IncludeItemTypes query matches Jellyfin's admin counts reliably.
     const cacheBuster = Date.now();
-    const noCacheHeaders = { "X-MediaBrowser-Token": apiKey, "Cache-Control": "no-cache" };
+    const noCacheHeaders = { ...jellyfinAuthHeaders(apiKey), "Cache-Control": "no-cache" };
 
     const countParams = (type) => ({
       Recursive: true,
