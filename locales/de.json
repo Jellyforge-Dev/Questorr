@@ -6,7 +6,7 @@
       "Jellyforge-Dev"
     ],
     "completion": "100%",
-    "last_updated": "2026-04-01",
+    "last_updated": "2026-09-14",
     "notes": "Standardübersetzungen ins Deutsche"
   },
   "common": {
@@ -207,6 +207,7 @@
     "connection_success": "Verbindung erfolgreich!",
     "connection_error": "Verbindungsfehler",
     "select_guild": "Server auswählen",
+    "daily_random_channel_placeholder": "Kanal auswählen...",
     "select_channel": "Kanal auswählen",
     "loading_guilds": "Server werden geladen...",
     "loading_channels": "Lade Kanäle...",

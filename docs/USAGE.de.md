@@ -174,6 +174,10 @@ sie automatisch.
   User laufen weiter als API-Key-Owner (Admin).
 - **Bilder brauchen TMDB.** `EMBED_SHOW_IMAGES` (Poster/Backdrops in Nachrichten)
   benötigt den TMDB-Key; ohne ihn gibt es keine Bildquelle.
+- **Jellyfin-Versionskompatibilität.** Questorr authentifiziert sich bei
+  Jellyfin mit dem Standard-Header `Authorization: MediaBrowser Token="..."`,
+  der unverändert mit Jellyfin 10.x, 11.x und 12.x funktioniert — nach einem
+  Jellyfin-Update ist keine zusätzliche Einrichtung nötig.
 
 ### 🔔 Seerr-Webhook & die Status-„Ampel"
 

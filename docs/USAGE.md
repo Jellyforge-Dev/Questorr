@@ -168,6 +168,10 @@ then work automatically.
   request as the API-key owner (admin).
 - **Images need TMDB.** `EMBED_SHOW_IMAGES` (posters/backdrops on messages)
   requires the TMDB key; without it there's nothing to fetch artwork from.
+- **Jellyfin version compatibility.** Questorr authenticates against Jellyfin
+  with the standard `Authorization: MediaBrowser Token="..."` header, which
+  works unchanged across Jellyfin 10.x, 11.x and 12.x — no extra setup needed
+  after upgrading Jellyfin.
 
 ### 🔔 Seerr Webhook & the status "traffic light"
 

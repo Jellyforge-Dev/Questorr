@@ -50,6 +50,21 @@
   Seerr user (`x-api-user`) even when auto-approving, so the "available" DM
   reaches the right person (that user then needs auto-approve permission in Seerr).
 
+#### 🔌 Jellyfin 12 compatibility
+- Jellyfin 12.0 removed the legacy `X-MediaBrowser-Token` / `X-Emby-Token` auth
+  headers by default, which broke every Jellyfin call — library sync, cleanup
+  advisor, daily pick, notifications, and the dashboard's health/status
+  indicators. Questorr now authenticates with the standard
+  `Authorization: MediaBrowser Token="..."` header everywhere, which works on
+  both Jellyfin 12 and older 10.x/11.x servers — no configuration change needed.
+
+#### 🩹 Polish
+- Dashboard mobile/layout fixes across setup steps 4/5/7/8 (overflowing number
+  fields, collapsible notifications panel, button rows, wide tables).
+- Auto-approve request attribution no longer sends a conflicting body `userId`
+  alongside the `x-api-user` header, which Seerr rejected with "You do not have
+  permission to modify the request user".
+
 ---
 
 ### 🛠️ v2.4.1
@@ -210,6 +225,23 @@ The browser now warns before navigating away from the dashboard when there are u
 - **Auto-Approve behält den Melder** — Anfragen werden dem gemappten Seerr-User
   (`x-api-user`) zugeordnet, auch bei Auto-Approve, sodass die „Verfügbar"-DM den
   richtigen erreicht (dieser User braucht dann Auto-Approve-Recht in Seerr).
+
+#### 🔌 Jellyfin-12-Kompatibilität
+- Jellyfin 12.0 hat standardmäßig die alten `X-MediaBrowser-Token` /
+  `X-Emby-Token`-Auth-Header entfernt, was jeden Jellyfin-Aufruf brach —
+  Bibliotheks-Abgleich, Cleanup-Advisor, Tagesempfehlung, Benachrichtigungen
+  und die Health-/Status-Anzeigen im Dashboard. Questorr authentifiziert sich
+  jetzt überall mit dem Standard-Header `Authorization: MediaBrowser
+  Token="..."`, der sowohl mit Jellyfin 12 als auch mit älteren 10.x/11.x-
+  Servern funktioniert — keine Konfigurationsänderung nötig.
+
+#### 🩹 Politur
+- Mobile/Layout-Fixes im Dashboard über die Setup-Schritte 4/5/7/8
+  (überlaufende Zahlenfelder, einklappbares Benachrichtigungs-Panel,
+  Button-Reihen, breite Tabellen).
+- Auto-Approve-Zuordnung sendet nicht mehr gleichzeitig ein widersprüchliches
+  `userId` im Body neben dem `x-api-user`-Header, was Seerr mit „You do not
+  have permission to modify the request user" ablehnte.
 
 ---
 
