@@ -4,6 +4,7 @@ import { t } from "../../utils/botStrings.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../../utils/logger.js";
 import { removeAdminPendingMsg } from "../../seerrWebhook.js";
+import { recordAudit } from "../../utils/adminAudit.js";
 
 /**
  * Handle approve/decline button clicks on MEDIA_PENDING admin notifications.
@@ -79,6 +80,12 @@ export async function handleSeerrApproveDecline(interaction) {
 
     // Update the message: disable buttons and show who acted
     const username = interaction.user.username;
+    recordAudit({
+      actor: username,
+      action: isApprove ? "approve" : "decline",
+      target: `req#${requestId}`,
+      detail: current?.media?.title || current?.media?.name || "",
+    });
     const label = isApprove
       ? `✅ ${t("btn_approved_by")} ${username}`
       : `❌ ${t("btn_declined_by")} ${username}`;

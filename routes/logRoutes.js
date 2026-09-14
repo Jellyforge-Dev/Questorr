@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { authenticateToken } from "../utils/auth.js";
 import logger from "../utils/logger.js";
+import { getRecentAudit } from "../utils/adminAudit.js";
 
 const router = Router();
 
@@ -102,5 +103,12 @@ function makeHandler(prefix, fallback) {
 
 router.get("/logs/error", authenticateToken, makeHandler("error-", "error.log"));
 router.get("/logs/all", authenticateToken, makeHandler("combined-", "combined.log"));
+
+// Admin audit trail (approve/decline, config changes, bot control, logins).
+router.get("/audit", authenticateToken, (req, res) => {
+  const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 200));
+  const entries = getRecentAudit(limit);
+  res.json({ entries, count: entries.length });
+});
 
 export default router;

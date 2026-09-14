@@ -4,6 +4,69 @@
 
 ## English
 
+### 🎨 v2.4.2
+
+#### 🆕 Dashboard redesign + dark/light theme
+- **Dark/light toggle** in the navbar, persisted per browser and applied
+  before paint (no flash). Dark keeps the retro neon/pixel identity; light is
+  a new **Paper-Terminal** palette (parchment background, dark ink, deepened
+  teal accent, pixel fonts kept).
+- **Toggle switches** for boolean settings (multi-select lists stay native
+  checkboxes), a **loading spinner** on the Save button, and a **pulse** on
+  connected service status dots.
+- **Motion layer** (GSAP, vendored locally so it works offline): login and
+  dashboard entrance, About scroll reveals, and randomized falling Tetris
+  pieces in the background. `prefers-reduced-motion` is honored.
+- **Stats count-up** animation on the statistics summary numbers.
+
+#### 🐛 Issue reporting (`/report`)
+- New **`/report movie`** / **`/report series`** command opens a Seerr issue
+  (video / audio / subtitle). Series requires season, episode and a
+  description; both require a description. Title suggestions come **only from
+  your Jellyfin library**, so you can't report content that isn't there.
+- The issue is attributed to the **real reporter** in Seerr (not "Admin"), and
+  the reporter gets a **summary DM** of what they filed.
+- Issue communication stays **private**: it goes to the **admin channel** only
+  (never library/public channels), and follow-ups (comment / resolved /
+  reopened) are **DM'd to the reporter**.
+- Admins can **comment on and resolve issues straight from Discord** (buttons +
+  modal) — no Seerr web UI needed.
+- Toggle the command on/off in **Step 7 → Misc** (`SHOW_REPORT_COMMAND`).
+
+#### 🛡️ Admin audit log
+- New **Audit** tab in the dashboard log viewer records who did what: request
+  **approve/decline** (Discord user), **config changes** (changed key names
+  only — never secret values), **bot start/stop**, and **dashboard logins**
+  (success + failure with IP). Bounded and persisted.
+
+#### 🔔 Notifications & ops
+- **Proactive health alerts** — optional watchdog posts to an admin channel when
+  **Seerr** or **Jellyfin** goes down or recovers.
+- **Container health check** — the Docker image now ships a built-in `HEALTHCHECK`
+  on `/api/health` (Portainer / Docker / Uptime Kuma).
+- **All command replies are private** (ephemeral) — only visible to the user who
+  ran them; the redundant "Ephemeral Message Mode" toggle was removed.
+- **Auto-approve keeps the requester** — requests are attributed to the mapped
+  Seerr user (`x-api-user`) even when auto-approving, so the "available" DM
+  reaches the right person (that user then needs auto-approve permission in Seerr).
+
+#### 🔌 Jellyfin 12 compatibility
+- Jellyfin 12.0 removed the legacy `X-MediaBrowser-Token` / `X-Emby-Token` auth
+  headers by default, which broke every Jellyfin call — library sync, cleanup
+  advisor, daily pick, notifications, and the dashboard's health/status
+  indicators. Questorr now authenticates with the standard
+  `Authorization: MediaBrowser Token="..."` header everywhere, which works on
+  both Jellyfin 12 and older 10.x/11.x servers — no configuration change needed.
+
+#### 🩹 Polish
+- Dashboard mobile/layout fixes across setup steps 4/5/7/8 (overflowing number
+  fields, collapsible notifications panel, button rows, wide tables).
+- Auto-approve request attribution no longer sends a conflicting body `userId`
+  alongside the `x-api-user` header, which Seerr rejected with "You do not have
+  permission to modify the request user".
+
+---
+
 ### 🛠️ v2.4.1
 
 #### 🆕 New
@@ -116,6 +179,71 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🎨 v2.4.2
+
+#### 🆕 Dashboard-Redesign + Dark/Light-Theme
+- **Dark/Light-Umschalter** in der Navbar, pro Browser gemerkt und vor dem
+  Paint angewendet (kein Flackern). Dark behält die Retro-Neon/Pixel-Identität;
+  Light ist ein neues **Paper-Terminal** (Pergament-BG, dunkle Tinte,
+  abgedunkelter Teal-Akzent, Pixel-Fonts bleiben).
+- **Toggle-Switches** für Boolean-Einstellungen (Mehrfach-Auswahl-Listen
+  bleiben native Checkboxen), **Lade-Spinner** am Speichern-Button und ein
+  **Puls** auf verbundenen Service-Status-Punkten.
+- **Animations-Layer** (GSAP, lokal gebündelt → offline lauffähig): Login-
+  und Dashboard-Entrance, About-Scroll-Reveals und zufällig fallende
+  Tetris-Blöcke im Hintergrund. `prefers-reduced-motion` wird respektiert.
+- **Count-Up** auf den Statistik-Zahlen.
+
+#### 🐛 Problem-Meldungen (`/report`)
+- Neuer Befehl **`/report movie`** / **`/report series`** öffnet ein Seerr-Issue
+  (Video / Ton / Untertitel). Serie verlangt Staffel, Folge und Beschreibung;
+  beide verlangen eine Beschreibung. Titel-Vorschläge kommen **nur aus deiner
+  Jellyfin-Bibliothek** — keine Meldungen auf nicht vorhandene Inhalte.
+- Das Issue wird in Seerr dem **echten Melder** zugeordnet (nicht „Admin"), und
+  der Melder bekommt eine **Zusammenfassungs-DM** seiner Meldung.
+- Die Issue-Kommunikation bleibt **privat**: nur in den **Admin-Channel** (nie
+  Library-/Public-Channels), Folgenachrichten (Kommentar / gelöst / wieder
+  geöffnet) gehen als **DM an den Melder**.
+- Admins können Issues **direkt aus Discord kommentieren und lösen** (Buttons +
+  Modal) — ohne Seerr-WebUI.
+- An-/Abschaltbar in **Schritt 7 → Verschiedenes** (`SHOW_REPORT_COMMAND`).
+
+#### 🛡️ Admin-Audit-Log
+- Neuer **Audit**-Tab im Dashboard-Log-Viewer protokolliert, wer was getan hat:
+  Request **Approve/Decline** (Discord-User), **Config-Änderungen** (nur
+  geänderte Key-Namen — keine Secret-Werte), **Bot Start/Stop** und
+  **Dashboard-Logins** (Erfolg + Fehlversuch mit IP). Begrenzt und persistiert.
+
+#### 🔔 Benachrichtigungen & Betrieb
+- **Proaktive Health-Alerts** — optionaler Watchdog postet in einen Admin-Channel,
+  wenn **Seerr** oder **Jellyfin** ausfällt oder wiederkommt.
+- **Container-Healthcheck** — das Docker-Image bringt jetzt einen eingebauten
+  `HEALTHCHECK` auf `/api/health` mit (Portainer / Docker / Uptime Kuma).
+- **Alle Command-Antworten sind privat** (ephemeral) — nur für den ausführenden
+  Nutzer sichtbar; der überflüssige „Ephemeral Message Mode"-Schalter wurde entfernt.
+- **Auto-Approve behält den Melder** — Anfragen werden dem gemappten Seerr-User
+  (`x-api-user`) zugeordnet, auch bei Auto-Approve, sodass die „Verfügbar"-DM den
+  richtigen erreicht (dieser User braucht dann Auto-Approve-Recht in Seerr).
+
+#### 🔌 Jellyfin-12-Kompatibilität
+- Jellyfin 12.0 hat standardmäßig die alten `X-MediaBrowser-Token` /
+  `X-Emby-Token`-Auth-Header entfernt, was jeden Jellyfin-Aufruf brach —
+  Bibliotheks-Abgleich, Cleanup-Advisor, Tagesempfehlung, Benachrichtigungen
+  und die Health-/Status-Anzeigen im Dashboard. Questorr authentifiziert sich
+  jetzt überall mit dem Standard-Header `Authorization: MediaBrowser
+  Token="..."`, der sowohl mit Jellyfin 12 als auch mit älteren 10.x/11.x-
+  Servern funktioniert — keine Konfigurationsänderung nötig.
+
+#### 🩹 Politur
+- Mobile/Layout-Fixes im Dashboard über die Setup-Schritte 4/5/7/8
+  (überlaufende Zahlenfelder, einklappbares Benachrichtigungs-Panel,
+  Button-Reihen, breite Tabellen).
+- Auto-Approve-Zuordnung sendet nicht mehr gleichzeitig ein widersprüchliches
+  `userId` im Body neben dem `x-api-user`-Header, was Seerr mit „You do not
+  have permission to modify the request user" ablehnte.
+
+---
 
 ### 🛠️ v2.4.1
 

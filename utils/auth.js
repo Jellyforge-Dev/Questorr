@@ -6,6 +6,7 @@ import path from "path";
 import logger from "./logger.js";
 import { readConfig, updateConfig, CONFIG_PATH } from "./configFile.js";
 import { getUsers, saveUser as saveUserToConfig } from "./userStore.js";
+import { recordAudit } from "./adminAudit.js";
 
 const AUTH_TOKEN_EXPIRATION = "7d";
 const AUTH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -317,6 +318,7 @@ export const login = async (req, res) => {
       });
     }
     logger.warn(`⚠️ Failed login for "${username}" — ${count}/${MAX_FAILED_ATTEMPTS} attempts (from ${req.ip})`);
+    recordAudit({ actor: String(username || "unknown"), action: "login_fail", target: `${count}/${MAX_FAILED_ATTEMPTS}`, detail: req.ip });
     return res
       .status(401)
       .json({ success: false, message: "Invalid credentials" });
@@ -324,6 +326,8 @@ export const login = async (req, res) => {
 
   clearFailures(username);
   clearIpFailures(req.ip);
+
+  recordAudit({ actor: user.username, action: "login_ok", target: "", detail: req.ip });
 
   const token = jwt.sign({ id: user.id, username: user.username, jti: crypto.randomUUID() }, JWT_SECRET, {
     expiresIn: AUTH_TOKEN_EXPIRATION,

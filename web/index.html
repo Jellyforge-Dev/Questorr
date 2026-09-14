@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Questorr</title>
+    <script src="theme.js"></script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css"
@@ -55,6 +56,11 @@
             <li id="mobile-save-li" class="mobile-save-nav-item mobile-save-hidden">
               <button type="submit" form="config-form" class="mobile-save-nav-btn" title="Save Settings">
                 <i class="material-icons">save</i>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                <i class="bi bi-sun nav-icon" aria-hidden="true"></i>
               </button>
             </li>
             <li>
@@ -697,14 +703,19 @@
                         </div>
                         <div class="form-group" style="margin-top:1rem;">
                           <div id="NOTIFICATION_AUDIT_BLOCK" style="padding:0.75rem;border-radius:8px;background:var(--surface0);border:1px solid var(--surface1);">
-                            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
                               <span style="font-weight:600;" data-i18n="config.audit_title">📋 Letzte Benachrichtigungen</span>
-                              <button type="button" id="BTN_REFRESH_AUDIT" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
-                                <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.audit_refresh">Aktualisieren</span>
-                              </button>
+                              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <button type="button" class="btn btn-secondary collapsible-btn" style="padding:0.4rem 0.8rem;font-size:0.85em;" data-collapse-target="notif-audit-body" data-open="false" data-i18n-open="config.show_less" data-i18n-closed="config.show_more">Mehr anzeigen</button>
+                                <button type="button" id="BTN_REFRESH_AUDIT" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.85em;display:inline-flex;align-items:center;gap:0.4rem;">
+                                  <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.audit_refresh">Aktualisieren</span>
+                                </button>
+                              </div>
                             </div>
-                            <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.audit_description">What Questorr last posted or skipped — including source, target channel and dedup reason.</div>
-                            <div id="NOTIFICATION_AUDIT_BODY" style="font-size:0.82em;color:var(--subtext1);overflow-x:auto;" data-i18n="config.audit_loading">Lädt…</div>
+                            <div id="notif-audit-body" class="collapsible-body collapsible-closed" style="display:none !important;margin-top:0.5rem;">
+                              <div class="form-text" style="margin-bottom:0.5rem;" data-i18n="config.audit_description">What Questorr last posted or skipped — including source, target channel and dedup reason.</div>
+                              <div id="NOTIFICATION_AUDIT_BODY" style="font-size:0.82em;color:var(--subtext1);overflow-x:auto;" data-i18n="config.audit_loading">Lädt…</div>
+                            </div>
                           </div>
                         </div>
                         <div class="form-group" style="margin-top:1rem;">
@@ -835,8 +846,10 @@
                               <span data-i18n="config.mappings_seerr_placeholder">Select the corresponding Seerr account</span>
                             </div>
                           </div>
-                          <button type="button" id="add-mapping-btn" class="btn btn-primary" style="margin-left: 0;" data-i18n="config.mappings_add_btn">Add Mapping</button>
-                          <button type="button" id="remove-all-mappings-btn" class="btn btn-danger" style="margin-left: 0.75rem; display: none;" data-i18n="config.remove_all_mappings_btn">Alle Zuordnungen entfernen</button>
+                          <div class="mapping-actions" style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-top:0.5rem;">
+                            <button type="button" id="add-mapping-btn" class="btn btn-primary" data-i18n="config.mappings_add_btn">Add Mapping</button>
+                            <button type="button" id="remove-all-mappings-btn" class="btn btn-danger" style="display: none;" data-i18n="config.remove_all_mappings_btn">Alle Zuordnungen entfernen</button>
+                          </div>
                         </div>
                       </div>
                     </fieldset>
@@ -1000,21 +1013,21 @@
 
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                          <input type="checkbox" id="NOTIFY_ON_AVAILABLE" name="NOTIFY_ON_AVAILABLE" />
-                          Send DM when request is available
+                          <input type="checkbox" id="SHOW_REPORT_COMMAND" name="SHOW_REPORT_COMMAND" />
+                          <span data-i18n="config.misc_report_command">Enable /report command</span>
                         </label>
                         <div class="form-text">
-                          <span data-i18n="config.misc_pm_desc">When enabled, users will receive a DM when their requested content becomes available on Jellyfin.</span>
+                          <span data-i18n="config.misc_report_command_desc">Let users report a problem (audio, video, subtitle…) with a Jellyfin title, which opens an issue in Seerr. Disable to remove the command.</span>
                         </div>
                       </div>
 
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                          <input type="checkbox" id="PRIVATE_MESSAGE_MODE" name="PRIVATE_MESSAGE_MODE" />
-                          <span data-i18n="config.misc_ephemeral">Ephemeral Message Mode (/search only)</span>
+                          <input type="checkbox" id="NOTIFY_ON_AVAILABLE" name="NOTIFY_ON_AVAILABLE" />
+                          Send DM when request is available
                         </label>
                         <div class="form-text">
-                          <span data-i18n="config.misc_ephemeral_desc">When enabled, all bot responses are only visible to the user. When disabled, successful results are visible to everyone.</span>
+                          <span data-i18n="config.misc_pm_desc">When enabled, users will receive a DM when their requested content becomes available on Jellyfin.</span>
                         </div>
                       </div>
 
@@ -1054,6 +1067,34 @@
                           style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
                         <div class="form-text" style="margin-top: 0.4rem;">
                           <span data-i18n="config.misc_status_polling_interval_desc">Standard: 120s. Minimum 30s, Maximum 3600s.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                          <input type="checkbox" id="HEALTH_ALERTS_ENABLED" name="HEALTH_ALERTS_ENABLED" />
+                          <span data-i18n="config.misc_health_alerts">Proactive health alerts</span>
+                        </label>
+                        <div class="form-text">
+                          <span data-i18n="config.misc_health_alerts_desc">Periodically checks whether Seerr and Jellyfin are reachable and posts to an admin channel when a service goes down or recovers. The first check after start only records a baseline (no alert).</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="HEALTH_ALERT_INTERVAL_SECONDS" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_health_interval">Health-check interval (seconds)</label>
+                        <input type="number" id="HEALTH_ALERT_INTERVAL_SECONDS" name="HEALTH_ALERT_INTERVAL_SECONDS" placeholder="120" min="30" max="3600"
+                          style="width: 100%; max-width: 150px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem;" />
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_health_interval_desc">Default: 120s. Minimum 30s, maximum 3600s.</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-top: 1rem;">
+                        <label for="HEALTH_ALERT_CHANNEL_ID" style="font-weight: 600; display: block; margin-bottom: 0.4rem;" data-i18n="config.misc_health_channel">Health-alert channel</label>
+                        <select id="HEALTH_ALERT_CHANNEL_ID" name="HEALTH_ALERT_CHANNEL_ID" class="form-select channel-select" data-channel-select="true"
+                          style="width: 100%; max-width: 300px;"></select>
+                        <div class="form-text" style="margin-top: 0.4rem;">
+                          <span data-i18n="config.misc_health_channel_desc">Where to post health alerts. If left empty, the admin channel is used (Seerr admin → Seerr → Jellyfin channel).</span>
                         </div>
                       </div>
 
@@ -1642,6 +1683,7 @@
                   <li><i class="bi bi-fire"></i><div data-i18n="about.feature_trending"><code>/trending</code> Browse the week's most popular movies and TV shows from TMDB — discover what's hot right now and request directly.</div></li>
                   <li><i class="bi bi-patch-question-fill"></i><div data-i18n="about.feature_status"><code>/status &lt;title&gt;</code> Check the current <strong style="color: var(--blue);">Seerr request status</strong> of any title in Discord — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested.</div></li>
                   <li><i class="bi bi-shuffle"></i><div data-i18n="about.feature_random"><code>/random movie</code> or <code>/random series</code> — get a <strong style="color: var(--blue);">random suggestion</strong> from your Jellyfin library with poster, summary, genre, runtime, rating and Watch Now button.</div></li>
+                  <li><i class="bi bi-flag-fill"></i><div data-i18n="about.feature_report"><code>/report movie</code> or <code>/report series</code> — <strong style="color: var(--blue);">report a problem</strong> (audio, video, subtitle…) with a Jellyfin title. Opens a Seerr issue, posts it to the admin channel, and DMs the reporter when an admin resolves it (with their comment). Suggestions come only from your Jellyfin library; can be toggled off in settings.</div></li>
                   <li><i class="bi bi-list-check"></i><div data-i18n="about.feature_watchlist"><code>/watchlist</code> View recent <strong style="color: var(--blue);">Seerr requests</strong> directly in Discord. Filter by all, mine, pending or available — mapped users see their own requests.</div></li>
                   <li><i class="bi bi-card-checklist"></i><div data-i18n="about.feature_queue"><code>/queue</code> Track the status of <strong style="color: var(--blue);">your own requests</strong> — grouped by stage (waiting for approval, downloading, available, declined, failed). Backfills older requests and resolves real titles. Also available as the "My Requests" button in the /help wizard.</div></li>
                   <li><i class="bi bi-bell"></i><div data-i18n="about.feature_subscribe"><code>/subscribe</code> <strong style="color: var(--blue);">Subscribe to a series</strong> and get a DM when a new season appears on Jellyfin. <code>/subscribe remove</code> unsubscribes, <code>/subscribe list</code> shows your subscriptions, and <code>/subscribe weekly</code> opts into a personalised weekly recommendation DM (based on your watch history). Also available as the "Subscribe" button in the /help wizard.</div></li>
@@ -1738,6 +1780,9 @@
               <button type="button" class="logs-tab-btn" data-target="webhook" data-i18n="logs.webhook">
                 Webhook
               </button>
+              <button type="button" class="logs-tab-btn" data-target="audit" data-i18n="logs.audit">
+                Audit
+              </button>
               <button type="button" id="refresh-logs-btn" class="logs-tab-btn" title="Refresh logs" data-i18n="logs.refresh" data-i18n-attr="title">
                 <i class="bi bi-arrow-clockwise"></i>
               </button>
@@ -1827,6 +1872,10 @@
     </div><!-- /content-wrapper -->
     <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
     <script src="script.js"></script>
+    <script src="vendor/gsap.min.js"></script>
+    <script src="vendor/ScrollTrigger.min.js"></script>
+    <script src="animations.js"></script>
+    <script src="ui-feedback.js"></script>
 
     <!-- Bot Auto-Start Confirmation Modal -->
     <div id="bot-autostart-modal" class="modal-overlay" style="display: none;">

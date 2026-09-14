@@ -271,6 +271,23 @@ describe("sendRequest", () => {
     expect(config.headers["x-api-user"]).toBe("5");
   });
 
+  it("also sets x-api-user when auto-approve is ON (so the requester keeps the available DM)", async () => {
+    axios.post.mockResolvedValue({ data: {} });
+
+    await sendRequest({
+      tmdbId: 550,
+      mediaType: "movie",
+      seerrUrl: "http://seerr",
+      apiKey: "key",
+      isAutoApproved: true,
+      discordUserId: "discord123",
+      userMappings: [{ discordUserId: "discord123", seerrUserId: 5 }],
+    });
+
+    const [, , config] = axios.post.mock.calls[0];
+    expect(config.headers["x-api-user"]).toBe("5");
+  });
+
   it("throws on API error", async () => {
     const err = new Error("Forbidden");
     err.response = { status: 403, data: { message: "Quota exceeded" } };

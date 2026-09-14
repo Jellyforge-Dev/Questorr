@@ -561,6 +561,75 @@ export async function declineRequest(requestId, seerrUrl, apiKey) {
 }
 
 /**
+ * Create a Seerr issue on a media item.
+ * @param {number|string} mediaId - Seerr internal media id (mediaInfo.id)
+ * @param {number|string} issueType - 1=Video, 2=Audio, 3=Subtitle, 4=Other
+ * @param {string} message - Free-text description
+ * @param {string} seerrUrl - Seerr API URL
+ * @param {string} apiKey - Seerr API key
+ * @returns {Promise<Object>} Created issue
+ */
+export async function createIssue(mediaId, issueType, message, seerrUrl, apiKey, opts = {}) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const payload = {
+    issueType: parseInt(issueType, 10),
+    message: message || "",
+    mediaId: parseInt(mediaId, 10),
+  };
+  // TV: optionally scope the issue to a specific season/episode (0 = all).
+  const season = parseInt(opts.season, 10);
+  const episode = parseInt(opts.episode, 10);
+  if (Number.isFinite(season) && season > 0) payload.problemSeason = season;
+  if (Number.isFinite(episode) && episode > 0) payload.problemEpisode = episode;
+  // Attribute the issue to the mapped Seerr user (like requests) instead of the
+  // API-key owner, so Seerr shows the real reporter — not "Admin".
+  const headers = { "X-Api-Key": apiKey };
+  if (opts.seerrUserId != null && opts.seerrUserId !== "") {
+    headers["x-api-user"] = String(opts.seerrUserId);
+  }
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue`, payload, {
+      headers,
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr create issue media ${mediaId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Post a comment on a Seerr issue. Triggers Seerr's ISSUE_COMMENT webhook,
+ * which is how the reporter is DM'd.
+ */
+export async function createIssueComment(issueId, message, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue/${issueId}/comment`, { message: message || "" }, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr comment issue ${issueId}` }
+  );
+  return response.data;
+}
+
+/**
+ * Set a Seerr issue's status ("resolved" or "open"). Triggers the matching
+ * ISSUE_RESOLVED / ISSUE_REOPENED webhook.
+ */
+export async function updateIssueStatus(issueId, status, seerrUrl, apiKey) {
+  const apiUrl = normalizeApiUrl(seerrUrl);
+  const response = await withRetry(
+    () => axios.post(`${apiUrl}/issue/${issueId}/${status}`, {}, {
+      headers: { "X-Api-Key": apiKey },
+      timeout: TIMEOUTS.SEERR_POST,
+    }),
+    { label: `Seerr issue ${issueId} → ${status}` }
+  );
+  return response.data;
+}
+
+/**
  * Fetch pending requests from Seerr
  * @param {string} seerrUrl - Seerr API URL
  * @param {string} apiKey - Seerr API key
@@ -928,13 +997,9 @@ export async function sendRequest({
 
       if (seerrUserId !== null && seerrUserId !== undefined) {
         logger.info(`[SEERR] 👤 Requesting as Seerr User ID: ${seerrUserId}`);
-
-        // If auto-approve is ON, add userId to payload for tracking
-        // This helps identify who made the request in Seerr's history
-        if (isAutoApproved === true) {
-          payload.userId = parseInt(seerrUserId, 10);
-          logger.info(`[SEERR] 📝 Adding userId to payload for tracking: ${payload.userId}`);
-        }
+        // Attribution is done via the x-api-user header (set below). Do NOT also
+        // put userId in the body — combining the two makes Seerr reject the
+        // request with "You do not have permission to modify the request user".
       } else {
         logger.warn(`[SEERR] ❌ No mapping found for Discord user ${discordUserId}. Requesting as API Key Owner (ADMIN).`);
       }
@@ -955,27 +1020,22 @@ export async function sendRequest({
       "Content-Type": "application/json"
     };
 
-    // CRITICAL: x-api-user header logic based on auto-approve setting
-    // 
-    // When isAutoApproved === true:
-    //   - DO NOT set x-api-user header
-    //   - Request will use API key owner's permissions (admin with auto-approve)
-    //   - Result: Request is auto-approved immediately
+    // Always attribute the request to the mapped Seerr user (x-api-user) when we
+    // have a mapping — including when auto-approving. Otherwise the request is
+    // created by the API-key owner (admin), and the "available" DM can't find the
+    // original Discord requester.
     //
-    // When isAutoApproved === false:
-    //   - SET x-api-user header to mapped user ID
-    //   - Request will use mapped user's permissions (no auto-approve)
-    //   - Result: Request is created as PENDING, requires manual approval
-
-    if (isAutoApproved === false && seerrUserId !== null && seerrUserId !== undefined) {
+    // Trade-off: under Questorr Auto-Approve, the request now runs as the mapped
+    // user, so Seerr only auto-approves it if THAT user has auto-approve
+    // permission in Seerr (otherwise it stays pending). Without a mapping we fall
+    // back to the API-key owner, preserving the old admin-auto-approve behaviour.
+    if (seerrUserId !== null && seerrUserId !== undefined) {
       headers["x-api-user"] = String(seerrUserId);
-      logger.info(`[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request will use this user's permissions - no auto-approve)`);
-    } else if (isAutoApproved === false) {
-      // No user mapping — request goes as API key owner but with isAutoApproved: false
-      // and without serverId/profileId, so Seerr should keep it PENDING
-      logger.info("[SEERR] ✋ No user mapping found — requesting as API key owner with isAutoApproved: false");
-    } else if (isAutoApproved === true) {
-      logger.info(`[SEERR] 🔓 NOT setting x-api-user header (request will use API key owner's permissions - auto-approve enabled)`);
+      logger.info(
+        `[SEERR] 🎭 Setting x-api-user header: ${seerrUserId} (request created as this user${isAutoApproved ? " — auto-approve needs this user's Seerr permission" : ""})`
+      );
+    } else {
+      logger.info(`[SEERR] ✋ No user mapping — requesting as API key owner (isAutoApproved: ${isAutoApproved})`);
     }
 
     const response = await withRetry(

@@ -11,6 +11,7 @@ import { registerInteractions } from "./interactions.js";
 import { stopCleanupAdvisor } from "./cleanupAdvisor.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
+import { startHealthAlertPoller } from "./healthAlertPoller.js";
 import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
@@ -78,6 +79,7 @@ export async function startBot() {
       rescheduleTimedJobs(client);
       startJellyfinPoller(client);
       startSeerrStatusPoller();
+      startHealthAlertPoller(client);
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

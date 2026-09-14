@@ -4227,3 +4227,311 @@ tr.notif-disabled td {
     color: var(--subtext0);
   }
 }
+
+/* ============================================================
+   RETRO + FEATURES MERGE LAYER
+   Keeps the dark neon/pixel identity as default and adds:
+   a Paper-Terminal LIGHT theme, a theme toggle, pixel toggle
+   switches, save spinner, and connected-status pulse.
+   Appended last so light overrides beat the pixel layer's
+   hardcoded !important dark surfaces.
+   ============================================================ */
+
+/* ── Paper-Terminal LIGHT tokens ─────────────────────────── */
+:root[data-theme="light"] {
+  --background: #efe9d8;
+  --foreground: #1d2421;
+  --mantle: #e4ddc9;
+  --surface0: #f5f1e4;
+  --surface1: #e9e2cf;
+  --surface2: #ddd4ba;
+  --mauve: #0a7d5f;
+  --blue: #0a6e80;
+  --green: #16744a;
+  --peach: #a05c0d;
+  --text: #19201d;
+  --subtext0: #4f574f;
+  --border-color: #c4b99b;
+  --code-bg: #e3dcc6;
+  --pixel-teal: #0a7d5f;
+  --pixel-cyan: #0a6e80;
+  --pixel-green: #16744a;
+  --pixel-dark: #efe9d8;
+  --pixel-grid: rgba(29, 36, 33, 0.05);
+  --pixel-border: rgba(12, 143, 116, 0.5);
+  --pixel-glow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+/* ── LIGHT: override the pixel layer's hardcoded dark surfaces ── */
+[data-theme="light"] body {
+  background-color: #efe9d8 !important;
+  color: #1d2421;
+}
+[data-theme="light"] body::before {
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0, 0, 0, 0.035) 2px, rgba(0, 0, 0, 0.035) 4px
+  ) !important;
+}
+[data-theme="light"] .navbar { background: rgba(239, 233, 216, 0.95) !important; }
+[data-theme="light"] .auth-container { background: #f5f1e4 !important; }
+[data-theme="light"] .dashboard-header { background: #f5f1e4 !important; }
+[data-theme="light"] .dashboard-sidebar { background: rgba(245, 241, 228, 0.85) !important; }
+[data-theme="light"] .footer { background: rgba(239, 233, 216, 0.95) !important; color: #5c645d !important; }
+[data-theme="light"] ::-webkit-scrollbar-track { background: #e4ddc9 !important; }
+
+[data-theme="light"] .hero-title { color: #0c8f74 !important; text-shadow: none !important; }
+[data-theme="light"] .hero-subtitle { color: #5c645d !important; }
+[data-theme="light"] .dashboard-title { color: #0c8f74 !important; text-shadow: none !important; }
+
+[data-theme="light"] .dashboard-nav .nav-item { color: #3a443d !important; }
+[data-theme="light"] .dashboard-nav .nav-item:hover,
+[data-theme="light"] .dashboard-nav .nav-item.active { color: #0c8f74 !important; }
+[data-theme="light"] label,
+[data-theme="light"] .form-group label { color: #3f4a42 !important; }
+[data-theme="light"] .form-text { color: #6a7167 !important; }
+[data-theme="light"] .config-pane strong,
+[data-theme="light"] .config-pane b { color: #0c6f59 !important; }
+[data-theme="light"] fieldset legend,
+[data-theme="light"] .config-pane legend { text-shadow: none !important; }
+
+/* Inputs in light */
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="url"],
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="number"],
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+[data-theme="light"] .auth-form input {
+  background: #fbf8ef !important;
+  color: #1d2421 !important;
+  border-color: rgba(12, 143, 116, 0.4) !important;
+}
+[data-theme="light"] .auth-form input::placeholder { color: rgba(29, 36, 33, 0.4) !important; }
+
+/* Code blocks in light */
+[data-theme="light"] code,
+[data-theme="light"] pre,
+[data-theme="light"] .code-block {
+  background: #e3dcc6 !important;
+  color: #0c6f59 !important;
+}
+
+/* Pixel buttons: readable text on teal in light */
+[data-theme="light"] .auth-form .btn-primary,
+[data-theme="light"] .dashboard-nav .btn-primary,
+[data-theme="light"] .btn-primary {
+  color: #f3efe2 !important;
+}
+[data-theme="light"] .btn-secondary { color: #0c8f74 !important; border-color: rgba(12, 143, 116, 0.5) !important; }
+
+/* ── Theme toggle button (pixel style) ───────────────────── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--pixel-border);
+  color: var(--pixel-teal);
+  cursor: pointer;
+  padding: 0.4rem 0.55rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 0;
+  font-family: var(--mono-font);
+  transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+.theme-toggle:hover {
+  background: rgba(30, 200, 160, 0.12);
+  box-shadow: 2px 2px 0 rgba(30, 200, 160, 0.3);
+  transform: translate(-1px, -1px);
+}
+
+/* ── Pixel toggle switches (boolean settings only) ───────── */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 42px !important;
+  height: 20px !important;
+  min-width: 42px;
+  border-radius: 0 !important;
+  background: var(--surface1) !important;
+  border: 1px solid var(--pixel-border) !important;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin: 0 0.4rem 0 0;
+  image-rendering: pixelated;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--subtext0);
+  opacity: 0.85;
+  transition: left 0.12s ease, background-color 0.12s ease;
+}
+input[type="checkbox"]:checked {
+  background: var(--pixel-teal) !important;
+  border-color: var(--pixel-teal) !important;
+}
+input[type="checkbox"]:checked::before {
+  left: 26px;
+  background: #ffffff;
+  opacity: 1;
+  box-shadow: var(--pixel-glow);
+}
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--pixel-teal); outline-offset: 2px; }
+
+/* Multi-select list checkboxes stay native */
+.library-item input[type="checkbox"],
+.library-label input[type="checkbox"],
+.role-item input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-width: 0;
+  background: initial !important;
+  border: initial !important;
+  accent-color: var(--pixel-teal);
+}
+.library-item input[type="checkbox"]::before,
+.library-label input[type="checkbox"]::before,
+.role-item input[type="checkbox"]::before { content: none !important; }
+
+/* ── Save button loading spinner (reuses @keyframes spin) ── */
+.btn.is-loading {
+  color: transparent !important;
+  text-shadow: none !important;
+  pointer-events: none;
+  position: relative;
+}
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1em;
+  height: 1em;
+  margin: -0.5em 0 0 -0.5em;
+  border: 2px solid rgba(0, 0, 0, 0.65);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.btn-secondary.is-loading::after { border-color: var(--pixel-teal); border-right-color: transparent; }
+
+/* ── Connected service status: neon pulse ────────────────── */
+@keyframes statusPulseRetro {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(30, 200, 160, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(30, 200, 160, 0); }
+}
+.status-dot.status-connected { animation: statusPulseRetro 2s ease-out infinite; }
+
+/* ── Keyboard focus + reduced motion ─────────────────────── */
+.theme-toggle:focus-visible,
+.btn:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--pixel-teal);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── LIGHT fixes: logo legibility, About readability, contrast ── */
+/* The wordmark logo is light art (uses mix-blend on dark). On paper give
+   it a dark chip so "Questorr" reads clearly. */
+[data-theme="light"] .navbar-brand .logo,
+[data-theme="light"] .auth-logo {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  background: #1b2420;
+  padding: 3px 6px;
+  border: 1px solid var(--pixel-border);
+  box-shadow: 2px 2px 0 rgba(10, 125, 95, 0.25);
+  border-radius: 0;
+}
+[data-theme="light"] .dashboard-title { color: var(--mauve) !important; }
+
+/* Accent texts follow the deepened light tokens */
+[data-theme="light"] .hero-title,
+[data-theme="light"] fieldset legend,
+[data-theme="light"] .config-pane legend,
+[data-theme="light"] .config-pane strong,
+[data-theme="light"] .config-pane b { color: var(--mauve) !important; }
+
+/* About page readability on paper */
+[data-theme="light"] #about,
+[data-theme="light"] #about p,
+[data-theme="light"] #about li,
+[data-theme="light"] #about span,
+[data-theme="light"] #about div,
+[data-theme="light"] .about-card,
+[data-theme="light"] .features-list li { color: var(--text) !important; }
+[data-theme="light"] #about h2,
+[data-theme="light"] #about h3,
+[data-theme="light"] .features-title {
+  color: var(--mauve) !important;
+  text-shadow: none !important;
+}
+[data-theme="light"] .about-card,
+[data-theme="light"] .features-list,
+[data-theme="light"] .dev-footer {
+  background: var(--surface0) !important;
+  border-color: var(--border-color) !important;
+}
+[data-theme="light"] .features-list li { background: #ece4cf !important; }
+[data-theme="light"] #about a,
+[data-theme="light"] #about strong { color: var(--blue) !important; }
+[data-theme="light"] #about code {
+  background: var(--code-bg) !important;
+  color: var(--mauve) !important;
+}
+
+/* Save spinner must win over the light-mode button text color */
+[data-theme="light"] .btn.is-loading {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* The flanking static tetris blocks read as frozen. Hide them and let the
+   randomized falling #tetris-bg pieces be the motion instead. */
+.hero.full-screen::before { display: none !important; }
+
+/* ── Layout fixes (mobile + overflow) ─────────────────────── */
+/* Form controls never overflow their container (fixes cut-off number fields
+   like Jellyfin "Retry Delay"). */
+input, select, textarea, .form-select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Flex/grid children must be allowed to shrink, so a wide table (e.g. the
+   per-notification buttons table) scrolls inside its own wrapper instead of
+   stretching the whole page width. */
+.dashboard-layout > *,
+.dashboard-sidebar,
+.config-pane,
+#config-section,
+#config-section .container {
+  min-width: 0;
+}
+.config-pane table { max-width: 100%; }
+
+@media (max-width: 768px) {
+  /* User-Mapping actions stack directly under each other */
+  .mapping-actions { flex-direction: column; align-items: stretch; }
+  .mapping-actions .btn { width: 100%; }
+}

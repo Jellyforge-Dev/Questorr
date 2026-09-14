@@ -15,8 +15,10 @@ import { botState, pendingRequests } from "../bot/botState.js";
 import { getCommandStats, resetCommandStats } from "../bot/commandStats.js";
 import { sendWeeklyDigest } from "../bot/weeklyDigest.js";
 import { updateConfig } from "../utils/configFile.js";
+import { recordAudit } from "../utils/adminAudit.js";
 import cache from "../utils/cache.js";
 import logger from "../utils/logger.js";
+import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 
 const require = createRequire(import.meta.url);
 const { version: APP_VERSION } = require("../package.json");
@@ -120,7 +122,7 @@ async function collectHealthData() {
     const jfBase = process.env.JELLYFIN_BASE_URL.replace(/\/+$/, "");
     checks.push(
       axios.get(`${jfBase}/System/Info`, {
-        headers: { "X-Emby-Token": process.env.JELLYFIN_API_KEY },
+        headers: jellyfinAuthHeaders(process.env.JELLYFIN_API_KEY),
         timeout: 3000,
       }).then(() => { services.jellyfin = "reachable"; })
         .catch(() => { services.jellyfin = "unreachable"; })
@@ -806,6 +808,7 @@ export function createBotRoutes({ startBot }) {
     }
     try {
       const result = await startBot();
+      recordAudit({ actor: req.user?.username || "unknown", action: "bot_start", target: "", detail: req.ip });
       res.status(200).json({ message: `Bot started successfully! ${result.message}` });
     } catch (error) {
       res.status(500).json({ message: `Failed to start bot: ${error.message}` });
@@ -822,6 +825,7 @@ export function createBotRoutes({ startBot }) {
       botState.discordClient = null;
       botState.botStartedAt = null;
       logger.info("Bot has been stopped.");
+      recordAudit({ actor: req.user?.username || "unknown", action: "bot_stop", target: "", detail: req.ip });
       res.status(200).json({ message: "Bot stopped successfully." });
     } catch (error) {
       logger.error("Error stopping bot:", error);

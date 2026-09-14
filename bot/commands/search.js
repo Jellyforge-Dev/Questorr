@@ -17,12 +17,13 @@ export async function handleSearchOrRequest(
   tags = [],
   options = {}
 ) {
-  const isPrivateMode = process.env.PRIVATE_MESSAGE_MODE === "true" || options.ephemeral === true;
+  // All command replies are private (only visible to the user who ran them).
+  const isPrivateMode = true;
 
   try {
     // Skip if the interaction was already deferred (e.g. from the DYM flow)
     if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: isPrivateMode });
+      await interaction.deferReply({ flags: 64 });
     }
   } catch (err) {
     logger.error(`Failed to defer reply: ${err.message}`);

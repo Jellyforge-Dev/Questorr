@@ -6,6 +6,7 @@ import { isMaskedValue } from "../utils/configSanitize.js";
 import { TIMEOUTS } from "../lib/constants.js";
 import { getPollerStatus, triggerManualPoll } from "../bot/jellyfinPoller.js";
 import logger from "../utils/logger.js";
+import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConne
     const safeUrl = new URL(url);
     safeUrl.pathname = safeUrl.pathname.replace(/\/$/, "") + "/Library/VirtualFolders";
     const response = await axios.get(safeUrl.href, {
-      headers: { "X-MediaBrowser-Token": apiKey },
+      headers: jellyfinAuthHeaders(apiKey),
       timeout: TIMEOUTS.JELLYFIN_API,
     });
 

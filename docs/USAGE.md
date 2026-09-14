@@ -59,6 +59,31 @@ Get a random title **from your own Jellyfin library** — a "what should I watch
 tonight" pick. The reply is **only visible to you** (ephemeral).
 - **`type`** *(required)* — `🎬 Movie` or `📺 Series`.
 
+### 🐛 `/report movie` · `/report series`  *(only if enabled)*
+Report a playback problem with a title that's **on your Jellyfin server**. Title
+suggestions come **only from the Jellyfin library** (you can't report something
+that isn't there), and the issue is opened in Seerr under **your** mapped user.
+You get a **summary DM** of what you filed, and another DM when an admin
+comments or resolves it.
+- **`/report movie`** — `title` *(required, autocomplete)*, `type`
+  *(required: Video / Audio / Subtitle)*, `message` *(required)*.
+- **`/report series`** — `title`, `season`, `episode`, `type` and `message`
+  are **all required**.
+
+Admins handle issues straight from the **admin channel**: the post carries
+**💬 Comment** and **✅ Resolve** buttons (no Seerr web UI needed). The whole
+conversation stays private between the reporter and the admins/Seerr.
+Toggle the command in **Step 7 → Misc** (`SHOW_REPORT_COMMAND`).
+
+> **Seerr requirements.** Issues are a Seerr feature, so:
+> - **Enable Issues** in **Seerr → Settings → General** (the global *Enable Issue
+>   Reporting* toggle).
+> - The reporter must be **mapped** (Step 5) to a Seerr user, and that user needs
+>   the **Report Issues** permission in Seerr — otherwise the issue can't be
+>   created on their behalf.
+> - Enable the **Issue** webhook events (see above) so comment/resolve DMs reach
+>   the reporter.
+
 ### 💡 `/recommend <title>`
 Get TMDB recommendations based on a movie or show you like.
 - **`title`** *(required, autocomplete)* — the title to base recommendations on.
@@ -125,6 +150,29 @@ Show all available commands with quick-action buttons. Good starting point for n
 These run in the background or live in the dashboard. They are configured once and
 then work automatically.
 
+### ⚠️ Common gotchas (read this first)
+- **TMDB API key is mandatory.** Search, requests, posters and images all rely on
+  TMDB. **OMDb alone is not enough** — without a TMDB key you can't even create
+  requests. OMDb only adds extra ratings.
+- **Quality profiles & servers come from Radarr/Sonarr — configured *inside*
+  Seerr.** If **Load Profiles & Servers** returns *0 profiles, 0 servers*, or the
+  Default Quality / Default Server dropdowns and Root-Folder → Channel mapping are
+  empty, it means **Seerr has no Radarr/Sonarr connected yet** (set them up in
+  Seerr first, then reload). This is expected on a fresh Seerr.
+- **"Send DM when available" + Seerr Auto-Approve.** Questorr creates every request
+  as the **mapped Seerr user** (so the *available* DM always reaches the right
+  person, even with auto-approve). The consequence: under Questorr's global
+  Auto-Approve, a request is only auto-approved if that **mapped user has
+  auto-approve permission in Seerr** — otherwise it stays pending. Grant your
+  mapped users auto-approve in Seerr, or approve manually. Unmapped users still
+  request as the API-key owner (admin).
+- **Images need TMDB.** `EMBED_SHOW_IMAGES` (posters/backdrops on messages)
+  requires the TMDB key; without it there's nothing to fetch artwork from.
+- **Jellyfin version compatibility.** Questorr authenticates against Jellyfin
+  with the standard `Authorization: MediaBrowser Token="..."` header, which
+  works unchanged across Jellyfin 10.x, 11.x and 12.x — no extra setup needed
+  after upgrading Jellyfin.
+
 ### 🔔 Seerr Webhook & the status "traffic light"
 
 This is how Questorr learns about Seerr events (request approved, media available,
@@ -140,7 +188,9 @@ Webhook**:
 - **Webhook URL** → the URL shown in Questorr.
 - **Authorization Header** → paste the secret (exactly, no extra spaces — a
   mismatch is rejected with HTTP 401 / `AUTH_FAIL`).
-- Enable the webhook and tick the notification types you want.
+- Enable the webhook and tick the notification types you want. For `/report`
+  follow-ups to reach the reporter, also enable the **Issue** events
+  (Issue Created / Comment / Resolved / Reopened).
 
 > ⚠️ **Docker URL gotcha (the #1 cause of "nothing arrives").** The URL Questorr
 > shows uses the address *you* opened the dashboard with, e.g.
@@ -207,6 +257,12 @@ Links a Discord account to a Seerr account so requests show up under the correct
 Seerr user (and Seerr's own per-user quotas apply). Configure under user mapping;
 you can filter the member picker by a Discord role first.
 
+> **Seerr permissions matter.** Questorr acts *as the mapped Seerr user* (via the
+> `x-api-user` header). That user must have the relevant Seerr permission for the
+> action to succeed: **Request** to send requests, **Auto-Approve** if you want
+> instant approval, and **Report Issues** for `/report`. An unmapped user falls
+> back to the API-key owner (admin).
+
 ### 🔐 Role permissions
 Control who may use Questorr's commands:
 - **Allowlist** (`ROLE_ALLOWLIST`) — if set, *only* these roles may use commands.
@@ -243,6 +299,44 @@ and start/stop controls. Protect it with `WIDGET_API_KEY`, restrict embedding wi
 ### 💚 Health-check bar & 📊 statistics
 The dashboard shows a real-time health bar (is Discord/Seerr/Jellyfin/TMDB
 reachable?) and a statistics panel with command usage broken down per user.
+
+### 🐛 Issue reporting & resolution
+Users file playback problems with `/report` (see Part 1). Issues are **private**:
+they go to the **admin channel** only and are opened in Seerr under the reporter's
+mapped user. The admin post carries **💬 Comment** and **✅ Resolve** buttons, so
+admins handle everything from Discord. Commenting / resolving flows back through
+Seerr's `ISSUE_COMMENT` / `ISSUE_RESOLVED` webhooks, which **DM the reporter** — so
+enable those issue events on your Seerr webhook. Toggle the command with
+`SHOW_REPORT_COMMAND`.
+
+### 🛡️ Admin audit log
+The dashboard log viewer has an **Audit** tab recording security-relevant admin
+actions: request **approve/decline** (which Discord user), **config saves**
+(changed key names only — never secret values), **bot start/stop**, and
+**dashboard logins** (success + failure with IP). Stored in a bounded
+`config/admin-audit.json`.
+
+### 🚨 Proactive health alerts
+Optional watchdog (**Step 7 → Misc**, off by default). When enabled, Questorr
+periodically checks whether **Seerr** and **Jellyfin** are reachable and posts to
+an admin channel when a service **goes down** or **recovers** — so you notice an
+outage before users do. The **first** check after start only records a baseline
+(no alert), so a restart never spams. Settings:
+- `HEALTH_ALERTS_ENABLED` — master switch.
+- `HEALTH_ALERT_INTERVAL_SECONDS` — how often to check (default `120`, min 30).
+- `HEALTH_ALERT_CHANNEL_ID` — where to post; empty falls back to the admin
+  channel (`SEERR_ADMIN_CHANNEL_ID` → `SEERR_CHANNEL_ID` → `JELLYFIN_CHANNEL_ID`).
+
+> **Not to be confused with the container health check.** The Docker image also
+> ships a built-in **`HEALTHCHECK`** that hits the public `GET /api/health`
+> endpoint, so **Portainer / Docker / Uptime Kuma** show Questorr as *healthy*
+> when the web server is responding — no configuration needed.
+
+### 🎨 Dashboard themes (dark / light)
+The dashboard ships a **retro neon/pixel dark** theme (default) and a
+**Paper-Terminal light** theme. The navbar toggle is applied before paint (no
+flash) and remembered per browser. Motion (entrance, scroll reveals, the falling
+Tetris background) honors `prefers-reduced-motion`.
 
 ### 🌍 Multi-language
 The dashboard and bot speak **English** and **German**. UI language is remembered
@@ -330,13 +424,16 @@ important ones for you.
 |---|---|---|
 | `NOTIFY_ON_AVAILABLE` | `"true"` | Send a notification when media becomes available. |
 | `APPROVAL_DM_ONLY` | `"true"` | Send approval events only as a DM, not to a public channel. |
-| `PRIVATE_MESSAGE_MODE` | `"false"` | Route more events to DMs instead of channels. |
+| `PRIVATE_MESSAGE_MODE` | `"false"` | Deprecated / no-op — **all** command replies are now always private (ephemeral, only visible to the user who ran the command). |
 
 ### Seerr status poller
 | Setting | Default | Meaning |
 |---|---|---|
 | `SEERR_STATUS_POLLING_ENABLED` | `"false"` | Poll Seerr to catch missed approval/decline webhooks. |
 | `SEERR_STATUS_POLL_INTERVAL_SECONDS` | `"120"` | How often to poll. |
+| `HEALTH_ALERTS_ENABLED` | `"false"` | Post to an admin channel when Seerr/Jellyfin goes down or recovers. |
+| `HEALTH_ALERT_INTERVAL_SECONDS` | `"120"` | How often to check reachability (min 30, max 3600). |
+| `HEALTH_ALERT_CHANNEL_ID` | `""` | Health-alert channel; empty falls back to the admin channel. |
 
 ### Per-user quota
 | Setting | Default | Meaning |
@@ -397,6 +494,7 @@ important ones for you.
 | `SHOW_QUALITY_SELECTION` | `"true"` | Show the `quality` option on `/request`. |
 | `SHOW_STATUS_COMMAND` | `"true"` | Register the `/status` command. |
 | `SHOW_RANDOM_COMMAND` | `"true"` | Register the `/random` command. |
+| `SHOW_REPORT_COMMAND` | `"true"` | Register the `/report` command (issue reporting). |
 | `DEFAULT_QUALITY_PROFILE_MOVIE` | `""` | Default quality profile for movie requests. |
 | `DEFAULT_QUALITY_PROFILE_TV` | `""` | Default quality profile for TV requests. |
 | `DEFAULT_SERVER_MOVIE` | `""` | Default Radarr server for movies. |

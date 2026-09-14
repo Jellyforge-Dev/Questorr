@@ -456,14 +456,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           const avatar = u.avatarUrl
             ? `<img src="${u.avatarUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" />`
             : `<div style="width:24px;height:24px;border-radius:50%;background:var(--surface1);"></div>`;
-          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1]).slice(0, 3)
-            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);">/${c} ${n}</span>`).join(" ");
-          return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
-            <span style="min-width:24px;text-align:center;">${medal}</span>
-            ${avatar}
-            <span style="font-weight:600;color:var(--text);flex:1;">${u.username}</span>
-            <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">${cmdTags}</div>
+          const cmdTags = Object.entries(u.commands || {}).sort((a, b) => b[1] - a[1])
+            .map(([c, n]) => `<span style="font-size:0.7rem;padding:1px 6px;border-radius:4px;background:var(--surface1);color:var(--subtext0);white-space:nowrap;">/${c} ${n}</span>`).join(" ");
+          return `<div style="padding:0.4rem 0.5rem;background:var(--surface0);border-radius:6px;">
+            <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
+              <span style="min-width:24px;text-align:center;">${medal}</span>
+              ${avatar}
+              <span style="font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.username}</span>
+              <span style="font-size:0.85rem;color:var(--teal);font-weight:600;min-width:30px;text-align:right;">${u.total}</span>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:0.35rem;">${cmdTags}</div>
           </div>`;
         }).join("");
       }
@@ -5007,6 +5009,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     logsContainer.innerHTML = `<div class="logs-empty">${t("logs.no_webhook") || "No webhook events in log yet."}</div>`;
   }
 
+  async function loadAuditLog() {
+    try {
+      const res = await fetch("/api/audit", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.entries || [];
+        if (list.length) {
+          logsContainer.innerHTML = list.map((e) => {
+            const lvl = e.action === "login_fail" ? "error"
+              : e.action === "decline" ? "warn"
+              : (e.action === "approve" || e.action === "login_ok") ? "info" : "debug";
+            const at = (e.at || "").replace("T", " ").slice(0, 19);
+            const extra = [e.target, e.detail].filter(Boolean).map(escapeHtml).join(" · ");
+            return `<div class="log-entry">
+              <span class="log-timestamp">${at}</span>
+              <span class="log-level ${lvl}">${escapeHtml((e.action || "?").toUpperCase())}</span>
+              <span class="log-message"><strong>${escapeHtml(e.actor || "—")}</strong>${extra ? " · " + extra : ""}</span>
+            </div>`;
+          }).join("");
+          return;
+        }
+      }
+    } catch (_) {}
+    logsContainer.innerHTML = `<div class="logs-empty">${t("logs.no_audit") || "No audit entries yet."}</div>`;
+  }
+
   // Load and display logs with server-side level/source/text filtering + paging.
   async function loadLogs(type, append = false) {
     const loadMoreRow = document.getElementById("logs-loadmore-row");
@@ -5017,6 +5045,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (loadMoreRow) loadMoreRow.style.display = "none";
         updateLogsCount(0, 0);
         await loadWebhookLog();
+        return;
+      }
+      // Audit tab: dedicated structured view (no filters/paging).
+      if (type === "audit") {
+        setLogsControlsVisible(false);
+        if (loadMoreRow) loadMoreRow.style.display = "none";
+        updateLogsCount(0, 0);
+        await loadAuditLog();
         return;
       }
       setLogsControlsVisible(true);
@@ -5369,21 +5405,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!bg) return;
     if (bg.children.length > 0) return; // already spawned
     const pieces = [
-      { cls: "tp-i",   count: 4, minDur: 7,  maxDur: 14 },
-      { cls: "tp-o",   count: 3, minDur: 8,  maxDur: 16 },
-      { cls: "tp-t",   count: 4, minDur: 9,  maxDur: 18 },
-      { cls: "tp-l",   count: 4, minDur: 6,  maxDur: 13 },
-      { cls: "tp-s",   count: 3, minDur: 10, maxDur: 20 },
-      { cls: "tp-z",   count: 3, minDur: 11, maxDur: 17 },
-      { cls: "tp-dot", count: 8, minDur: 5,  maxDur: 12 },
+      { cls: "tp-i",   count: 4, minDur: 13, maxDur: 24 },
+      { cls: "tp-o",   count: 3, minDur: 14, maxDur: 26 },
+      { cls: "tp-t",   count: 4, minDur: 15, maxDur: 28 },
+      { cls: "tp-l",   count: 4, minDur: 13, maxDur: 24 },
+      { cls: "tp-s",   count: 3, minDur: 16, maxDur: 30 },
+      { cls: "tp-z",   count: 3, minDur: 15, maxDur: 27 },
+      { cls: "tp-dot", count: 8, minDur: 11, maxDur: 22 },
     ];
     pieces.forEach(({ cls, count, minDur, maxDur }) => {
       for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "tetris-piece " + cls;
+        // Duration is fixed per piece. Changing it on iteration cascades into
+        // a storm of instant re-fires, so only the horizontal position is
+        // re-rolled each fall — the field still never repeats the same order.
         const dur = minDur + Math.random() * (maxDur - minDur);
-        const delay = -(Math.random() * maxDur);
-        el.style.cssText = "left:" + (Math.random()*97) + "%;animation-duration:" + dur + "s;animation-delay:" + delay + "s;";
+        el.style.animationDuration = dur + "s";
+        el.style.animationDelay = -(Math.random() * dur) + "s";
+        el.style.left = Math.random() * 97 + "%";
+        el.addEventListener("animationiteration", () => {
+          el.style.left = Math.random() * 97 + "%";
+        });
         bg.appendChild(el);
       }
     });

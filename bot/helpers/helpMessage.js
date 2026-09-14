@@ -24,6 +24,7 @@ export function buildHelpDescription() {
     `🔍 \`/search <title>\` — ${t("wizard_desc_search")}`,
     `📥 \`/request <title>\` — ${t("wizard_desc_request")}`,
     `❓ \`/status <title>\` — ${t("wizard_desc_status")}`,
+    `🐛 \`/report movie\` · \`/report series\` — ${t("wizard_desc_report")}`,
     "",
     `**${t("wizard_section_discover")}**`,
     `⭐ \`/recommend <title>\` — ${t("wizard_desc_recommend")}`,

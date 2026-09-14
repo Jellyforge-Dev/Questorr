@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.1-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.2-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -29,6 +29,7 @@
 | 🔥 `/trending` | Browse weekly trending movies and TV shows |
 | 🔎 `/status` | Check the Seerr request status of any title — with poster, summary, genre, runtime, rating and age rating. Shows a Request button if not yet requested |
 | 🎲 `/random` | Get a random movie or series from your Jellyfin library — with poster, summary, genre, runtime and rating. Only visible to the user who ran the command |
+| 🐛 `/report` | Report a problem (video / audio / subtitle) with a Jellyfin title (`/report movie` · `/report series`). Opens a Seerr issue; admins comment & resolve straight from Discord, and the reporter gets DMs |
 | 💡 `/recommend` | Get recommendations based on a movie or TV show via TMDB |
 | 🧭 `/discover` | Discover media by genre, year and minimum rating |
 | 📦 `/collection` | View all movies in a franchise/collection with availability |
@@ -54,6 +55,10 @@
 | 🎲 Daily random pick | Post a daily random suggestion from TMDB |
 | 🎨 Custom embed colors | Customize notification embed colors per event type |
 | ⚙️ Web dashboard | Full configuration at `http://your-server:8282` — Tetris-style UI |
+| 🎨 Dark / light theme | Retro-dark default plus a Paper-Terminal light theme; the toggle is persisted per browser |
+| 🛡️ Audit log | Dashboard **Audit** tab: who approved/declined a request, changed config, started/stopped the bot, or logged in |
+| 🚨 Health alerts | Optional: posts to an admin channel when Seerr or Jellyfin goes **down** or **recovers** |
+| ❤️ Container health check | Built-in Docker `HEALTHCHECK` on `/api/health` — Portainer / Docker / Uptime Kuma see the container as healthy |
 | 📱 Mobile-friendly | Responsive dashboard, works on smartphones and tablets |
 | ✅ Availability status | All embed lists show Seerr status: ✅ available, ⏳ requested, 📥 partial |
 | 🎬 Content ratings | FSK/MPAA age ratings in search embeds, configurable by country |
@@ -189,7 +194,14 @@ In **Seerr → Settings → Notifications → Webhook**, configure the following
 | Media available | Posts to the matching root folder channel · sends DM to requester |
 | Request declined | Sends DM to the requester only |
 | Download failed | Posts to admin channel |
-| Issue created / commented | Posts to default channel |
+| Issue created | Posts to the **admin channel** (with Comment / Resolve buttons) |
+| Issue comment / resolved / reopened | Sends a **DM to the reporter** (for `/report` follow-ups) |
+
+> **For `/report` to work**, enable issues in **Seerr → Settings → General**
+> (*Enable Issue Reporting*) and tick the **Issue** webhook events above.
+> Because Questorr acts as the **mapped Seerr user** (Step 5), that user needs
+> the matching Seerr permission for each action — **Request** to request,
+> **Auto-Approve** for instant approval, **Report Issues** for `/report`.
 
 ### 4. Channel Routing
 
