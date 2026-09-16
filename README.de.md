@@ -66,7 +66,7 @@
 | 🔐 Rollenberechtigungen | Steuern wer Bot-Befehle nutzen darf über Discord Rollen Allowlist / Blocklist |
 | 🌟 Tagesempfehlung | Täglich einen Vorschlag aus der bestehenden Jellyfin-Bibliothek posten |
 | 🎲 Tägliche Zufallsauswahl | Täglich einen zufälligen Vorschlag von TMDB posten |
-| 🎨 Benutzerdefinierte Embed-Farben | Embed-Farben für jeden Event-Typ individuell anpassen |
+| 🎨 Benutzerdefinierte Embed-Farben | Farben für Suchergebnis- und Erfolgs-Embeds individuell anpassen |
 | ⚙️ Web-Dashboard | Vollständige Konfiguration unter `http://dein-server:8282` — Tetris-Style-Oberfläche |
 | 🎨 Dark- / Light-Theme | Retro-dunkel als Standard plus ein Paper-Terminal-Light-Theme; der Umschalter wird pro Browser gemerkt |
 | 🛡️ Audit-Log | Dashboard-**Audit**-Tab: wer hat genehmigt/abgelehnt, Config geändert, Bot gestartet/gestoppt oder sich eingeloggt |

@@ -66,7 +66,7 @@
 | 🔐 Role permissions | Control who can use bot commands via Discord role allowlist / blocklist |
 | 🌟 Daily recommendation | Post a daily pick from your existing Jellyfin library |
 | 🎲 Daily random pick | Post a daily random suggestion from TMDB |
-| 🎨 Custom embed colors | Customize notification embed colors per event type |
+| 🎨 Custom embed colors | Customize the search-results and success-confirmation embed colors |
 | ⚙️ Web dashboard | Full configuration at `http://your-server:8282` — Tetris-style UI |
 | 🎨 Dark / light theme | Retro-dark default plus a Paper-Terminal light theme; the toggle is persisted per browser |
 | 🛡️ Audit log | Dashboard **Audit** tab: who approved/declined a request, changed config, started/stopped the bot, or logged in |

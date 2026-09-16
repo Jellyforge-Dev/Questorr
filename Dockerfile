@@ -1,4 +1,4 @@
-# Use Node 20 LTS (required for joi@18+)
+# Use Node 20 LTS (discord.js requires Node >=18; 20 is the current LTS)
 FROM node:20-alpine
 
 # Install su-exec for privilege dropping in entrypoint
