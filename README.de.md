@@ -137,7 +137,7 @@ Reverse-Proxy-Weiterleitungseinstellungen: Schema: `http` · Host / Forward-Host
 |---|---|
 | `latest` | Neueste stabile Version |
 | `dev` | Entwicklungs-Build (kann instabil sein) |
-| `2.3.0` | Bestimmte Version |
+| z.B. `2.4.2` | Bestimmte fixierte Version — alle Tags siehe [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) |
 
 ### Manuell (Entwicklung)
 
@@ -237,7 +237,7 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 ## 🔒 Sicherheit
 
-Questorr v2.3.0 enthält folgende Sicherheitshärtung:
+Questorr enthält folgende Sicherheitshärtung:
 
 | Funktion | Details |
 |---|---|

@@ -137,7 +137,7 @@ Reverse proxy forward settings: Scheme: `http` · Host / Forward hostname: `ques
 |---|---|
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
-| `2.3.0` | Specific version |
+| e.g. `2.4.2` | Specific pinned version — see [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) for all tags |
 
 ### Manual (Development)
 
@@ -236,7 +236,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 ## 🔒 Security
 
-Questorr v2.3.0 includes the following security hardening:
+Questorr includes the following security hardening:
 
 | Feature | Details |
 |---|---|
