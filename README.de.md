@@ -16,16 +16,26 @@
 
 ---
 
-> **📸 Screenshot-Hinweis:** Alle Screenshots in dieser README wurden in einer Demo-Umgebung aufgenommen und enthalten keine echten Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
+> **📸 Screenshot-Hinweis:** Alle Screenshots und GIFs in dieser README wurden in einer Demo-Umgebung aufgenommen und enthalten keine echten Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
+
+<div align="center">
+  <img src="assets/discord/search-request-flow.gif" alt="Einen Titel in Discord suchen und anfragen" width="620"/>
+  <br/>
+  <sub><code>/search</code> → Ergebnis auswählen → anfragen — alles direkt in Discord</sub>
+</div>
+
+<br/>
 
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="50%"><code>/search</code> — einen Titel finden und anfragen</td>
-      <td align="center" width="50%">Eine "jetzt verfügbar"-Benachrichtigung, automatisch in den richtigen Kanal geroutet</td>
+      <td align="center" width="33%"><code>/help</code> — Schnellaktions-Wizard</td>
+      <td align="center" width="33%"><code>/queue</code> — eigene Anfragen verfolgen</td>
+      <td align="center" width="34%">Automatisch geroutete "jetzt verfügbar"-Benachrichtigung</td>
     </tr>
     <tr>
-      <td><img src="assets/discord/search-example.png" alt="/search Befehl Beispiel" width="100%"/></td>
+      <td><img src="assets/discord/help-wizard.gif" alt="/help Wizard Schnellaktionen" width="100%"/></td>
+      <td><img src="assets/discord/queue-status.gif" alt="/queue Anfragestatus" width="100%"/></td>
       <td><img src="assets/discord/notification-example.png" alt="Beispiel einer Bibliotheks-Benachrichtigung" width="100%"/></td>
     </tr>
   </table>
@@ -164,6 +174,14 @@ node app.js
 ---
 
 ## ⚙️ Einrichtung
+
+<div align="center">
+  <img src="assets/dashboard/setup-wizard.gif" alt="Durchklicken des Questorr Setup-Wizards" width="720"/>
+  <br/>
+  <sub>Der 8-Schritte-Setup-Wizard — URLs/Keys unkenntlich gemacht, das ist eine echte Instanz</sub>
+</div>
+
+<br/>
 
 ### 1. Discord-Bot erstellen
 

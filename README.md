@@ -16,16 +16,26 @@
 
 ---
 
-> **📸 Screenshot notice:** All screenshots in this README were taken from a demo environment and show no real user data. The live version may look slightly different and shows more content depending on your configuration.
+> **📸 Screenshot notice:** All screenshots and GIFs in this README were taken from a demo environment and show no real user data. The live version may look slightly different and shows more content depending on your configuration.
+
+<div align="center">
+  <img src="assets/discord/search-request-flow.gif" alt="Searching for and requesting a title in Discord" width="620"/>
+  <br/>
+  <sub><code>/search</code> → pick a result → request it — all inside Discord</sub>
+</div>
+
+<br/>
 
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="50%"><code>/search</code> — find and request a title</td>
-      <td align="center" width="50%">A "now available" notification, auto-routed to the right channel</td>
+      <td align="center" width="33%"><code>/help</code> — quick-action wizard</td>
+      <td align="center" width="33%"><code>/queue</code> — track your requests</td>
+      <td align="center" width="34%">Auto-routed "now available" notification</td>
     </tr>
     <tr>
-      <td><img src="assets/discord/search-example.png" alt="/search command example" width="100%"/></td>
+      <td><img src="assets/discord/help-wizard.gif" alt="/help wizard quick actions" width="100%"/></td>
+      <td><img src="assets/discord/queue-status.gif" alt="/queue request status" width="100%"/></td>
       <td><img src="assets/discord/notification-example.png" alt="Library notification example" width="100%"/></td>
     </tr>
   </table>
@@ -164,6 +174,14 @@ node app.js
 ---
 
 ## ⚙️ Setup
+
+<div align="center">
+  <img src="assets/dashboard/setup-wizard.gif" alt="Walking through the Questorr setup wizard" width="720"/>
+  <br/>
+  <sub>The 8-step setup wizard — URLs/keys blurred, this is a real instance</sub>
+</div>
+
+<br/>
 
 ### 1. Create a Discord Bot
 
