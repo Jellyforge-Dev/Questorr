@@ -18,6 +18,19 @@
 
 > **📸 Screenshot notice:** All screenshots in this README were taken from a demo environment and show no real user data. The live version may look slightly different and shows more content depending on your configuration.
 
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%"><code>/search</code> — find and request a title</td>
+      <td align="center" width="50%">A "now available" notification, auto-routed to the right channel</td>
+    </tr>
+    <tr>
+      <td><img src="assets/discord/search-example.png" alt="/search command example" width="100%"/></td>
+      <td><img src="assets/discord/notification-example.png" alt="Library notification example" width="100%"/></td>
+    </tr>
+  </table>
+</div>
+
 ---
 
 ## ✨ Features

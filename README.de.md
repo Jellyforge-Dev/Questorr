@@ -18,6 +18,19 @@
 
 > **📸 Screenshot-Hinweis:** Alle Screenshots in dieser README wurden in einer Demo-Umgebung aufgenommen und enthalten keine echten Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
 
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%"><code>/search</code> — einen Titel finden und anfragen</td>
+      <td align="center" width="50%">Eine "jetzt verfügbar"-Benachrichtigung, automatisch in den richtigen Kanal geroutet</td>
+    </tr>
+    <tr>
+      <td><img src="assets/discord/search-example.png" alt="/search Befehl Beispiel" width="100%"/></td>
+      <td><img src="assets/discord/notification-example.png" alt="Beispiel einer Bibliotheks-Benachrichtigung" width="100%"/></td>
+    </tr>
+  </table>
+</div>
+
 ---
 
 ## ✨ Funktionen
