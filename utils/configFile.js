@@ -353,8 +353,9 @@ export function migrateNotifyOnAvailable(config) {
  * Removes config keys left behind by features that have since been removed.
  * updateConfig() merges rather than replaces, so a key written while a
  * feature existed (Streamystats integration, the old private-message-mode
- * toggle, webhook debounce) never gets cleaned up on its own once the
- * feature — and its configTemplate entry — is deleted.
+ * toggle, webhook debounce, the never-wired per-field embed show/colour
+ * toggles) never gets cleaned up on its own once the feature — and its
+ * configTemplate entry — is deleted.
  *
  * Mutates `config` in place. @returns {boolean} true if the caller should persist.
  */
@@ -365,6 +366,17 @@ export function stripOrphanedConfigKeys(config) {
     "STREAMYSTATS_PASS",
     "PRIVATE_MESSAGE_MODE",
     "WEBHOOK_DEBOUNCE_MS",
+    "EMBED_SHOW_BACKDROP",
+    "EMBED_SHOW_OVERVIEW",
+    "EMBED_SHOW_GENRE",
+    "EMBED_SHOW_RUNTIME",
+    "EMBED_SHOW_RATING",
+    "EMBED_COLOR_MOVIE",
+    "EMBED_COLOR_SERIES",
+    "EMBED_COLOR_SEASON",
+    "EMBED_COLOR_EPISODE_SINGLE",
+    "EMBED_COLOR_EPISODE_FEW",
+    "EMBED_COLOR_EPISODE_MANY",
   ];
   let removed = false;
   for (const key of orphanedKeys) {
