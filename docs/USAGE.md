@@ -340,7 +340,10 @@ Tetris background) honors `prefers-reduced-motion`.
 
 ### 🌍 Multi-language
 The dashboard and bot speak **English** and **German**. UI language is remembered
-per browser; bot language is set separately (`BOT_LANGUAGE`).
+per browser. The bot's reply language (`BOT_LANGUAGE`) is seeded once from
+whatever language the login/register screen was showing when the first admin
+account was created — change it independently any time in **Step 7 → Bot
+Language**.
 
 ---
 

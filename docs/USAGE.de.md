@@ -351,7 +351,10 @@ Scroll-Reveals, fallende Tetris-Blöcke) respektieren `prefers-reduced-motion`.
 
 ### 🌍 Mehrsprachigkeit
 Dashboard und Bot sprechen **Englisch** und **Deutsch**. Die UI-Sprache wird pro
-Browser gemerkt; die Bot-Sprache wird separat gesetzt (`BOT_LANGUAGE`).
+Browser gemerkt. Die Bot-Antwortsprache (`BOT_LANGUAGE`) wird einmalig aus der
+Sprache übernommen, die beim Anlegen des ersten Admin-Kontos auf dem
+Login/Registrierungs-Bildschirm eingestellt war — danach jederzeit unabhängig
+unter **Schritt 7 → Bot-Sprache** änderbar.
 
 ---
 

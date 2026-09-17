@@ -1231,12 +1231,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       e.preventDefault();
       const username = document.getElementById("register-username").value;
       const password = document.getElementById("register-password").value;
+      // Whatever language the login/register screen is showing right now —
+      // send it along so the server can seed LANGUAGE + BOT_LANGUAGE from it
+      // on first run instead of silently defaulting the bot to English.
+      const language = document.getElementById("auth-language")?.value || currentLanguage;
 
       try {
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username, password, language }),
         });
         const data = await response.json();
 
