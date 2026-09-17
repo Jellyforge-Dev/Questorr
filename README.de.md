@@ -5,7 +5,7 @@
 
   **Ein selbst gehosteter Discord-Bot, der Jellyfin und Seerr verbindet — mit smarten Benachrichtigungen, automatischem Channel-Routing und einem vollständigen Web-Dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.2-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.3-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -17,6 +17,19 @@
 ---
 
 > **📸 Screenshot-Hinweis:** Alle Screenshots in dieser README wurden in einer Demo-Umgebung aufgenommen und enthalten keine echten Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%"><code>/search</code> — einen Titel finden und anfragen</td>
+      <td align="center" width="50%">Eine "jetzt verfügbar"-Benachrichtigung, automatisch in den richtigen Kanal geroutet</td>
+    </tr>
+    <tr>
+      <td><img src="assets/discord/search-example.png" alt="/search Befehl Beispiel" width="100%"/></td>
+      <td><img src="assets/discord/notification-example.png" alt="Beispiel einer Bibliotheks-Benachrichtigung" width="100%"/></td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -53,7 +66,7 @@
 | 🔐 Rollenberechtigungen | Steuern wer Bot-Befehle nutzen darf über Discord Rollen Allowlist / Blocklist |
 | 🌟 Tagesempfehlung | Täglich einen Vorschlag aus der bestehenden Jellyfin-Bibliothek posten |
 | 🎲 Tägliche Zufallsauswahl | Täglich einen zufälligen Vorschlag von TMDB posten |
-| 🎨 Benutzerdefinierte Embed-Farben | Embed-Farben für jeden Event-Typ individuell anpassen |
+| 🎨 Benutzerdefinierte Embed-Farben | Farben für Suchergebnis- und Erfolgs-Embeds individuell anpassen |
 | ⚙️ Web-Dashboard | Vollständige Konfiguration unter `http://dein-server:8282` — Tetris-Style-Oberfläche |
 | 🎨 Dark- / Light-Theme | Retro-dunkel als Standard plus ein Paper-Terminal-Light-Theme; der Umschalter wird pro Browser gemerkt |
 | 🛡️ Audit-Log | Dashboard-**Audit**-Tab: wer hat genehmigt/abgelehnt, Config geändert, Bot gestartet/gestoppt oder sich eingeloggt |
@@ -137,7 +150,7 @@ Reverse-Proxy-Weiterleitungseinstellungen: Schema: `http` · Host / Forward-Host
 |---|---|
 | `latest` | Neueste stabile Version |
 | `dev` | Entwicklungs-Build (kann instabil sein) |
-| `2.3.0` | Bestimmte Version |
+| z.B. `2.4.3` | Bestimmte fixierte Version — alle Tags siehe [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) |
 
 ### Manuell (Entwicklung)
 
@@ -155,10 +168,9 @@ node app.js
 ### 1. Discord-Bot erstellen
 
 1. Zum [Discord Developer Portal](https://discord.com/developers/applications) → Neue Anwendung
-2. **Bot** → `Server Members Intent` aktivieren (erforderlich für Nutzerzuordnung)
-3. **OAuth2 → URL Generator** → Scopes: `bot` + `applications.commands`
-4. Berechtigungen: `Nachrichten senden`, `Eingebettete Links`, `Nachrichtenverlauf lesen`
-5. Die generierte URL kopieren, im Browser öffnen und den Bot zum Server hinzufügen
+2. **Bot** → Reset Token für einen Token, dann `Server Members Intent` aktivieren (erforderlich für Nutzerzuordnung)
+3. **OAuth2** → **Client ID** kopieren
+4. Beides ins Questorr-Dashboard (Schritt 1) eintragen und auf **"Bot zum Server einladen"** klicken — das Dashboard baut den Einladungslink automatisch mit genau den nötigen Berechtigungen (`Nachrichten senden`, `Links einbetten`, `Nachrichten anpinnen`), kein manueller OAuth2-URL-Generator-Schritt mehr nötig
 
 ### 2. Über das Web-Dashboard konfigurieren
 
@@ -237,7 +249,7 @@ Alle anderen Einstellungen werden über das Web-Dashboard verwaltet und in `conf
 
 ## 🔒 Sicherheit
 
-Questorr v2.3.0 enthält folgende Sicherheitshärtung:
+Questorr enthält folgende Sicherheitshärtung:
 
 | Funktion | Details |
 |---|---|

@@ -869,6 +869,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Grey out notification types not enabled in Seerr
       await applySeerrNotifTypes();
+
+      // BOT_ID was just set programmatically above (no "input" event fires for
+      // that), so the invite/settings deep-links need an explicit refresh here.
+      updateDiscordInviteLinks();
     } catch (error) {
       console.error("[fetchConfig] Error:", error);
       showToast("Config error: " + (error.message || "Unknown error"));
@@ -1227,12 +1231,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       e.preventDefault();
       const username = document.getElementById("register-username").value;
       const password = document.getElementById("register-password").value;
+      // Whatever language the login/register screen is showing right now —
+      // send it along so the server can seed LANGUAGE + BOT_LANGUAGE from it
+      // on first run instead of silently defaulting the bot to English.
+      const language = document.getElementById("auth-language")?.value || currentLanguage;
 
       try {
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username, password, language }),
         });
         const data = await response.json();
 
@@ -1518,11 +1526,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
+        if (result.code === "DISALLOWED_INTENTS") {
+          showDiscordIntentError();
+        }
         showToast(`${t("common.error") || "Fehler"}: ${result.message || result.error || response.status}`);
         botControlText.textContent = originalText; // Restore text on failure
         botControlBtn.disabled = false;
       } else {
         const result = await response.json();
+        hideDiscordIntentError();
         showToast(result.message);
         setTimeout(() => {
           fetchStatus();
@@ -3661,6 +3673,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // ─── Discord invite link + bot-settings deep link (auto-built from Client ID) ─
+  // Permissions bitfield = SEND_MESSAGES (2048) | EMBED_LINKS (16384) | PIN_MESSAGES
+  // (2251799813685248, split into its own permission bit by Discord on 2026-02-23) —
+  // matches exactly the permissions listed in the setup instructions above, so the
+  // generated invite never asks for more than the bot actually needs.
+  const DISCORD_BOT_INVITE_PERMISSIONS = "2251799813703680";
+
+  function getDiscordBotSettingsUrl(botId) {
+    return `https://discord.com/developers/applications/${encodeURIComponent(botId)}/bot`;
+  }
+
+  function updateDiscordInviteLinks() {
+    const botId = document.getElementById("BOT_ID")?.value?.trim();
+    const block = document.getElementById("discord-invite-block");
+    if (!block) return;
+    if (!botId) {
+      block.style.display = "none";
+      return;
+    }
+    block.style.display = "block";
+    const inviteLink = document.getElementById("discord-invite-link");
+    const settingsLink = document.getElementById("discord-bot-settings-link");
+    const errorLink = document.getElementById("discord-intent-error-link");
+    if (inviteLink) {
+      inviteLink.href = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botId)}&permissions=${DISCORD_BOT_INVITE_PERMISSIONS}&scope=bot%20applications.commands`;
+    }
+    const settingsUrl = getDiscordBotSettingsUrl(botId);
+    if (settingsLink) settingsLink.href = settingsUrl;
+    if (errorLink) errorLink.href = settingsUrl;
+  }
+
+  function showDiscordIntentError() {
+    updateDiscordInviteLinks(); // make sure the deep-link href reflects the current Client ID
+    const box = document.getElementById("discord-intent-error-box");
+    if (box) box.style.display = "block";
+    document.querySelector('.nav-item[data-target="discord"]')?.click();
+  }
+
+  function hideDiscordIntentError() {
+    const box = document.getElementById("discord-intent-error-box");
+    if (box) box.style.display = "none";
+  }
+
   // Listen for token/bot ID changes to reload guilds
   const tokenInput = document.getElementById("DISCORD_TOKEN");
   const botIdInput = document.getElementById("BOT_ID");
@@ -3679,7 +3734,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadDiscordGuilds();
       }
     });
+    botIdInput?.addEventListener("input", updateDiscordInviteLinks);
   }
+  updateDiscordInviteLinks();
 
   // --- Episodes and Seasons Notification Controls ---
   const episodesCheckbox = document.getElementById("JELLYFIN_NOTIFY_EPISODES_CHECKBOX");
@@ -5231,11 +5288,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!response.ok) {
         const data = await response.json();
+        if (data.code === "DISALLOWED_INTENTS") {
+          showDiscordIntentError();
+        }
         showToast(`${t("common.error") || "Fehler"}: ${data.message}`);
         botControlTextLogs.textContent = originalText;
         botControlBtnLogs.disabled = false;
       } else {
         const data = await response.json();
+        hideDiscordIntentError();
         showToast(data.message);
         setTimeout(async () => {
           await updateBotControlButtonLogs();
@@ -5454,100 +5515,6 @@ document.addEventListener("DOMContentLoaded", () => {
       "#f9e2af", // Yellow
     ],
   });
-
-  // Sync debounce seconds input with milliseconds hidden field
-  const secondsInput = document.getElementById('WEBHOOK_DEBOUNCE_SECONDS');
-  const msInput = document.getElementById('WEBHOOK_DEBOUNCE_MS');
-  const upArrow = document.getElementById('debounce-up');
-  const downArrow = document.getElementById('debounce-down');
-
-  if (secondsInput && msInput) {
-    // Convert seconds to milliseconds on input
-    secondsInput.addEventListener('input', function() {
-      let seconds = parseInt(this.value) || 60;
-      // Clamp to valid range
-      if (seconds < 1) seconds = 1;
-      if (seconds > 600) seconds = 600;
-      this.value = seconds;
-      msInput.value = seconds * 1000;
-    });
-
-    // Hold-to-repeat functionality
-    let repeatInterval = null;
-    let repeatTimeout = null;
-
-    const startRepeat = function(direction) {
-      const increment = function() {
-        let current = parseInt(secondsInput.value) || 60;
-        if (direction === 'up' && current < 600) {
-          secondsInput.value = current + 1;
-          msInput.value = (current + 1) * 1000;
-        } else if (direction === 'down' && current > 1) {
-          secondsInput.value = current - 1;
-          msInput.value = (current - 1) * 1000;
-        }
-      };
-
-      // Immediate increment on first click
-      increment();
-
-      // Start repeating after 300ms delay at max speed (50ms interval)
-      repeatTimeout = setTimeout(function() {
-        repeatInterval = setInterval(increment, 50);
-      }, 300);
-    };
-
-    const stopRepeat = function() {
-      if (repeatTimeout) {
-        clearTimeout(repeatTimeout);
-        repeatTimeout = null;
-      }
-      if (repeatInterval) {
-        clearInterval(repeatInterval);
-        repeatInterval = null;
-      }
-    };
-
-    // Up arrow events
-    if (upArrow) {
-      upArrow.addEventListener('mousedown', () => startRepeat('up'));
-      upArrow.addEventListener('mouseup', stopRepeat);
-      upArrow.addEventListener('mouseleave', stopRepeat);
-      upArrow.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startRepeat('up');
-      });
-      upArrow.addEventListener('touchend', stopRepeat);
-    }
-
-    // Down arrow events
-    if (downArrow) {
-      downArrow.addEventListener('mousedown', () => startRepeat('down'));
-      downArrow.addEventListener('mouseup', stopRepeat);
-      downArrow.addEventListener('mouseleave', stopRepeat);
-      downArrow.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startRepeat('down');
-      });
-      downArrow.addEventListener('touchend', stopRepeat);
-    }
-
-    // Convert milliseconds to seconds when loading config
-    const updateSecondsFromMs = function() {
-      const ms = parseInt(msInput.value);
-      if (!isNaN(ms) && ms > 0) {
-        const seconds = Math.round(ms / 1000);
-        secondsInput.value = seconds;
-      }
-    };
-
-    // Watch for changes to the hidden field (when config loads)
-    const observer = new MutationObserver(updateSecondsFromMs);
-    observer.observe(msInput, { attributes: true, attributeFilter: ['value'] });
-
-    // Also update immediately if there's already a value
-    updateSecondsFromMs();
-  }
 
   // ─── Config Import Handler ──────────────────────────────────────────────────
   const importInput = document.getElementById("import-config-input");

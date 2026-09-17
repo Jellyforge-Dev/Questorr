@@ -1,4 +1,4 @@
-# Use Node 20 LTS (required for joi@18+)
+# Use Node 20 LTS (discord.js requires Node >=18; 20 is the current LTS)
 FROM node:20-alpine
 
 # Install su-exec for privilege dropping in entrypoint
@@ -27,7 +27,7 @@ LABEL org.opencontainers.image.title="Questorr" \
       org.opencontainers.image.url="https://github.com/Jellyforge-Dev/Questorr" \
       org.opencontainers.image.documentation="https://github.com/Jellyforge-Dev/Questorr/blob/main/README.md" \
       org.opencontainers.image.source="https://github.com/Jellyforge-Dev/Questorr" \
-      org.opencontainers.image.version="2.4.2" \
+      org.opencontainers.image.version="2.4.3" \
       org.opencontainers.image.icon="https://raw.githubusercontent.com/Jellyforge-Dev/Questorr/main/assets/logo.png" \
       org.unraid.icon="https://raw.githubusercontent.com/Jellyforge-Dev/Questorr/main/assets/logo.png" \
       org.unraid.category="MediaServer:Other" \

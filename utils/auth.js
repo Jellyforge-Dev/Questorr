@@ -347,8 +347,12 @@ export const login = async (req, res) => {
   });
 };
 
+// Locales Questorr actually ships (locales/*.json) — keep in sync with the
+// <select id="bot-language"> options in web/index.html.
+const SUPPORTED_LANGUAGES = ["en", "de"];
+
 export const register = async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, language } = req.body;
 
   if (!username || !password) {
     return res
@@ -371,6 +375,17 @@ export const register = async (req, res) => {
 
   try {
     const newUser = saveUserToConfig(username, hashedPassword);
+
+    // First-run setup: the language picked on the login/register screen only
+    // ever controlled how that screen itself was rendered (a client-side/
+    // localStorage preference) — it never reached the server, so the bot's
+    // own reply language (BOT_LANGUAGE) silently stayed on the "en" default
+    // even for an admin who registered in German. Seed both the dashboard
+    // default and the bot's reply language from that same choice now, once,
+    // at account creation. A later change in Step 7 still overrides this.
+    if (SUPPORTED_LANGUAGES.includes(language)) {
+      updateConfig({ LANGUAGE: language, BOT_LANGUAGE: language });
+    }
 
     // Auto-login after register
     const token = jwt.sign(

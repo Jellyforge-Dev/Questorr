@@ -4,6 +4,34 @@
 
 ## English
 
+### 🛠️ v2.4.3
+
+#### 🔌 Automated Discord bot invite
+- Dashboard Step 1 now builds the OAuth2 invite URL itself from the entered Client ID (`Send Messages | Embed Links | Pin Messages`) — no more manual OAuth2 URL Generator step.
+- A second button deep-links straight to the app's Bot tab for the still-manual "enable Server Members Intent" step (Discord's API has no way to automate this).
+- Missing-intent startup failures now surface a dedicated, translated error with a working deep-link to the exact settings page, instead of a generic failure or silent hang.
+- Setup instructions trimmed from 7 steps to 5 to match.
+
+#### 🐛 Fixes
+- `BOT_LANGUAGE` is now seeded from the language chosen on the register screen on first run, instead of always defaulting regardless of the selected UI language.
+
+#### 🧹 Cleanup
+- Removed dead config and code accumulated across past releases: `PRIVATE_MESSAGE_MODE`, `WEBHOOK_DEBOUNCE_MS`, the unused `EMBED_SHOW_*`/`EMBED_COLOR_*` schema entries (including a 93-line dead UI block wired to non-existent DOM elements), the unused `lodash.debounce` dependency, and 161 unreferenced locale keys.
+- A one-time startup migration now strips these orphaned keys from existing `config/config.json` files, extended to also cover the embed show/colour keys.
+- Removed the broken `npm run create-translation` script reference (the script never existed in the repo).
+
+#### 🔒 Security
+- Resolved 10 dependency vulnerabilities (axios, body-parser, follow-redirects, form-data, joi, discord.js/undici, ws) via `npm audit fix` plus an `overrides` pin for `qs`. 0 known vulnerabilities.
+- Corrected `package.json`'s `license` field from `ISC` to the actual `AGPL-3.0-only`.
+
+#### 📚 Docs
+- README hero row now shows the bot in action (`/search` result + a "now available" notification) instead of only dashboard screenshots.
+- Docker Tags table and Security section no longer reference a stale version number.
+
+All 360 tests green.
+
+---
+
 ### 🎨 v2.4.2
 
 #### 🆕 Dashboard redesign + dark/light theme
@@ -179,6 +207,34 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🛠️ v2.4.3
+
+#### 🔌 Automatisierte Discord-Bot-Einladung
+- Dashboard Schritt 1 baut die OAuth2-Einladungs-URL jetzt selbst aus der eingegebenen Client-ID (`Nachrichten senden | Links einbetten | Nachrichten anheften`) — kein manueller Schritt über den OAuth2 URL Generator mehr nötig.
+- Ein zweiter Button verlinkt direkt zum Bot-Tab der App für den weiterhin manuellen Schritt "Server Members Intent aktivieren" (Discords API bietet dafür keine Automatisierung).
+- Fehlende Intents beim Start zeigen jetzt einen eigenen, übersetzten Fehler mit funktionierendem Deep-Link zur passenden Einstellungsseite, statt eines generischen Fehlers oder eines stillen Hängers.
+- Setup-Anleitung von 7 auf 5 Schritte gekürzt.
+
+#### 🐛 Fehlerbehebungen
+- `BOT_LANGUAGE` wird beim ersten Start jetzt aus der auf dem Registrierungsbildschirm gewählten Sprache übernommen, statt immer unabhängig von der gewählten UI-Sprache auf den Standard zurückzufallen.
+
+#### 🧹 Aufräumarbeiten
+- Toter Code und tote Konfiguration aus früheren Releases entfernt: `PRIVATE_MESSAGE_MODE`, `WEBHOOK_DEBOUNCE_MS`, die ungenutzten `EMBED_SHOW_*`/`EMBED_COLOR_*`-Schema-Einträge (inklusive eines 93 Zeilen langen toten UI-Blocks für nicht existierende DOM-Elemente), die ungenutzte `lodash.debounce`-Abhängigkeit sowie 161 unreferenzierte Locale-Keys.
+- Eine einmalige Start-Migration entfernt diese verwaisten Keys jetzt auch aus bestehenden `config/config.json`-Dateien — erweitert um die Embed-Anzeige-/Farb-Keys.
+- Den Verweis auf das kaputte `npm run create-translation`-Skript entfernt (das Skript existierte nie im Repo).
+
+#### 🔒 Sicherheit
+- 10 Abhängigkeits-Schwachstellen behoben (axios, body-parser, follow-redirects, form-data, joi, discord.js/undici, ws) via `npm audit fix` plus einem `overrides`-Pin für `qs`. 0 bekannte Schwachstellen.
+- Das `license`-Feld in `package.json` von `ISC` auf das tatsächliche `AGPL-3.0-only` korrigiert.
+
+#### 📚 Dokumentation
+- Die README-Hero-Zeile zeigt jetzt den Bot in Aktion (`/search`-Ergebnis + eine "jetzt verfügbar"-Benachrichtigung) statt nur Dashboard-Screenshots.
+- Docker-Tags-Tabelle und Sicherheits-Abschnitt referenzieren keine veraltete Versionsnummer mehr.
+
+Alle 360 Tests grün.
+
+---
 
 ### 🎨 v2.4.2
 

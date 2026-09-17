@@ -350,6 +350,45 @@ export function migrateNotifyOnAvailable(config) {
 }
 
 /**
+ * Removes config keys left behind by features that have since been removed.
+ * updateConfig() merges rather than replaces, so a key written while a
+ * feature existed (Streamystats integration, the old private-message-mode
+ * toggle, webhook debounce, the never-wired per-field embed show/colour
+ * toggles) never gets cleaned up on its own once the feature — and its
+ * configTemplate entry — is deleted.
+ *
+ * Mutates `config` in place. @returns {boolean} true if the caller should persist.
+ */
+export function stripOrphanedConfigKeys(config) {
+  const orphanedKeys = [
+    "STREAMYSTATS_URL",
+    "STREAMYSTATS_USER",
+    "STREAMYSTATS_PASS",
+    "PRIVATE_MESSAGE_MODE",
+    "WEBHOOK_DEBOUNCE_MS",
+    "EMBED_SHOW_BACKDROP",
+    "EMBED_SHOW_OVERVIEW",
+    "EMBED_SHOW_GENRE",
+    "EMBED_SHOW_RUNTIME",
+    "EMBED_SHOW_RATING",
+    "EMBED_COLOR_MOVIE",
+    "EMBED_COLOR_SERIES",
+    "EMBED_COLOR_SEASON",
+    "EMBED_COLOR_EPISODE_SINGLE",
+    "EMBED_COLOR_EPISODE_FEW",
+    "EMBED_COLOR_EPISODE_MANY",
+  ];
+  let removed = false;
+  for (const key of orphanedKeys) {
+    if (config[key] !== undefined) {
+      delete config[key];
+      removed = true;
+    }
+  }
+  return removed;
+}
+
+/**
  * Loads config into process.env for compatibility with existing code
  * Includes automatic migrations for backwards compatibility
  * @returns {boolean} True if load succeeded
@@ -488,6 +527,15 @@ export function loadConfigToEnv() {
       logger.info("✅ Seerr key migration saved to config.json");
     } else {
       logger.error("❌ Failed to save Seerr key migration");
+    }
+  }
+
+  // 5. One-time sweep of orphaned config keys (see stripOrphanedConfigKeys).
+  if (stripOrphanedConfigKeys(config)) {
+    if (writeConfig(config)) {
+      logger.info("🔄 Removed orphaned config keys left by removed features");
+    } else {
+      logger.error("❌ Failed to save orphaned-key cleanup");
     }
   }
 

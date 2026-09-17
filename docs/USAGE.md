@@ -340,7 +340,10 @@ Tetris background) honors `prefers-reduced-motion`.
 
 ### 🌍 Multi-language
 The dashboard and bot speak **English** and **German**. UI language is remembered
-per browser; bot language is set separately (`BOT_LANGUAGE`).
+per browser. The bot's reply language (`BOT_LANGUAGE`) is seeded once from
+whatever language the login/register screen was showing when the first admin
+account was created — change it independently any time in **Step 7 → Bot
+Language**.
 
 ---
 
@@ -407,7 +410,6 @@ important ones for you.
 |---|---|---|
 | `WEBHOOK_PORT` | `"8282"` | Port for the dashboard and the Seerr webhook endpoint. |
 | `WEBHOOK_SECRET` | `""` | Shared secret Seerr must send in the `Authorization` header. **Required for webhooks.** |
-| `WEBHOOK_DEBOUNCE_MS` | `"15000"` | Ignore duplicate events arriving within this window (ms). |
 
 ### Notification channels & routing
 | Setting | Default | Meaning |
@@ -503,11 +505,6 @@ important ones for you.
 ### Embed appearance
 | Setting | Default | Meaning |
 |---|---|---|
-| `EMBED_SHOW_BACKDROP` | `"true"` | Show the large backdrop image. |
-| `EMBED_SHOW_OVERVIEW` | `"true"` | Show the plot summary. |
-| `EMBED_SHOW_GENRE` | `"true"` | Show genres. |
-| `EMBED_SHOW_RUNTIME` | `"true"` | Show runtime. |
-| `EMBED_SHOW_RATING` | `"true"` | Show rating. |
 | `EMBED_SHOW_CONTENT_RATING` | `"true"` | Show age rating (FSK/MPAA). |
 | `CONTENT_RATING_COUNTRY` | `""` | Country code for the age rating (e.g. `US`, `DE`). |
 | `EMBED_SHOW_PROVIDERS` | `"true"` | Show streaming providers (Netflix, Disney+, …). |
@@ -517,12 +514,6 @@ important ones for you.
 | `EMBED_SHOW_BUTTON_WATCH` | `"true"` | Show the *Watch Now* button. |
 | `EMBED_SHOW_BUTTON_LETTERBOXD` | `"true"` | Show the *Letterboxd* button. |
 | `EMBED_SHOW_BUTTON_IMDB` | `"true"` | Show the *IMDb* button. |
-| `EMBED_COLOR_MOVIE` | `"#1ec8a0"` | Embed colour for movies. |
-| `EMBED_COLOR_SERIES` | `"#1ec8a0"` | Embed colour for series. |
-| `EMBED_COLOR_SEASON` | `"#17b8c4"` | Embed colour for season notifications. |
-| `EMBED_COLOR_EPISODE_SINGLE` | `"#17b8c4"` | Colour for a single new episode. |
-| `EMBED_COLOR_EPISODE_FEW` | `"#17b8c4"` | Colour for a few new episodes. |
-| `EMBED_COLOR_EPISODE_MANY` | `"#17b8c4"` | Colour for many new episodes. |
 | `EMBED_COLOR_SEARCH` | `"#f0a05a"` | Colour for search embeds. |
 | `EMBED_COLOR_SUCCESS` | `"#2ecc8e"` | Colour for success/confirmation embeds. |
 

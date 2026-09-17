@@ -209,27 +209,24 @@
                         </p>
                         <ol class="setup-instructions-list">
                           <li data-i18n="config.discord_instructions_1">
-                            Go to <strong>"Bot"</strong> in the sidebar and click <strong>"Add Bot"</strong>
+                            Go to <strong>"Bot"</strong> in the sidebar, click <strong>"Reset Token"</strong> to get a token, and scroll down to <strong>"Privileged Gateway Intents"</strong> to enable <code>SERVER MEMBERS INTENT</code> (required for user mappings)
                           </li>
                           <li data-i18n="config.discord_instructions_2">
-                            In the <strong>"Bot"</strong> section, scroll down to <strong>"Privileged Gateway Intents"</strong> and enable <code>SERVER MEMBERS INTENT</code> (required for user mappings)
+                            Go to <strong>"OAuth2"</strong> and copy the <strong>Client ID</strong>
                           </li>
                           <li data-i18n="config.discord_instructions_3">
-                            Go to <strong>"OAuth2"</strong> → <strong>"URL Generator"</strong>
+                            Paste the <strong>Bot Token</strong> and <strong>Client ID</strong> into the two fields below
                           </li>
                           <li data-i18n="config.discord_instructions_4">
-                            Select scopes: <code>bot</code> and <code>applications.commands</code>
+                            Click <strong>"Bot zum Server einladen"</strong> below — Questorr baut den Einladungslink automatisch mit den richtigen Berechtigungen, kein manuelles Zusammenklicken im OAuth2 URL Generator mehr nötig
                           </li>
                           <li data-i18n="config.discord_instructions_5">
-                            Select permissions: <code>Send Messages</code>, <code>Embed Links</code> and <code>Pin Messages</code>
-                          </li>
-                          <li data-i18n="config.discord_instructions_6">
-                            Copy the generated URL, open it in your browser, and authorize the bot on your Discord server
-                          </li>
-                          <li data-i18n="config.discord_instructions_7">
-                            Come back and enter the <strong>Discord Bot Token</strong> and <strong>Bot Client ID</strong> below, <strong>save your settings</strong>, <strong>start the bot</strong>, then select your server and channel from the dropdowns
+                            Come back, <strong>save your settings</strong>, <strong>start the bot</strong>, then select your server and channel from the dropdowns
                           </li>
                         </ol>
+                        <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="margin-top:0.5rem;display:inline-flex;align-items:center;gap:0.5rem;">
+                          <i class="bi bi-box-arrow-up-right"></i> <span data-i18n="config.open_dev_portal">Discord Developer Portal öffnen</span>
+                        </a>
                       </div>
 
                       <div class="form-group">
@@ -254,6 +251,43 @@
                         />
                         <div class="form-text" data-i18n="config.bot_id_help">
                           Die Anwendungs-Client-ID aus dem <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a> → OAuth2 → Client ID
+                        </div>
+                      </div>
+
+                      <!-- Invite Bot + Bot Settings deep-links (shown once a Client ID is entered) -->
+                      <div class="form-group" id="discord-invite-block" style="display:none;">
+                        <div class="setup-instructions-box" style="background: rgba(166, 227, 161, 0.08); border-left: 4px solid var(--green);">
+                          <p style="margin:0 0 0.5rem 0; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="bi bi-rocket-takeoff-fill"></i>
+                            <span data-i18n="config.invite_bot_title">Bot einladen</span>
+                          </p>
+                          <p class="form-text" style="margin-bottom:0.75rem;" data-i18n="config.invite_bot_desc">
+                            Dieser Link wird automatisch aus deiner Client ID oben gebaut — mit genau den Berechtigungen, die Questorr braucht (Nachrichten senden, Links einbetten, Nachrichten anpinnen). Kein manuelles Zusammenklicken im OAuth2 URL Generator nötig.
+                          </p>
+                          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                            <a id="discord-invite-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+                              <i class="bi bi-discord"></i> <span data-i18n="config.invite_bot_button">Bot zum Server einladen</span>
+                            </a>
+                            <a id="discord-bot-settings-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+                              <i class="bi bi-gear-fill"></i> <span data-i18n="config.bot_settings_button">Bot-Einstellungen öffnen</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Disallowed-intents error box (shown by script.js when bot start fails because Server Members Intent isn't enabled) -->
+                      <div class="form-group" id="discord-intent-error-box" style="display:none;">
+                        <div class="setup-instructions-box" style="background: rgba(243, 139, 168, 0.1); border-left: 4px solid var(--red);">
+                          <p style="margin:0 0 0.5rem 0; font-weight:600; color: var(--red); display:flex; align-items:center; gap:0.5rem;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span data-i18n="config.intent_error_title">Bot konnte nicht starten: eine Berechtigung fehlt</span>
+                          </p>
+                          <p class="form-text" style="margin-bottom:0.75rem;" data-i18n="config.intent_error_desc">
+                            Discord hat die Verbindung abgelehnt, weil "Server Members Intent" für diesen Bot noch nicht aktiviert ist. Das ist ein einmaliger Schalter im Developer Portal unter Bot → Privileged Gateway Intents.
+                          </p>
+                          <a id="discord-intent-error-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:0.5rem;">
+                            <i class="bi bi-box-arrow-up-right"></i> <span data-i18n="config.bot_settings_button">Bot-Einstellungen öffnen</span>
+                          </a>
                         </div>
                       </div>
 

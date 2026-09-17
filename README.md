@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.2-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.3-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -17,6 +17,19 @@
 ---
 
 > **📸 Screenshot notice:** All screenshots in this README were taken from a demo environment and show no real user data. The live version may look slightly different and shows more content depending on your configuration.
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%"><code>/search</code> — find and request a title</td>
+      <td align="center" width="50%">A "now available" notification, auto-routed to the right channel</td>
+    </tr>
+    <tr>
+      <td><img src="assets/discord/search-example.png" alt="/search command example" width="100%"/></td>
+      <td><img src="assets/discord/notification-example.png" alt="Library notification example" width="100%"/></td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -53,7 +66,7 @@
 | 🔐 Role permissions | Control who can use bot commands via Discord role allowlist / blocklist |
 | 🌟 Daily recommendation | Post a daily pick from your existing Jellyfin library |
 | 🎲 Daily random pick | Post a daily random suggestion from TMDB |
-| 🎨 Custom embed colors | Customize notification embed colors per event type |
+| 🎨 Custom embed colors | Customize the search-results and success-confirmation embed colors |
 | ⚙️ Web dashboard | Full configuration at `http://your-server:8282` — Tetris-style UI |
 | 🎨 Dark / light theme | Retro-dark default plus a Paper-Terminal light theme; the toggle is persisted per browser |
 | 🛡️ Audit log | Dashboard **Audit** tab: who approved/declined a request, changed config, started/stopped the bot, or logged in |
@@ -137,7 +150,7 @@ Reverse proxy forward settings: Scheme: `http` · Host / Forward hostname: `ques
 |---|---|
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
-| `2.3.0` | Specific version |
+| e.g. `2.4.3` | Specific pinned version — see [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) for all tags |
 
 ### Manual (Development)
 
@@ -155,10 +168,9 @@ node app.js
 ### 1. Create a Discord Bot
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) → New Application
-2. **Bot** → Enable `Server Members Intent` (required for user mapping)
-3. **OAuth2 → URL Generator** → Scopes: `bot` + `applications.commands`
-4. Permissions: `Send Messages`, `Embed Links`, `Read Message History`
-5. Copy the generated URL, open it in your browser and add the bot to your server
+2. **Bot** → Reset Token to get a token, then enable `Server Members Intent` (required for user mapping)
+3. **OAuth2** → copy the **Client ID**
+4. Paste both into Questorr's dashboard (Step 1) and click **"Invite Bot to Server"** — the dashboard builds the invite link for you with exactly the permissions needed (`Send Messages`, `Embed Links`, `Pin Messages`), no manual OAuth2 URL Generator step required
 
 ### 2. Configure via Web Dashboard
 
@@ -236,7 +248,7 @@ All other settings are managed through the web dashboard and saved to `config/co
 
 ## 🔒 Security
 
-Questorr v2.3.0 includes the following security hardening:
+Questorr includes the following security hardening:
 
 | Feature | Details |
 |---|---|

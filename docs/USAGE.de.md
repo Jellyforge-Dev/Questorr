@@ -351,7 +351,10 @@ Scroll-Reveals, fallende Tetris-Blöcke) respektieren `prefers-reduced-motion`.
 
 ### 🌍 Mehrsprachigkeit
 Dashboard und Bot sprechen **Englisch** und **Deutsch**. Die UI-Sprache wird pro
-Browser gemerkt; die Bot-Sprache wird separat gesetzt (`BOT_LANGUAGE`).
+Browser gemerkt. Die Bot-Antwortsprache (`BOT_LANGUAGE`) wird einmalig aus der
+Sprache übernommen, die beim Anlegen des ersten Admin-Kontos auf dem
+Login/Registrierungs-Bildschirm eingestellt war — danach jederzeit unabhängig
+unter **Schritt 7 → Bot-Sprache** änderbar.
 
 ---
 
@@ -418,7 +421,6 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 |---|---|---|
 | `WEBHOOK_PORT` | `"8282"` | Port für Dashboard und Seerr-Webhook-Endpoint. |
 | `WEBHOOK_SECRET` | `""` | Gemeinsames Secret, das Seerr im `Authorization`-Header senden muss. **Pflicht für Webhooks.** |
-| `WEBHOOK_DEBOUNCE_MS` | `"15000"` | Doppelte Events innerhalb dieses Fensters ignorieren (ms). |
 
 ### Benachrichtigungs-Channels & Routing
 | Einstellung | Standard | Bedeutung |
@@ -514,11 +516,6 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 ### Embed-Darstellung
 | Einstellung | Standard | Bedeutung |
 |---|---|---|
-| `EMBED_SHOW_BACKDROP` | `"true"` | Großes Hintergrundbild zeigen. |
-| `EMBED_SHOW_OVERVIEW` | `"true"` | Handlungszusammenfassung zeigen. |
-| `EMBED_SHOW_GENRE` | `"true"` | Genres zeigen. |
-| `EMBED_SHOW_RUNTIME` | `"true"` | Laufzeit zeigen. |
-| `EMBED_SHOW_RATING` | `"true"` | Bewertung zeigen. |
 | `EMBED_SHOW_CONTENT_RATING` | `"true"` | Altersfreigabe (FSK/MPAA) zeigen. |
 | `CONTENT_RATING_COUNTRY` | `""` | Ländercode für die Altersfreigabe (z. B. `US`, `DE`). |
 | `EMBED_SHOW_PROVIDERS` | `"true"` | Streaming-Anbieter zeigen (Netflix, Disney+, …). |
@@ -528,12 +525,6 @@ der Dashboard-Assistent setzt die wichtigen für dich.
 | `EMBED_SHOW_BUTTON_WATCH` | `"true"` | *Jetzt ansehen*-Button zeigen. |
 | `EMBED_SHOW_BUTTON_LETTERBOXD` | `"true"` | *Letterboxd*-Button zeigen. |
 | `EMBED_SHOW_BUTTON_IMDB` | `"true"` | *IMDb*-Button zeigen. |
-| `EMBED_COLOR_MOVIE` | `"#1ec8a0"` | Embed-Farbe für Filme. |
-| `EMBED_COLOR_SERIES` | `"#1ec8a0"` | Embed-Farbe für Serien. |
-| `EMBED_COLOR_SEASON` | `"#17b8c4"` | Embed-Farbe für Staffel-Benachrichtigungen. |
-| `EMBED_COLOR_EPISODE_SINGLE` | `"#17b8c4"` | Farbe für eine einzelne neue Episode. |
-| `EMBED_COLOR_EPISODE_FEW` | `"#17b8c4"` | Farbe für wenige neue Episoden. |
-| `EMBED_COLOR_EPISODE_MANY` | `"#17b8c4"` | Farbe für viele neue Episoden. |
 | `EMBED_COLOR_SEARCH` | `"#f0a05a"` | Farbe für Such-Embeds. |
 | `EMBED_COLOR_SUCCESS` | `"#2ecc8e"` | Farbe für Erfolgs-/Bestätigungs-Embeds. |
 
