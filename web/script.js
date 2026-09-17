@@ -869,6 +869,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Grey out notification types not enabled in Seerr
       await applySeerrNotifTypes();
+
+      // BOT_ID was just set programmatically above (no "input" event fires for
+      // that), so the invite/settings deep-links need an explicit refresh here.
+      updateDiscordInviteLinks();
     } catch (error) {
       console.error("[fetchConfig] Error:", error);
       showToast("Config error: " + (error.message || "Unknown error"));
@@ -1518,11 +1522,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
+        if (result.code === "DISALLOWED_INTENTS") {
+          showDiscordIntentError();
+        }
         showToast(`${t("common.error") || "Fehler"}: ${result.message || result.error || response.status}`);
         botControlText.textContent = originalText; // Restore text on failure
         botControlBtn.disabled = false;
       } else {
         const result = await response.json();
+        hideDiscordIntentError();
         showToast(result.message);
         setTimeout(() => {
           fetchStatus();
@@ -3661,6 +3669,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // ─── Discord invite link + bot-settings deep link (auto-built from Client ID) ─
+  // Permissions bitfield = SEND_MESSAGES (2048) | EMBED_LINKS (16384) | PIN_MESSAGES
+  // (2251799813685248, split into its own permission bit by Discord on 2026-02-23) —
+  // matches exactly the permissions listed in the setup instructions above, so the
+  // generated invite never asks for more than the bot actually needs.
+  const DISCORD_BOT_INVITE_PERMISSIONS = "2251799813703680";
+
+  function getDiscordBotSettingsUrl(botId) {
+    return `https://discord.com/developers/applications/${encodeURIComponent(botId)}/bot`;
+  }
+
+  function updateDiscordInviteLinks() {
+    const botId = document.getElementById("BOT_ID")?.value?.trim();
+    const block = document.getElementById("discord-invite-block");
+    if (!block) return;
+    if (!botId) {
+      block.style.display = "none";
+      return;
+    }
+    block.style.display = "block";
+    const inviteLink = document.getElementById("discord-invite-link");
+    const settingsLink = document.getElementById("discord-bot-settings-link");
+    const errorLink = document.getElementById("discord-intent-error-link");
+    if (inviteLink) {
+      inviteLink.href = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botId)}&permissions=${DISCORD_BOT_INVITE_PERMISSIONS}&scope=bot%20applications.commands`;
+    }
+    const settingsUrl = getDiscordBotSettingsUrl(botId);
+    if (settingsLink) settingsLink.href = settingsUrl;
+    if (errorLink) errorLink.href = settingsUrl;
+  }
+
+  function showDiscordIntentError() {
+    updateDiscordInviteLinks(); // make sure the deep-link href reflects the current Client ID
+    const box = document.getElementById("discord-intent-error-box");
+    if (box) box.style.display = "block";
+    document.querySelector('.nav-item[data-target="discord"]')?.click();
+  }
+
+  function hideDiscordIntentError() {
+    const box = document.getElementById("discord-intent-error-box");
+    if (box) box.style.display = "none";
+  }
+
   // Listen for token/bot ID changes to reload guilds
   const tokenInput = document.getElementById("DISCORD_TOKEN");
   const botIdInput = document.getElementById("BOT_ID");
@@ -3679,7 +3730,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadDiscordGuilds();
       }
     });
+    botIdInput?.addEventListener("input", updateDiscordInviteLinks);
   }
+  updateDiscordInviteLinks();
 
   // --- Episodes and Seasons Notification Controls ---
   const episodesCheckbox = document.getElementById("JELLYFIN_NOTIFY_EPISODES_CHECKBOX");
@@ -5231,11 +5284,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!response.ok) {
         const data = await response.json();
+        if (data.code === "DISALLOWED_INTENTS") {
+          showDiscordIntentError();
+        }
         showToast(`${t("common.error") || "Fehler"}: ${data.message}`);
         botControlTextLogs.textContent = originalText;
         botControlBtnLogs.disabled = false;
       } else {
         const data = await response.json();
+        hideDiscordIntentError();
         showToast(data.message);
         setTimeout(async () => {
           await updateBotControlButtonLogs();

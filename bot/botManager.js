@@ -16,6 +16,23 @@ import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
+/**
+ * True if `err` looks like discord.js's DisallowedIntents error — thrown when
+ * the client requests a privileged intent (e.g. GuildMembers) that hasn't been
+ * enabled for this application yet under Developer Portal → Bot → Privileged
+ * Gateway Intents. Matched by name AND message substring since discord.js has
+ * changed how reliably this rejects `client.login()` across versions (see
+ * https://github.com/discordjs/discord.js/issues/9621) — callers should check
+ * this from multiple listeners (login().catch, client 'error', client
+ * 'shardError'), not just the login promise alone.
+ */
+export function isDisallowedIntentsError(err) {
+  if (!err) return false;
+  if (err.name === "DisallowedIntents") return true;
+  const msg = String(err.message || "").toLowerCase();
+  return msg.includes("disallowed intent");
+}
+
 export async function startBot() {
   if (botState.isBotRunning && botState.discordClient) {
     logger.info("Bot is already running.");
@@ -71,7 +88,41 @@ export async function startBot() {
 
   // ----------------- LOGIN -----------------
   return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const failWithDisallowedIntents = (err) => {
+      if (settled) return;
+      settled = true;
+      logger.error(
+        "[DISCORD LOGIN ERROR] Server Members Intent is not enabled for this application " +
+          "(Developer Portal → Bot → Privileged Gateway Intents). Original error: " +
+          (err?.message || err)
+      );
+      botState.isBotRunning = false;
+      botState.discordClient = null;
+      const wrapped = new Error(
+        "Server Members Intent is not enabled for this bot application. Enable it under " +
+          "Developer Portal → Bot → Privileged Gateway Intents, then start the bot again."
+      );
+      wrapped.code = "DISALLOWED_INTENTS";
+      reject(wrapped);
+    };
+
+    // discord.js's handling of this error has been inconsistent across versions
+    // (github.com/discordjs/discord.js/issues/9621) — sometimes it rejects
+    // login() cleanly, sometimes it only surfaces via an 'error'/'shardError'
+    // event. Listen on all three so the dashboard reliably gets a clear cause
+    // instead of a generic timeout/crash.
+    client.on("error", (err) => {
+      if (isDisallowedIntentsError(err)) failWithDisallowedIntents(err);
+    });
+    client.on("shardError", (err) => {
+      if (isDisallowedIntentsError(err)) failWithDisallowedIntents(err);
+    });
+
     client.once("clientReady", async () => {
+      if (settled) return;
+      settled = true;
       logger.info(`✅ Bot logged in as ${client.user.tag}`);
       botState.isBotRunning = true;
       botState.botStartedAt = Date.now();
@@ -85,6 +136,12 @@ export async function startBot() {
     });
 
     client.login(process.env.DISCORD_TOKEN).catch((err) => {
+      if (isDisallowedIntentsError(err)) {
+        failWithDisallowedIntents(err);
+        return;
+      }
+      if (settled) return;
+      settled = true;
       logger.error("[DISCORD LOGIN ERROR] Bot login failed:");
       if (err && err.message) {
         logger.error("[DISCORD LOGIN ERROR] Message:", err.message);

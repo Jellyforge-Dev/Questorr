@@ -811,7 +811,9 @@ export function createBotRoutes({ startBot }) {
       recordAudit({ actor: req.user?.username || "unknown", action: "bot_start", target: "", detail: req.ip });
       res.status(200).json({ message: `Bot started successfully! ${result.message}` });
     } catch (error) {
-      res.status(500).json({ message: `Failed to start bot: ${error.message}` });
+      const body = { message: `Failed to start bot: ${error.message}` };
+      if (error.code) body.code = error.code;
+      res.status(500).json(body);
     }
   });
 

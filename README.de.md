@@ -168,10 +168,9 @@ node app.js
 ### 1. Discord-Bot erstellen
 
 1. Zum [Discord Developer Portal](https://discord.com/developers/applications) → Neue Anwendung
-2. **Bot** → `Server Members Intent` aktivieren (erforderlich für Nutzerzuordnung)
-3. **OAuth2 → URL Generator** → Scopes: `bot` + `applications.commands`
-4. Berechtigungen: `Nachrichten senden`, `Eingebettete Links`, `Nachrichtenverlauf lesen`
-5. Die generierte URL kopieren, im Browser öffnen und den Bot zum Server hinzufügen
+2. **Bot** → Reset Token für einen Token, dann `Server Members Intent` aktivieren (erforderlich für Nutzerzuordnung)
+3. **OAuth2** → **Client ID** kopieren
+4. Beides ins Questorr-Dashboard (Schritt 1) eintragen und auf **"Bot zum Server einladen"** klicken — das Dashboard baut den Einladungslink automatisch mit genau den nötigen Berechtigungen (`Nachrichten senden`, `Links einbetten`, `Nachrichten anpinnen`), kein manueller OAuth2-URL-Generator-Schritt mehr nötig
 
 ### 2. Über das Web-Dashboard konfigurieren
 
