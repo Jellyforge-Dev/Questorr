@@ -214,8 +214,12 @@ export function getByUser(discordUserId) {
  */
 export function getPendingByMedia(tmdbId, mediaType) {
   let best = null;
+  const wantedTmdbId = Number(tmdbId);
   for (const record of records.values()) {
-    if (record.tmdbId !== tmdbId || record.mediaType !== mediaType) continue;
+    // Number(...) on both sides: some callers store tmdbId as a string
+    // (e.g. parsed straight out of a "id|mediaType" customId/input), others
+    // as a number — a strict !== would silently never match across that split.
+    if (Number(record.tmdbId) !== wantedTmdbId || record.mediaType !== mediaType) continue;
     if (record.stage !== STAGES.PENDING) continue;
     // >= (not >): requestedAt has millisecond resolution, so two records added
     // in the same tick would tie — >= makes the later insertion win deterministically.
