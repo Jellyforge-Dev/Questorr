@@ -40,6 +40,7 @@ import { jellyfinAuthHeaders } from "./api/jellyfin.js";
 import { CONFIG_PATH } from "./utils/configFile.js";
 import { getIssueReporter, removeIssueReporter } from "./utils/issueReporters.js";
 import { buildIssueAdminButtons } from "./bot/handlers/issueActions.js";
+import { getPendingByMedia } from "./utils/requestStore.js";
 
 // ─── Admin Pending Messages persistence ──────────────────────────────────────
 // Maps requestId → { channelId, messageId } so the status poller can edit the
@@ -1024,12 +1025,22 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     const requesterFooter = t("requested_by").replace("{{user}}", requesterName);
     const combinedFooter = footerText ? `${requesterFooter} \u2022 ${footerText}` : requesterFooter;
 
+    // Prefer the Discord requester's own avatar (captured at request-click time,
+    // always a publicly reachable discord.com CDN URL) over Seerr's
+    // requestedBy_avatar — the latter is often unset, or a path relative to
+    // SEERR_URL, which is frequently a LAN-only/localhost address that Discord's
+    // servers can't reach to render the embed icon.
     let avatarUrl = null;
-    const seerrUrl = process.env.SEERR_URL;
-    if (request?.requestedBy_avatar && seerrUrl) {
-      avatarUrl = request.requestedBy_avatar.startsWith("http")
-        ? request.requestedBy_avatar
-        : `${seerrUrl.replace(/\/+$/, "")}${request.requestedBy_avatar}`;
+    const pendingRecord = tmdbId != null ? getPendingByMedia(tmdbId, mediaType) : null;
+    if (pendingRecord?.discordAvatarUrl) {
+      avatarUrl = pendingRecord.discordAvatarUrl;
+    } else {
+      const seerrUrl = process.env.SEERR_URL;
+      if (request?.requestedBy_avatar && seerrUrl) {
+        avatarUrl = request.requestedBy_avatar.startsWith("http")
+          ? request.requestedBy_avatar
+          : `${seerrUrl.replace(/\/+$/, "")}${request.requestedBy_avatar}`;
+      }
     }
     embed.setFooter(avatarUrl ? { text: combinedFooter, iconURL: avatarUrl } : { text: combinedFooter });
   } else if (footerText) {

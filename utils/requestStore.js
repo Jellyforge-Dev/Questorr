@@ -56,7 +56,16 @@ export function deriveStage(req) {
  * Add a record at request-click time. Older Seerr without an id degrades to a
  * tmdbId-mediaType pseudo-key with a Pending stage.
  */
-export function add({ requestId, tmdbId, mediaType, title, discordUserId, seerrStatus, mediaStatus }) {
+export function add({
+  requestId,
+  tmdbId,
+  mediaType,
+  title,
+  discordUserId,
+  discordAvatarUrl,
+  seerrStatus,
+  mediaStatus,
+}) {
   const now = new Date().toISOString();
   const stage =
     seerrStatus != null
@@ -69,6 +78,7 @@ export function add({ requestId, tmdbId, mediaType, title, discordUserId, seerrS
     mediaType,
     title,
     discordUserId,
+    discordAvatarUrl: discordAvatarUrl ?? null,
     stage,
     seerrStatus: seerrStatus ?? null,
     mediaStatus: mediaStatus ?? null,
@@ -194,6 +204,24 @@ export async function resolveMissingTitles(discordUserId, resolveTitle) {
 /** All records for a given Discord user (for the /queue view). */
 export function getByUser(discordUserId) {
   return [...records.values()].filter((r) => r.discordUserId === discordUserId);
+}
+
+/**
+ * Most recently requested still-Pending record for a title, if any — used to
+ * recover the Discord requester's own avatar for the MEDIA_PENDING admin
+ * notification (Seerr's own requestedBy_avatar is often unset or points at a
+ * URL Discord's servers can't reach, e.g. a LAN-only SEERR_URL).
+ */
+export function getPendingByMedia(tmdbId, mediaType) {
+  let best = null;
+  for (const record of records.values()) {
+    if (record.tmdbId !== tmdbId || record.mediaType !== mediaType) continue;
+    if (record.stage !== STAGES.PENDING) continue;
+    // >= (not >): requestedAt has millisecond resolution, so two records added
+    // in the same tick would tie — >= makes the later insertion win deterministically.
+    if (!best || record.requestedAt >= best.requestedAt) best = record;
+  }
+  return best;
 }
 
 /** Drop completed (Available/Declined) entries older than maxAgeDays. */
