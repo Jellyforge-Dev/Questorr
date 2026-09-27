@@ -119,14 +119,19 @@ export async function poll(seedOnly) {
 
     if (previousStatus === status) continue;
 
-    // Detect pending → approved/declined transitions
-    if (
-      previousStatus === STATUS_PENDING &&
-      (status === STATUS_APPROVED || status === STATUS_DECLINED)
-    ) {
+    // Detect pending → approved/declined transitions. Deliberately NOT
+    // `status === STATUS_APPROVED` here: Seerr keeps processing an approved
+    // request right away (triggers Radarr/Sonarr), so on a quick grab the
+    // request can already be at FAILED(4) or COMPLETED(5) by the next poll
+    // tick, skipping straight past the literal APPROVED(2) value — the strict
+    // equality silently missed that case. Declined has no such race (status
+    // stays at DECLINED forever), so anything that isn't still Pending and
+    // isn't Declined is treated as "approved" for notification purposes.
+    if (previousStatus === STATUS_PENDING && status !== STATUS_PENDING) {
       const tmdbId = req.media?.tmdbId;
       const mediaType = req.media?.mediaType || req.type;
-      const eventType = status === STATUS_APPROVED ? "MEDIA_APPROVED" : "MEDIA_DECLINED";
+      const isDeclined = status === STATUS_DECLINED;
+      const eventType = isDeclined ? "MEDIA_DECLINED" : "MEDIA_APPROVED";
 
       // ── Edit admin embed to show disabled status button ──────────────────
       if (botState.discordClient) {
@@ -137,10 +142,10 @@ export async function poll(seedOnly) {
             if (ch) {
               const msg = await ch.messages.fetch(msgRef.messageId);
               if (msg) {
-                const label = status === STATUS_APPROVED
-                  ? `✅ ${t("admin_status_approved")} (Seerr)`
-                  : `❌ ${t("admin_status_declined")} (Seerr)`;
-                const style = status === STATUS_APPROVED ? ButtonStyle.Success : ButtonStyle.Danger;
+                const label = isDeclined
+                  ? `❌ ${t("admin_status_declined")} (Seerr)`
+                  : `✅ ${t("admin_status_approved")} (Seerr)`;
+                const style = isDeclined ? ButtonStyle.Danger : ButtonStyle.Success;
                 // Keep link buttons, replace interactive ones with a single disabled status button
                 const newButtons = [
                   new ButtonBuilder()
@@ -211,8 +216,8 @@ export async function poll(seedOnly) {
           await sendRequesterDm(synth, eventType, {}, botState.discordClient, null, null, { tmdbId });
           logger.info(
             `[SEERR Status Poller] Detected pending→${
-              status === STATUS_APPROVED ? "approved" : "declined"
-            } transition for request ${reqId} (TMDB ${tmdbId})`
+              isDeclined ? "declined" : "approved"
+            } transition for request ${reqId} (TMDB ${tmdbId}, status=${status})`
           );
         } catch (err) {
           logger.warn(
