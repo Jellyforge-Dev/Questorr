@@ -594,7 +594,7 @@
     "feature_permissions": "Steuere wer Bot-Befehle nutzen darf über Discord <strong style=\"color: var(--blue);\">Rollen Allowlist und Blocklist</strong>. Verknüpfe Discord-Accounts mit Seerr-Konten damit jede Anfrage dem richtigen Nutzer zugeordnet wird.",
     "feature_direct_messages": "Nutzer erhalten eine <strong style=\"color: var(--blue);\">private Direktnachricht</strong> wenn ihr angeforderter Inhalt auf Jellyfin verfügbar ist — damit niemand den Moment verpasst.",
     "feature_daily": "Poste täglich eine <strong style=\"color: var(--blue);\">Zufallsauswahl</strong> von TMDB oder eine <strong style=\"color: var(--blue);\">Empfehlung</strong> aus deiner Jellyfin-Bibliothek in einen Discord-Kanal — ideal für Community-Engagement.",
-    "feature_dashboard": "Alles über das <strong style=\"color: var(--blue);\">Web-Dashboard</strong> auf Port 8282 konfigurieren. Unterstützt Englisch und Deutsch, vollständig mobil-responsiv — funktioniert auf Smartphones und Tablets.",
+    "feature_dashboard": "Alles über das <strong style=\"color: var(--blue);\">Web-Dashboard</strong> auf Port 8282 konfigurieren. Vollständig in mehrere Sprachen übersetzt, mobil-responsiv — funktioniert auf Smartphones und Tablets.",
     "support_title": "Projekt unterstützen",
     "support_description": "Wenn dir Questorr gefällt, unterstütze gerne die Entwicklung. Jeder Kaffee hilft bei nächtlichen Coding-Sessions!",
     "contribute_title": "Mitmachen",

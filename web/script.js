@@ -177,20 +177,24 @@ async function getAvailableLanguages() {
   return [
     { code: 'en', name: 'English' },
     { code: 'de', name: 'Deutsch' },
+    { code: 'fr', name: 'Français' },
+    { code: 'es', name: 'Español' },
+    { code: 'pt_br', name: 'Português (Brasil)' },
+    { code: 'sv', name: 'Svenska' },
   ];
 }
 
 // Populate language selectors dynamically
 async function populateLanguageSelectors() {
   const languages = await getAvailableLanguages();
-  const selectors = document.querySelectorAll('#auth-language, #app-language');
-  
-  selectors.forEach(select => {
+  const uiSelectors = document.querySelectorAll('#auth-language, #app-language');
+
+  uiSelectors.forEach(select => {
     if (!select) return;
-    
+
     // Clear existing options
     select.innerHTML = '';
-    
+
     // Add language options
     languages.forEach(lang => {
       const option = document.createElement('option');
@@ -198,10 +202,25 @@ async function populateLanguageSelectors() {
       option.textContent = lang.name;
       select.appendChild(option);
     });
-    
+
     // Set current language
     select.value = currentLanguage;
   });
+
+  // BOT_LANGUAGE (the language the Discord bot replies to end users in) is a
+  // separate, independent setting from the dashboard's own UI language above —
+  // populate its options from the same source, but never force a value here;
+  // the saved BOT_LANGUAGE config value is applied later when the config form loads.
+  const botLanguageSelect = document.getElementById('bot-language');
+  if (botLanguageSelect) {
+    botLanguageSelect.innerHTML = '';
+    languages.forEach(lang => {
+      const option = document.createElement('option');
+      option.value = lang.code;
+      option.textContent = lang.name;
+      botLanguageSelect.appendChild(option);
+    });
+  }
 }
 
 // Initialize i18n system

@@ -1536,8 +1536,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <label for="bot-language" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.bot_language_label">Bot Language</label>
                         <select id="bot-language" name="BOT_LANGUAGE" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                          <option value="en">English</option>
-                          <option value="de">Deutsch</option>
+                          <!-- Languages populated dynamically by populateLanguageSelectors() in script.js -->
                         </select>
                         <div class="form-text" style="margin-top: 0.5rem;">
                           <span data-i18n="config.bot_language_help">Language for Discord notifications, bot messages and button labels.</span>
@@ -1749,7 +1748,7 @@
                   <li><i class="bi bi-calendar-week"></i><div data-i18n="about.feature_digest"><strong style="color: var(--blue);">Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                   <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
-                  <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
+                  <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Fully translated into multiple languages, mobile-responsive, and works on smartphones and tablets.</div></li>
                   <li><i class="bi bi-heart-pulse-fill"></i><div data-i18n="about.feature_health_check">Built-in <strong style="color: var(--blue);">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.</div></li>
                   <li><i class="bi bi-window-sidebar"></i><div data-i18n="about.feature_widget">Embeddable <strong style="color: var(--blue);">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.</div></li>
                 </ul>

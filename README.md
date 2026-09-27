@@ -80,7 +80,7 @@
 | 💚 Health-check bar | Real-time service status display in the dashboard |
 | 📊 Statistics dashboard | Command usage statistics with per-user breakdown |
 | 🧩 Embeddable widget | HTML widget for Homarr/Homepage/Organizr with bot status and controls |
-| 🌍 Multi-language | English and German dashboard interface |
+| 🌍 Multi-language | Dashboard and bot fully translated into English, German, French, Spanish, Brazilian Portuguese and Swedish |
 
 > 📖 **New here?** The [**Full Usage & Configuration Guide**](docs/USAGE.md) explains
 > **every** command, feature and setting in plain language — including the Seerr

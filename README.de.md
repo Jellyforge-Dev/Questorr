@@ -80,7 +80,7 @@
 | 💚 Health-Check-Leiste | Echtzeit-Servicestatus im Dashboard |
 | 📊 Statistik-Dashboard | Befehlsnutzungsstatistiken mit Aufschlüsselung pro Nutzer |
 | 🧩 Einbettbares Widget | HTML-Widget für Homarr/Homepage/Organizr mit Bot-Status und Steuerung |
-| 🌍 Mehrsprachig | Englische und deutsche Dashboard-Oberfläche |
+| 🌍 Mehrsprachig | Dashboard und Bot vollständig übersetzt: Englisch, Deutsch, Französisch, Spanisch, brasilianisches Portugiesisch und Schwedisch |
 
 > 📖 **Neu hier?** Die [**vollständige Bedienungs- & Konfigurationsanleitung**](docs/USAGE.de.md)
 > erklärt **jeden** Befehl, jedes Feature und jede Einstellung in einfacher Sprache
