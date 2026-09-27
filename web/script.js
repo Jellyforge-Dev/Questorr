@@ -102,13 +102,33 @@ function getNestedTranslation(key) {
   return result || key; // Fallback to key if translation not found
 }
 
-// Short alias for getNestedTranslation
-function t(key) {
+// Short alias for getNestedTranslation. `vars` (optional) fills {{placeholder}}
+// tokens in the translated string — same convention the bot's own server-side
+// t() (utils/botStrings.js) already uses for interpolated notification text.
+function t(key, vars) {
   if (!key || typeof key !== 'string') {
     console.warn('Invalid translation key:', key);
     return key || '';
   }
-  return getNestedTranslation(key);
+  let str = getNestedTranslation(key);
+  if (vars && typeof str === 'string') {
+    for (const [k, v] of Object.entries(vars)) {
+      str = str.replace(new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, 'g'), String(v));
+    }
+  }
+  return str;
+}
+
+// Translates a backend API response into display text. Backend routes return
+// {success, messageKey, messageParams} instead of pre-rendered English text
+// (messageKey resolves through the dashboard's own locale files, messageParams
+// fills any {{placeholder}} — e.g. a live server name/version — into the
+// translated template). Falls back to a raw `message` field for any response
+// not yet using this convention, then to a generic error string.
+function apiMessage(data, fallback) {
+  if (data && data.messageKey) return t(data.messageKey, data.messageParams);
+  if (data && data.message) return data.message;
+  return fallback !== undefined ? fallback : t('errors.generic');
 }
 
 // Read the persisted UI-language preference (survives reloads and works on the
@@ -742,7 +762,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
                 const d = await r.json();
                 btn.textContent = d.success ? "\u2705" : "\u274C";
-                if (typeof showToast === "function") showToast(d.message || (d.success ? "Sent!" : "Error"), 3000);
+                if (typeof showToast === "function") showToast(apiMessage(d, d.success ? (t("config.test_sent") || "Sent!") : (t("common.error") || "Error")), 3000);
               } catch (e) {
                 btn.textContent = "\u274C";
               }
@@ -894,7 +914,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateDiscordInviteLinks();
     } catch (error) {
       console.error("[fetchConfig] Error:", error);
-      showToast("Config error: " + (error.message || "Unknown error"));
+      showToast((t("api.config_error") || "Config error") + ": " + (error.message || t("common.error") || "Unknown error"));
     }
   }
 
@@ -1237,7 +1257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           startStatusPolling();
         } else {
-          authError.textContent = data.message;
+          authError.textContent = apiMessage(data);
         }
       } catch (error) {
         authError.textContent = t("auth.login_failed") || "Anmeldung fehlgeschlagen. Bitte erneut versuchen.";
@@ -1277,7 +1297,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           startStatusPolling();
         } else {
-          authError.textContent = data.message;
+          authError.textContent = apiMessage(data);
         }
       } catch (error) {
         authError.textContent = t("auth.register_failed") || "Registrierung fehlgeschlagen. Bitte erneut versuchen.";
@@ -1511,18 +1531,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         const result = await response.json();
         const errorMsg =
           result.errors?.map((e) => `${e.field}: ${e.message}`).join(", ") ||
-          result.message;
+          apiMessage(result);
         showToast((t("errors.save_config") || "Save error") + ": " + errorMsg);
       } else {
         const result = await response.json();
         formDirty = false;
-        // Check if commands were updated
-        const msg = result.message || "";
-        if (msg.toLowerCase().includes("command") || msg.toLowerCase().includes("updated")) {
-          showToast(t("toast.saved_commands") || "Settings saved. Discord commands updated.");
-        } else {
-          showToast(t("toast.saved") || "Settings saved successfully.");
-        }
+        // Show the actual outcome (e.g. "bot failed to restart") instead of a
+        // generic "saved" toast that used to hide failures behind a fuzzy
+        // substring check on the old English-only message text.
+        showToast(apiMessage(result, t("toast.saved") || "Settings saved successfully."));
       }
     } catch (error) {
       console.error("[saveConfig] Error:", error);
@@ -1548,13 +1565,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (result.code === "DISALLOWED_INTENTS") {
           showDiscordIntentError();
         }
-        showToast(`${t("common.error") || "Fehler"}: ${result.message || result.error || response.status}`);
+        showToast(`${t("common.error") || "Fehler"}: ${apiMessage(result, result.error || response.status)}`);
         botControlText.textContent = originalText; // Restore text on failure
         botControlBtn.disabled = false;
       } else {
         const result = await response.json();
         hideDiscordIntentError();
-        showToast(result.message);
+        showToast(apiMessage(result));
         setTimeout(() => {
           fetchStatus();
           loadHealthCheck(); // refresh the status lamps + uptime ticker immediately
@@ -1789,7 +1806,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           showToast(t("config.test_sent") || "Gesendet!");
         } else {
           if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ " + (t("common.error") || "Fehler");
-          showToast(data.message || "Fehler beim Senden.");
+          showToast(apiMessage(data, t("api.send_failed") || "Fehler beim Senden."));
         }
       } catch (err) {
         if (testDailyRecStatus) testDailyRecStatus.textContent = "❌ Error";
@@ -2134,15 +2151,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         const data = await response.json();
         if (data.success) {
-          if (testCleanupStatus) testCleanupStatus.textContent = "✅ " + data.message;
-          showToast(data.message);
+          if (testCleanupStatus) testCleanupStatus.textContent = "✅ " + apiMessage(data);
+          showToast(apiMessage(data));
         } else {
-          if (testCleanupStatus) testCleanupStatus.textContent = "❌ " + (data.message || (t("common.error") || "Fehler"));
-          showToast(data.message || "Fehler beim Senden.");
+          if (testCleanupStatus) testCleanupStatus.textContent = "❌ " + apiMessage(data, t("common.error") || "Fehler");
+          showToast(apiMessage(data, t("api.send_failed") || "Fehler beim Senden."));
         }
       } catch (err) {
-        if (testCleanupStatus) testCleanupStatus.textContent = "❌ Error";
-        showToast("Fehler beim Senden.");
+        if (testCleanupStatus) testCleanupStatus.textContent = "❌ " + (t("common.error") || "Error");
+        showToast(t("api.send_failed") || "Fehler beim Senden.");
       } finally {
         testCleanupBtn.disabled = false;
         setTimeout(() => { if (testCleanupStatus) testCleanupStatus.textContent = ""; }, 5000);
@@ -2166,14 +2183,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await response.json();
         if (data.success || response.ok) {
           if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "✅ " + (t("config.test_sent") || "Sent!");
-          showToast(data.message || "Webhook-Test gesendet!");
+          showToast(apiMessage(data, t("api.webhook_test_sent") || "Webhook-Test gesendet!"));
         } else {
-          if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "❌ " + (data.message || "Failed");
-          showToast(data.message || "Test fehlgeschlagen.");
+          if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "❌ " + apiMessage(data, t("common.error") || "Failed");
+          showToast(apiMessage(data, t("api.test_failed") || "Test fehlgeschlagen."));
         }
       } catch (err) {
-        if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "❌ Error";
-        showToast("Fehler beim Testen.");
+        if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = "❌ " + (t("common.error") || "Error");
+        showToast(t("api.test_error") || "Fehler beim Testen.");
       } finally {
         testSeerrWebhookBtn.disabled = false;
         setTimeout(() => { if (testSeerrWebhookStatus) testSeerrWebhookStatus.textContent = ""; }, 4000);
@@ -2198,14 +2215,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await response.json();
         if (data.success) {
           if (statusEl) statusEl.textContent = "✅";
-          showToast(data.message || "Round-Trip erfolgreich!");
+          showToast(apiMessage(data, t("api.roundtrip_ok") || "Round-Trip erfolgreich!"));
         } else {
           if (statusEl) statusEl.textContent = "❌";
-          showToast(data.message || "Round-Trip fehlgeschlagen.");
+          showToast(apiMessage(data, t("api.roundtrip_failed") || "Round-Trip fehlgeschlagen."));
         }
       } catch (err) {
         if (statusEl) statusEl.textContent = "❌";
-        showToast("Fehler beim Round-Trip-Test.");
+        showToast(t("api.roundtrip_test_error") || "Fehler beim Round-Trip-Test.");
       } finally {
         rtBtn.disabled = false;
         setTimeout(() => {
@@ -2298,14 +2315,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         const data = await response.json();
         if (data.success || response.ok) {
-          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + (data.message || t("config.test_sent") || "Sent!");
-          showToast(data.message || t("config.test_sent") || "Gesendet!");
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "✅ " + apiMessage(data, t("config.test_sent") || "Sent!");
+          showToast(apiMessage(data, t("config.test_sent") || "Gesendet!"));
         } else {
-          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (data.message || "Failed");
-          showToast(data.message || "Test failed.");
+          if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + apiMessage(data, t("common.error") || "Failed");
+          showToast(apiMessage(data, t("api.test_failed") || "Test failed."));
         }
       } catch (err) {
-        if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ Error";
+        if (testNotifBtnsStatus) testNotifBtnsStatus.textContent = "❌ " + (t("common.error") || "Error");
         showToast(t("errors.test_notification_failed") || "Fehler beim Senden der Test-Benachrichtigung.");
       } finally {
         testNotifBtnsBtn.disabled = false;
@@ -2508,7 +2525,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
           }
         } else {
-          if (loadRootFoldersStatus) loadRootFoldersStatus.textContent = "⚠️ Keine Root Folders gefunden";
+          if (loadRootFoldersStatus) loadRootFoldersStatus.textContent = data.messageKey
+            ? "⚠️ " + apiMessage(data)
+            : "⚠️ " + t("api.no_root_folders_found");
         }
       } catch (err) {
         console.error("[LoadRootFolders] Error:", err);
@@ -2751,15 +2770,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (response.ok) {
           const result = await response.json();
-          testSeerrStatus.textContent = result.message;
+          testSeerrStatus.textContent = apiMessage(result);
           testSeerrStatus.style.color = "var(--green)";
         } else {
           const result = await response.json();
-          throw new Error(result.message);
+          throw new Error(apiMessage(result));
         }
       } catch (error) {
         testSeerrStatus.textContent =
-          error.message || "Connection failed.";
+          error.message || t('api.connection_failed');
         testSeerrStatus.style.color = "#f38ba8"; // Red
       } finally {
         testSeerrBtn.disabled = false;
@@ -2790,7 +2809,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         if (!profilesResponse.ok) {
-          throw new Error("Failed to fetch quality profiles");
+          throw new Error(t('api.fetch_quality_profiles_failed'));
         }
         const profilesResult = await profilesResponse.json();
 
@@ -2802,16 +2821,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         if (!serversResponse.ok) {
-          throw new Error("Failed to fetch servers");
+          throw new Error(t('api.fetch_servers_failed'));
         }
         const serversResult = await serversResponse.json();
 
         // Validate API responses
         if (!Array.isArray(profilesResult.profiles)) {
-          throw new Error("Invalid quality profiles response");
+          throw new Error(t('api.invalid_quality_profiles_response'));
         }
         if (!Array.isArray(serversResult.servers)) {
-          throw new Error("Invalid servers response");
+          throw new Error(t('api.invalid_servers_response'));
         }
 
         // Get current saved values
@@ -2873,7 +2892,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const totalProfiles = radarrProfiles.length + sonarrProfiles.length;
         const totalServers = radarrServers.length + sonarrServers.length;
     if (!silent && loadSeerrOptionsStatus) {
-        loadSeerrOptionsStatus.textContent = `Loaded ${totalProfiles} profiles, ${totalServers} servers`;
+        loadSeerrOptionsStatus.textContent = t('api.loaded_profiles_servers', { profiles: totalProfiles, servers: totalServers });
         loadSeerrOptionsStatus.style.color = "var(--green)";
       }
     } catch (error) {
@@ -2920,7 +2939,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (response.ok) {
           const result = await response.json();
-          testJellyfinStatus.textContent = result.message;
+          testJellyfinStatus.textContent = apiMessage(result);
           testJellyfinStatus.style.color = "var(--green)";
 
           // Auto-fill Server ID if returned
@@ -2939,11 +2958,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         } else {
           const result = await response.json();
-          throw new Error(result.message);
+          throw new Error(apiMessage(result, t('api.endpoint_test_failed')));
         }
       } catch (error) {
         testJellyfinStatus.textContent =
-          error.message || "Endpoint test failed.";
+          error.message || t('api.endpoint_test_failed');
         testJellyfinStatus.style.color = "#f38ba8"; // Red
       } finally {
         testJellyfinBtn.disabled = false;
@@ -2976,7 +2995,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             testRandomPickBtn.disabled = false;
           }, 2000);
         } else {
-          throw new Error(result.message || "Failed to send random pick");
+          throw new Error(apiMessage(result, t("api.random_pick_send_failed") || "Failed to send random pick"));
         }
       } catch (error) {
         testRandomPickBtn.style.backgroundColor = "#f38ba8";
@@ -3031,7 +3050,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!response.ok) {
           const result = await response.json();
-          throw new Error(result.message || t("errors.jellyfin_fetch_libraries") || "Fehler beim Laden der Bibliotheken");
+          throw new Error(apiMessage(result, t("errors.jellyfin_fetch_libraries") || "Fehler beim Laden der Bibliotheken"));
         }
 
         const result = await response.json();
@@ -4329,7 +4348,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast(t("config.mapping_removed") || "Zuordnung erfolgreich entfernt!");
         await loadMappings();
       } else {
-        showToast(`Error: ${result.message}`);
+        showToast(`${t("common.error") || "Error"}: ${apiMessage(result)}`);
       }
     } catch (error) {
       showToast(t("errors.mapping_remove_failed") || "Fehler beim Entfernen der Zuordnung.");
@@ -4351,7 +4370,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           showToast(t("config.remove_all_mappings_ok") || "Alle Zuordnungen entfernt.");
           await loadMappings();
         } else {
-          showToast(result.message || t("config.remove_all_mappings_fail") || "Fehler.");
+          showToast(apiMessage(result, t("config.remove_all_mappings_fail") || "Fehler."));
         }
       } catch (err) {
         showToast(t("config.remove_all_mappings_fail") || "Fehler beim Entfernen.");
@@ -4435,7 +4454,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           await loadMappings();
         } else {
-          showToast(`Error: ${result.message}`);
+          showToast(`${t("common.error") || "Error"}: ${apiMessage(result)}`);
         }
       } catch (error) {
         showToast(t("errors.mapping_add_failed") || "Fehler beim Hinzufügen der Zuordnung.");
@@ -4783,7 +4802,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           // selected", "Bot is not in the configured guild", etc.). This makes
           // self-diagnosis far easier when something other than a stopped bot
           // is the real cause.
-          const msg = (data && data.message) || t('errors.bot_must_be_running');
+          const msg = apiMessage(data, t('errors.bot_must_be_running'));
           const html = `<p class="form-text" style="opacity: 0.7; font-style: italic;">${msg}</p>`;
           document.getElementById("allowlist-roles").innerHTML = html;
           document.getElementById("blocklist-roles").innerHTML = html;
@@ -5310,13 +5329,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (data.code === "DISALLOWED_INTENTS") {
           showDiscordIntentError();
         }
-        showToast(`${t("common.error") || "Fehler"}: ${data.message}`);
+        showToast(`${t("common.error") || "Fehler"}: ${apiMessage(data)}`);
         botControlTextLogs.textContent = originalText;
         botControlBtnLogs.disabled = false;
       } else {
         const data = await response.json();
         hideDiscordIntentError();
-        showToast(data.message);
+        showToast(apiMessage(data));
         setTimeout(async () => {
           await updateBotControlButtonLogs();
           await fetchStatus(); // Update main page button too
@@ -5564,13 +5583,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           const err = await res.json().catch(() => ({}));
           if (importStatus) {
-            importStatus.textContent = "❌ " + (err.message || t("errors.import_failed") || "Import fehlgeschlagen");
+            importStatus.textContent = "❌ " + apiMessage(err, t("errors.import_failed") || "Import fehlgeschlagen");
             importStatus.style.color = "var(--red)";
           }
         }
       } catch (err) {
         if (importStatus) {
-          importStatus.textContent = "❌ Invalid JSON file";
+          importStatus.textContent = "❌ " + (t("api.invalid_json_file") || "Invalid JSON file");
           importStatus.style.color = "var(--red)";
         }
       }
@@ -5633,10 +5652,10 @@ document.addEventListener("DOMContentLoaded", () => {
           showToast(msg);
         } else {
           if (postHelpStatus) {
-            postHelpStatus.textContent = "❌ " + (data.message || (t("common.error") || "Failed"));
+            postHelpStatus.textContent = "❌ " + apiMessage(data, t("common.error") || "Failed");
             postHelpStatus.style.color = "var(--red)";
           }
-          showToast(data.message || "Failed to post help wizard.");
+          showToast(apiMessage(data, t("config.post_help_failed") || "Failed to post help wizard."));
         }
       } catch (err) {
         const detail = err?.message ? `: ${err.message}` : "";
@@ -5662,7 +5681,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch("/api/config/export", {
           credentials: "include",
         });
-        if (!res.ok) throw new Error("Export failed");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(apiMessage(err, t("api.export_failed") || "Export failed"));
+        }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -5671,7 +5693,7 @@ document.addEventListener("DOMContentLoaded", () => {
         a.click();
         URL.revokeObjectURL(url);
       } catch (err) {
-        alert("Export failed: " + err.message);
+        alert((t("api.export_failed") || "Export failed") + ": " + err.message);
       }
     });
   }

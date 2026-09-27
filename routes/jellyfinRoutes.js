@@ -69,10 +69,10 @@ router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConne
     }
 
     if (!url || !apiKey) {
-      return res.status(400).json({ success: false, message: "URL and API Key are required." });
+      return res.status(400).json({ success: false, messageKey: "api.url_api_key_required" });
     }
     if (!isAllowedUrl(url)) {
-      return res.status(400).json({ success: false, message: "Invalid URL. Must be http or https." });
+      return res.status(400).json({ success: false, messageKey: "api.invalid_url_protocol" });
     }
 
     const safeUrl = new URL(url);
@@ -97,7 +97,7 @@ router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConne
     res.json({ success: true, libraries });
   } catch (err) {
     logger.error("[JELLYFIN LIBRARIES API] Error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, messageKey: "api.jellyfin_libraries_error", messageParams: { detail: err.message } });
   }
 });
 
@@ -105,10 +105,10 @@ router.post("/jellyfin-libraries", authenticateToken, validateBody(jellyfinConne
 router.post("/test-jellyfin", authenticateToken, validateBody(jellyfinConnectionSchema), async (req, res) => {
   const { url } = req.body;
   if (!url) {
-    return res.status(400).json({ success: false, message: "Jellyfin URL is required." });
+    return res.status(400).json({ success: false, messageKey: "api.jellyfin_url_required" });
   }
   if (!isAllowedUrl(url)) {
-    return res.status(400).json({ success: false, message: "Invalid URL. Must be http or https." });
+    return res.status(400).json({ success: false, messageKey: "api.invalid_url_protocol" });
   }
 
   try {
@@ -119,14 +119,15 @@ router.post("/test-jellyfin", authenticateToken, validateBody(jellyfinConnection
     if (response.data?.ServerName && response.data?.Version) {
       return res.json({
         success: true,
-        message: `Connected to ${response.data.ServerName} (v${response.data.Version})`,
+        messageKey: "api.jellyfin_connected",
+        messageParams: { serverName: response.data.ServerName, version: response.data.Version },
         serverId: response.data.Id,
       });
     }
     throw new Error("Invalid response from Jellyfin server.");
   } catch (error) {
     logger.error("Jellyfin test failed:", error.message);
-    res.status(500).json({ success: false, message: "Connection failed. Check URL and network." });
+    res.status(500).json({ success: false, messageKey: "api.connection_failed_network" });
   }
 });
 
@@ -139,7 +140,7 @@ router.get("/jellyfin/libraries", authenticateToken, async (req, res) => {
     if (!apiKey || !baseUrl) {
       return res.status(400).json({
         success: false,
-        message: "Jellyfin API key and URL are required in configuration.",
+        messageKey: "api.jellyfin_config_missing",
       });
     }
 
@@ -159,7 +160,7 @@ router.get("/jellyfin/libraries", authenticateToken, async (req, res) => {
     logger.error("Failed to fetch Jellyfin libraries:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch libraries. Check Jellyfin configuration.",
+      messageKey: "api.fetch_libraries_failed",
     });
   }
 });

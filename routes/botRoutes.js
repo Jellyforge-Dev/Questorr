@@ -459,13 +459,13 @@ router.get("/widget/stats", authenticateWidget, async (req, res) => {
 // ─── Reset Command Stats (widget) ───────────────────────────────────────────
 router.post("/widget/reset-stats", authenticateWidget, (req, res) => {
   resetCommandStats();
-  res.json({ success: true, message: "Command stats reset" });
+  res.json({ success: true, messageKey: "api.command_stats_reset" });
 });
 
 // ─── Reset Command Stats (dashboard, cookie auth) ───────────────────────────
 router.post("/stats/reset", authenticateToken, (req, res) => {
   resetCommandStats();
-  res.json({ success: true, message: "Command stats reset" });
+  res.json({ success: true, messageKey: "api.command_stats_reset" });
 });
 
 // ─── Embeddable HTML Widget (Questorr theme, fully responsive) ──────────────
@@ -749,16 +749,16 @@ r();setInterval(r,15000);
 // ─── Post Help Wizard (authenticated) ────────────────────────────────────────
 router.post("/post-help", botControlLimiter, authenticateToken, async (req, res) => {
   if (!botState.isBotRunning || !botState.discordClient) {
-    return res.status(400).json({ success: false, message: "Bot is not running." });
+    return res.status(400).json({ success: false, messageKey: "api.bot_not_running" });
   }
   const { channelId, pin } = req.body;
   if (!channelId) {
-    return res.status(400).json({ success: false, message: "channelId is required." });
+    return res.status(400).json({ success: false, messageKey: "api.channel_id_required" });
   }
   try {
     const channel = await botState.discordClient.channels.fetch(channelId);
     if (!channel || !channel.isTextBased()) {
-      return res.status(400).json({ success: false, message: "Channel not found or not a text channel." });
+      return res.status(400).json({ success: false, messageKey: "api.channel_not_found" });
     }
     const { buildHelpEmbed, buildHelpComponents } = await import("../bot/helpers/helpMessage.js");
     const message = await channel.send({
@@ -789,7 +789,7 @@ router.post("/post-help", botControlLimiter, authenticateToken, async (req, res)
     res.json({ success: true, messageId: message.id, channelId: channel.id, pinned, pinError });
   } catch (err) {
     logger.error("[post-help] Error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, messageKey: "api.post_help_failed", messageParams: { detail: err.message } });
   }
 });
 
@@ -804,14 +804,14 @@ router.get("/status", authenticateToken, (req, res) => {
 export function createBotRoutes({ startBot }) {
   router.post("/start-bot", botControlLimiter, authenticateToken, async (req, res) => {
     if (botState.isBotRunning) {
-      return res.status(400).json({ message: "Bot is already running." });
+      return res.status(400).json({ messageKey: "api.bot_already_running" });
     }
     try {
       const result = await startBot();
       recordAudit({ actor: req.user?.username || "unknown", action: "bot_start", target: "", detail: req.ip });
-      res.status(200).json({ message: `Bot started successfully! ${result.message}` });
+      res.status(200).json({ messageKey: "api.bot_started", messageParams: { detail: result.message } });
     } catch (error) {
-      const body = { message: `Failed to start bot: ${error.message}` };
+      const body = { messageKey: "api.bot_start_failed", messageParams: { detail: error.message } };
       if (error.code) body.code = error.code;
       res.status(500).json(body);
     }
@@ -819,7 +819,7 @@ export function createBotRoutes({ startBot }) {
 
   router.post("/stop-bot", botControlLimiter, authenticateToken, async (req, res) => {
     if (!botState.isBotRunning || !botState.discordClient) {
-      return res.status(400).json({ message: "Bot is not running." });
+      return res.status(400).json({ messageKey: "api.bot_not_running" });
     }
     try {
       await botState.discordClient.destroy();
@@ -828,10 +828,10 @@ export function createBotRoutes({ startBot }) {
       botState.botStartedAt = null;
       logger.info("Bot has been stopped.");
       recordAudit({ actor: req.user?.username || "unknown", action: "bot_stop", target: "", detail: req.ip });
-      res.status(200).json({ message: "Bot stopped successfully." });
+      res.status(200).json({ messageKey: "api.bot_stopped" });
     } catch (error) {
       logger.error("Error stopping bot:", error);
-      res.status(500).json({ message: `Failed to stop bot: ${error.message}` });
+      res.status(500).json({ messageKey: "api.bot_stop_failed", messageParams: { detail: error.message } });
     }
   });
 

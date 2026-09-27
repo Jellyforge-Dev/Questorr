@@ -249,20 +249,20 @@ export const authenticateToken = (req, res, next) => {
   const token = req.cookies.auth_token;
 
   if (!token) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+    return res.status(401).json({ success: false, messageKey: "api.unauthorized" });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      return res.status(403).json({ success: false, messageKey: "api.forbidden" });
     }
     // Ensure the decoded token payload is an object; non-object payloads are rejected
     if (!user || typeof user !== "object") {
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      return res.status(403).json({ success: false, messageKey: "api.forbidden" });
     }
     // Legacy tokens without JTI remain valid until expiry; JTI tokens enforce revocation
     if (user.jti && isTokenRevoked(user.jti)) {
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      return res.status(403).json({ success: false, messageKey: "api.forbidden" });
     }
     req.user = user;
     next();
@@ -275,7 +275,7 @@ export const login = async (req, res) => {
   if (!username || !password) {
     return res
       .status(400)
-      .json({ success: false, message: "Username and password are required" });
+      .json({ success: false, messageKey: "api.username_password_required" });
   }
 
   // Check lockout before doing anything else
@@ -284,7 +284,8 @@ export const login = async (req, res) => {
     logger.warn(`🔒 Login blocked for IP ${req.ip} — IP locked (${ipSecondsRemaining}s remaining)`);
     return res.status(429).json({
       success: false,
-      message: `Too many failed attempts. Try again in ${ipSecondsRemaining} seconds.`,
+      messageKey: "api.too_many_attempts_seconds",
+      messageParams: { seconds: ipSecondsRemaining },
     });
   }
 
@@ -293,7 +294,8 @@ export const login = async (req, res) => {
     logger.warn(`🔒 Login blocked for "${username}" — account locked (${secondsRemaining}s remaining, from ${req.ip})`);
     return res.status(429).json({
       success: false,
-      message: `Too many failed attempts. Try again in ${secondsRemaining} seconds.`,
+      messageKey: "api.too_many_attempts_seconds",
+      messageParams: { seconds: secondsRemaining },
     });
   }
 
@@ -315,14 +317,15 @@ export const login = async (req, res) => {
       logger.warn(`🔒 Account "${username}" locked after ${MAX_FAILED_ATTEMPTS} failed attempts (from ${req.ip})`);
       return res.status(429).json({
         success: false,
-        message: `Too many failed attempts. Account locked for ${Math.ceil(LOCKOUT_DURATION_MS / 60000)} minutes.`,
+        messageKey: "api.too_many_attempts_locked",
+        messageParams: { minutes: Math.ceil(LOCKOUT_DURATION_MS / 60000) },
       });
     }
     logger.warn(`⚠️ Failed login for "${username}" — ${count}/${MAX_FAILED_ATTEMPTS} attempts (from ${req.ip})`);
     recordAudit({ actor: String(username || "unknown"), action: "login_fail", target: `${count}/${MAX_FAILED_ATTEMPTS}`, detail: req.ip });
     return res
       .status(401)
-      .json({ success: false, message: "Invalid credentials" });
+      .json({ success: false, messageKey: "api.invalid_credentials" });
   }
 
   clearFailures(username);
@@ -343,7 +346,7 @@ export const login = async (req, res) => {
 
   res.json({
     success: true,
-    message: "Logged in successfully",
+    messageKey: "api.logged_in",
     username: user.username,
   });
 };
@@ -354,7 +357,7 @@ export const register = async (req, res) => {
   if (!username || !password) {
     return res
       .status(400)
-      .json({ success: false, message: "Username and password are required" });
+      .json({ success: false, messageKey: "api.username_password_required" });
   }
 
   const users = getUsers();
@@ -363,7 +366,7 @@ export const register = async (req, res) => {
   if (users.length > 0) {
     return res.status(403).json({
       success: false,
-      message: "Registration is disabled. An admin account already exists.",
+      messageKey: "api.registration_disabled",
     });
   }
 
@@ -400,14 +403,14 @@ export const register = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Account created successfully",
+      messageKey: "api.account_created",
       username: newUser.username,
     });
   } catch (error) {
     logger.error("Error during user registration:", error);
     res.status(500).json({
       success: false,
-      message: "Error creating account - check server logs",
+      messageKey: "api.account_creation_failed",
     });
   }
 };
@@ -418,7 +421,7 @@ export const logout = (req, res) => {
     revokeToken(token);
   }
   res.clearCookie("auth_token");
-  res.json({ success: true, message: "Logged out successfully" });
+  res.json({ success: true, messageKey: "api.logged_out" });
 };
 
 export const checkAuth = (req, res) => {
