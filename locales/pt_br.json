@@ -107,6 +107,8 @@
     "default_channel": "Canal de Notificação Padrão",
     "use_default_channel": "Usar canal padrão",
     "select_server_first": "Selecione um servidor primeiro...",
+    "select_server": "Selecione um servidor...",
+    "enter_token_bot_id_first": "Insira primeiro o Token do Discord e o ID do Bot...",
     "default_channel_help": "Canal Discord padrão para notificações. Pode ser sobrescrito por biblioteca na Etapa 4.",
     "post_help_title": "Publicar o Help Wizard no Canal",
     "post_help_desc": "Publica o wizard /help (embed + botões de ação rápida) em um canal do Discord, para que todos os usuários possam acessá-lo sem digitar /help.",

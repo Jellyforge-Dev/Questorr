@@ -2522,7 +2522,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function populateRootFolderSelect(sel) {
     const currentVal = sel.value;
-    sel.innerHTML = `<option value="">— ${t('config.select_root_folder') || 'Select root folder'} —</option>`;
+    sel.innerHTML = `<option value="" data-i18n="config.select_root_folder">${t('config.select_root_folder') || 'Select root folder'}</option>`;
     // Group by type
     const radarr = availableRootFolders.filter(f => f.type === "radarr");
     const sonarr = availableRootFolders.filter(f => f.type === "sonarr");
@@ -2604,7 +2604,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const channelSel = document.createElement("select");
     channelSel.className = "root-folder-channel-select";
     channelSel.style.cssText = "flex:1;background:var(--surface0);border:1px solid var(--surface1);color:var(--text);padding:0.6rem 0.75rem;border-radius:8px;font-size:0.9rem;";
-    channelSel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Select a channel'} —</option>`;
+    channelSel.innerHTML = `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Select a channel'}</option>`;
     // Stash the saved channelId on the element itself so a late channel-load
     // can still restore the correct selection (closure capture wasn't enough
     // when populateChannels was called with stale/empty data).
@@ -2827,7 +2827,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Movie quality profiles (Radarr)
         const movieQualityDefaultLabel = t('config.use_seerr_default') || 'Use Seerr default';
-        movieQualitySelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
+        movieQualitySelect.innerHTML = `<option value="" data-i18n="config.use_seerr_default">${movieQualityDefaultLabel}</option>`;
         const radarrProfiles = profilesResult.profiles.filter(p => p.type === "radarr");
         radarrProfiles.forEach(profile => {
           const option = document.createElement("option");
@@ -2838,7 +2838,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedMovieQuality) movieQualitySelect.value = savedMovieQuality;
 
         // TV quality profiles (Sonarr)
-        tvQualitySelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
+        tvQualitySelect.innerHTML = `<option value="" data-i18n="config.use_seerr_default">${movieQualityDefaultLabel}</option>`;
         const sonarrProfiles = profilesResult.profiles.filter(p => p.type === "sonarr");
         sonarrProfiles.forEach(profile => {
           const option = document.createElement("option");
@@ -2849,7 +2849,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedTvQuality) tvQualitySelect.value = savedTvQuality;
 
         // Movie servers (Radarr)
-        movieServerSelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
+        movieServerSelect.innerHTML = `<option value="" data-i18n="config.use_seerr_default">${movieQualityDefaultLabel}</option>`;
         const radarrServers = serversResult.servers.filter(s => s.type === "radarr");
         radarrServers.forEach(server => {
           const option = document.createElement("option");
@@ -2860,7 +2860,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (savedMovieServer) movieServerSelect.value = savedMovieServer;
 
         // TV servers (Sonarr)
-        tvServerSelect.innerHTML = `<option value="">${movieQualityDefaultLabel}</option>`;
+        tvServerSelect.innerHTML = `<option value="" data-i18n="config.use_seerr_default">${movieQualityDefaultLabel}</option>`;
         const sonarrServers = serversResult.servers.filter(s => s.type === "sonarr");
         sonarrServers.forEach(server => {
           const option = document.createElement("option");
@@ -3100,7 +3100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   data-library-id="${lib.id}"
                   ${!isChecked ? "disabled" : ""}
                 >
-                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
+                  <option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -3136,7 +3136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!episodesEnabled ? "disabled" : ""}
                 >
-                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
+                  <option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
 
@@ -3158,7 +3158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="library-channel-select"
                   ${!seasonsEnabled ? "disabled" : ""}
                 >
-                  <option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
+                  <option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>
                 </select>
               </div>
             `;
@@ -3260,7 +3260,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Clear and populate options
         select.innerHTML =
-          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
+          `<option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -3286,7 +3286,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (episodesSelect) {
         episodesSelect.innerHTML =
-          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
+          `<option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -3304,7 +3304,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (seasonsSelect) {
         seasonsSelect.innerHTML =
-          `<option value="">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
+          `<option value="" data-i18n="config.use_default_channel">${t("config.use_default_channel") || "Standardkanal verwenden"}</option>` +
           channels
             .map((ch) => {
               let icon = "";
@@ -3367,18 +3367,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Reset to default state if no token
     if (!tokenInput?.value || !botIdInput?.value) {
       guildSelect.innerHTML =
-        '<option value="">Enter Discord Token and Bot ID first...</option>';
+        `<option value="" data-i18n="config.enter_token_bot_id_first">${t('config.enter_token_bot_id_first') || 'Enter Discord Token and Bot ID first...'}</option>`;
       return;
     }
 
-    guildSelect.innerHTML = `<option value="">${t('config.loading_servers') || 'Lade Server...'}</option>`;
+    guildSelect.innerHTML = `<option value="" data-i18n="config.loading_servers">${t('config.loading_servers') || 'Lade Server...'}</option>`;
 
     try {
       const response = await fetch("/api/discord/guilds");
       const data = await response.json();
 
       if (data.success && data.guilds) {
-        guildSelect.innerHTML = '<option value="">Select a server...</option>';
+        guildSelect.innerHTML = `<option value="" data-i18n="config.select_server">${t('config.select_server') || 'Select a server...'}</option>`;
         data.guilds.forEach((guild) => {
           const option = document.createElement("option");
           option.value = guild.id;
@@ -3397,10 +3397,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } else {
         guildSelect.innerHTML =
-          `<option value="">${t('errors.loading_servers_check_token')}</option>`;
+          `<option value="" data-i18n="errors.loading_servers_check_token">${t('errors.loading_servers_check_token')}</option>`;
       }
     } catch (error) {
-      guildSelect.innerHTML = `<option value="">${t('errors.loading_servers')}</option>`;
+      guildSelect.innerHTML = `<option value="" data-i18n="errors.loading_servers">${t('errors.loading_servers')}</option>`;
     }
   }
 
@@ -3414,51 +3414,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!guildId) {
       if (channelSelect) {
         channelSelect.innerHTML =
-          '<option value="">Select a server first...</option>';
+          `<option value="" data-i18n="config.select_server_first">${t('config.select_server_first') || 'Select a server first...'}</option>`;
       }
       if (episodeChannelSelect) {
         episodeChannelSelect.innerHTML =
-          `<option value="">${t('config.use_default_channel')}</option>`;
+          `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
       }
       if (seasonChannelSelect) {
         seasonChannelSelect.innerHTML =
-          `<option value="">${t('config.use_default_channel')}</option>`;
+          `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+          `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
       if (cleanupChannelSelect) {
         cleanupChannelSelect.innerHTML =
-          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+          `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
       const postHelpChanSelEmpty = document.getElementById("POST_HELP_CHANNEL_ID");
-      if (postHelpChanSelEmpty) postHelpChanSelEmpty.innerHTML = `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+      if (postHelpChanSelEmpty) postHelpChanSelEmpty.innerHTML = `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       return;
     }
 
     // Set loading state for all selects
     if (channelSelect) {
-      channelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+      channelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (episodeChannelSelect) {
-      episodeChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+      episodeChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (seasonChannelSelect) {
-      seasonChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+      seasonChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (cleanupChannelSelect) {
-      cleanupChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+      cleanupChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     if (dailyRandomPickChannelSelect) {
-      dailyRandomPickChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+      dailyRandomPickChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     }
     const seerrChannelSelect = document.getElementById("SEERR_CHANNEL_ID");
     const seerrAdminChannelSelect = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
-    if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
-    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    if (seerrChannelSelect) seerrChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    if (seerrAdminChannelSelect) seerrAdminChannelSelect.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
     const postHelpChanSelLoading = document.getElementById("POST_HELP_CHANNEL_ID");
-    if (postHelpChanSelLoading) postHelpChanSelLoading.innerHTML = `<option value="">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
+    if (postHelpChanSelLoading) postHelpChanSelLoading.innerHTML = `<option value="" data-i18n="config.loading_channels">${t('config.loading_channels') || 'Lade Kanäle...'}</option>`;
 
     try {
       const response = await fetch(`/api/discord/channels/${guildId}`);
@@ -3468,7 +3468,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate main channel select
         if (channelSelect) {
           channelSelect.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3489,7 +3489,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate episode channel select (optional)
         if (episodeChannelSelect) {
           episodeChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3510,7 +3510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate season channel select (optional)
         if (seasonChannelSelect) {
           seasonChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3531,7 +3531,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Populate daily random pick channel select
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3552,9 +3552,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const seerrChannelSelect2 = document.getElementById("SEERR_CHANNEL_ID");
         const seerrAdminChannelSelect2 = document.getElementById("SEERR_ADMIN_CHANNEL_ID");
 
-        function populateSeerrSelect(sel, placeholder, savedKey) {
+        function populateSeerrSelect(sel, key, fallback, savedKey) {
           if (!sel) return;
-          sel.innerHTML = `<option value="">${placeholder}</option>`;
+          sel.innerHTML = `<option value="" data-i18n="${key}">${t(key) || fallback}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3566,25 +3566,25 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (sv) sel.value = sv;
         }
 
-        populateSeerrSelect(seerrChannelSelect2, `— ${t('config.select_channel') || 'Select a channel'} —`, "SEERR_CHANNEL_ID");
-        populateSeerrSelect(seerrAdminChannelSelect2, t("config.seerr_admin_channel_same") || "— Same as default Seerr channel —", "SEERR_ADMIN_CHANNEL_ID");
+        populateSeerrSelect(seerrChannelSelect2, "config.select_channel", "Select a channel", "SEERR_CHANNEL_ID");
+        populateSeerrSelect(seerrAdminChannelSelect2, "config.seerr_admin_channel_same", "Same as default Seerr channel", "SEERR_ADMIN_CHANNEL_ID");
 
         // Populate Daily Recommendation channel select
         const dailyRecChannelSelect = document.getElementById("DAILY_RECOMMENDATION_CHANNEL_ID");
-        populateSeerrSelect(dailyRecChannelSelect, `— ${t('config.select_channel') || 'Select a channel'} —`, "DAILY_RECOMMENDATION_CHANNEL_ID");
+        populateSeerrSelect(dailyRecChannelSelect, "config.select_channel", "Select a channel", "DAILY_RECOMMENDATION_CHANNEL_ID");
 
         // Populate Cleanup Advisor channel select
         const cleanupChanSel = document.getElementById("CLEANUP_ADVISOR_CHANNEL_ID");
-        populateSeerrSelect(cleanupChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "CLEANUP_ADVISOR_CHANNEL_ID");
+        populateSeerrSelect(cleanupChanSel, "config.select_channel", "Kanal auswählen", "CLEANUP_ADVISOR_CHANNEL_ID");
 
         // Populate Post Help Wizard channel select
         const postHelpChanSel = document.getElementById("POST_HELP_CHANNEL_ID");
-        populateSeerrSelect(postHelpChanSel, `— ${t('config.select_channel') || 'Kanal auswählen'} —`, "POST_HELP_CHANNEL_ID");
+        populateSeerrSelect(postHelpChanSel, "config.select_channel", "Kanal auswählen", "POST_HELP_CHANNEL_ID");
 
         // Generic fallback: populate any [data-channel-select="true"] elements not yet handled above
         document.querySelectorAll("[data-channel-select='true']").forEach(sel => {
           if (sel.options.length > 1) return; // already populated — skip
-          sel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Kanal auswählen'} —</option>`;
+          sel.innerHTML = `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3599,7 +3599,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Also populate root-folder channel dropdowns if any exist
         document.querySelectorAll(".root-folder-channel-select").forEach((sel) => {
           const savedVal = sel.dataset.savedValue || sel.value;
-          sel.innerHTML = `<option value="">— ${t('config.select_channel') || 'Select a channel'} —</option>`;
+          sel.innerHTML = `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Select a channel'}</option>`;
           data.channels.forEach((channel) => {
             const option = document.createElement("option");
             option.value = channel.id;
@@ -3612,45 +3612,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         if (channelSelect) {
           channelSelect.innerHTML =
-            `<option value="">${t('errors.loading_channels')}</option>`;
+            `<option value="" data-i18n="errors.loading_channels">${t('errors.loading_channels')}</option>`;
         }
         if (episodeChannelSelect) {
           episodeChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
         }
         if (seasonChannelSelect) {
           seasonChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
         if (cleanupChannelSelect) {
           cleanupChannelSelect.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     } catch (error) {
       if (channelSelect) {
         channelSelect.innerHTML =
-          `<option value="">${t('errors.loading_channels')}</option>`;
+          `<option value="" data-i18n="errors.loading_channels">${t('errors.loading_channels')}</option>`;
       }
       if (episodeChannelSelect) {
         episodeChannelSelect.innerHTML =
-          `<option value="">${t('config.use_default_channel')}</option>`;
+          `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
       }
       if (seasonChannelSelect) {
         seasonChannelSelect.innerHTML =
-          `<option value="">${t('config.use_default_channel')}</option>`;
+          `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
       }
       if (dailyRandomPickChannelSelect) {
         dailyRandomPickChannelSelect.innerHTML =
-          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+          `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
       if (cleanupChannelSelect) {
         cleanupChannelSelect.innerHTML =
-          `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+          `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
       }
     }
   }
@@ -3670,23 +3670,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (channelSelect) {
           channelSelect.innerHTML =
-            '<option value="">Select a server first...</option>';
+            `<option value="" data-i18n="config.select_server_first">${t('config.select_server_first') || 'Select a server first...'}</option>`;
         }
         if (episodeChannelSelect) {
           episodeChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
         }
         if (seasonChannelSelect) {
           seasonChannelSelect.innerHTML =
-            `<option value="">${t('config.use_default_channel')}</option>`;
+            `<option value="" data-i18n="config.use_default_channel">${t('config.use_default_channel')}</option>`;
         }
         if (dailyRandomPickChannelSelect) {
           dailyRandomPickChannelSelect.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
         if (cleanupChannelSelect2) {
           cleanupChannelSelect2.innerHTML =
-            `<option value="">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
+            `<option value="" data-i18n="config.select_channel">${t('config.select_channel') || 'Kanal auswählen...'}</option>`;
         }
       }
     });
@@ -4865,7 +4865,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const sel = document.getElementById(selectId);
     if (!sel) return;
     const allLabel = t('config.all_members') || 'All members';
-    const opts = [`<option value="">${escapeHtml(allLabel)}</option>`];
+    const opts = [`<option value="" data-i18n="config.all_members">${escapeHtml(allLabel)}</option>`];
     for (const role of guildRoles) {
       const selected = String(role.id) === String(currentValue) ? " selected" : "";
       opts.push(`<option value="${escapeHtml(role.id)}"${selected}>${escapeHtml(role.name)}</option>`);

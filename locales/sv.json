@@ -107,6 +107,8 @@
     "default_channel": "Standardkanal för aviseringar",
     "use_default_channel": "Använd standardkanal",
     "select_server_first": "Välj en server först...",
+    "select_server": "Välj en server...",
+    "enter_token_bot_id_first": "Ange Discord-token och Bot-ID först...",
     "default_channel_help": "Standard Discord-kanal för aviseringar. Kan åsidosättas per bibliotek i steg 4.",
     "post_help_title": "Posta hjälpguiden i en kanal",
     "post_help_desc": "Posta /help-guiden (inbäddning + snabbknappar) i en Discord-kanal så att alla användare kan komma åt den utan att skriva /help.",

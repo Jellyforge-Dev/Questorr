@@ -107,6 +107,8 @@
     "default_channel": "Salon de notification par défaut",
     "use_default_channel": "Utiliser le salon par défaut",
     "select_server_first": "Sélectionnez d'abord un serveur...",
+    "select_server": "Sélectionnez un serveur...",
+    "enter_token_bot_id_first": "Entrez d'abord le token Discord et l'ID du bot...",
     "default_channel_help": "Salon Discord par défaut pour les notifications. Peut être remplacé par bibliothèque à l'étape 4.",
     "post_help_title": "Publier l'assistant d'aide dans un salon",
     "post_help_desc": "Publiez l'assistant /help (embed + boutons d'action rapide) dans un salon Discord pour que tous les utilisateurs puissent y accéder sans taper /help.",

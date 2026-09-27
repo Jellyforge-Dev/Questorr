@@ -107,6 +107,8 @@
     "default_channel": "Canal de notificaciones predeterminado",
     "use_default_channel": "Usar canal predeterminado",
     "select_server_first": "Selecciona primero un servidor...",
+    "select_server": "Selecciona un servidor...",
+    "enter_token_bot_id_first": "Introduce primero el token de Discord y el ID del bot...",
     "default_channel_help": "Canal de Discord predeterminado para notificaciones. Se puede anular por biblioteca en el paso 4.",
     "post_help_title": "Publicar el asistente de ayuda en un canal",
     "post_help_desc": "Publica el asistente /help (embed + botones de acción rápida) en un canal de Discord para que todos los usuarios puedan acceder a él sin escribir /help.",

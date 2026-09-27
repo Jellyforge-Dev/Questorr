@@ -107,6 +107,8 @@
     "default_channel": "Default Notification Channel",
     "use_default_channel": "Use default channel",
     "select_server_first": "Select a server first...",
+    "select_server": "Select a server...",
+    "enter_token_bot_id_first": "Enter Discord Token and Bot ID first...",
     "default_channel_help": "Default Discord channel for notifications. Can be overridden per library in Step 4.",
     "post_help_title": "Post Help Wizard to Channel",
     "post_help_desc": "Post the /help wizard (embed + quick-action buttons) to a Discord channel so all users can access it without typing /help.",

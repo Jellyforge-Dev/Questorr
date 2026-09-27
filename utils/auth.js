@@ -7,6 +7,7 @@ import logger from "./logger.js";
 import { readConfig, updateConfig, CONFIG_PATH } from "./configFile.js";
 import { getUsers, saveUser as saveUserToConfig } from "./userStore.js";
 import { recordAudit } from "./adminAudit.js";
+import { getAvailableLanguageCodes } from "./availableLanguages.js";
 
 const AUTH_TOKEN_EXPIRATION = "7d";
 const AUTH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -347,10 +348,6 @@ export const login = async (req, res) => {
   });
 };
 
-// Locales Questorr actually ships (locales/*.json) — keep in sync with the
-// <select id="bot-language"> options in web/index.html.
-const SUPPORTED_LANGUAGES = ["en", "de"];
-
 export const register = async (req, res) => {
   const { username, password, language } = req.body;
 
@@ -383,7 +380,7 @@ export const register = async (req, res) => {
     // even for an admin who registered in German. Seed both the dashboard
     // default and the bot's reply language from that same choice now, once,
     // at account creation. A later change in Step 7 still overrides this.
-    if (SUPPORTED_LANGUAGES.includes(language)) {
+    if (getAvailableLanguageCodes().includes(language)) {
       updateConfig({ LANGUAGE: language, BOT_LANGUAGE: language });
     }
 

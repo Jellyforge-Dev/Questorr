@@ -107,6 +107,8 @@
     "default_channel": "",
     "use_default_channel": "",
     "select_server_first": "",
+    "select_server": "",
+    "enter_token_bot_id_first": "",
     "default_channel_help": "",
     "post_help_title": "",
     "post_help_desc": "",
