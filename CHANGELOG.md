@@ -21,6 +21,7 @@
 - Seerr status-poller no longer misses fast approve/decline transitions that race past the "pending" status.
 - Stopping the bot now actually tears down all background timers/pollers (Jellyfin poller, Seerr status poller, cleanup advisor, subscription poller, weekly digest) instead of leaving them running after the Discord client was destroyed — the same fix applies to the graceful shutdown on SIGTERM/SIGINT.
 - Questorr's logo is now automatically set as the bot's Discord avatar on first start.
+- Fixed hardcoded English/German hover-text (tooltips) and screen-reader labels on several buttons (Round-Trip Test, Insights Refresh, mobile Save, theme toggle, both role-filter dropdowns) that ignored the selected dashboard language.
 
 #### 🧹 Cleanup
 - Removed dead code: several unused API-client functions, an abandoned query/param validation approach, unused constants, stray duplicate module exports, and a duplicated pair of URL-builder functions (consolidated into `utils/url.js`).
@@ -252,6 +253,7 @@ The browser now warns before navigating away from the dashboard when there are u
 - Der Seerr-Status-Poller verpasst keine schnellen Genehmigungen/Ablehnungen mehr, die den "pending"-Status überspringen.
 - Das Stoppen des Bots räumt jetzt tatsächlich alle Hintergrund-Timer/Poller ab (Jellyfin-Poller, Seerr-Status-Poller, Cleanup-Advisor, Subscription-Poller, Weekly-Digest), statt sie nach dem Zerstören des Discord-Clients weiterlaufen zu lassen — derselbe Fix gilt auch beim Graceful Shutdown via SIGTERM/SIGINT.
 - Das Questorr-Logo wird jetzt automatisch als Bot-Avatar beim ersten Start gesetzt.
+- Hartcodierte englische/deutsche Hover-Texte (Tooltips) und Screenreader-Labels bei mehreren Buttons behoben (Round-Trip Test, Insights Aktualisieren, mobiler Speichern-Button, Theme-Umschalter, beide Rollen-Filter-Dropdowns) — diese ignorierten bisher die gewählte Dashboard-Sprache.
 
 #### 🧹 Aufräumarbeiten
 - Toter Code entfernt: mehrere unbenutzte API-Client-Funktionen, ein verworfener Query/Param-Validierungsansatz, unbenutzte Konstanten, verwaiste doppelte Modul-Exporte und ein dupliziertes Paar URL-Builder-Funktionen (in `utils/url.js` konsolidiert).
