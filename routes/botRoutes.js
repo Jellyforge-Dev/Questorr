@@ -801,7 +801,7 @@ router.get("/status", authenticateToken, (req, res) => {
   });
 });
 
-export function createBotRoutes({ startBot }) {
+export function createBotRoutes({ startBot, stopBot }) {
   router.post("/start-bot", botControlLimiter, authenticateToken, async (req, res) => {
     if (botState.isBotRunning) {
       return res.status(400).json({ messageKey: "api.bot_already_running" });
@@ -822,10 +822,7 @@ export function createBotRoutes({ startBot }) {
       return res.status(400).json({ messageKey: "api.bot_not_running" });
     }
     try {
-      await botState.discordClient.destroy();
-      botState.isBotRunning = false;
-      botState.discordClient = null;
-      botState.botStartedAt = null;
+      await stopBot();
       logger.info("Bot has been stopped.");
       recordAudit({ actor: req.user?.username || "unknown", action: "bot_stop", target: "", detail: req.ip });
       res.status(200).json({ messageKey: "api.bot_stopped" });
@@ -837,5 +834,3 @@ export function createBotRoutes({ startBot }) {
 
   return router;
 }
-
-export default router;

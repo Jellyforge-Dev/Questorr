@@ -345,8 +345,6 @@
     "seerr_root_folder_hint": "⚠️ Klicka på \"Ladda rotmappar\" innan du lägger till en koppling.",
     "seerr_root_folder_loading": "Läser in rotmappar...",
     "seerr_root_folder_loaded": "Rotmappar inlästa",
-    "btn_collection": "🎬 Visa samling",
-    "btn_collection_desc": "Listar alla filmer i TMDB-samlingen med tillgänglighet och förfrågningsknappar",
     "notif_titles_title": "Aviseringstitlar",
     "notif_titles_desc": "Anpassa titelraden för varje Discord-avisering. Lämna tomt för standard baserat på valt bot-språk.",
     "notif_media_pending": "Ny förfrågan",
@@ -604,8 +602,7 @@
     "feature_digest": "<strong>Veckovis biblioteks-sammanfattning</strong> — ett valfritt veckoinlägg som listar filmer och serier som lagts till i ditt Jellyfin-bibliotek de senaste 7 dagarna, plus nya avsnitt av befintliga serier (aggregerat per serie). Kanal, dag och tid är konfigurerbara; inget postas under en lugn vecka."
   },
   "toast": {
-    "saved": "Inställningarna sparades.",
-    "saved_commands": "Inställningarna sparades. Discord-kommandon uppdaterade."
+    "saved": "Inställningarna sparades."
   },
   "widget": {
     "tab_commands": "Kommandon",

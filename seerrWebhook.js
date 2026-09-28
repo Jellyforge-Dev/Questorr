@@ -33,7 +33,7 @@ import {
 } from "discord.js";
 import axios from "axios";
 import logger from "./utils/logger.js";
-import { isValidUrl } from "./utils/url.js";
+import { isValidUrl, buildSeerrUrl, buildJellyfinUrl } from "./utils/url.js";
 import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
 import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
 import { jellyfinAuthHeaders } from "./api/jellyfin.js";
@@ -652,21 +652,6 @@ async function fetchTmdbDetails(tmdbId, mediaType) {
     logger.warn(`[SEERR WEBHOOK] Could not fetch TMDB data for ${mediaType}/${tmdbId}: ${e.message}`);
     return null;
   }
-}
-
-// ─── URL Builders ─────────────────────────────────────────────────────────────
-
-export function buildSeerrUrl(mediaType, tmdbId) {
-  const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
-  if (!base || !tmdbId) return null;
-  return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
-}
-
-export function buildJellyfinUrl(itemId) {
-  const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-  const serverId = process.env.JELLYFIN_SERVER_ID || "";
-  if (!base || !itemId) return null;
-  return `${base}/web/index.html#!/details?id=${itemId}&serverId=${serverId}`;
 }
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────

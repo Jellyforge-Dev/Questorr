@@ -74,9 +74,8 @@ export function resolveTargetChannel(configLibraryId, libraryChannels) {
 }
 
 /**
- * Shared in-memory deduplication store for seen Jellyfin item IDs.
- * Shared between the poller and WebSocket client so that an item
- * detected by both within 24 hours is only notified once.
+ * Shared in-memory deduplication store for seen Jellyfin item IDs, so an item
+ * detected more than once within 24 hours is only notified once.
  */
 // Round 9: timestamp=0 marks an item as "seed-only" — recorded during the
 // silent bulk-seed at first bot start, but never notified.
@@ -139,5 +138,5 @@ export class ItemDeduplicator {
   }
 }
 
-/** Singleton deduplicator shared by poller and WebSocket client. */
+/** Singleton deduplicator used by the poller. */
 export const deduplicator = new ItemDeduplicator();

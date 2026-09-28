@@ -14,6 +14,8 @@ import { stopCleanupAdvisor } from "./cleanupAdvisor.js";
 import { startJellyfinPoller, stopJellyfinPoller } from "./jellyfinPoller.js";
 import { startSeerrStatusPoller, stopSeerrStatusPoller } from "./seerrStatusPoller.js";
 import { startHealthAlertPoller } from "./healthAlertPoller.js";
+import { stopSubscriptionPoller } from "./subscriptionPoller.js";
+import { stopWeeklyDigest } from "./weeklyDigest.js";
 import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
@@ -180,4 +182,25 @@ export async function startBot() {
       reject(err);
     });
   });
+}
+
+/**
+ * Mirror of startBot(): tears down every background timer/poller it started
+ * (Jellyfin poller, Seerr status poller, cleanup advisor, subscription
+ * poller, weekly digest) before destroying the Discord client. Without this,
+ * stopping the bot only disconnected the Discord client — the scheduled jobs
+ * kept firing in the background with botState.discordClient already null.
+ */
+export async function stopBot() {
+  stopJellyfinPoller();
+  stopSeerrStatusPoller();
+  stopCleanupAdvisor();
+  stopSubscriptionPoller();
+  stopWeeklyDigest();
+  if (botState.discordClient) {
+    await botState.discordClient.destroy();
+  }
+  botState.isBotRunning = false;
+  botState.discordClient = null;
+  botState.botStartedAt = null;
 }

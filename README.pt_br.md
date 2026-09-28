@@ -5,7 +5,7 @@
 
   **Um bot do Discord auto-hospedado que conecta Jellyfin e Seerr — com notificações inteligentes, roteamento automático de canais e um dashboard web completo.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.3-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.4-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Entrar-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -152,7 +152,7 @@ Configurações de encaminhamento do proxy reverso: Esquema: `http` · Host / Fo
 |---|---|
 | `latest` | Última versão estável |
 | `dev` | Build de desenvolvimento (pode ser instável) |
-| ex.: `2.4.3` | Versão específica fixada — veja [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) para todas as tags |
+| ex.: `2.4.4` | Versão específica fixada — veja [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) para todas as tags |
 
 ### Manual (Desenvolvimento)
 
