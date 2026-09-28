@@ -68,6 +68,7 @@
     "stats_insights_title": "Estadísticas de biblioteca y solicitudes",
     "stats_insights_load": "Cargar estadísticas",
     "stats_insights_refresh": "Actualizar",
+    "stats_insights_refresh_title": "Omite la caché de 5 minutos y obtiene datos actualizados directamente de Jellyfin/Seerr",
     "stats_insights_loading": "Cargando…",
     "stats_insights_ok": "Cargado",
     "stats_insights_no_data": "Aún no hay datos — haz clic en \"Cargar estadísticas\".",
@@ -194,6 +195,7 @@
     "time_ago_hours": "hace {{n}} h",
     "time_ago_days": "hace {{n}} d",
     "test_seerr_roundtrip": "Prueba de ida y vuelta",
+    "test_seerr_roundtrip_title": "Hace que Seerr envíe un webhook a Questorr — prueba toda la cadena, incluida la cabecera Authorization",
     "seerr_root_folder_load": "Cargar carpetas raíz",
     "jellyfin_fallback_channel": "📢 Canal de notificaciones predeterminado",
     "jellyfin_fallback_desc": "El canal de reserva se configura en la pestaña 1. Discord → Canal de notificaciones predeterminado.",
@@ -484,6 +486,8 @@
   "ui": {
     "hide_header": "Ocultar cabecera",
     "show_header": "Mostrar cabecera",
+    "theme_toggle_aria": "Cambiar tema",
+    "filter_by_role_aria": "Filtrar miembros por rol",
     "copied": "¡Copiado!"
   },
   "footer": {

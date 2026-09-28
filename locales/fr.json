@@ -68,6 +68,7 @@
     "stats_insights_title": "Analyses de la bibliothèque et des demandes",
     "stats_insights_load": "Charger les analyses",
     "stats_insights_refresh": "Actualiser",
+    "stats_insights_refresh_title": "Contourne le cache de 5 minutes et récupère des données fraîches directement depuis Jellyfin/Seerr",
     "stats_insights_loading": "Chargement…",
     "stats_insights_ok": "Chargé",
     "stats_insights_no_data": "Pas encore de données — cliquez sur « Charger les analyses ».",
@@ -194,6 +195,7 @@
     "time_ago_hours": "il y a {{n}} h",
     "time_ago_days": "il y a {{n}} j",
     "test_seerr_roundtrip": "Test aller-retour",
+    "test_seerr_roundtrip_title": "Déclenche l'envoi d'un webhook de Seerr vers Questorr — teste toute la chaîne, y compris l'en-tête Authorization",
     "seerr_root_folder_load": "Charger les dossiers racines",
     "jellyfin_fallback_channel": "📢 Salon de notification par défaut",
     "jellyfin_fallback_desc": "Le salon de repli est configuré dans l'onglet 1. Discord → Salon de notification par défaut.",
@@ -484,6 +486,8 @@
   "ui": {
     "hide_header": "Masquer l'en-tête",
     "show_header": "Afficher l'en-tête",
+    "theme_toggle_aria": "Changer de thème",
+    "filter_by_role_aria": "Filtrer les membres par rôle",
     "copied": "Copié !"
   },
   "footer": {

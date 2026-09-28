@@ -54,12 +54,12 @@
               </a>
             </li>
             <li id="mobile-save-li" class="mobile-save-nav-item mobile-save-hidden">
-              <button type="submit" form="config-form" class="mobile-save-nav-btn" title="Save Settings">
+              <button type="submit" form="config-form" class="mobile-save-nav-btn" title="Save Settings" data-i18n="config.save_button" data-i18n-attr="title">
                 <i class="material-icons">save</i>
               </button>
             </li>
             <li>
-              <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+              <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" data-i18n="ui.theme_toggle_aria" data-i18n-attr="aria-label">
                 <i class="bi bi-sun nav-icon" aria-hidden="true"></i>
               </button>
             </li>
@@ -493,7 +493,7 @@
                           <button type="button" id="test-seerr-webhook-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" data-i18n="config.test_seerr_webhook_title" data-i18n-attr="title" title="Sends a test notification straight to Discord (bypasses the auth check)">
                             <i class="bi bi-send"></i> <span data-i18n="config.test_seerr_webhook">Discord-Test</span>
                           </button>
-                          <button type="button" id="test-seerr-roundtrip-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Triggert Seerr, einen Webhook an Questorr zu senden — testet die volle Kette inkl. Authorization-Header">
+                          <button type="button" id="test-seerr-roundtrip-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;" title="Triggert Seerr, einen Webhook an Questorr zu senden — testet die volle Kette inkl. Authorization-Header" data-i18n="config.test_seerr_roundtrip_title" data-i18n-attr="title">
                             <i class="bi bi-arrow-left-right"></i> <span data-i18n="config.test_seerr_roundtrip">Round-Trip Test</span>
                           </button>
                           <span id="test-seerr-webhook-status" style="font-size: 0.9rem;"></span>
@@ -846,7 +846,7 @@
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
                               <label for="discord-user-select" style="margin-bottom: 0;" data-i18n="config.mappings_discord_label">Discord User</label>
                             </div>
-                            <select id="mapping-role-filter" aria-label="Filter members by role"
+                            <select id="mapping-role-filter" aria-label="Filter members by role" data-i18n="ui.filter_by_role_aria" data-i18n-attr="aria-label"
                               style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
                               <option value="" data-i18n="config.all_members">All members</option>
                             </select>
@@ -937,7 +937,7 @@
                       </div>
                       <div class="form-group">
                         <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--green);" data-i18n="config.quota_unlimited_users_label">Unlimited users</label>
-                        <select id="quota-unlimited-role-filter" aria-label="Filter members by role"
+                        <select id="quota-unlimited-role-filter" aria-label="Filter members by role" data-i18n="ui.filter_by_role_aria" data-i18n-attr="aria-label"
                           style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:0.9rem;box-sizing:border-box;">
                           <option value="" data-i18n="config.all_members">All members</option>
                         </select>
@@ -1632,7 +1632,7 @@
                         <button type="button" id="stats-insights-load-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
                           <i class="bi bi-graph-up"></i> <span data-i18n="config.stats_insights_load">Load Insights</span>
                         </button>
-                        <button type="button" id="stats-insights-refresh-btn" class="btn btn-secondary" style="font-size: 0.85rem;" title="Umgeht den 5-Min-Cache und holt frische Daten direkt von Jellyfin/Seerr">
+                        <button type="button" id="stats-insights-refresh-btn" class="btn btn-secondary" style="font-size: 0.85rem;" title="Umgeht den 5-Min-Cache und holt frische Daten direkt von Jellyfin/Seerr" data-i18n="config.stats_insights_refresh_title" data-i18n-attr="title">
                           <i class="bi bi-arrow-clockwise"></i> <span data-i18n="config.stats_insights_refresh">Refresh</span>
                         </button>
                         <span id="stats-insights-status" style="font-size: 0.85rem; color: var(--subtext0);"></span>

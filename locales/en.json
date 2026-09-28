@@ -68,6 +68,7 @@
     "stats_insights_title": "Library & Request Insights",
     "stats_insights_load": "Load Insights",
     "stats_insights_refresh": "Refresh",
+    "stats_insights_refresh_title": "Bypasses the 5-minute cache and fetches fresh data directly from Jellyfin/Seerr",
     "stats_insights_loading": "Loading…",
     "stats_insights_ok": "Loaded",
     "stats_insights_no_data": "No data yet — click \"Load Insights\".",
@@ -194,6 +195,7 @@
     "time_ago_hours": "{{n}} h ago",
     "time_ago_days": "{{n}} d ago",
     "test_seerr_roundtrip": "Round-trip test",
+    "test_seerr_roundtrip_title": "Triggers Seerr to send a webhook to Questorr — tests the full chain including the Authorization header",
     "seerr_root_folder_load": "Load Root Folders",
     "jellyfin_fallback_channel": "📢 Default Notification Channel",
     "jellyfin_fallback_desc": "The fallback channel is configured in tab 1. Discord → Default Notification Channel.",
@@ -484,6 +486,8 @@
   "ui": {
     "hide_header": "Hide header",
     "show_header": "Show header",
+    "theme_toggle_aria": "Toggle theme",
+    "filter_by_role_aria": "Filter members by role",
     "copied": "Copied!"
   },
   "footer": {

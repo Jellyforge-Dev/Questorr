@@ -68,6 +68,7 @@
     "stats_insights_title": "Bibliotek- och förfrågningsinsikter",
     "stats_insights_load": "Ladda insikter",
     "stats_insights_refresh": "Uppdatera",
+    "stats_insights_refresh_title": "Förbigår 5-minuters-cachen och hämtar färsk data direkt från Jellyfin/Seerr",
     "stats_insights_loading": "Läser in…",
     "stats_insights_ok": "Inläst",
     "stats_insights_no_data": "Inga data än — klicka på \"Ladda insikter\".",
@@ -194,6 +195,7 @@
     "time_ago_hours": "{{n}} h sedan",
     "time_ago_days": "{{n}} d sedan",
     "test_seerr_roundtrip": "Rundturstest",
+    "test_seerr_roundtrip_title": "Får Seerr att skicka en webhook till Questorr — testar hela kedjan inklusive Authorization-headern",
     "seerr_root_folder_load": "Ladda rotmappar",
     "jellyfin_fallback_channel": "📢 Standardkanal för aviseringar",
     "jellyfin_fallback_desc": "Reservkanalen konfigureras i flik 1. Discord → Standardkanal för aviseringar.",
@@ -484,6 +486,8 @@
   "ui": {
     "hide_header": "Dölj rubrik",
     "show_header": "Visa rubrik",
+    "theme_toggle_aria": "Växla tema",
+    "filter_by_role_aria": "Filtrera medlemmar efter roll",
     "copied": "Kopierat!"
   },
   "footer": {
