@@ -95,6 +95,9 @@ function updateUITranslations() {
       }
     }
   });
+  // Let purely JS-rendered widgets (built with textContent, not data-i18n) know
+  // the language changed so they can re-render themselves in the new language.
+  document.dispatchEvent(new CustomEvent('questorr:language-changed'));
 }
 
 function getNestedTranslation(key) {
@@ -623,18 +626,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ─── Per-event notification buttons table ─────────────────────────────────
   const NOTIF_EVENTS = [
-    { key: "MEDIA_PENDING",       label: "New Request (Pending)" },
-    { key: "MEDIA_APPROVED",      label: "Request Approved" },
-    { key: "MEDIA_AUTO_APPROVED", label: "Auto-Approved" },
-    { key: "MEDIA_AVAILABLE",     label: "Now Available" },
-    { key: "MEDIA_DECLINED",      label: "Request Declined" },
-    { key: "MEDIA_FAILED",        label: "Download Failed" },
-    { key: "ISSUE_CREATED",       label: "Issue Reported" },
-    { key: "ISSUE_COMMENT",       label: "Issue Comment" },
-    { key: "ISSUE_RESOLVED",      label: "Issue Resolved" },
-    { key: "ISSUE_REOPENED",      label: "Issue Reopened" },
-    { key: "RANDOM",               label: "/random" },
-    { key: "STATUS",               label: "/status" },
+    { key: "MEDIA_PENDING",       i18nKey: "config.notif_media_pending" },
+    { key: "MEDIA_APPROVED",      i18nKey: "config.notif_media_approved" },
+    { key: "MEDIA_AUTO_APPROVED", i18nKey: "config.notif_media_auto_approved" },
+    { key: "MEDIA_AVAILABLE",     i18nKey: "config.notif_media_available" },
+    { key: "MEDIA_DECLINED",      i18nKey: "config.notif_media_declined" },
+    { key: "MEDIA_FAILED",        i18nKey: "config.notif_media_failed" },
+    { key: "ISSUE_CREATED",       i18nKey: "config.notif_issue_created" },
+    { key: "ISSUE_COMMENT",       i18nKey: "config.notif_issue_comment" },
+    { key: "ISSUE_RESOLVED",      i18nKey: "config.notif_issue_resolved" },
+    { key: "ISSUE_REOPENED",      i18nKey: "config.notif_issue_reopened" },
+    { key: "RANDOM",               i18nKey: "config.notif_evt_random" },
+    { key: "STATUS",               i18nKey: "config.notif_evt_status" },
   ];
   const BTN_DEFS = [
     { key: "seerr",      configKey: "EMBED_SHOW_BUTTON_SEERR" },
@@ -656,12 +659,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   // /random and /status are command embeds, not webhook events \u2014 they have no DM
   // counterpart, so we skip the DM sub-row for those.
   const VARIANTS = [
-    { key: "CHANNEL", label: "Channel", envSuffix: ""   },
-    { key: "DM",      label: "DM",      envSuffix: "_DM" },
+    { key: "CHANNEL", i18nKey: "config.notif_variant_channel", envSuffix: ""   },
+    { key: "DM",      i18nKey: "config.notif_variant_dm",      envSuffix: "_DM" },
   ];
   const COMMAND_ONLY_EVENTS = new Set(["RANDOM", "STATUS"]);
 
+  // Cached so the table can be rebuilt with fresh translations on a language
+  // switch — it's rendered via createElement/textContent, not data-i18n, so
+  // updateUITranslations() can't refresh it directly.
+  let lastNotifButtonsConfig = null;
+  document.addEventListener("questorr:language-changed", () => {
+    if (lastNotifButtonsConfig) buildNotifButtonsTable(lastNotifButtonsConfig);
+  });
+
   function buildNotifButtonsTable(configData, resetToGlobal) {
+    lastNotifButtonsConfig = configData;
     const tbody = document.getElementById("notif-buttons-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -704,14 +716,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           const tdLabel = document.createElement("td");
           tdLabel.style.cssText = "padding: 0.55rem 0.75rem; font-size: 0.82rem; color: var(--text); white-space: nowrap; vertical-align: middle;";
           if (variantsForEvent.length > 1) tdLabel.rowSpan = variantsForEvent.length;
-          tdLabel.textContent = evt.label;
+          tdLabel.textContent = t(evt.i18nKey);
           tr.appendChild(tdLabel);
         }
 
         // Variant column
         const tdVariant = document.createElement("td");
         tdVariant.style.cssText = "text-align: center; padding: 0.55rem 0.4rem; font-size: 0.78rem; color: var(--subtext0);";
-        tdVariant.textContent = variant.label;
+        tdVariant.textContent = t(variant.i18nKey);
         tr.appendChild(tdVariant);
 
         for (const btn of BTN_DEFS) {
@@ -745,7 +757,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           const testBtn = document.createElement("button");
           testBtn.type = "button";
           testBtn.textContent = "\u25B6";
-          testBtn.title = "Send test to admin channel";
+          testBtn.title = t("config.notif_test_tooltip");
           testBtn.style.cssText = "background: transparent; border: 1px solid var(--surface1); color: var(--teal, #1ec8a0); border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;";
           testBtn.addEventListener("mouseenter", function() { testBtn.style.background = "var(--surface1)"; });
           testBtn.addEventListener("mouseleave", function() { testBtn.style.background = "transparent"; });
@@ -2634,7 +2646,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     removeBtn.type = "button";
     removeBtn.className = "btn btn-secondary remove-root-folder-btn";
     removeBtn.style.cssText = "padding:0.35rem 0.7rem;font-size:0.85rem;";
-    removeBtn.title = "Entfernen";
+    removeBtn.title = t("common.remove");
     removeBtn.textContent = "✕";
 
     row.appendChild(folderSel);
@@ -4247,6 +4259,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {}
   }
 
+  // Rebuilt with textContent/template strings, not data-i18n, so it needs an
+  // explicit re-render on language switch (see updateUITranslations()).
+  document.addEventListener("questorr:language-changed", () => {
+    if (currentMappings.length) displayMappings();
+  });
+
   function displayMappings() {
     const container = document.getElementById("mappings-list");
     if (!container) return;
@@ -4314,7 +4332,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div style="font-weight: 600; color: var(--blue);">${escapeHtml(
                 discordName
               )}</div>
-              <div style="opacity: 0.8; font-size: 0.9rem;">→ Seerr: ${escapeHtml(
+              <div style="opacity: 0.8; font-size: 0.9rem;">${escapeHtml(t("config.mapping_seerr_arrow"))} ${escapeHtml(
                 seerrName
               )}</div>
             </div>
@@ -4322,7 +4340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <button class="btn btn-danger btn-sm mapping-delete-btn" data-discord-id="${
             escapeHtml(mapping.discordUserId)
           }" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-            <i class="bi bi-trash"></i> Remove
+            <i class="bi bi-trash"></i> ${escapeHtml(t("common.remove"))}
           </button>
         </div>
       `;
@@ -4336,7 +4354,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function deleteMapping(discordUserId) {
-    if (!confirm(`Remove mapping for Discord user ${discordUserId}?`)) return;
+    if (!confirm(t("config.mapping_remove_confirm", { userId: discordUserId }))) return;
 
     try {
       const response = await fetch(`/api/user-mappings/${discordUserId}`, {

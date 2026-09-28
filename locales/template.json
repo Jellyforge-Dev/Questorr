@@ -14,7 +14,8 @@
     "error": "",
     "saved": "",
     "username": "",
-    "password": ""
+    "password": "",
+    "remove": ""
   },
   "auth": {
     "login": "",
@@ -450,11 +451,42 @@
     "digest_test_send_failed": "Send failed: {{error}} (check the bot's channel permissions).",
     "digest_test_done": "Digest test finished.",
     "digest_movies_word": "movies",
-    "digest_series_word": "series"
+    "digest_series_word": "series",
+    "weekday_monday": "",
+    "weekday_tuesday": "",
+    "weekday_wednesday": "",
+    "weekday_thursday": "",
+    "weekday_friday": "",
+    "weekday_saturday": "",
+    "weekday_sunday": "",
+    "misc_autostart_label": "",
+    "misc_notify_available_label": "",
+    "misc_autoapprove_label": "",
+    "notif_evt_random": "",
+    "notif_evt_status": "",
+    "notif_variant_channel": "",
+    "notif_variant_dm": "",
+    "notif_test_tooltip": "",
+    "notif_ph_media_pending": "",
+    "notif_ph_media_approved": "",
+    "notif_ph_media_auto_approved": "",
+    "notif_ph_media_available": "",
+    "notif_ph_media_declined": "",
+    "notif_ph_media_failed": "",
+    "notif_ph_issue_created": "",
+    "notif_ph_issue_comment": "",
+    "notif_ph_issue_resolved": "",
+    "notif_ph_issue_reopened": "",
+    "notif_ph_daily_random": "",
+    "notif_ph_daily_recommendation": "",
+    "notif_ph_jellyfin_new": "",
+    "mapping_remove_confirm": "",
+    "mapping_seerr_arrow": ""
   },
   "ui": {
     "hide_header": "",
-    "show_header": ""
+    "show_header": "",
+    "copied": ""
   },
   "footer": {
     "report_bug": "",
@@ -505,7 +537,10 @@
     "jellyfin_load_libraries": "",
     "seerr_load_options": "",
     "seerr_enter_url_key": "",
-    "import_failed": ""
+    "import_failed": "",
+    "generic": "",
+    "save_config": "",
+    "no_webhook_secret": ""
   },
   "modals": {
     "start_bot_yes": "",

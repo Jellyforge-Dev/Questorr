@@ -14,7 +14,8 @@
     "error": "Fel",
     "saved": "sparat",
     "username": "Användarnamn",
-    "password": "Lösenord"
+    "password": "Lösenord",
+    "remove": "Ta bort"
   },
   "auth": {
     "login": "Logga in",
@@ -450,11 +451,42 @@
     "digest_test_send_failed": "Sändning misslyckades: {{error}} (kontrollera botens kanalbehörigheter).",
     "digest_test_done": "Sammanfattningstest slutfört.",
     "digest_movies_word": "filmer",
-    "digest_series_word": "serier"
+    "digest_series_word": "serier",
+    "weekday_monday": "Måndag",
+    "weekday_tuesday": "Tisdag",
+    "weekday_wednesday": "Onsdag",
+    "weekday_thursday": "Torsdag",
+    "weekday_friday": "Fredag",
+    "weekday_saturday": "Lördag",
+    "weekday_sunday": "Söndag",
+    "misc_autostart_label": "Starta boten automatiskt vid serverstart",
+    "misc_notify_available_label": "Skicka DM när begäran är tillgänglig",
+    "misc_autoapprove_label": "Automatiskt godkännande av Seerr-förfrågningar",
+    "notif_evt_random": "/random",
+    "notif_evt_status": "/status",
+    "notif_variant_channel": "Kanal",
+    "notif_variant_dm": "DM",
+    "notif_test_tooltip": "Skicka test till adminkanalen",
+    "notif_ph_media_pending": "Ny förfrågan – Väntar på godkännande",
+    "notif_ph_media_approved": "Förfrågan godkänd",
+    "notif_ph_media_auto_approved": "Förfrågan automatiskt godkänd",
+    "notif_ph_media_available": "Nu tillgänglig!",
+    "notif_ph_media_declined": "Förfrågan nekad",
+    "notif_ph_media_failed": "Nedladdning misslyckades",
+    "notif_ph_issue_created": "Problem rapporterat",
+    "notif_ph_issue_comment": "Kommentar om problemet",
+    "notif_ph_issue_resolved": "Problem löst",
+    "notif_ph_issue_reopened": "Problem återöppnat",
+    "notif_ph_daily_random": "Dagens slumpmässiga val",
+    "notif_ph_daily_recommendation": "Dagens rekommendation från ditt bibliotek",
+    "notif_ph_jellyfin_new": "Tillagd i biblioteket",
+    "mapping_remove_confirm": "Ta bort koppling för Discord-användaren {{userId}}?",
+    "mapping_seerr_arrow": "→ Seerr:"
   },
   "ui": {
     "hide_header": "Dölj rubrik",
-    "show_header": "Visa rubrik"
+    "show_header": "Visa rubrik",
+    "copied": "Kopierat!"
   },
   "footer": {
     "report_bug": "Rapportera ett fel",
@@ -505,7 +537,10 @@
     "jellyfin_load_libraries": "Kunde inte läsa in bibliotek. Kontrollera din Jellyfin-URL och API-nyckel.",
     "seerr_load_options": "Kunde inte läsa in alternativ",
     "seerr_enter_url_key": "Ange URL och API-nyckel först",
-    "import_failed": "Importen misslyckades"
+    "import_failed": "Importen misslyckades",
+    "generic": "Fel",
+    "save_config": "Sparfel",
+    "no_webhook_secret": "Ingen webhook-hemlighet konfigurerad."
   },
   "modals": {
     "start_bot_yes": "Ja, starta boten",

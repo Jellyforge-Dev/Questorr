@@ -14,7 +14,8 @@
     "error": "Error",
     "saved": "guardado",
     "username": "Usuario",
-    "password": "Contraseña"
+    "password": "Contraseña",
+    "remove": "Eliminar"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -450,11 +451,42 @@
     "digest_test_send_failed": "Error al enviar: {{error}} (comprueba los permisos de canal del bot).",
     "digest_test_done": "Prueba del resumen finalizada.",
     "digest_movies_word": "películas",
-    "digest_series_word": "series"
+    "digest_series_word": "series",
+    "weekday_monday": "Lunes",
+    "weekday_tuesday": "Martes",
+    "weekday_wednesday": "Miércoles",
+    "weekday_thursday": "Jueves",
+    "weekday_friday": "Viernes",
+    "weekday_saturday": "Sábado",
+    "weekday_sunday": "Domingo",
+    "misc_autostart_label": "Iniciar el bot automáticamente al arrancar el servidor",
+    "misc_notify_available_label": "Enviar MD cuando la solicitud esté disponible",
+    "misc_autoapprove_label": "Aprobación automática de solicitudes en Seerr",
+    "notif_evt_random": "/random",
+    "notif_evt_status": "/status",
+    "notif_variant_channel": "Canal",
+    "notif_variant_dm": "MD",
+    "notif_test_tooltip": "Enviar prueba al canal de administración",
+    "notif_ph_media_pending": "Nueva solicitud – Aprobación pendiente",
+    "notif_ph_media_approved": "Solicitud aprobada",
+    "notif_ph_media_auto_approved": "Solicitud aprobada automáticamente",
+    "notif_ph_media_available": "¡Ya disponible!",
+    "notif_ph_media_declined": "Solicitud rechazada",
+    "notif_ph_media_failed": "Descarga fallida",
+    "notif_ph_issue_created": "Problema reportado",
+    "notif_ph_issue_comment": "Comentario del problema",
+    "notif_ph_issue_resolved": "Problema resuelto",
+    "notif_ph_issue_reopened": "Problema reabierto",
+    "notif_ph_daily_random": "Selección aleatoria del día",
+    "notif_ph_daily_recommendation": "Recomendación de hoy de tu biblioteca",
+    "notif_ph_jellyfin_new": "Añadido a la biblioteca",
+    "mapping_remove_confirm": "¿Eliminar la asociación del usuario de Discord {{userId}}?",
+    "mapping_seerr_arrow": "→ Seerr:"
   },
   "ui": {
     "hide_header": "Ocultar cabecera",
-    "show_header": "Mostrar cabecera"
+    "show_header": "Mostrar cabecera",
+    "copied": "¡Copiado!"
   },
   "footer": {
     "report_bug": "Reportar un error",
@@ -505,7 +537,10 @@
     "jellyfin_load_libraries": "Error al cargar las bibliotecas. Comprueba tu URL y clave API de Jellyfin.",
     "seerr_load_options": "Error al cargar las opciones",
     "seerr_enter_url_key": "Introduce primero la URL y la clave API",
-    "import_failed": "Error en la importación"
+    "import_failed": "Error en la importación",
+    "generic": "Error",
+    "save_config": "Error al guardar",
+    "no_webhook_secret": "No hay un secreto de webhook configurado."
   },
   "modals": {
     "start_bot_yes": "Sí, iniciar bot",

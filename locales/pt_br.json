@@ -14,7 +14,8 @@
     "error": "Erro",
     "saved": "salvo",
     "username": "Nome de usuário",
-    "password": "Senha"
+    "password": "Senha",
+    "remove": "Remover"
   },
   "auth": {
     "login": "Entrar",
@@ -450,11 +451,42 @@
     "digest_test_send_failed": "Falha no envio: {{error}} (verifique as permissões de canal do bot).",
     "digest_test_done": "Teste de resumo concluído.",
     "digest_movies_word": "filmes",
-    "digest_series_word": "séries"
+    "digest_series_word": "séries",
+    "weekday_monday": "Segunda-feira",
+    "weekday_tuesday": "Terça-feira",
+    "weekday_wednesday": "Quarta-feira",
+    "weekday_thursday": "Quinta-feira",
+    "weekday_friday": "Sexta-feira",
+    "weekday_saturday": "Sábado",
+    "weekday_sunday": "Domingo",
+    "misc_autostart_label": "Iniciar o bot automaticamente ao reiniciar o servidor",
+    "misc_notify_available_label": "Enviar DM quando a solicitação estiver disponível",
+    "misc_autoapprove_label": "Aprovação automática de solicitações no Seerr",
+    "notif_evt_random": "/random",
+    "notif_evt_status": "/status",
+    "notif_variant_channel": "Canal",
+    "notif_variant_dm": "DM",
+    "notif_test_tooltip": "Enviar teste para o canal de administração",
+    "notif_ph_media_pending": "Nova solicitação – Aprovação pendente",
+    "notif_ph_media_approved": "Solicitação aprovada",
+    "notif_ph_media_auto_approved": "Solicitação aprovada automaticamente",
+    "notif_ph_media_available": "Já disponível!",
+    "notif_ph_media_declined": "Solicitação recusada",
+    "notif_ph_media_failed": "Falha no download",
+    "notif_ph_issue_created": "Problema reportado",
+    "notif_ph_issue_comment": "Comentário do problema",
+    "notif_ph_issue_resolved": "Problema resolvido",
+    "notif_ph_issue_reopened": "Problema reaberto",
+    "notif_ph_daily_random": "Escolha aleatória de hoje",
+    "notif_ph_daily_recommendation": "Recomendação de hoje da sua biblioteca",
+    "notif_ph_jellyfin_new": "Adicionado à biblioteca",
+    "mapping_remove_confirm": "Remover associação do usuário do Discord {{userId}}?",
+    "mapping_seerr_arrow": "→ Seerr:"
   },
   "ui": {
     "hide_header": "Ocultar cabeçalho",
-    "show_header": "Mostrar cabeçalho"
+    "show_header": "Mostrar cabeçalho",
+    "copied": "Copiado!"
   },
   "footer": {
     "report_bug": "Reportar um Bug",
@@ -505,7 +537,10 @@
     "jellyfin_load_libraries": "Falha ao carregar bibliotecas. Verifique a URL e a Chave de API do Jellyfin.",
     "seerr_load_options": "Falha ao carregar opções",
     "seerr_enter_url_key": "Insira a URL e a Chave de API primeiro",
-    "import_failed": "Falha na importação"
+    "import_failed": "Falha na importação",
+    "generic": "Erro",
+    "save_config": "Erro ao salvar",
+    "no_webhook_secret": "Nenhum segredo de webhook configurado."
   },
   "modals": {
     "start_bot_yes": "Sim, Iniciar Bot",

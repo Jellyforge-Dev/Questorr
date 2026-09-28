@@ -14,7 +14,8 @@
     "error": "Fehler",
     "saved": "gespeichert",
     "username": "Benutzername",
-    "password": "Passwort"
+    "password": "Passwort",
+    "remove": "Entfernen"
   },
   "auth": {
     "login": "Anmelden",
@@ -520,11 +521,42 @@
     "digest_test_send_failed": "Senden fehlgeschlagen: {{error}} (Channel-Rechte des Bots prüfen).",
     "digest_test_done": "Digest-Test abgeschlossen.",
     "digest_movies_word": "Filme",
-    "digest_series_word": "Serien"
+    "digest_series_word": "Serien",
+    "weekday_monday": "Montag",
+    "weekday_tuesday": "Dienstag",
+    "weekday_wednesday": "Mittwoch",
+    "weekday_thursday": "Donnerstag",
+    "weekday_friday": "Freitag",
+    "weekday_saturday": "Samstag",
+    "weekday_sunday": "Sonntag",
+    "misc_autostart_label": "Bot beim Server-Start automatisch starten",
+    "misc_notify_available_label": "DM senden, wenn Anfrage verfügbar ist",
+    "misc_autoapprove_label": "Seerr-Anfragen automatisch genehmigen",
+    "notif_evt_random": "/random",
+    "notif_evt_status": "/status",
+    "notif_variant_channel": "Kanal",
+    "notif_variant_dm": "DM",
+    "notif_test_tooltip": "Test an Admin-Kanal senden",
+    "notif_ph_media_pending": "Neue Anfrage – Genehmigung ausstehend",
+    "notif_ph_media_approved": "Anfrage genehmigt",
+    "notif_ph_media_auto_approved": "Anfrage automatisch genehmigt",
+    "notif_ph_media_available": "Jetzt verfügbar!",
+    "notif_ph_media_declined": "Anfrage abgelehnt",
+    "notif_ph_media_failed": "Download fehlgeschlagen",
+    "notif_ph_issue_created": "Problem gemeldet",
+    "notif_ph_issue_comment": "Kommentar zum Problem",
+    "notif_ph_issue_resolved": "Problem gelöst",
+    "notif_ph_issue_reopened": "Problem erneut geöffnet",
+    "notif_ph_daily_random": "Heutige Zufallsempfehlung",
+    "notif_ph_daily_recommendation": "Heutige Empfehlung aus deiner Bibliothek",
+    "notif_ph_jellyfin_new": "Zur Bibliothek hinzugefügt",
+    "mapping_remove_confirm": "Zuordnung für Discord-Nutzer {{userId}} entfernen?",
+    "mapping_seerr_arrow": "→ Seerr:"
   },
   "ui": {
     "hide_header": "Header ausblenden",
-    "show_header": "Header einblenden"
+    "show_header": "Header einblenden",
+    "copied": "Kopiert!"
   },
   "footer": {
     "report_bug": "Fehler melden",
@@ -575,7 +607,10 @@
     "jellyfin_load_libraries": "Fehler beim Laden der Bibliotheken. Bitte Jellyfin-URL und API-Key prüfen.",
     "seerr_load_options": "Fehler beim Laden der Optionen",
     "seerr_enter_url_key": "Bitte zuerst URL und API-Key eingeben",
-    "import_failed": "Import fehlgeschlagen"
+    "import_failed": "Import fehlgeschlagen",
+    "generic": "Fehler",
+    "save_config": "Fehler beim Speichern",
+    "no_webhook_secret": "Kein Webhook-Secret konfiguriert."
   },
   "modals": {
     "start_bot_yes": "Ja, Bot starten",

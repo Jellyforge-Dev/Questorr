@@ -14,7 +14,8 @@
     "error": "Error",
     "saved": "saved",
     "username": "Username",
-    "password": "Password"
+    "password": "Password",
+    "remove": "Remove"
   },
   "auth": {
     "login": "Login",
@@ -450,11 +451,42 @@
     "digest_test_send_failed": "Send failed: {{error}} (check the bot's channel permissions).",
     "digest_test_done": "Digest test finished.",
     "digest_movies_word": "movies",
-    "digest_series_word": "series"
+    "digest_series_word": "series",
+    "weekday_monday": "Monday",
+    "weekday_tuesday": "Tuesday",
+    "weekday_wednesday": "Wednesday",
+    "weekday_thursday": "Thursday",
+    "weekday_friday": "Friday",
+    "weekday_saturday": "Saturday",
+    "weekday_sunday": "Sunday",
+    "misc_autostart_label": "Auto-start bot on server boot",
+    "misc_notify_available_label": "Send DM when request is available",
+    "misc_autoapprove_label": "Seerr Auto-Approve Requests",
+    "notif_evt_random": "/random",
+    "notif_evt_status": "/status",
+    "notif_variant_channel": "Channel",
+    "notif_variant_dm": "DM",
+    "notif_test_tooltip": "Send test to admin channel",
+    "notif_ph_media_pending": "New Request – Pending Approval",
+    "notif_ph_media_approved": "Request Approved",
+    "notif_ph_media_auto_approved": "Request Auto-Approved",
+    "notif_ph_media_available": "Now Available!",
+    "notif_ph_media_declined": "Request Declined",
+    "notif_ph_media_failed": "Download Failed",
+    "notif_ph_issue_created": "Issue Reported",
+    "notif_ph_issue_comment": "Issue Comment",
+    "notif_ph_issue_resolved": "Issue Resolved",
+    "notif_ph_issue_reopened": "Issue Reopened",
+    "notif_ph_daily_random": "Today's Random Pick",
+    "notif_ph_daily_recommendation": "Today's Recommendation from your Library",
+    "notif_ph_jellyfin_new": "Added to the Library",
+    "mapping_remove_confirm": "Remove mapping for Discord user {{userId}}?",
+    "mapping_seerr_arrow": "→ Seerr:"
   },
   "ui": {
     "hide_header": "Hide header",
-    "show_header": "Show header"
+    "show_header": "Show header",
+    "copied": "Copied!"
   },
   "footer": {
     "report_bug": "Report a Bug",
@@ -505,7 +537,10 @@
     "jellyfin_load_libraries": "Failed to load libraries. Please check your Jellyfin URL and API Key.",
     "seerr_load_options": "Failed to load options",
     "seerr_enter_url_key": "Enter URL and API Key first",
-    "import_failed": "Import failed"
+    "import_failed": "Import failed",
+    "generic": "Error",
+    "save_config": "Save error",
+    "no_webhook_secret": "No webhook secret configured."
   },
   "modals": {
     "start_bot_yes": "Yes, Start Bot",
