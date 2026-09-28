@@ -22,6 +22,7 @@
     "create_account": "Créer un compte",
     "enter_username": "Entrez votre nom d'utilisateur",
     "enter_password": "Entrez votre mot de passe",
+    "choose_language": "Choisissez votre langue",
     "choose_username": "Choisir un nom d'utilisateur",
     "choose_password": "Choisir un mot de passe",
     "choose_username_placeholder": "Choisissez un nom d'utilisateur",
