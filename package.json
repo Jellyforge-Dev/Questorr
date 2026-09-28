@@ -1,6 +1,6 @@
 {
   "name": "questorr",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -13,6 +13,7 @@
   "license": "AGPL-3.0-only",
   "description": "Discord bot for requesting media via Jellyseerr and receiving Jellyfin notifications",
   "dependencies": {
+    "@discordjs/rest": "^2.6.3",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -24,8 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cache": "^5.1.2",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1",
-    "ws": "^8.18.0"
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
     "vitest": "^4.1.4"

@@ -4,6 +4,33 @@
 
 ## English
 
+### 🌍 v2.4.4
+
+#### 🌍 Full French, Spanish, Brazilian Portuguese & Swedish support
+- Dashboard and bot now fully support 4 new languages, on top of English and German.
+- Every backend API response is now localized (was previously hardcoded English).
+- Fixed remaining hardcoded English texts in the dashboard (weekday dropdowns, notification-title placeholders, per-event buttons table, user-mapping "Remove" button) across all 6 languages.
+- Added `README.fr.md`, `README.es.md`, `README.pt_br.md`, `README.sv.md`, with a shared language switcher across all READMEs.
+
+#### 🔒 Security
+- `/api/config/import` now runs through the same validation (incl. the SSRF blocklist) as `/api/save-config`, and guards against a `__proto__`/`constructor`/`prototype` key in an imported config file.
+- `trust proxy` now defaults to trusting exactly 1 hop instead of the full `X-Forwarded-For` chain, closing a spoofing gap for IP-based login lockout.
+
+#### 🐛 Fixes
+- Requester's Discord avatar now shows correctly in admin-channel Seerr request embeds.
+- Seerr status-poller no longer misses fast approve/decline transitions that race past the "pending" status.
+- Stopping the bot now actually tears down all background timers/pollers (Jellyfin poller, Seerr status poller, cleanup advisor, subscription poller, weekly digest) instead of leaving them running after the Discord client was destroyed — the same fix applies to the graceful shutdown on SIGTERM/SIGINT.
+- Questorr's logo is now automatically set as the bot's Discord avatar on first start.
+
+#### 🧹 Cleanup
+- Removed dead code: several unused API-client functions, an abandoned query/param validation approach, unused constants, stray duplicate module exports, and a duplicated pair of URL-builder functions (consolidated into `utils/url.js`).
+- Removed the unused `ws` npm dependency; added `@discordjs/rest` as an explicit dependency (previously only resolved transitively).
+- Removed 10 orphaned locale keys (dashboard + bot strings) left over from earlier UI changes.
+
+All tests passing.
+
+---
+
 ### 🛠️ v2.4.3
 
 #### 🔌 Automated Discord bot invite
@@ -207,6 +234,33 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🌍 v2.4.4
+
+#### 🌍 Vollständige Unterstützung für Französisch, Spanisch, brasilianisches Portugiesisch & Schwedisch
+- Dashboard und Bot unterstützen jetzt zusätzlich zu Englisch und Deutsch vier weitere Sprachen vollständig.
+- Jede Backend-API-Antwort ist jetzt lokalisiert (vorher hartcodiertes Englisch).
+- Verbleibende hartcodierte englische Texte im Dashboard behoben (Wochentag-Dropdowns, Platzhalter bei Benachrichtigungs-Titeln, Buttons-je-Benachrichtigung-Tabelle, "Remove"-Button bei Benutzerzuordnungen) — für alle 6 Sprachen.
+- `README.fr.md`, `README.es.md`, `README.pt_br.md`, `README.sv.md` hinzugefügt, mit einheitlichem Sprachumschalter über alle READMEs.
+
+#### 🔒 Sicherheit
+- `/api/config/import` läuft jetzt durch dieselbe Validierung (inkl. SSRF-Blocklist) wie `/api/save-config` und schützt vor einem `__proto__`/`constructor`/`prototype`-Schlüssel in einer importierten Config-Datei.
+- `trust proxy` vertraut standardmäßig nur noch genau einem Hop statt der kompletten `X-Forwarded-For`-Kette — schließt eine Spoofing-Lücke beim IP-basierten Login-Lockout.
+
+#### 🐛 Fixes
+- Das Profilbild des Anfragers wird jetzt korrekt in Admin-Kanal-Seerr-Anfrage-Embeds angezeigt.
+- Der Seerr-Status-Poller verpasst keine schnellen Genehmigungen/Ablehnungen mehr, die den "pending"-Status überspringen.
+- Das Stoppen des Bots räumt jetzt tatsächlich alle Hintergrund-Timer/Poller ab (Jellyfin-Poller, Seerr-Status-Poller, Cleanup-Advisor, Subscription-Poller, Weekly-Digest), statt sie nach dem Zerstören des Discord-Clients weiterlaufen zu lassen — derselbe Fix gilt auch beim Graceful Shutdown via SIGTERM/SIGINT.
+- Das Questorr-Logo wird jetzt automatisch als Bot-Avatar beim ersten Start gesetzt.
+
+#### 🧹 Aufräumarbeiten
+- Toter Code entfernt: mehrere unbenutzte API-Client-Funktionen, ein verworfener Query/Param-Validierungsansatz, unbenutzte Konstanten, verwaiste doppelte Modul-Exporte und ein dupliziertes Paar URL-Builder-Funktionen (in `utils/url.js` konsolidiert).
+- Unbenutzte npm-Abhängigkeit `ws` entfernt; `@discordjs/rest` als explizite Abhängigkeit ergänzt (vorher nur zufällig transitiv aufgelöst).
+- 10 verwaiste Locale-Keys entfernt (Dashboard + Bot-Strings), Überbleibsel früherer UI-Änderungen.
+
+Alle Tests grün.
+
+---
 
 ### 🛠️ v2.4.3
 

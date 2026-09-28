@@ -345,8 +345,6 @@
     "seerr_root_folder_hint": "",
     "seerr_root_folder_loading": "",
     "seerr_root_folder_loaded": "",
-    "btn_collection": "",
-    "btn_collection_desc": "",
     "notif_titles_title": "",
     "notif_titles_desc": "",
     "notif_media_pending": "",
@@ -604,8 +602,7 @@
     "feature_digest": "<strong>Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days, plus new episodes of existing series (aggregated per series). Channel, day and time are configurable; nothing is posted on a quiet week."
   },
   "toast": {
-    "saved": "",
-    "saved_commands": ""
+    "saved": ""
   },
   "widget": {
     "tab_commands": "",

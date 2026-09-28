@@ -209,31 +209,6 @@ export const userMappingSchema = Joi.object({
   seerrDisplayName: Joi.string().allow(null, "").optional(),
 });
 
-// --- SEERR REQUEST VALIDATION ---
-export const seerrRequestSchema = Joi.object({
-  mediaType: Joi.string().valid("movie", "tv").required(),
-  mediaId: Joi.number().integer().positive().required(),
-  seasons: Joi.alternatives(
-    Joi.array().items(Joi.number().integer().positive()),
-    Joi.array().items(Joi.string().valid("all"))
-  ).optional(),
-  tags: Joi.array().items(Joi.number().integer().positive()).optional(),
-  rootFolder: Joi.string().optional(),
-  serverId: Joi.number().integer().positive().optional(),
-  userId: Joi.number().integer().positive().optional(),
-});
-
-// --- SEARCH QUERY VALIDATION ---
-export const searchQuerySchema = Joi.object({
-  query: Joi.string().min(1).max(200).required(),
-});
-
-// --- ID VALIDATION ---
-export const tmdbIdSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
-  mediaType: Joi.string().valid("movie", "tv").required(),
-});
-
 // --- CONNECTION-TEST VALIDATION ---
 // Deliberately permissive on URL format (we don't want to reject valid but
 // unusual self-hosted URLs); the point is to reject missing / wrong-type /
@@ -291,62 +266,3 @@ export function validateBody(schema) {
   };
 }
 
-/**
- * Express middleware factory for validating query parameters
- * @param {Joi.Schema} schema - Joi validation schema
- * @returns {Function} Express middleware function
- */
-export function validateQuery(schema) {
-  return (req, res, next) => {
-    const { error, value } = schema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
-
-    if (error) {
-      const errors = error.details.map((detail) => ({
-        field: detail.path.join("."),
-        message: detail.message,
-      }));
-
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors,
-      });
-    }
-
-    req.query = value;
-    next();
-  };
-}
-
-/**
- * Express middleware factory for validating URL parameters
- * @param {Joi.Schema} schema - Joi validation schema
- * @returns {Function} Express middleware function
- */
-export function validateParams(schema) {
-  return (req, res, next) => {
-    const { error, value } = schema.validate(req.params, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
-
-    if (error) {
-      const errors = error.details.map((detail) => ({
-        field: detail.path.join("."),
-        message: detail.message,
-      }));
-
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors,
-      });
-    }
-
-    req.params = value;
-    next();
-  };
-}

@@ -345,8 +345,6 @@
     "seerr_root_folder_hint": "⚠️ Haz clic primero en \"Cargar carpetas raíz\" antes de añadir una asignación.",
     "seerr_root_folder_loading": "Cargando carpetas raíz...",
     "seerr_root_folder_loaded": "Carpetas raíz cargadas",
-    "btn_collection": "🎬 Mostrar colección",
-    "btn_collection_desc": "Muestra todas las películas de la colección de TMDB con disponibilidad y botones de solicitud",
     "notif_titles_title": "Títulos de notificación",
     "notif_titles_desc": "Personaliza la línea de título de cada notificación de Discord. Déjalo vacío para usar el predeterminado del idioma del bot seleccionado.",
     "notif_media_pending": "Nueva solicitud",
@@ -604,8 +602,7 @@
     "feature_digest": "<strong>Resumen semanal de la biblioteca</strong> — una publicación semanal opcional que lista las películas y series añadidas a tu biblioteca de Jellyfin en los últimos 7 días, además de los episodios nuevos de series existentes (agrupados por serie). El canal, el día y la hora son configurables; no se publica nada en una semana tranquila."
   },
   "toast": {
-    "saved": "Configuración guardada correctamente.",
-    "saved_commands": "Configuración guardada. Comandos de Discord actualizados."
+    "saved": "Configuración guardada correctamente."
   },
   "widget": {
     "tab_commands": "Comandos",

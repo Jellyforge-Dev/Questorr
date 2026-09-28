@@ -1,18 +1,7 @@
 import { getSeerrApiUrl } from "../utils/seerrUrl.js";
 
-// ─── URL helpers (mirrors seerrWebhook.js) ────────────────────────────────────
-export function buildSeerrUrl(mediaType, tmdbId) {
-  const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
-  if (!base || !tmdbId) return null;
-  return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
-}
-
-export function buildJellyfinUrl(itemId) {
-  const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
-  const serverId = process.env.JELLYFIN_SERVER_ID || "";
-  if (!base || !itemId) return null;
-  return `${base}/web/index.html#!/details?id=${itemId}&serverId=${serverId}`;
-}
+// ─── URL helpers ───────────────────────────────────────────────────────────────
+export { buildSeerrUrl, buildJellyfinUrl } from "../utils/url.js";
 
 // ─── Button visibility per notification type ────────────────────────────────
 /**

@@ -8,6 +8,19 @@ export function isValidUrl(string) {
   }
 }
 
+export function buildSeerrUrl(mediaType, tmdbId) {
+  const base = (process.env.SEERR_URL || "").replace(/\/$/, "");
+  if (!base || !tmdbId) return null;
+  return `${base}/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}`;
+}
+
+export function buildJellyfinUrl(itemId) {
+  const base = (process.env.JELLYFIN_BASE_URL || "").replace(/\/$/, "");
+  const serverId = process.env.JELLYFIN_SERVER_ID || "";
+  if (!base || !itemId) return null;
+  return `${base}/web/index.html#!/details?id=${itemId}&serverId=${serverId}`;
+}
+
 // True only when the host is plausibly reachable from the public internet
 // (i.e. by Discord's image proxy). Loopback, RFC1918 ranges and *.local
 // hostnames are treated as private — sending those URLs to Discord yields a

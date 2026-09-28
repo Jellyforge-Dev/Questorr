@@ -30,7 +30,7 @@ import seerrRouter from "./routes/seerrRoutes.js";
 import jellyfinRouter from "./routes/jellyfinRoutes.js";
 import { botState, pendingRequests, savePendingRequests } from "./bot/botState.js";
 import { createBotRoutes } from "./routes/botRoutes.js";
-import { startBot } from "./bot/botManager.js";
+import { startBot, stopBot } from "./bot/botManager.js";
 import { rescheduleTimedJobs } from "./bot/jobScheduler.js";
 import { registerCommands } from "./discord/commands.js";
 import { REST } from "@discordjs/rest";
@@ -190,10 +190,24 @@ let port = process.env.WEBHOOK_PORT || 8282;
 // so that rate limiting and IP detection use the real client IP from X-Forwarded-For.
 // Set TRUST_PROXY=false in your environment when running without a reverse proxy
 // to prevent clients from spoofing X-Forwarded-For headers.
-const trustProxy = process.env.TRUST_PROXY !== "false";
+//
+// TRUST_PROXY defaults to trusting exactly 1 hop rather than `true` (unbounded).
+// `true` makes Express take the FIRST (leftmost) entry in X-Forwarded-For as the
+// client IP — but that entry is always whatever the connecting client claims,
+// since a well-behaved proxy only ever appends its own hop to the end of the
+// list. That made req.ip (and therefore IP-based login lockout) spoofable via a
+// forged header even behind a real reverse proxy. Trusting exactly 1 hop makes
+// Express instead take the value the immediate trusted proxy appended, which is
+// what a standard single-reverse-proxy deployment actually needs. Set
+// TRUST_PROXY to a higher number for a chained-proxy/CDN setup with more hops.
+const rawTrustProxy = process.env.TRUST_PROXY;
+const trustProxy =
+  rawTrustProxy === "false" ? false
+  : /^\d+$/.test(rawTrustProxy || "") ? parseInt(rawTrustProxy, 10)
+  : 1;
 app.set("trust proxy", trustProxy);
-if (trustProxy) {
-  logger.info("ℹ️  Trust proxy enabled (set TRUST_PROXY=false to disable)");
+if (trustProxy !== false) {
+  logger.info(`ℹ️  Trust proxy enabled, trusting ${trustProxy} hop${trustProxy === 1 ? "" : "s"} (set TRUST_PROXY=false to disable, or a number for more hops)`);
 }
 
 function configureWebServer() {
@@ -346,7 +360,7 @@ function configureWebServer() {
   app.use("/api", jellyfinRouter);
 
   // Bot management routes (health, status, start-bot, stop-bot)
-  app.use("/api", createBotRoutes({ startBot }));
+  app.use("/api", createBotRoutes({ startBot, stopBot }));
 
   // Endpoint for Discord servers list (guilds)
   app.get("/api/discord/guilds", authenticateToken, async (_req, res) => {
@@ -1332,7 +1346,7 @@ function configureWebServer() {
       }
       if (Array.isArray(exportable.USERS)) exportable.USERS = exportable.USERS.map(({ password, ...u }) => u);
       exportable._exportedAt = new Date().toISOString();
-      exportable._questorrVersion = "2.4.3";
+      exportable._questorrVersion = "2.4.4";
       const filename = "questorr-config-" + new Date().toISOString().slice(0, 10) + ".json";
       res.setHeader("Content-Disposition", "attachment; filename=" + filename);
       res.setHeader("Content-Type", "application/json");
@@ -1344,7 +1358,7 @@ function configureWebServer() {
   });
 
   // ─── Config Import ────────────────────────────────────────────────────────────
-  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
+  app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), validateBody(configSchema), async (req, res) => {
     try {
       const imported = req.body;
       if (!imported || typeof imported !== "object") return res.status(400).json({ success: false, messageKey: "api.invalid_json" });
@@ -1353,8 +1367,13 @@ function configureWebServer() {
       const existing = readConfig() || {};
       const merged = { ...existing };
       const MASKED_FIELDS = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
+      // __proto__/constructor/prototype are excluded because a bracket
+      // assignment (merged[key] = value) for these keys does not create a
+      // normal own property — it walks the prototype chain, so "__proto__"
+      // would reassign merged's own [[Prototype]] instead of storing data.
+      const DANGEROUS_KEYS = ["__proto__", "constructor", "prototype"];
       for (const [key, value] of Object.entries(imported)) {
-        if (["USERS", "JWT_SECRET", "WEBHOOK_SECRET"].includes(key)) continue;
+        if (["USERS", "JWT_SECRET", "WEBHOOK_SECRET", ...DANGEROUS_KEYS].includes(key)) continue;
         if (MASKED_FIELDS.includes(key) && typeof value === "string" && value.startsWith("MASKED:")) continue;
         merged[key] = value;
       }
@@ -1565,21 +1584,24 @@ function startServer() {
 }
 
 // Keep the process alive
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM signal received: closing HTTP server");
+async function gracefulShutdown(signal) {
+  logger.info(`${signal} signal received: shutting down`);
+  if (botState.isBotRunning) {
+    try {
+      await stopBot();
+      logger.info("Bot stopped (timers/pollers cleared)");
+    } catch (err) {
+      logger.error("Error stopping bot during shutdown:", err);
+    }
+  }
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);
   });
-});
+}
 
-process.on("SIGINT", () => {
-  logger.info("SIGINT signal received: closing HTTP server");
-  server.close(() => {
-    logger.info("HTTP server closed");
-    process.exit(0);
-  });
-});
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Catch uncaught exceptions
 process.on("uncaughtException", (err) => {

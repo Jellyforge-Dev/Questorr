@@ -345,8 +345,6 @@
     "seerr_root_folder_hint": "⚠️ Clique em \"Carregar Pastas Raiz\" antes de adicionar um mapeamento.",
     "seerr_root_folder_loading": "Carregando Pastas Raiz...",
     "seerr_root_folder_loaded": "Pastas Raiz carregadas",
-    "btn_collection": "🎬 Ver coleção",
-    "btn_collection_desc": "Lista todos os filmes da coleção TMDB com disponibilidade e botões de solicitação",
     "notif_titles_title": "Títulos das Notificações",
     "notif_titles_desc": "Personalize a linha de título de cada notificação do Discord. Deixe vazio para usar o padrão do Idioma do Bot selecionado.",
     "notif_media_pending": "Nova Solicitação",
@@ -604,8 +602,7 @@
     "feature_digest": "<strong>Resumo semanal da biblioteca</strong> — um post semanal opcional listando os filmes e séries adicionados à sua biblioteca Jellyfin nos últimos 7 dias, além de novos episódios de séries existentes (agrupados por série). Canal, dia e horário são configuráveis; nada é publicado em uma semana tranquila."
   },
   "toast": {
-    "saved": "Configurações salvas com sucesso.",
-    "saved_commands": "Configurações salvas. Comandos do Discord atualizados."
+    "saved": "Configurações salvas com sucesso."
   },
   "widget": {
     "tab_commands": "Comandos",

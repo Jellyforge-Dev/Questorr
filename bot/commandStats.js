@@ -106,10 +106,5 @@ export function resetCommandStats() {
   logger.info("[Command Stats] 🗑️ Stats reset");
 }
 
-/** Reset stats (for testing) */
-export function _resetStatsForTest() {
-  stats = { commands: {}, users: {} };
-}
-
 // Load on import
 loadCommandStats();

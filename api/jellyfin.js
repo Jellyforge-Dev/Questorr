@@ -522,57 +522,6 @@ export async function findLibraryId(
 }
 
 /**
- * Fetch recently added items from Jellyfin
- * @param {string} apiKey - Jellyfin API key
- * @param {string} baseUrl - Jellyfin base URL
- * @param {number} limit - Maximum number of items to fetch
- * @returns {Promise<Array>} Array of recently added items
- */
-export async function fetchRecentlyAdded(apiKey, baseUrl, limit = 50) {
-  try {
-    // Use /Items endpoint with SortBy=DateCreated for recently added items
-    // Note: /Items/Latest requires userId and has compatibility issues with API keys
-    const safeBase = new URL(baseUrl);
-    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
-    const url = safeBase.href;
-    const response = await axios.get(url, {
-      headers: jellyfinAuthHeaders(apiKey),
-      params: {
-        SortBy: "DateCreated",
-        SortOrder: "Descending",
-        Limit: limit,
-        Fields: "ProviderIds,Overview,Genres,RunTimeTicks,ParentId",
-        IncludeItemTypes: "Movie,Series,Season,Episode",
-        Recursive: true,
-      },
-      timeout: 10000,
-    });
-
-    // Handle both direct array response and Items property
-    const items = response.data?.Items || response.data || [];
-
-    logger.debug(`Fetched ${items.length} recently added items from Jellyfin`);
-
-    // Log first item's library info for debugging
-    if (items.length > 0) {
-      const firstItem = items[0];
-      logger.debug(
-        `First item: ${firstItem.Name} (Type: ${firstItem.Type}, ParentId: ${firstItem.ParentId})`
-      );
-    }
-
-    return items;
-  } catch (err) {
-    logger.error(
-      "Failed to fetch recently added items from Jellyfin:",
-      err?.message || err
-    );
-    // Return empty array instead of failing
-    return [];
-  }
-}
-
-/**
  * Fetch recently added items (latest additions to the library)
  * Uses DateCreated sort — no userId required.
  * @param {string} apiKey - Jellyfin API key
@@ -854,71 +803,6 @@ export async function fetchItemPath(itemId, apiKey, baseUrl) {
 }
 
 /**
- * Transform Jellyfin item to webhook-compatible format
- * @param {Object} item - Jellyfin item object
- * @param {string} baseUrl - Jellyfin base URL
- * @param {string} serverId - Jellyfin server ID
- * @returns {Object} Webhook-compatible data object
- */
-export function transformToWebhookFormat(item, baseUrl, serverId) {
-  const data = {
-    ItemType: item.Type,
-    ItemId: item.Id,
-    Name: item.Name,
-    Year: item.ProductionYear,
-    Overview: item.Overview,
-    Genres: item.Genres || [],
-    ServerUrl: baseUrl,
-    ServerId: serverId,
-  };
-
-  // Add TMDB ID if available
-  if (item.ProviderIds?.Tmdb) {
-    data.Provider_tmdb = item.ProviderIds.Tmdb;
-  }
-
-  // Add IMDb ID if available
-  if (item.ProviderIds?.Imdb) {
-    data.Provider_imdb = item.ProviderIds.Imdb;
-  }
-
-  // Add runtime in ticks (convert to minutes for display)
-  if (item.RunTimeTicks) {
-    data.RunTime = Math.round(item.RunTimeTicks / 600000000); // Convert ticks to minutes
-  }
-
-  // For TV shows, add series-specific data
-  if (item.Type === "Series") {
-    data.SeriesId = item.Id;
-    data.SeriesName = item.Name;
-  } else if (item.Type === "Season") {
-    data.SeriesId = item.SeriesId;
-    data.SeriesName = item.SeriesName;
-    data.SeasonId = item.Id;
-    data.IndexNumber = item.IndexNumber;
-  } else if (item.Type === "Episode") {
-    data.SeriesId = item.SeriesId;
-    data.SeriesName = item.SeriesName;
-    data.SeasonId = item.SeasonId;
-    data.IndexNumber = item.IndexNumber;
-    data.ParentIndexNumber = item.ParentIndexNumber;
-  }
-
-  // Add library ID - use ParentIds[0] if available (most reliable), otherwise fallback to ParentId
-  if (
-    item.ParentIds &&
-    Array.isArray(item.ParentIds) &&
-    item.ParentIds.length > 0
-  ) {
-    data.LibraryId = item.ParentIds[0]; // First ParentId is the library
-  } else {
-    data.LibraryId = item.ParentId;
-  }
-
-  return data;
-}
-
-/**
  * Fetch a random movie or TV series from Jellyfin
  * @param {string} apiKey - Jellyfin API key
  * @param {string} baseUrl - Jellyfin base URL
@@ -1102,43 +986,6 @@ export async function fetchUserRecentlyPlayedSeriesViaEpisodes(jellyfinUserId, a
     return seriesResponse.data?.Items || [];
   } catch (err) {
     logger.warn(`[Jellyfin] fetchUserRecentlyPlayedSeriesViaEpisodes error: ${err?.message || err}`);
-    return [];
-  }
-}
-
-/**
- * Fetch server-wide top-played items as fallback when no per-user history exists.
- *
- * @param {string} apiKey
- * @param {string} baseUrl
- * @param {number} limit
- * @returns {Promise<Array>} Items with { Id, Name, Type, ProviderIds, UserData }
- */
-export async function fetchServerTopPlayed(apiKey, baseUrl, limit = 10) {
-  // NOTE: SortBy=PlayCount without a userId causes HTTP 500 on Jellyfin's /Items endpoint
-  // (PlayCount is user-scoped data). We sort by DateCreated (recently added) as a reliable
-  // server-wide fallback that always works with an admin API key.
-  try {
-    const safeBase = new URL(baseUrl);
-    safeBase.pathname = safeBase.pathname.replace(/\/$/, "") + "/Items";
-    const response = await withRetry(
-      () => axios.get(safeBase.href, {
-        headers: jellyfinAuthHeaders(apiKey),
-        params: {
-          Recursive: true,
-          SortBy: "DateCreated",
-          SortOrder: "Descending",
-          IncludeItemTypes: "Movie,Series",
-          Limit: limit,
-          Fields: "ProviderIds",
-        },
-        timeout: 8000,
-      }),
-      { label: "Jellyfin server recently-added" }
-    );
-    return response.data?.Items || [];
-  } catch (err) {
-    logger.warn(`[Jellyfin] fetchServerTopPlayed error: ${err?.message || err}`);
     return [];
   }
 }
