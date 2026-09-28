@@ -32,7 +32,10 @@ const { handleRandomRequestButton } = await import("../bot/handlers/randomReques
 function makeInteraction(customId) {
   return {
     customId,
-    user: { id: "discord-user-2" },
+    user: {
+      id: "discord-user-2",
+      displayAvatarURL: vi.fn(() => "https://cdn.discordapp.com/avatars/discord-user-2/def.png"),
+    },
     deferUpdate: vi.fn(),
     reply: vi.fn(),
     followUp: vi.fn(),
@@ -56,6 +59,7 @@ describe("handleRandomRequestButton → requestStore.add", () => {
       mediaType: "movie",
       title: "Fallout",
       discordUserId: "discord-user-2",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/discord-user-2/def.png",
     });
   });
 

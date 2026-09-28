@@ -44,7 +44,10 @@ const { handleRequestButton } = await import("../bot/handlers/requestButton.js")
 function makeInteraction(customId) {
   return {
     customId,
-    user: { id: "discord-user-1" },
+    user: {
+      id: "discord-user-1",
+      displayAvatarURL: vi.fn(() => "https://cdn.discordapp.com/avatars/discord-user-1/abc.png"),
+    },
     deferUpdate: vi.fn(),
     reply: vi.fn(),
     followUp: vi.fn(),
@@ -86,6 +89,7 @@ describe("handleRequestButton → requestStore.add", () => {
       mediaType: "movie",
       title: "Dune: Part Two",
       discordUserId: "discord-user-1",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/discord-user-1/abc.png",
     });
   });
 

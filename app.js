@@ -353,7 +353,7 @@ function configureWebServer() {
     try {
       if (!botState.discordClient || !botState.discordClient.user) {
         logger.debug("[GUILDS API] Bot not running or not logged in.");
-        return res.json({ success: false, message: "Bot not running" });
+        return res.json({ success: false, messageKey: "api.bot_not_running" });
       }
       // Debug: log all guilds
       logger.debug(
@@ -368,7 +368,7 @@ function configureWebServer() {
       res.json({ success: true, guilds });
     } catch (err) {
       logger.error("[GUILDS API] Error:", err);
-      res.json({ success: false, message: err.message });
+      res.json({ success: false, messageKey: "api.discord_error", messageParams: { detail: err.message } });
     }
   });
 
@@ -381,12 +381,12 @@ function configureWebServer() {
         const { guildId } = req.params;
         if (!botState.discordClient || !botState.discordClient.user) {
           logger.debug("[CHANNELS API] Bot not running or not logged in.");
-          return res.json({ success: false, message: "Bot not running" });
+          return res.json({ success: false, messageKey: "api.bot_not_running" });
         }
 
         const guild = botState.discordClient.guilds.cache.get(guildId);
         if (!guild) {
-          return res.json({ success: false, message: "Guild not found" });
+          return res.json({ success: false, messageKey: "api.guild_not_found" });
         }
 
         const channels = [];
@@ -474,7 +474,7 @@ function configureWebServer() {
         res.json({ success: true, channels });
       } catch (err) {
         logger.error("[CHANNELS API] Error:", err);
-        res.json({ success: false, message: err.message });
+        res.json({ success: false, messageKey: "api.discord_error", messageParams: { detail: err.message } });
       }
     }
   );
@@ -485,20 +485,20 @@ function configureWebServer() {
       logger.debug("[MEMBERS API] Request received");
       if (!botState.discordClient || !botState.discordClient.user) {
         logger.debug("[MEMBERS API] Bot not running");
-        return res.json({ success: false, message: "Bot not running" });
+        return res.json({ success: false, messageKey: "api.bot_not_running" });
       }
 
       const guildId = process.env.GUILD_ID;
       logger.debug("[MEMBERS API] GUILD_ID from env:", guildId);
       if (!guildId) {
         logger.debug("[MEMBERS API] No guild selected");
-        return res.json({ success: false, message: "No guild selected" });
+        return res.json({ success: false, messageKey: "api.no_guild_selected" });
       }
 
       const guild = botState.discordClient.guilds.cache.get(guildId);
       if (!guild) {
         logger.debug("[MEMBERS API] Guild not found in cache");
-        return res.json({ success: false, message: "Guild not found" });
+        return res.json({ success: false, messageKey: "api.guild_not_found" });
       }
 
       logger.debug(
@@ -512,7 +512,7 @@ function configureWebServer() {
       const botMember = guild.members.cache.get(botState.discordClient.user.id);
       if (!botMember) {
         logger.debug("[MEMBERS API] Bot member not found in guild");
-        return res.json({ success: false, message: "Bot not in guild" });
+        return res.json({ success: false, messageKey: "api.bot_not_in_guild" });
       }
 
       logger.debug(
@@ -602,7 +602,7 @@ function configureWebServer() {
       });
     } catch (err) {
       logger.error("[MEMBERS API] Error:", err);
-      res.json({ success: false, message: err.message });
+      res.json({ success: false, messageKey: "api.discord_error", messageParams: { detail: err.message } });
     }
   });
 
@@ -618,24 +618,24 @@ function configureWebServer() {
       // real reason to the user.
       if (!botState.isBotRunning) {
         logger.debug("[ROLES API] Bot is not running (isBotRunning=false)");
-        return res.json({ success: false, message: "Bot is not running" });
+        return res.json({ success: false, messageKey: "api.bot_not_running" });
       }
       if (!botState.discordClient || !botState.discordClient.user) {
         logger.debug("[ROLES API] Bot is starting (discordClient.user not ready yet)");
-        return res.json({ success: false, message: "Bot is starting — please retry in a few seconds" });
+        return res.json({ success: false, messageKey: "api.bot_starting" });
       }
 
       const guildId = process.env.GUILD_ID;
       logger.debug("[ROLES API] GUILD_ID from env:", guildId);
       if (!guildId) {
         logger.debug("[ROLES API] No guild selected");
-        return res.json({ success: false, message: "No guild selected — configure GUILD_ID first" });
+        return res.json({ success: false, messageKey: "api.no_guild_selected_configure" });
       }
 
       const guild = botState.discordClient.guilds.cache.get(guildId);
       if (!guild) {
         logger.debug("[ROLES API] Guild not found in cache");
-        return res.json({ success: false, message: "Bot is not in the configured guild (check GUILD_ID and bot invite)" });
+        return res.json({ success: false, messageKey: "api.bot_not_in_configured_guild" });
       }
 
       logger.debug("[ROLES API] Guild found:", guild.name);
@@ -663,23 +663,23 @@ function configureWebServer() {
       res.json({ success: true, roles });
     } catch (err) {
       logger.error("[ROLES API] Error:", err);
-      res.json({ success: false, message: err.message });
+      res.json({ success: false, messageKey: "api.discord_error", messageParams: { detail: err.message } });
     }
   });
 
   // Manual command push endpoint
   app.post("/api/push-commands", authenticateToken, async (req, res) => {
     if (!botState.isBotRunning || !botState.discordClient) {
-      return res.status(400).json({ success: false, message: "Bot is not running" });
+      return res.status(400).json({ success: false, messageKey: "api.bot_not_running" });
     }
     try {
       const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
       await registerCommands(rest, process.env.BOT_ID, process.env.GUILD_ID, logger);
       logger.info("[Push Commands] ✅ Commands manually pushed to Discord.");
-      res.json({ success: true, message: "Commands pushed to Discord successfully." });
+      res.json({ success: true, messageKey: "api.commands_pushed" });
     } catch (err) {
       logger.error("[Push Commands] ❌ Failed:", err.message);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.commands_push_failed", messageParams: { detail: err.message } });
     }
   });
 
@@ -1022,10 +1022,11 @@ function configureWebServer() {
           await startBot();
           res
             .status(200)
-            .json({ message: "Configuration saved. Bot restarted." });
+            .json({ messageKey: "api.config_saved_bot_restarted" });
         } catch (error) {
           res.status(500).json({
-            message: `Config saved, but bot failed to restart: ${error.message}`,
+            messageKey: "api.config_saved_restart_failed",
+            messageParams: { detail: error.message },
           });
         }
       } else if (!botState.isBotRunning && hasDiscordCreds && discordCredsChanged) {
@@ -1038,18 +1039,19 @@ function configureWebServer() {
           try {
             await startBot();
             res.status(200).json({
-              message: "Configuration saved. Bot started successfully!"
+              messageKey: "api.config_saved_bot_started"
             });
           } catch (error) {
             logger.error("Auto-start failed:", error.message);
             res.status(200).json({
-              message: `Configuration saved, but bot failed to start: ${error.message}. Check credentials and try starting manually.`,
+              messageKey: "api.config_saved_start_failed",
+              messageParams: { detail: error.message },
             });
           }
         } else {
           // User chose not to start the bot
           res.status(200).json({
-            message: "Configuration saved successfully! You can start the bot manually when ready."
+            messageKey: "api.config_saved_manual_start"
           });
         }
       } else if (botState.isBotRunning && commandOptionsChanged) {
@@ -1059,13 +1061,13 @@ function configureWebServer() {
           const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
           await registerCommands(rest, process.env.BOT_ID, process.env.GUILD_ID, logger);
           logger.info("[/request Options] ✅ Commands re-registered successfully.");
-          res.status(200).json({ message: "Configuration saved. Discord commands updated." });
+          res.status(200).json({ messageKey: "api.config_saved_commands_updated" });
         } catch (err) {
           logger.error("[/request Options] ❌ Failed to re-register commands:", err.message);
-          res.status(200).json({ message: "Configuration saved. Command update failed: " + err.message });
+          res.status(200).json({ messageKey: "api.config_saved_command_update_failed", messageParams: { detail: err.message } });
         }
       } else {
-        res.status(200).json({ message: "Configuration saved successfully!" });
+        res.status(200).json({ messageKey: "api.config_saved" });
       }
     }
   );
@@ -1099,7 +1101,7 @@ function configureWebServer() {
   app.post("/api/test-seerr-webhook", authenticateToken, async (req, res) => {
     try {
       if (!botState.isBotRunning || !botState.discordClient) {
-        return res.status(400).json({ success: false, message: "Bot is not running" });
+        return res.status(400).json({ success: false, messageKey: "api.bot_not_running" });
       }
 
       const fakeReq = {
@@ -1117,10 +1119,10 @@ function configureWebServer() {
       };
 
       await handleSeerrWebhook(fakeReq, null, botState.discordClient);
-      res.json({ success: true, message: "Test notification sent to Seerr channel!" });
+      res.json({ success: true, messageKey: "api.test_notification_sent" });
     } catch (err) {
       logger.error("Error sending Seerr webhook test:", err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.seerr_webhook_test_failed", messageParams: { detail: err.message } });
     }
   });
 
@@ -1131,7 +1133,7 @@ function configureWebServer() {
     const seerrUrl = (process.env.SEERR_URL || "").replace(/\/$/, "").replace(/\/api\/v1\/?$/, "");
     const apiKey = process.env.SEERR_API_KEY;
     if (!seerrUrl || !apiKey) {
-      return res.status(400).json({ success: false, message: "SEERR_URL or SEERR_API_KEY not configured." });
+      return res.status(400).json({ success: false, messageKey: "api.seerr_url_key_not_configured" });
     }
 
     try {
@@ -1166,20 +1168,22 @@ function configureWebServer() {
       if (!arrival) {
         return res.json({
           success: false,
-          message: "Seerr akzeptierte den Test-Auftrag, aber Questorr hat innerhalb von 6 Sekunden keinen Callback erhalten. Prüfe: Erreichbarkeit der Webhook-URL aus Seerr (Docker-Networking, Firewall) und ob Seerr den Webhook überhaupt aktiviert hat.",
+          messageKey: "api.roundtrip_no_callback",
         });
       }
 
       if (arrival.status === "unauthorized") {
         return res.json({
           success: false,
-          message: `Seerr hat den Webhook gesendet, aber Questorr hat ihn mit Auth-Fehler abgewiesen (${arrival.subject || "-"}). Das Authorization-Header-Secret in Seerr stimmt nicht mit Questorr überein.`,
+          messageKey: "api.roundtrip_unauthorized",
+          messageParams: { subject: arrival.subject || "-" },
         });
       }
 
       return res.json({
         success: true,
-        message: `✅ Round-Trip erfolgreich: Seerr → Questorr funktioniert. (Event: ${arrival.event}, Subject: ${arrival.subject})`,
+        messageKey: "api.roundtrip_success",
+        messageParams: { event: arrival.event, subject: arrival.subject },
       });
     } catch (err) {
       const status = err?.response?.status;
@@ -1188,7 +1192,8 @@ function configureWebServer() {
       logger.error(`[Seerr Round-Trip Test] ${detail}`);
       return res.status(500).json({
         success: false,
-        message: `Seerr-API-Aufruf fehlgeschlagen: ${detail}. Prüfe SEERR_URL und SEERR_API_KEY.`,
+        messageKey: "api.seerr_api_call_failed",
+        messageParams: { detail },
       });
     }
   });
@@ -1197,11 +1202,11 @@ function configureWebServer() {
   app.post("/api/test-notification-buttons", authenticateToken, async (req, res) => {
     try {
       if (!botState.isBotRunning || !botState.discordClient) {
-        return res.status(400).json({ success: false, message: "Bot is not running" });
+        return res.status(400).json({ success: false, messageKey: "api.bot_not_running" });
       }
       const channelId = process.env.SEERR_ADMIN_CHANNEL_ID || process.env.SEERR_CHANNEL_ID;
       if (!channelId) {
-        return res.status(400).json({ success: false, message: "No admin or Seerr channel configured (Step 2)." });
+        return res.status(400).json({ success: false, messageKey: "api.no_admin_seerr_channel" });
       }
       const channel = await botState.discordClient.channels.fetch(channelId);
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
@@ -1286,10 +1291,18 @@ function configureWebServer() {
       await channel.send(msgOptions);
 
       const activeLabels = [showSeerr ? "Seerr" : null, showWatch ? "Watch" : null, showLboxd ? "Ltrbxd" : null, showImdb ? "IMDb" : null].filter(Boolean);
-      res.json({ success: true, message: "[" + (EVENT_LABELS[eventType] || eventType) + "] " + item.title + " — " + (activeLabels.join(", ") || "no buttons") });
+      res.json({
+        success: true,
+        messageKey: "api.test_notification_buttons_sent",
+        messageParams: {
+          eventLabel: EVENT_LABELS[eventType] || eventType,
+          title: item.title,
+          buttons: activeLabels.join(", ") || "no buttons",
+        },
+      });
     } catch (err) {
       logger.error("Error sending test notification buttons:", err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.test_notification_buttons_failed", messageParams: { detail: err.message } });
     }
   });
 
@@ -1300,7 +1313,7 @@ function configureWebServer() {
 
   app.delete("/api/webhook-log", authenticateToken, (req, res) => {
     webhookEventLog.length = 0;
-    res.json({ success: true, message: "Webhook log cleared." });
+    res.json({ success: true, messageKey: "api.webhook_log_cleared" });
   });
 
 
@@ -1308,7 +1321,7 @@ function configureWebServer() {
   app.get("/api/config/export", authenticateToken, (req, res) => {
     try {
       const config = readConfig();
-      if (!config) return res.status(500).json({ success: false, message: "No config found." });
+      if (!config) return res.status(500).json({ success: false, messageKey: "api.no_config_found" });
       const exportable = { ...config };
       const STRIP = ["JWT_SECRET", "WEBHOOK_SECRET"];
       const MASK = ["DISCORD_TOKEN", "SEERR_API_KEY", "JELLYFIN_API_KEY", "TMDB_API_KEY", "OMDB_API_KEY"];
@@ -1326,7 +1339,7 @@ function configureWebServer() {
       res.send(JSON.stringify(exportable, null, 2));
       logger.info("[Config] Configuration exported");
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.export_failed" });
     }
   });
 
@@ -1334,7 +1347,7 @@ function configureWebServer() {
   app.post("/api/config/import", authenticateToken, express.json({ limit: "1mb" }), async (req, res) => {
     try {
       const imported = req.body;
-      if (!imported || typeof imported !== "object") return res.status(400).json({ success: false, message: "Invalid JSON." });
+      if (!imported || typeof imported !== "object") return res.status(400).json({ success: false, messageKey: "api.invalid_json" });
       delete imported._exportedAt;
       delete imported._questorrVersion;
       const existing = readConfig() || {};
@@ -1348,9 +1361,9 @@ function configureWebServer() {
       writeConfig(merged);
       loadConfigToEnv(merged);
       logger.info("[Config] Configuration imported");
-      res.json({ success: true, message: "Configuration imported. Please save settings and restart the bot." });
+      res.json({ success: true, messageKey: "api.config_imported" });
     } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.import_failed", messageParams: { detail: err.message } });
     }
   });
 
@@ -1358,13 +1371,13 @@ function configureWebServer() {
   app.post("/api/test-daily-recommendation", authenticateToken, async (_req, res) => {
     try {
       if (!botState.isBotRunning || !botState.discordClient) {
-        return res.status(400).json({ success: false, message: "Bot is not running" });
+        return res.status(400).json({ success: false, messageKey: "api.bot_not_running" });
       }
       await sendDailyRecommendation(botState.discordClient);
-      res.json({ success: true, message: "Daily Recommendation sent" });
+      res.json({ success: true, messageKey: "api.daily_recommendation_sent" });
     } catch (err) {
       logger.error("Error sending test daily recommendation:", err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, messageKey: "api.daily_recommendation_failed", messageParams: { detail: err.message } });
     }
   });
 
@@ -1374,7 +1387,7 @@ function configureWebServer() {
       if (!botState.discordClient || !botState.discordClient.isReady()) {
         return res.status(400).json({
           success: false,
-          message: "Discord bot is not running. Please start the bot first.",
+          messageKey: "api.discord_bot_not_running_start_first",
         });
       }
 
@@ -1382,7 +1395,7 @@ function configureWebServer() {
       if (!channelId) {
         return res.status(400).json({
           success: false,
-          message: "Daily Random Pick channel must be configured first.",
+          messageKey: "api.daily_random_pick_channel_required",
         });
       }
 
@@ -1390,7 +1403,7 @@ function configureWebServer() {
       if (!TMDB_API_KEY) {
         return res.status(400).json({
           success: false,
-          message: "TMDB API key is required. Configure it in Step 3.",
+          messageKey: "api.tmdb_key_required",
         });
       }
 
@@ -1399,13 +1412,14 @@ function configureWebServer() {
 
       res.json({
         success: true,
-        message: "Random pick sent successfully! Check your Discord channel.",
+        messageKey: "api.random_pick_sent",
       });
     } catch (error) {
       logger.error("Failed to send test random pick:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to send random pick. Check logs for details.",
+        messageKey: "api.random_pick_failed",
+        messageParams: { detail: error.message || "unknown error" },
       });
     }
   });
@@ -1416,30 +1430,32 @@ function configureWebServer() {
       if (!botState.discordClient || !botState.discordClient.isReady()) {
         return res.status(400).json({
           success: false,
-          message: "Discord bot is not running. Please start the bot first.",
+          messageKey: "api.discord_bot_not_running_start_first",
         });
       }
       const channelId = process.env.CLEANUP_ADVISOR_CHANNEL_ID;
       if (!channelId) {
         return res.status(400).json({
           success: false,
-          message: "Cleanup Advisor channel is not configured.",
+          messageKey: "api.cleanup_advisor_channel_not_configured",
         });
       }
       const result = await runCleanupAdvisor(botState.discordClient);
       if (!result.posted) {
         return res.status(400).json({
           success: false,
-          message: result.message || "Cleanup advisor did not post — check logs.",
+          messageKey: result.message ? "api.cleanup_advisor_did_not_post_detail" : "api.cleanup_advisor_did_not_post",
+          messageParams: result.message ? { detail: result.message } : undefined,
         });
       }
       return res.json({
         success: true,
-        message: `Cleanup post sent (${result.count} items, ${result.totalSizeGb} GB).`,
+        messageKey: "api.cleanup_post_sent",
+        messageParams: { count: result.count, sizeGb: result.totalSizeGb },
       });
     } catch (err) {
       logger.error("Failed to run cleanup advisor:", err);
-      return res.status(500).json({ success: false, message: err.message || "Cleanup advisor failed." });
+      return res.status(500).json({ success: false, messageKey: "api.cleanup_advisor_failed", messageParams: { detail: err.message || "unknown error" } });
     }
   });
 

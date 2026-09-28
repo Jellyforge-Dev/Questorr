@@ -1,11 +1,10 @@
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import { authenticateToken } from "../utils/auth.js";
 import { readConfig } from "../utils/configFile.js";
 import { sanitizeConfigForClient } from "../utils/configSanitize.js";
 import { WEBHOOK_SECRET } from "../utils/auth.js";
 import { configTemplate } from "../lib/config.js";
+import { getAvailableLanguages } from "../utils/availableLanguages.js";
 import logger from "../utils/logger.js";
 
 const router = Router();
@@ -40,38 +39,7 @@ router.get("/widget-api-key", authenticateToken, (req, res) => {
 });
 
 router.get("/languages", async (req, res) => {
-  try {
-    const localesDir = path.join(process.cwd(), "locales");
-    const files = fs.readdirSync(localesDir);
-    const languages = [];
-
-    for (const file of files) {
-      if (file.endsWith(".json") && file !== "template.json") {
-        try {
-          const langData = JSON.parse(
-            fs.readFileSync(path.join(localesDir, file), "utf8")
-          );
-          if (langData._meta?.language_code && langData._meta?.language_name) {
-            languages.push({
-              code: langData._meta.language_code,
-              name: langData._meta.language_name,
-            });
-          }
-        } catch (error) {
-          logger.warn(`Failed to parse language file ${file}: ${error.message}`);
-        }
-      }
-    }
-
-    languages.sort((a, b) => a.name.localeCompare(b.name));
-    res.json(languages);
-  } catch (error) {
-    logger.error(`Failed to load available languages: ${error.message}`);
-    res.json([
-      { code: "en", name: "English" },
-      { code: "de", name: "Deutsch" },
-    ]);
-  }
+  res.json(getAvailableLanguages());
 });
 
 export default router;

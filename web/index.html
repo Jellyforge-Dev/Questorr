@@ -98,7 +98,7 @@
               <div id="auth-container-wrapper" class="auth-container">
                 <!-- Language Selection (shown during auth) -->
                 <div class="language-selector-auth" style="margin-bottom: 1.5rem; text-align: center;">
-                  <label for="auth-language" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--subtext0);">Language / Sprache</label>
+                  <label for="auth-language" data-i18n="auth.choose_language" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--subtext0);">Choose your language</label>
                   <select id="auth-language" style="width: 100%; max-width: 200px; background-color: var(--surface0); border: 1px solid var(--surface1); color: var(--text); padding: 0.5rem; border-radius: 8px; font-size: 0.9rem;">
                     <!-- Languages will be populated dynamically -->
                   </select>
@@ -966,13 +966,13 @@
                         <div class="form-group" style="margin:0;">
                           <label for="WEEKLY_RECOMMENDATION_DAY" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.weekly_rec_day">Weekly recommendation — day</label>
                           <select id="WEEKLY_RECOMMENDATION_DAY" name="WEEKLY_RECOMMENDATION_DAY" style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
-                            <option value="monday">Monday</option>
-                            <option value="tuesday">Tuesday</option>
-                            <option value="wednesday">Wednesday</option>
-                            <option value="thursday">Thursday</option>
-                            <option value="friday">Friday</option>
-                            <option value="saturday">Saturday</option>
-                            <option value="sunday" selected>Sunday</option>
+                            <option value="monday" data-i18n="config.weekday_monday">Monday</option>
+                            <option value="tuesday" data-i18n="config.weekday_tuesday">Tuesday</option>
+                            <option value="wednesday" data-i18n="config.weekday_wednesday">Wednesday</option>
+                            <option value="thursday" data-i18n="config.weekday_thursday">Thursday</option>
+                            <option value="friday" data-i18n="config.weekday_friday">Friday</option>
+                            <option value="saturday" data-i18n="config.weekday_saturday">Saturday</option>
+                            <option value="sunday" selected data-i18n="config.weekday_sunday">Sunday</option>
                           </select>
                         </div>
                         <div class="form-group" style="margin:0;">
@@ -1006,13 +1006,13 @@
                         <div class="form-group" style="margin:0;">
                           <label for="DIGEST_DAY" style="display:block;margin-bottom:0.5rem;font-weight:600;" data-i18n="config.digest_day">Day</label>
                           <select id="DIGEST_DAY" name="DIGEST_DAY" style="width:100%;padding:0.75rem;border-radius:8px;border:1px solid var(--surface1);background-color:var(--surface1);color:var(--text);font-size:1rem;box-sizing:border-box;">
-                            <option value="monday" selected>Monday</option>
-                            <option value="tuesday">Tuesday</option>
-                            <option value="wednesday">Wednesday</option>
-                            <option value="thursday">Thursday</option>
-                            <option value="friday">Friday</option>
-                            <option value="saturday">Saturday</option>
-                            <option value="sunday">Sunday</option>
+                            <option value="monday" selected data-i18n="config.weekday_monday">Monday</option>
+                            <option value="tuesday" data-i18n="config.weekday_tuesday">Tuesday</option>
+                            <option value="wednesday" data-i18n="config.weekday_wednesday">Wednesday</option>
+                            <option value="thursday" data-i18n="config.weekday_thursday">Thursday</option>
+                            <option value="friday" data-i18n="config.weekday_friday">Friday</option>
+                            <option value="saturday" data-i18n="config.weekday_saturday">Saturday</option>
+                            <option value="sunday" data-i18n="config.weekday_sunday">Sunday</option>
                           </select>
                         </div>
                         <div class="form-group" style="margin:0;">
@@ -1038,7 +1038,7 @@
                       <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="AUTO_START_BOT" name="AUTO_START_BOT" />
-                          Auto-start bot on server boot
+                          <span data-i18n="config.misc_autostart_label">Auto-start bot on server boot</span>
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_autostart_desc">If enabled, the bot starts automatically when the container restarts and Discord credentials are present.</span>
@@ -1058,7 +1058,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="NOTIFY_ON_AVAILABLE" name="NOTIFY_ON_AVAILABLE" />
-                          Send DM when request is available
+                          <span data-i18n="config.misc_notify_available_label">Send DM when request is available</span>
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_pm_desc">When enabled, users will receive a DM when their requested content becomes available on Jellyfin.</span>
@@ -1068,7 +1068,7 @@
                       <div class="form-group" style="margin-top: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                           <input type="checkbox" id="SEERR_AUTO_APPROVE" name="SEERR_AUTO_APPROVE" />
-                          Seerr Auto-Approve Requests
+                          <span data-i18n="config.misc_autoapprove_label">Seerr Auto-Approve Requests</span>
                         </label>
                         <div class="form-text">
                           <span data-i18n="config.misc_autoapprove_desc">When enabled, requests through the bot are automatically approved in Seerr.</span>
@@ -1367,13 +1367,13 @@
                           <div class="form-group" style="margin: 0;">
                             <label for="CLEANUP_ADVISOR_DAY" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.cleanup_day">Day of week</label>
                             <select id="CLEANUP_ADVISOR_DAY" name="CLEANUP_ADVISOR_DAY" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--surface1); background-color: var(--surface1); color: var(--text); font-size: 1rem; box-sizing: border-box;">
-                              <option value="monday">Monday</option>
-                              <option value="tuesday">Tuesday</option>
-                              <option value="wednesday">Wednesday</option>
-                              <option value="thursday">Thursday</option>
-                              <option value="friday">Friday</option>
-                              <option value="saturday">Saturday</option>
-                              <option value="sunday" selected>Sunday</option>
+                              <option value="monday" data-i18n="config.weekday_monday">Monday</option>
+                              <option value="tuesday" data-i18n="config.weekday_tuesday">Tuesday</option>
+                              <option value="wednesday" data-i18n="config.weekday_wednesday">Wednesday</option>
+                              <option value="thursday" data-i18n="config.weekday_thursday">Thursday</option>
+                              <option value="friday" data-i18n="config.weekday_friday">Friday</option>
+                              <option value="saturday" data-i18n="config.weekday_saturday">Saturday</option>
+                              <option value="sunday" selected data-i18n="config.weekday_sunday">Sunday</option>
                             </select>
                           </div>
                           <div class="form-group" style="margin: 0;">
@@ -1455,43 +1455,43 @@
                         <div style="display: grid; gap: 0.6rem;">
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_pending">New Request</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_PENDING" name="NOTIF_TITLE_MEDIA_PENDING" class="form-control" placeholder="New Request – Pending Approval" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_PENDING" name="NOTIF_TITLE_MEDIA_PENDING" class="form-control" placeholder="New Request – Pending Approval" data-i18n="config.notif_ph_media_pending" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_approved">Request Approved</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_APPROVED" name="NOTIF_TITLE_MEDIA_APPROVED" class="form-control" placeholder="Request Approved" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_APPROVED" name="NOTIF_TITLE_MEDIA_APPROVED" class="form-control" placeholder="Request Approved" data-i18n="config.notif_ph_media_approved" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_auto_approved">Request Auto-Approved</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_AUTO_APPROVED" name="NOTIF_TITLE_MEDIA_AUTO_APPROVED" class="form-control" placeholder="Request Auto-Approved" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AUTO_APPROVED" name="NOTIF_TITLE_MEDIA_AUTO_APPROVED" class="form-control" placeholder="Request Auto-Approved" data-i18n="config.notif_ph_media_auto_approved" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_available">Now Available</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_AVAILABLE" name="NOTIF_TITLE_MEDIA_AVAILABLE" class="form-control" placeholder="Now Available!" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_AVAILABLE" name="NOTIF_TITLE_MEDIA_AVAILABLE" class="form-control" placeholder="Now Available!" data-i18n="config.notif_ph_media_available" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_declined">Request Declined</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_DECLINED" name="NOTIF_TITLE_MEDIA_DECLINED" class="form-control" placeholder="Request Declined" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_DECLINED" name="NOTIF_TITLE_MEDIA_DECLINED" class="form-control" placeholder="Request Declined" data-i18n="config.notif_ph_media_declined" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_media_failed">Download Failed</label>
-                          <input type="text" id="NOTIF_TITLE_MEDIA_FAILED" name="NOTIF_TITLE_MEDIA_FAILED" class="form-control" placeholder="Download Failed" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_MEDIA_FAILED" name="NOTIF_TITLE_MEDIA_FAILED" class="form-control" placeholder="Download Failed" data-i18n="config.notif_ph_media_failed" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_created">Issue Reported</label>
-                          <input type="text" id="NOTIF_TITLE_ISSUE_CREATED" name="NOTIF_TITLE_ISSUE_CREATED" class="form-control" placeholder="Issue Reported" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_ISSUE_CREATED" name="NOTIF_TITLE_ISSUE_CREATED" class="form-control" placeholder="Issue Reported" data-i18n="config.notif_ph_issue_created" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_comment">Issue Comment</label>
-                          <input type="text" id="NOTIF_TITLE_ISSUE_COMMENT" name="NOTIF_TITLE_ISSUE_COMMENT" class="form-control" placeholder="Issue Comment" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_ISSUE_COMMENT" name="NOTIF_TITLE_ISSUE_COMMENT" class="form-control" placeholder="Issue Comment" data-i18n="config.notif_ph_issue_comment" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_resolved">Issue Resolved</label>
-                          <input type="text" id="NOTIF_TITLE_ISSUE_RESOLVED" name="NOTIF_TITLE_ISSUE_RESOLVED" class="form-control" placeholder="Issue Resolved" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_ISSUE_RESOLVED" name="NOTIF_TITLE_ISSUE_RESOLVED" class="form-control" placeholder="Issue Resolved" data-i18n="config.notif_ph_issue_resolved" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_issue_reopened">Issue Reopened</label>
-                          <input type="text" id="NOTIF_TITLE_ISSUE_REOPENED" name="NOTIF_TITLE_ISSUE_REOPENED" class="form-control" placeholder="Issue Reopened" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_ISSUE_REOPENED" name="NOTIF_TITLE_ISSUE_REOPENED" class="form-control" placeholder="Issue Reopened" data-i18n="config.notif_ph_issue_reopened" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_random">Daily Random Pick</label>
-                          <input type="text" id="NOTIF_TITLE_DAILY_RANDOM" name="NOTIF_TITLE_DAILY_RANDOM" class="form-control" placeholder="Today's Random Pick" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_DAILY_RANDOM" name="NOTIF_TITLE_DAILY_RANDOM" class="form-control" placeholder="Today's Random Pick" data-i18n="config.notif_ph_daily_random" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_daily_recommendation">Daily Recommendation</label>
-                          <input type="text" id="NOTIF_TITLE_DAILY_RECOMMENDATION" name="NOTIF_TITLE_DAILY_RECOMMENDATION" class="form-control" placeholder="Today's Recommendation from your Library" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_DAILY_RECOMMENDATION" name="NOTIF_TITLE_DAILY_RECOMMENDATION" class="form-control" placeholder="Today's Recommendation from your Library" data-i18n="config.notif_ph_daily_recommendation" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                           <label style="font-size: 0.82rem; color: var(--subtext0);" data-i18n="config.notif_jellyfin_new">Added to Library (non-Seerr)</label>
-                          <input type="text" id="NOTIF_TITLE_JELLYFIN_NEW" name="NOTIF_TITLE_JELLYFIN_NEW" class="form-control" placeholder="Added to the Library" style="margin-bottom: 0.5rem;" />
+                          <input type="text" id="NOTIF_TITLE_JELLYFIN_NEW" name="NOTIF_TITLE_JELLYFIN_NEW" class="form-control" placeholder="Added to the Library" data-i18n="config.notif_ph_jellyfin_new" data-i18n-attr="placeholder" style="margin-bottom: 0.5rem;" />
 
                         </div>
                       </div>
@@ -1536,8 +1536,7 @@
                       <div class="form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface1);">
                         <label for="bot-language" style="display: block; margin-bottom: 0.5rem; font-weight: 600;" data-i18n="config.bot_language_label">Bot Language</label>
                         <select id="bot-language" name="BOT_LANGUAGE" style="width: 100%; max-width: 300px; background-color: #1e1e2e; border: 1px solid var(--surface1); color: var(--text); padding: 0.75rem; border-radius: 8px; font-size: 1rem;">
-                          <option value="en">English</option>
-                          <option value="de">Deutsch</option>
+                          <!-- Languages populated dynamically by populateLanguageSelectors() in script.js -->
                         </select>
                         <div class="form-text" style="margin-top: 0.5rem;">
                           <span data-i18n="config.bot_language_help">Language for Discord notifications, bot messages and button labels.</span>
@@ -1749,7 +1748,7 @@
                   <li><i class="bi bi-calendar-week"></i><div data-i18n="about.feature_digest"><strong style="color: var(--blue);">Weekly library digest</strong> — an opt-in weekly post listing the movies and series added to your Jellyfin library in the last 7 days. Channel, day and time are configurable; nothing is posted on a quiet week.</div></li>
                   <li><i class="bi bi-speedometer2"></i><div data-i18n="about.feature_rate_limiting">Per-user <strong style="color: var(--blue);">command rate limiting</strong> prevents Discord API abuse. Configurable commands-per-minute threshold per user.</div></li>
                   <li><i class="bi bi-download"></i><div data-i18n="about.feature_config_backup"><strong style="color: var(--blue);">Export and import</strong> your entire configuration as JSON. API keys are masked in exports for security — ideal for backups or migrating to a new server.</div></li>
-                  <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Supports English and German, is fully mobile-responsive and works on smartphones and tablets.</div></li>
+                  <li><i class="bi bi-phone-fill"></i><div data-i18n="about.feature_dashboard">Configure everything through the <strong style="color: var(--blue);">web dashboard</strong> at port 8282. Fully translated into multiple languages, mobile-responsive, and works on smartphones and tablets.</div></li>
                   <li><i class="bi bi-heart-pulse-fill"></i><div data-i18n="about.feature_health_check">Built-in <strong style="color: var(--blue);">health-check endpoint</strong> at <code>/api/health</code> for Docker HEALTHCHECK and monitoring tools like Uptime Kuma. Reports bot status, service connectivity and cache stats.</div></li>
                   <li><i class="bi bi-window-sidebar"></i><div data-i18n="about.feature_widget">Embeddable <strong style="color: var(--blue);">HTML widget</strong> for Homarr, Homepage or Organizr. Shows bot status, uptime, command statistics with per-user breakdown, and start/stop controls — secured by API key.</div></li>
                 </ul>

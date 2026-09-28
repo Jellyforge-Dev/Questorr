@@ -39,7 +39,7 @@ router.post(
     if (!discordUserId || !seerrUserId) {
       return res.status(400).json({
         success: false,
-        message: "Discord user ID and Seerr user ID are required.",
+        messageKey: "api.mapping_ids_required",
       });
     }
 
@@ -55,12 +55,12 @@ router.post(
       saveUserMapping(mapping);
       loadConfigToEnv();
 
-      res.json({ success: true, message: "Mapping saved successfully." });
+      res.json({ success: true, messageKey: "api.mapping_saved" });
     } catch (error) {
       logger.error("Error saving user mapping:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to save mapping - check server logs.",
+        messageKey: "api.mapping_save_failed",
       });
     }
   }
@@ -72,12 +72,12 @@ router.delete("/user-mappings/all", authenticateToken, (req, res) => {
   try {
     const removed = deleteAllUserMappings();
     loadConfigToEnv();
-    res.json({ success: true, removed, message: `${removed} mapping(s) removed.` });
+    res.json({ success: true, removed, messageKey: "api.mappings_removed", messageParams: { count: removed } });
   } catch (error) {
     logger.error("Error clearing user mappings:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to clear mappings - check server logs.",
+      messageKey: "api.mappings_clear_failed",
     });
   }
 });
@@ -91,17 +91,17 @@ router.delete("/user-mappings/:discordUserId", authenticateToken, (req, res) => 
     if (!deleted) {
       return res
         .status(404)
-        .json({ success: false, message: "Mapping not found." });
+        .json({ success: false, messageKey: "api.mapping_not_found" });
     }
 
     loadConfigToEnv();
 
-    res.json({ success: true, message: "Mapping deleted successfully." });
+    res.json({ success: true, messageKey: "api.mapping_deleted" });
   } catch (error) {
     logger.error("Error deleting user mapping:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete mapping - check server logs.",
+      messageKey: "api.mapping_delete_failed",
     });
   }
 });

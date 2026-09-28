@@ -71,6 +71,73 @@ describe("requestStore.add / getByUser", () => {
   });
 });
 
+describe("requestStore.getPendingByMedia", () => {
+  it("returns the stored Discord avatar for a still-pending request", () => {
+    store.add({
+      requestId: 501,
+      tmdbId: 9001,
+      mediaType: "movie",
+      title: "Arrival",
+      discordUserId: "user-L",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/user-L/x.png",
+    });
+
+    const record = store.getPendingByMedia(9001, "movie");
+    expect(record?.discordAvatarUrl).toBe("https://cdn.discordapp.com/avatars/user-L/x.png");
+  });
+
+  it("returns null for a title with no matching record", () => {
+    expect(store.getPendingByMedia(123456, "movie")).toBeNull();
+  });
+
+  it("matches regardless of whether tmdbId was stored as a string or a number", () => {
+    // bot/commands/search.js stores tmdbId as a string (parsed straight out of
+    // a "id|mediaType" input, never coerced); the webhook always passes a number.
+    store.add({
+      requestId: 505,
+      tmdbId: "9004",
+      mediaType: "movie",
+      title: "String Id",
+      discordUserId: "user-P",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/user-P/y.png",
+    });
+
+    expect(store.getPendingByMedia(9004, "movie")?.discordAvatarUrl).toBe(
+      "https://cdn.discordapp.com/avatars/user-P/y.png"
+    );
+  });
+
+  it("ignores records that are no longer Pending", () => {
+    store.add({ requestId: 502, tmdbId: 9002, mediaType: "tv", title: "Loki", discordUserId: "user-M" });
+    store.updateFromSeerr([{ id: 502, status: 2, media: { status: 5 } }]); // -> Available
+
+    expect(store.getPendingByMedia(9002, "tv")).toBeNull();
+  });
+
+  it("picks the most recently requested match when several exist", () => {
+    store.add({
+      requestId: 503,
+      tmdbId: 9003,
+      mediaType: "movie",
+      title: "Old Attempt",
+      discordUserId: "user-N",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/user-N/old.png",
+    });
+    store.add({
+      requestId: 504,
+      tmdbId: 9003,
+      mediaType: "movie",
+      title: "Newer Attempt",
+      discordUserId: "user-O",
+      discordAvatarUrl: "https://cdn.discordapp.com/avatars/user-O/new.png",
+    });
+
+    expect(store.getPendingByMedia(9003, "movie")?.discordAvatarUrl).toBe(
+      "https://cdn.discordapp.com/avatars/user-O/new.png"
+    );
+  });
+});
+
 describe("requestStore.deriveStage", () => {
   const cases = [
     { status: 3, mediaStatus: 1, expected: "Declined" },

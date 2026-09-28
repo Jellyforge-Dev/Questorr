@@ -10,7 +10,9 @@
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Beitreten-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
 
-  [🇬🇧 English Documentation](README.md) &nbsp;|&nbsp; [💬 Discord Community](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
+  [🇬🇧 English](README.md) &nbsp;|&nbsp; [🇩🇪 Deutsch](README.de.md) &nbsp;|&nbsp; [🇫🇷 Français](README.fr.md) &nbsp;|&nbsp; [🇪🇸 Español](README.es.md) &nbsp;|&nbsp; [🇧🇷 Português (Brasil)](README.pt_br.md) &nbsp;|&nbsp; [🇸🇪 Svenska](README.sv.md)
+
+  [💬 Discord Community](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev) &nbsp;|&nbsp; [🐛 Fehler melden](https://github.com/Jellyforge-Dev/Questorr/issues)
 
 </div>
 
@@ -80,7 +82,7 @@
 | 💚 Health-Check-Leiste | Echtzeit-Servicestatus im Dashboard |
 | 📊 Statistik-Dashboard | Befehlsnutzungsstatistiken mit Aufschlüsselung pro Nutzer |
 | 🧩 Einbettbares Widget | HTML-Widget für Homarr/Homepage/Organizr mit Bot-Status und Steuerung |
-| 🌍 Mehrsprachig | Englische und deutsche Dashboard-Oberfläche |
+| 🌍 Mehrsprachig | Dashboard und Bot vollständig übersetzt: Englisch, Deutsch, Französisch, Spanisch, brasilianisches Portugiesisch und Schwedisch |
 
 > 📖 **Neu hier?** Die [**vollständige Bedienungs- & Konfigurationsanleitung**](docs/USAGE.de.md)
 > erklärt **jeden** Befehl, jedes Feature und jede Einstellung in einfacher Sprache
@@ -375,6 +377,6 @@ Dieses Projekt ist unter der [GNU Affero General Public License v3.0 (AGPL-3.0)]
 
 <div align="center">
 
-Inspiriert von [openVESSL/Anchorr](https://github.com/openVESSL/Anchorr) &nbsp;|&nbsp; Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
+Gepflegt von [Jellyforge-Dev](https://github.com/Jellyforge-Dev) &nbsp;|&nbsp; [💬 Discord](https://discord.gg/rXANrXJqVf) &nbsp;|&nbsp; [<img src="https://storage.ko-fi.com/cdn/cup-border.png" height="14" alt="Ko-fi"> Kauf mir einen Kaffee](https://ko-fi.com/jellyforgedev)
 
 </div>

@@ -32,7 +32,7 @@ router.get("/seerr-users", authenticateToken, async (req, res) => {
       logger.debug("[SEERR USERS API] Missing configuration");
       return res.json({
         success: false,
-        message: "Seerr configuration missing",
+        messageKey: "api.seerr_config_missing",
       });
     }
 
@@ -92,7 +92,7 @@ router.get("/seerr-users", authenticateToken, async (req, res) => {
       logger.error("[SEERR USERS API] Response status:", err.response.status);
       logger.error("[SEERR USERS API] Response data:", err.response.data);
     }
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, messageKey: "api.seerr_users_fetch_failed", messageParams: { detail: err.message } });
   }
 });
 
@@ -100,10 +100,10 @@ router.post("/test-seerr", authenticateToken, validateBody(seerrConnectionSchema
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
-    return res.status(400).json({ success: false, message: "URL and API Key are required." });
+    return res.status(400).json({ success: false, messageKey: "api.url_api_key_required" });
   }
   if (!isAllowedUrl(url)) {
-    return res.status(400).json({ success: false, message: "Invalid URL. Must be http or https." });
+    return res.status(400).json({ success: false, messageKey: "api.invalid_url_protocol" });
   }
 
   try {
@@ -115,13 +115,13 @@ router.post("/test-seerr", authenticateToken, validateBody(seerrConnectionSchema
       timeout: TIMEOUTS.SEERR_API,
     });
     const version = response.data?.version;
-    res.json({ success: true, message: `Connection successful! (v${version})` });
+    res.json({ success: true, messageKey: "api.seerr_connected", messageParams: { version } });
   } catch (error) {
     logger.error("Seerr test failed:", error.message);
     if (error.response && [401, 403].includes(error.response.status)) {
-      return res.status(401).json({ success: false, message: "Invalid API Key." });
+      return res.status(401).json({ success: false, messageKey: "api.invalid_api_key" });
     }
-    res.status(500).json({ success: false, message: "Connection failed. Check URL and API Key." });
+    res.status(500).json({ success: false, messageKey: "api.connection_failed_api_key" });
   }
 });
 
@@ -129,10 +129,10 @@ router.post("/seerr/quality-profiles", authenticateToken, validateBody(seerrConn
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
-    return res.status(400).json({ success: false, message: "URL and API Key are required." });
+    return res.status(400).json({ success: false, messageKey: "api.url_api_key_required" });
   }
   if (!isAllowedUrl(url)) {
-    return res.status(400).json({ success: false, message: "Invalid URL. Must be http or https." });
+    return res.status(400).json({ success: false, messageKey: "api.invalid_url_protocol" });
   }
 
   try {
@@ -142,7 +142,7 @@ router.post("/seerr/quality-profiles", authenticateToken, validateBody(seerrConn
     res.json({ success: true, profiles });
   } catch (error) {
     logger.error("Failed to fetch quality profiles:", error.message);
-    res.status(500).json({ success: false, message: "Failed to fetch quality profiles." });
+    res.status(500).json({ success: false, messageKey: "api.fetch_quality_profiles_failed" });
   }
 });
 
@@ -150,10 +150,10 @@ router.post("/seerr/servers", authenticateToken, validateBody(seerrConnectionSch
   const { url, apiKey } = req.body;
   const effectiveApiKey = isMaskedValue(apiKey) ? process.env.SEERR_API_KEY : apiKey;
   if (!url || !effectiveApiKey) {
-    return res.status(400).json({ success: false, message: "URL and API Key are required." });
+    return res.status(400).json({ success: false, messageKey: "api.url_api_key_required" });
   }
   if (!isAllowedUrl(url)) {
-    return res.status(400).json({ success: false, message: "Invalid URL. Must be http or https." });
+    return res.status(400).json({ success: false, messageKey: "api.invalid_url_protocol" });
   }
 
   try {
@@ -163,7 +163,7 @@ router.post("/seerr/servers", authenticateToken, validateBody(seerrConnectionSch
     res.json({ success: true, servers });
   } catch (error) {
     logger.error("Failed to fetch servers:", error.message);
-    res.status(500).json({ success: false, message: "Failed to fetch servers." });
+    res.status(500).json({ success: false, messageKey: "api.fetch_servers_failed" });
   }
 });
 
@@ -176,14 +176,14 @@ router.post("/seerr-root-folders", authenticateToken, validateBody(seerrConnecti
     if (!apiKey || isMaskedValue(apiKey)) apiKey = process.env.SEERR_API_KEY;
 
     if (!url || !apiKey) {
-      return res.status(400).json({ success: false, message: "Seerr URL and API Key required." });
+      return res.status(400).json({ success: false, messageKey: "api.seerr_url_api_key_required" });
     }
 
     const folders = await seerrApi.fetchRootFolders(url, apiKey);
     res.json({ success: true, folders });
   } catch (err) {
     logger.error("Failed to fetch root folders:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, messageKey: "api.fetch_root_folders_failed", messageParams: { detail: err.message } });
   }
 });
 
@@ -209,7 +209,7 @@ router.get("/seerr-notification-types", authenticateToken, async (req, res) => {
     const apiKey = process.env.SEERR_API_KEY;
 
     if (!seerrUrl || !apiKey) {
-      return res.json({ success: false, message: "Seerr configuration missing" });
+      return res.json({ success: false, messageKey: "api.seerr_config_missing" });
     }
 
     const baseUrl = getSeerrApiUrl(seerrUrl);
@@ -228,7 +228,7 @@ router.get("/seerr-notification-types", authenticateToken, async (req, res) => {
     res.json({ success: true, webhookEnabled: !!enabled, enabledTypes });
   } catch (err) {
     logger.error("[SEERR NOTIF TYPES] Error:", err.message);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, messageKey: "api.seerr_notification_types_failed", messageParams: { detail: err.message } });
   }
 });
 

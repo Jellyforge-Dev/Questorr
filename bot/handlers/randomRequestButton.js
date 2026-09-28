@@ -60,6 +60,7 @@ export async function handleRandomRequestButton(interaction) {
       mediaType,
       title: details.title || details.name,
       discordUserId: interaction.user.id,
+      discordAvatarUrl: interaction.user.displayAvatarURL({ size: 128 }),
     });
 
     // Round 12: ALWAYS record the request in pendingRequests (see

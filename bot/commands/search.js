@@ -6,6 +6,7 @@ import { fetchOMDbData } from "../../api/omdb.js";
 import { buildNotificationEmbed, buildButtons, buildActionButtons } from "../embeds.js";
 import { parseQualityAndServerOptions, getSeerrAutoApprove, getQuotaDenial } from "../botUtils.js";
 import { pendingRequests, savePendingRequests } from "../botState.js";
+import { add as addToRequestStore } from "../../utils/requestStore.js";
 import { getUserMappings } from "../../utils/configFile.js";
 import { getSeerrUrl, getSeerrApiKey, getTmdbApiKey } from "../helpers.js";
 import logger from "../../utils/logger.js";
@@ -145,7 +146,7 @@ export async function handleSearchOrRequest(
         }
       }
 
-      await seerrApi.sendRequest({
+      const createdRequest = await seerrApi.sendRequest({
         tmdbId,
         mediaType,
         seasons: seasonsToRequest,
@@ -161,6 +162,19 @@ export async function handleSearchOrRequest(
       logger.info(
         `[REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
       );
+
+      // Mirror requestButton.js/randomRequestButton.js: record the request in
+      // the lifecycle store keyed on the Seerr requestId, so /queue can show
+      // its status and the MEDIA_PENDING admin embed can show the requester's
+      // real Discord avatar instead of Seerr's own (often unreachable) one.
+      addToRequestStore({
+        requestId: createdRequest?.id ?? null,
+        tmdbId,
+        mediaType,
+        title: details.title || details.name,
+        discordUserId: interaction.user.id,
+        discordAvatarUrl: interaction.user.displayAvatarURL({ size: 128 }),
+      });
 
       // Round 12: ALWAYS record the request in pendingRequests (see
       // requestButton.js for the full rationale — used as dedup source for

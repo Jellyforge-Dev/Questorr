@@ -1,3 +1,5 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   Client,
   GatewayIntentBits,
@@ -15,6 +17,26 @@ import { startHealthAlertPoller } from "./healthAlertPoller.js";
 import { rescheduleTimedJobs } from "./jobScheduler.js";
 import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_BOT_AVATAR_PATH = path.join(__dirname, "..", "assets", "discord-avatar.png");
+
+/**
+ * Uploads the Questorr logo as the bot's Discord avatar, but only the first
+ * time — i.e. only while the application still has Discord's default (empty)
+ * avatar. Never overwrites an avatar the user set manually, and never throws:
+ * a failure here (missing file, rate limit, no permission) must not break bot
+ * startup.
+ */
+async function setDefaultAvatarIfUnset(client) {
+  if (client.user.avatar) return; // already customized — leave it alone
+  try {
+    await client.user.setAvatar(DEFAULT_BOT_AVATAR_PATH);
+    logger.info("✅ No bot avatar was set — uploaded the default Questorr logo");
+  } catch (err) {
+    logger.warn(`⚠️ Could not set the default bot avatar: ${err.message}`);
+  }
+}
 
 /**
  * True if `err` looks like discord.js's DisallowedIntents error — thrown when
@@ -131,6 +153,7 @@ export async function startBot() {
       startJellyfinPoller(client);
       startSeerrStatusPoller();
       startHealthAlertPoller(client);
+      setDefaultAvatarIfUnset(client); // fire-and-forget, never blocks startup
 
       resolve({ success: true, message: `Logged in as ${client.user.tag}` });
     });

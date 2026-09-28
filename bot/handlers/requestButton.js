@@ -146,6 +146,7 @@ export async function handleRequestButton(interaction) {
       mediaType,
       title: details.title || details.name,
       discordUserId: interaction.user.id,
+      discordAvatarUrl: interaction.user.displayAvatarURL({ size: 128 }),
     });
 
     // Always record the request in pendingRequests. The map serves as the
