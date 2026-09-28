@@ -77,7 +77,8 @@ docker compose -f docker-compose.demo.yml down -v
 
 - Put images/GIFs in [`assets/`](assets/) (e.g. `assets/hero.gif`,
   `assets/dashboard.png`).
-- Reference them in `README.md` / `README.de.md`:
+- Reference them in `README.md` and the other language READMEs (`README.de.md`,
+  `README.fr.md`, `README.es.md`, `README.pt_br.md`, `README.sv.md`):
   ```markdown
   <p align="center"><img src="./assets/hero.gif" alt="Questorr demo" width="800"/></p>
   ```
@@ -89,4 +90,4 @@ docker compose -f docker-compose.demo.yml down -v
 - [ ] No real usernames, emails, server names, IPs or tokens visible
 - [ ] Consistent theme + window size across the set
 - [ ] GIFs trimmed and reasonably sized (< ~5 MB each)
-- [ ] Images placed in `assets/` and linked from both READMEs
+- [ ] Images placed in `assets/` and linked from all language READMEs
