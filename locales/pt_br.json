@@ -68,6 +68,7 @@
     "stats_insights_title": "Insights de Biblioteca e Solicitações",
     "stats_insights_load": "Carregar Insights",
     "stats_insights_refresh": "Atualizar",
+    "stats_insights_refresh_title": "Ignora o cache de 5 minutos e busca dados atualizados diretamente do Jellyfin/Seerr",
     "stats_insights_loading": "Carregando…",
     "stats_insights_ok": "Carregado",
     "stats_insights_no_data": "Ainda sem dados — clique em \"Carregar Insights\".",
@@ -194,6 +195,7 @@
     "time_ago_hours": "{{n}} h atrás",
     "time_ago_days": "{{n}} d atrás",
     "test_seerr_roundtrip": "Teste de ida e volta",
+    "test_seerr_roundtrip_title": "Aciona o Seerr para enviar um webhook ao Questorr — testa toda a cadeia, incluindo o cabeçalho Authorization",
     "seerr_root_folder_load": "Carregar Pastas Raiz",
     "jellyfin_fallback_channel": "📢 Canal de Notificação Padrão",
     "jellyfin_fallback_desc": "O canal de fallback é configurado na aba 1. Discord → Canal de Notificação Padrão.",
@@ -484,6 +486,8 @@
   "ui": {
     "hide_header": "Ocultar cabeçalho",
     "show_header": "Mostrar cabeçalho",
+    "theme_toggle_aria": "Alternar tema",
+    "filter_by_role_aria": "Filtrar membros por cargo",
     "copied": "Copiado!"
   },
   "footer": {
