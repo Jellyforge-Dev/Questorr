@@ -420,6 +420,7 @@
     "poller_status_text": "",
     "poller_polling": "",
     "poller_polled_msg": "",
+    "poller_scan_progress": "",
     "poller_scan_started": "",
     "poller_scan_inprogress": "",
     "poller_scan_cap_hit": "",

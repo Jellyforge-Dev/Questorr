@@ -2018,9 +2018,12 @@ document.addEventListener("DOMContentLoaded", async () => {
               renderStatus(status);
               const prog = status.fullScanProgress;
               if (prog && status.fullScanInProgress) {
+                const progressTpl = t("config.poller_scan_progress") || "{{scanned}} / ? · {{new}} new";
                 btn.innerHTML =
                   '<i class="bi bi-arrow-repeat"></i> ' +
-                  `${prog.scanned ?? 0} / ? · ${prog.newFound ?? 0} neu`;
+                  progressTpl
+                    .replace("{{scanned}}", prog.scanned ?? 0)
+                    .replace("{{new}}", prog.newFound ?? 0);
               } else {
                 if (prog) {
                   const tpl = t("config.poller_polled_msg") || "Polled: {{fetched}} fetched, {{new}} new";

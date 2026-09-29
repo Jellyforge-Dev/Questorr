@@ -351,14 +351,34 @@ export async function sendDailyRecommendation(client) {
     let backdropUrl = null;
     let posterUrl = null;
 
+    // Some Jellyfin items (in particular collection/compilation entries) end up
+    // with a stale or wrong ProviderIds.Tmdb value — e.g. a TMDB *collection* ID
+    // that happens to collide with an unrelated movie/tv ID in TMDB's separate
+    // movie/tv ID namespace. Blindly trusting it produced a Seerr link, poster
+    // and overview for a completely different title while the Jellyfin "Watch
+    // Now" link (built from Jellyfin's own item ID, not TMDB) stayed correct.
+    // Cross-check the release year — a language-independent signal, unlike the
+    // title — before using the TMDB response for anything Seerr/TMDB-related.
     let tmdbOverview = null;
+    let tmdbMismatch = false;
     if (tmdbId && tmdbApiKey) {
       try {
         const tmdbType = isMovie ? "movie" : "tv";
         const tmdb = await tmdbApi.tmdbGetDetails(tmdbId, tmdbType, tmdbApiKey);
-        if (tmdb.backdrop_path) backdropUrl = `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}`;
-        if (tmdb.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`;
-        if (tmdb.overview) tmdbOverview = tmdb.overview;
+        const tmdbDateStr = isMovie ? tmdb.release_date : tmdb.first_air_date;
+        const tmdbYear = tmdbDateStr ? parseInt(String(tmdbDateStr).slice(0, 4), 10) : null;
+        if (year && tmdbYear && Math.abs(tmdbYear - year) > 1) {
+          tmdbMismatch = true;
+          logger.warn(
+            `[Daily Recommendation] TMDB id ${tmdbId} (${tmdbType}) on Jellyfin item "${item.Name}" (${year}) ` +
+            `resolved to "${tmdb.title || tmdb.name}" (${tmdbYear}) — release years don't match, ` +
+            `treating ProviderIds.Tmdb as unreliable for this item (skipping TMDB overview/poster/Seerr link).`
+          );
+        } else {
+          if (tmdb.backdrop_path) backdropUrl = `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}`;
+          if (tmdb.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`;
+          if (tmdb.overview) tmdbOverview = tmdb.overview;
+        }
       } catch (e) {
         logger.debug("[Daily Recommendation] TMDB fetch failed:", e.message);
       }
@@ -416,7 +436,7 @@ export async function sendDailyRecommendation(client) {
 
     // Seerr media page
     const seerrBase = normalizeSeerrUrl(process.env.SEERR_URL || "");
-    if (_showRec("seerr") && seerrBase && tmdbId) {
+    if (_showRec("seerr") && seerrBase && tmdbId && !tmdbMismatch) {
       const seerrPageUrl = `${seerrBase}/${isMovie ? "movie" : "tv"}/${tmdbId}`;
       if (isValidUrl(seerrPageUrl)) {
         buttonComponents.push(
@@ -429,7 +449,7 @@ export async function sendDailyRecommendation(client) {
     }
 
     // YouTube trailer (best-effort)
-    if (_showRec("trailer") && tmdbId && tmdbApiKey) {
+    if (_showRec("trailer") && tmdbId && tmdbApiKey && !tmdbMismatch) {
       try {
         const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbId, isMovie ? "movie" : "tv", tmdbApiKey);
         if (trailerUrl && isValidUrl(trailerUrl)) {

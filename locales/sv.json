@@ -420,6 +420,7 @@
     "poller_status_text": "Senaste kontroll: {{last}} · Spårade: {{tracked}} · Nya (senast): {{new}}",
     "poller_polling": "Kontrollerar…",
     "poller_polled_msg": "Kontrollerat: {{fetched}} hämtade, {{new}} nya",
+    "poller_scan_progress": "{{scanned}} / ? · {{new}} nya",
     "poller_scan_started": "Skanning startad — resultat visas i Discord",
     "poller_scan_inprogress": "Skanning pågår redan…",
     "poller_scan_cap_hit": "Gräns nådd, klicka igen för fler",
