@@ -22,6 +22,8 @@
 - Stopping the bot now actually tears down all background timers/pollers (Jellyfin poller, Seerr status poller, cleanup advisor, subscription poller, weekly digest) instead of leaving them running after the Discord client was destroyed — the same fix applies to the graceful shutdown on SIGTERM/SIGINT.
 - Questorr's logo is now automatically set as the bot's Discord avatar on first start.
 - Fixed hardcoded English/German hover-text (tooltips) and screen-reader labels on several buttons (Round-Trip Test, Insights Refresh, mobile Save, theme toggle, both role-filter dropdowns) that ignored the selected dashboard language.
+- Fixed the Jellyfin "Poll Now" scan's live progress text ("X / ? · Y new") being hardcoded German regardless of the selected dashboard language.
+- Fixed Daily Recommendation, `/random` and new-content notifications showing a wrong Seerr link, poster and overview when the picked Jellyfin item represents a whole collection (e.g. "Toy Story Collection") rather than a single movie/show — the stored TMDB id either collided with an unrelated movie/tv id or didn't resolve at all. Collection ids are now detected and linked to Seerr's `/collection/{id}` page, with a name-based TMDB search as a last-resort fallback when the id itself is unusable.
 
 #### 🧹 Cleanup
 - Removed dead code: several unused API-client functions, an abandoned query/param validation approach, unused constants, stray duplicate module exports, and a duplicated pair of URL-builder functions (consolidated into `utils/url.js`).
@@ -254,6 +256,8 @@ The browser now warns before navigating away from the dashboard when there are u
 - Das Stoppen des Bots räumt jetzt tatsächlich alle Hintergrund-Timer/Poller ab (Jellyfin-Poller, Seerr-Status-Poller, Cleanup-Advisor, Subscription-Poller, Weekly-Digest), statt sie nach dem Zerstören des Discord-Clients weiterlaufen zu lassen — derselbe Fix gilt auch beim Graceful Shutdown via SIGTERM/SIGINT.
 - Das Questorr-Logo wird jetzt automatisch als Bot-Avatar beim ersten Start gesetzt.
 - Hartcodierte englische/deutsche Hover-Texte (Tooltips) und Screenreader-Labels bei mehreren Buttons behoben (Round-Trip Test, Insights Aktualisieren, mobiler Speichern-Button, Theme-Umschalter, beide Rollen-Filter-Dropdowns) — diese ignorierten bisher die gewählte Dashboard-Sprache.
+- Den Live-Fortschrittstext des Jellyfin-"Poll Now"-Scans ("X / ? · Y neu") behoben — war hartcodiert Deutsch, unabhängig von der gewählten Dashboard-Sprache.
+- Falsche Seerr-Links, Poster und Beschreibungen bei Daily Recommendation, `/random` und Neuzugang-Benachrichtigungen behoben, wenn das ausgewählte Jellyfin-Item eine ganze Filmreihe/Kollektion darstellt (z. B. "Toy Story Filmreihe") statt eines einzelnen Films/einer Serie — die gespeicherte TMDB-ID kollidierte entweder mit einer unabhängigen Film-/Serien-ID oder löste sich gar nicht auf. Kollektions-IDs werden jetzt erkannt und korrekt auf Seerrs `/collection/{id}`-Seite verlinkt, mit einer namensbasierten TMDB-Suche als letzter Rückfalloption, wenn die ID selbst unbrauchbar ist.
 
 #### 🧹 Aufräumarbeiten
 - Toter Code entfernt: mehrere unbenutzte API-Client-Funktionen, ein verworfener Query/Param-Validierungsansatz, unbenutzte Konstanten, verwaiste doppelte Modul-Exporte und ein dupliziertes Paar URL-Builder-Funktionen (in `utils/url.js` konsolidiert).
