@@ -47,7 +47,7 @@ export async function handleRandomCommand(interaction) {
     if (tmdbIdFromJf && getTmdbApiKey()) {
       try {
         const resolved = await tmdbApi.tmdbResolveJellyfinItem(
-          tmdbIdFromJf, tmdbResolvedTypeR, getTmdbApiKey(), item.ProductionYear
+          tmdbIdFromJf, tmdbResolvedTypeR, getTmdbApiKey(), item.ProductionYear, item.Name
         );
         if (resolved) {
           tmdbResolvedTypeR = resolved.type;

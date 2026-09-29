@@ -869,7 +869,7 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   let tmdbData = null;
   if (tmdbId && process.env.TMDB_API_KEY && (itemType === "Movie" || itemType === "Series")) {
     try {
-      const resolved = await tmdbResolveJellyfinItem(tmdbId, tmdbType, process.env.TMDB_API_KEY, year);
+      const resolved = await tmdbResolveJellyfinItem(tmdbId, tmdbType, process.env.TMDB_API_KEY, year, item.Name);
       tmdbData = resolved?.data || null;
     } catch (_) { /* non-fatal */ }
   }

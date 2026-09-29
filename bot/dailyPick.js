@@ -364,7 +364,7 @@ export async function sendDailyRecommendation(client) {
     let tmdbMismatch = false;
     let tmdbResolvedType = isMovie ? "movie" : "tv";
     if (tmdbId && tmdbApiKey) {
-      const resolved = await tmdbApi.tmdbResolveJellyfinItem(tmdbId, tmdbResolvedType, tmdbApiKey, year);
+      const resolved = await tmdbApi.tmdbResolveJellyfinItem(tmdbId, tmdbResolvedType, tmdbApiKey, year, item.Name);
       if (!resolved) {
         tmdbMismatch = true;
         logger.warn(

@@ -530,6 +530,52 @@ export async function tmdbGetCollection(collectionId, apiKey) {
 }
 
 /**
+ * Search TMDB collections by name.
+ * @param {string} query
+ * @param {string} apiKey - TMDB API key
+ * @returns {Promise<Array>} Collection search results
+ */
+export async function tmdbSearchCollection(query, apiKey) {
+  if (!query || !query.trim()) return [];
+  const url = "https://api.themoviedb.org/3/search/collection";
+  try {
+    const res = await withRetry(
+      () => axios.get(url, {
+        params: { api_key: apiKey, query, language: getTmdbLanguage() },
+        timeout: TIMEOUTS.TMDB_API,
+      }),
+      { label: `TMDB collection search "${query}"` }
+    );
+    return res.data?.results || [];
+  } catch (err) {
+    logger.error(`TMDB collection search failed for "${query}": ${err.message}`);
+    return [];
+  }
+}
+
+// Suffix words some libraries append to a franchise/collection folder's name
+// (localized: German/English/French/Spanish/Portuguese/Swedish) — stripped
+// before a name-based collection search so "Toy Story Filmreihe" searches as
+// just "Toy Story" rather than a string TMDB is unlikely to match verbatim.
+const COLLECTION_SUFFIX_RE = new RegExp(
+  "\\s*[:\\-–—]?\\s*(filmreihe|reihe|sammlung|kollektion|film\\s*series|" +
+  "collection|saga|anthology|trilog(?:y|ie)|colecci[oó]n|cole[cç][aã]o|samling)\\s*$",
+  "i"
+);
+
+function stripCollectionSuffix(name) {
+  return String(name || "").replace(/\s*\(\d{4}\)\s*$/, "").replace(COLLECTION_SUFFIX_RE, "").trim();
+}
+
+function normalizeForMatch(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
  * Resolve TMDB details for an id sourced from a Jellyfin item's
  * ProviderIds.Tmdb field, defending against Jellyfin occasionally storing a
  * TMDB *Collection* id in that field instead of a proper Movie/TV id — TMDB
@@ -537,24 +583,28 @@ export async function tmdbGetCollection(collectionId, apiKey) {
  * still resolve to real-but-unrelated movie/tv data instead of failing
  * outright (e.g. a "Pirates of the Caribbean Filmreihe" library entry whose
  * stored id is actually the TMDB *collection* id, silently returning an
- * unrelated show's details when queried as a TV id).
+ * unrelated show's details when queried as a TV id) — or, as observed in
+ * practice, to no valid id at all for either entity type.
  *
  * Cross-checks the release year — a language-independent signal, unlike the
- * title text — against `expectedYear` (Jellyfin's own ProductionYear). If the
- * movie/tv response is missing its release date entirely or the year clearly
- * doesn't match, it falls back to querying the collection endpoint before
- * giving up, since collections have no release_date/first_air_date at all
- * (which is exactly what trips the initial check for a genuine collection).
+ * title text — against `expectedYear` (Jellyfin's own ProductionYear), and
+ * unconditionally checks the collection endpoint for the same id in parallel,
+ * preferring it whenever TMDB has real (named) data there. If NEITHER the
+ * movie/tv nor the id-based collection lookup panned out and `itemName` was
+ * given, falls back to a name-based TMDB collection search (some library
+ * entries — often named "<Franchise> Filmreihe"/"... Collection" — simply
+ * carry no usable ProviderIds.Tmdb at all).
  *
  * @param {string|number} tmdbId
  * @param {"movie"|"tv"} mediaType
  * @param {string} apiKey
  * @param {number|null} [expectedYear] - Jellyfin's ProductionYear, if known
+ * @param {string|null} [itemName] - Jellyfin's item Name, for the name-search fallback
  * @returns {Promise<{type: "movie"|"tv"|"collection", data: Object}|null>}
  *   `data.title` for movie, `data.name` for tv/collection. `null` means no
  *   trustworthy match was found — treat tmdbId as unusable for this item.
  */
-export async function tmdbResolveJellyfinItem(tmdbId, mediaType, apiKey, expectedYear) {
+export async function tmdbResolveJellyfinItem(tmdbId, mediaType, apiKey, expectedYear, itemName) {
   if (!tmdbId || !apiKey) return null;
 
   // Check the collection endpoint unconditionally, in parallel with movie/tv,
@@ -591,7 +641,27 @@ export async function tmdbResolveJellyfinItem(tmdbId, mediaType, apiKey, expecte
       `(${detailYear}) but expected year ${expectedYear} doesn't match, and no collection match either — ` +
       `treating this id as untrustworthy.`
     );
-    return null; // confirmed year mismatch and no collection match — untrustworthy id
+  }
+
+  // Neither the id-based movie/tv nor id-based collection lookup panned out.
+  // Some library entries (often named "<Franchise> Filmreihe"/"... Collection")
+  // simply carry no usable ProviderIds.Tmdb at all — last resort, search TMDB
+  // collections by name.
+  if (itemName) {
+    const query = stripCollectionSuffix(itemName);
+    if (query) {
+      const results = await tmdbSearchCollection(query, apiKey).catch(() => []);
+      if (results.length > 0) {
+        const wanted = normalizeForMatch(query);
+        const best = results.find((r) => normalizeForMatch(r.name).includes(wanted) || wanted.includes(normalizeForMatch(r.name)))
+          || results[0];
+        logger.info(
+          `[tmdbResolveJellyfinItem] No usable id for "${itemName}" (tmdbId ${tmdbId}) — ` +
+          `found by name search: TMDB collection ${best.id} ("${best.name}").`
+        );
+        return { type: "collection", data: best };
+      }
+    }
   }
 
   return null;
