@@ -69,9 +69,11 @@ export function scheduleDailyRandomPick(client) {
     const intervalMs = intervalMinutes * 60 * 1000;
     logger.info(`📅 Daily Random Pick scheduled every ${intervalMinutes} minute${intervalMinutes !== 1 ? "s" : ""}`);
 
-    sendDailyRandomPick(client).catch((err) =>
-      logger.error("Error sending initial random pick:", err)
-    );
+    // No immediate send here — scheduleDailyRandomPick() runs on every config
+    // save (see jobScheduler.js), not just on bot start, so sending
+    // immediately fired an unwanted notification on every "Save Settings"
+    // click. The first real send now happens once intervalMs has elapsed,
+    // matching the time-based branch above (which never sends immediately).
     dailyRandomPickTimer = setInterval(async () => {
       await sendDailyRandomPick(client);
     }, intervalMs);
@@ -269,9 +271,11 @@ export function scheduleDailyRecommendation(client) {
     const intervalMs = intervalMinutes * 60 * 1000;
     logger.info(`📅 Daily Recommendation scheduled every ${intervalMinutes} minute(s)`);
 
-    sendDailyRecommendation(client).catch((err) =>
-      logger.error("[Daily Recommendation] Error on initial send:", err)
-    );
+    // No immediate send here — scheduleDailyRecommendation() runs on every
+    // config save (see jobScheduler.js), not just on bot start, so sending
+    // immediately fired an unwanted notification on every "Save Settings"
+    // click. The first real send now happens once intervalMs has elapsed,
+    // matching the time-based branch above (which never sends immediately).
     dailyRecommendationTimer = setInterval(async () => {
       await sendDailyRecommendation(client);
     }, intervalMs);
