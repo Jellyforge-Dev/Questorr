@@ -1115,28 +1115,27 @@ export async function fetchLibrarySummary(apiKey, baseUrl) {
     const rootUrl = new URL(baseUrl);
     rootUrl.pathname = rootUrl.pathname.replace(/\/$/, "") + "/Items";
 
-    // Global counts — most reliable approach. A per-library aggregation via
-    // /Library/MediaFolders can under-count when CollectionType is missing or
-    // when Jellyfin stores items across nested virtual folders. The global
-    // IncludeItemTypes query matches Jellyfin's admin counts reliably.
+    const countsUrl = new URL(baseUrl);
+    countsUrl.pathname = countsUrl.pathname.replace(/\/$/, "") + "/Items/Counts";
+
     const cacheBuster = Date.now();
     const noCacheHeaders = { ...jellyfinAuthHeaders(apiKey), "Cache-Control": "no-cache" };
 
-    const countParams = (type) => ({
-      Recursive: true,
-      IncludeItemTypes: type,
-      Limit: 0,
-      EnableTotalRecordCount: true,
-      _t: cacheBuster,
+    // /Items/Counts — the same endpoint Jellyfin's own admin dashboard widget
+    // uses, counted by library membership. /Items?IncludeItemTypes=Movie (the
+    // previous approach) filters by each item's internal Type field instead,
+    // which under-counts when files in a movie library weren't individually
+    // identified as type "Movie" — confirmed on a production instance where
+    // /Items reported 1457 movies while /Items/Counts, the Jellyfin dashboard,
+    // and Radarr all agreed on ~2089.
+    const countsResponse = await axios.get(countsUrl.href, {
+      headers: noCacheHeaders,
+      params: { _t: cacheBuster },
+      timeout: 15000,
     });
 
-    const [movieCountRes, seriesCountRes] = await Promise.all([
-      axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Movie"), timeout: 15000 }),
-      axios.get(rootUrl.href, { headers: noCacheHeaders, params: countParams("Series"), timeout: 15000 }),
-    ]);
-
-    let movies = movieCountRes.data?.TotalRecordCount ?? 0;
-    let series = seriesCountRes.data?.TotalRecordCount ?? 0;
+    let movies = countsResponse.data?.MovieCount ?? 0;
+    let series = countsResponse.data?.SeriesCount ?? 0;
 
     // Aggregate genres + runtime across Movies AND Series. We need the actual
     // items for these — do it in one bounded call (Jellyfin libraries above
