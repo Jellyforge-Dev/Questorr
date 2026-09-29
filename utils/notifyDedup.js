@@ -49,18 +49,30 @@ function saveNotified() {
 
 loadNotified();
 
-/** @param {"movie"|"tv"} mediaType @param {string|number} tmdbId */
-export function markNotified(mediaType, tmdbId) {
-  notified.set(`${mediaType}-${tmdbId}`, Date.now());
+function dedupKey(mediaType, tmdbId, seasonNumber) {
+  return seasonNumber != null
+    ? `${mediaType}-${tmdbId}-s${seasonNumber}`
+    : `${mediaType}-${tmdbId}`;
+}
+
+/**
+ * @param {"movie"|"tv"} mediaType @param {string|number} tmdbId
+ * @param {number} [seasonNumber] - when given, dedups per season instead of
+ *   per title, so a show with multiple seasons becoming available within the
+ *   TTL window still gets a notification for each one.
+ */
+export function markNotified(mediaType, tmdbId, seasonNumber) {
+  notified.set(dedupKey(mediaType, tmdbId, seasonNumber), Date.now());
   saveNotified();
 }
 
-/** @param {"movie"|"tv"} mediaType @param {string|number} tmdbId @returns {boolean} */
-export function wasRecentlyNotified(mediaType, tmdbId) {
-  const ts = notified.get(`${mediaType}-${tmdbId}`);
+/** @param {"movie"|"tv"} mediaType @param {string|number} tmdbId @param {number} [seasonNumber] @returns {boolean} */
+export function wasRecentlyNotified(mediaType, tmdbId, seasonNumber) {
+  const key = dedupKey(mediaType, tmdbId, seasonNumber);
+  const ts = notified.get(key);
   if (!ts) return false;
   if (Date.now() - ts > TTL_MS) {
-    notified.delete(`${mediaType}-${tmdbId}`);
+    notified.delete(key);
     return false;
   }
   return true;

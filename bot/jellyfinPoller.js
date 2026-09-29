@@ -628,6 +628,14 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   const tmdbId  = item.ProviderIds?.Tmdb  || item.ProviderIds?.tmdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
+  // A show's Jellyfin Season/Episode items share the series' TMDB id, so
+  // without this the dedup key alone ("tv-<tmdbId>") would treat any season
+  // becoming available within the TTL window as a duplicate of an earlier one.
+  const seasonNumber =
+    itemType === "Season" ? item.IndexNumber ?? undefined :
+    itemType === "Episode" ? item.ParentIndexNumber ?? undefined :
+    undefined;
+
   // Round 12: PRIMARY dedup — if this TMDB ID was requested via Questorr/Seerr,
   // skip the poller notification. The Seerr MEDIA_AVAILABLE webhook will send
   // the proper "Now Available!" notification with the Seerr button + DM the
@@ -646,7 +654,7 @@ async function notifyItem(client, item, apiKey, baseUrl, libraryMap, libraryIdMa
   // cleared but the webhook just ran moments ago). The skip is recorded in the
   // audit trail.
   if (tmdbId) {
-    const { post } = shouldPost({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name });
+    const { post } = shouldPost({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name, seasonNumber });
     if (!post) {
       logger.debug(`[Jellyfin Poller] Skipping "${item.Name}" – already notified via Seerr webhook`);
       return;
@@ -762,6 +770,14 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   const imdbId  = item.ProviderIds?.Imdb  || item.ProviderIds?.imdb  || null;
   const tmdbType = itemType === "Movie" ? "movie" : "tv";
 
+  // A show's Jellyfin Season/Episode items share the series' TMDB id, so
+  // without this the dedup key alone ("tv-<tmdbId>") would treat any season
+  // becoming available within the TTL window as a duplicate of an earlier one.
+  const seasonNumber =
+    itemType === "Season" ? item.IndexNumber ?? undefined :
+    itemType === "Episode" ? item.ParentIndexNumber ?? undefined :
+    undefined;
+
   // TERTIARY dedup (#3): if the title is tracked in Seerr (it was requested
   // there — by anyone, including directly in the Seerr UI), the poller must NOT
   // post. The Seerr MEDIA_AVAILABLE webhook will deliver the proper
@@ -827,7 +843,7 @@ export async function doNotify(client, item, apiKey, baseUrl, libraryMap, librar
   // Mark via the central dispatcher so the Seerr MEDIA_AVAILABLE webhook skips
   // the duplicate post, and record the post in the audit trail. Bidirectional:
   // both sources check AND mark, regardless of which fires first.
-  markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name, channelId });
+  markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId, mediaType: tmdbType, source: "jellyfin-poller", title: item.Name, channelId, seasonNumber });
 }
 
 // ─── Embed Builder ────────────────────────────────────────────────────────────

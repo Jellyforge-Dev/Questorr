@@ -23,12 +23,12 @@ function dedupType(mediaType) {
 /**
  * @returns {{ post: boolean, reason: string }}
  */
-export function shouldPost({ eventType, tmdbId, mediaType, source, title }) {
+export function shouldPost({ eventType, tmdbId, mediaType, source, title, seasonNumber }) {
   if (tmdbId == null) {
     return { post: true, reason: "no-dedup-key" }; // can't dedup without a tmdbId
   }
   const dt = dedupType(mediaType);
-  if (wasRecentlyNotified(dt, tmdbId)) {
+  if (wasRecentlyNotified(dt, tmdbId, seasonNumber)) {
     recordNotification({ eventType, tmdbId, mediaType: dt, source, title, status: "skipped", reason: "already-notified" });
     return { post: false, reason: "already-notified" };
   }
@@ -36,9 +36,9 @@ export function shouldPost({ eventType, tmdbId, mediaType, source, title }) {
 }
 
 /** Mark a successful post: update dedup and record a posted audit entry. */
-export function markPosted({ eventType, tmdbId, mediaType, source, title, channelId }) {
+export function markPosted({ eventType, tmdbId, mediaType, source, title, channelId, seasonNumber }) {
   const dt = dedupType(mediaType);
-  if (tmdbId != null) markNotified(dt, tmdbId);
+  if (tmdbId != null) markNotified(dt, tmdbId, seasonNumber);
   recordNotification({ eventType, tmdbId, mediaType: dt, source, title, channelId, status: "posted", reason: "ok" });
 }
 

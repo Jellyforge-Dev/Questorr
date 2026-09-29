@@ -128,4 +128,18 @@ describe("interactions pre-checks", () => {
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "rate_limited" }));
     expect(h.search).not.toHaveBeenCalled();
   });
+
+  it("blocks a button with no role permission (replies, routes nowhere)", async () => {
+    checkRolePermission.mockReturnValue(false);
+    const interaction = { ...base(), isButton: () => true, customId: "wizard_foryou_all", reply: vi.fn() };
+    await handler(interaction);
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ content: "no_permission" }));
+  });
+
+  it("does not gate admin approve/decline buttons behind the requester role list", async () => {
+    checkRolePermission.mockReturnValue(false);
+    const interaction = { ...base(), isButton: () => true, customId: "seerr_approve|123" };
+    await handler(interaction);
+    expect(interaction.reply).not.toHaveBeenCalledWith(expect.objectContaining({ content: "no_permission" }));
+  });
 });

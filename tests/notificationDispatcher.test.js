@@ -59,7 +59,7 @@ describe("notificationDispatcher.shouldPost", () => {
     wasRecentlyNotified.mockReturnValue(true);
     const r = shouldPost({ eventType: "MEDIA_AVAILABLE", tmdbId: 5, mediaType: "tv", source: "jellyfin-poller", title: "Shogun" });
     expect(r.post).toBe(false);
-    expect(wasRecentlyNotified).toHaveBeenCalledWith("tv", 5);
+    expect(wasRecentlyNotified).toHaveBeenCalledWith("tv", 5, undefined);
     expect(recordNotification).toHaveBeenCalledWith(
       expect.objectContaining({ status: "skipped", source: "jellyfin-poller", tmdbId: 5, title: "Shogun" })
     );
@@ -75,7 +75,7 @@ describe("notificationDispatcher.shouldPost", () => {
 describe("notificationDispatcher.markPosted", () => {
   it("marks dedup and records a posted audit entry", () => {
     markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId: 7, mediaType: "movie", source: "seerr-webhook", channelId: "c1", title: "Dune" });
-    expect(markNotified).toHaveBeenCalledWith("movie", 7);
+    expect(markNotified).toHaveBeenCalledWith("movie", 7, undefined);
     expect(recordNotification).toHaveBeenCalledWith(
       expect.objectContaining({ status: "posted", source: "seerr-webhook", channelId: "c1", tmdbId: 7, title: "Dune" })
     );
@@ -85,5 +85,14 @@ describe("notificationDispatcher.markPosted", () => {
     markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId: null, mediaType: "movie", source: "jellyfin-poller" });
     expect(markNotified).not.toHaveBeenCalled();
     expect(recordNotification).toHaveBeenCalledWith(expect.objectContaining({ status: "posted" }));
+  });
+
+  it("passes seasonNumber through to shouldPost/markNotified so seasons dedup independently", () => {
+    wasRecentlyNotified.mockReturnValue(false);
+    shouldPost({ eventType: "MEDIA_AVAILABLE", tmdbId: 5, mediaType: "tv", source: "jellyfin-poller", title: "Shogun", seasonNumber: 2 });
+    expect(wasRecentlyNotified).toHaveBeenCalledWith("tv", 5, 2);
+
+    markPosted({ eventType: "MEDIA_AVAILABLE", tmdbId: 5, mediaType: "tv", source: "jellyfin-poller", title: "Shogun", seasonNumber: 2 });
+    expect(markNotified).toHaveBeenCalledWith("tv", 5, 2);
   });
 });
