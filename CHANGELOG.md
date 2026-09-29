@@ -24,6 +24,7 @@
 - Fixed hardcoded English/German hover-text (tooltips) and screen-reader labels on several buttons (Round-Trip Test, Insights Refresh, mobile Save, theme toggle, both role-filter dropdowns) that ignored the selected dashboard language.
 - Fixed the Jellyfin "Poll Now" scan's live progress text ("X / ? · Y new") being hardcoded German regardless of the selected dashboard language.
 - Fixed Daily Recommendation, `/random` and new-content notifications showing a wrong Seerr link, poster and overview when the picked Jellyfin item represents a whole collection (e.g. "Toy Story Collection") rather than a single movie/show — the stored TMDB id either collided with an unrelated movie/tv id or didn't resolve at all. Collection ids are now detected and linked to Seerr's `/collection/{id}` page, with a name-based TMDB search as a last-resort fallback when the id itself is unusable.
+- Fixed Daily Random Pick / Daily Recommendation sending an unwanted Discord notification on every "Save Settings" click when using the legacy interval-based schedule (no HH:MM time set), instead of only on the manual test button or at the scheduled time.
 
 #### 🧹 Cleanup
 - Removed dead code: several unused API-client functions, an abandoned query/param validation approach, unused constants, stray duplicate module exports, and a duplicated pair of URL-builder functions (consolidated into `utils/url.js`).
@@ -258,6 +259,7 @@ The browser now warns before navigating away from the dashboard when there are u
 - Hartcodierte englische/deutsche Hover-Texte (Tooltips) und Screenreader-Labels bei mehreren Buttons behoben (Round-Trip Test, Insights Aktualisieren, mobiler Speichern-Button, Theme-Umschalter, beide Rollen-Filter-Dropdowns) — diese ignorierten bisher die gewählte Dashboard-Sprache.
 - Den Live-Fortschrittstext des Jellyfin-"Poll Now"-Scans ("X / ? · Y neu") behoben — war hartcodiert Deutsch, unabhängig von der gewählten Dashboard-Sprache.
 - Falsche Seerr-Links, Poster und Beschreibungen bei Daily Recommendation, `/random` und Neuzugang-Benachrichtigungen behoben, wenn das ausgewählte Jellyfin-Item eine ganze Filmreihe/Kollektion darstellt (z. B. "Toy Story Filmreihe") statt eines einzelnen Films/einer Serie — die gespeicherte TMDB-ID kollidierte entweder mit einer unabhängigen Film-/Serien-ID oder löste sich gar nicht auf. Kollektions-IDs werden jetzt erkannt und korrekt auf Seerrs `/collection/{id}`-Seite verlinkt, mit einer namensbasierten TMDB-Suche als letzter Rückfalloption, wenn die ID selbst unbrauchbar ist.
+- Behoben, dass Daily Random Pick / Daily Recommendation bei jedem Klick auf "Save Settings" eine ungewollte Discord-Benachrichtigung gesendet haben, wenn der Legacy-Intervall-Zeitplan (keine HH:MM-Uhrzeit gesetzt) verwendet wurde — statt nur über den manuellen Test-Button oder zur eingestellten Uhrzeit.
 
 #### 🧹 Aufräumarbeiten
 - Toter Code entfernt: mehrere unbenutzte API-Client-Funktionen, ein verworfener Query/Param-Validierungsansatz, unbenutzte Konstanten, verwaiste doppelte Modul-Exporte und ein dupliziertes Paar URL-Builder-Funktionen (in `utils/url.js` konsolidiert).
