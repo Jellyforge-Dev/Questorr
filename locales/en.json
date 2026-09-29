@@ -420,6 +420,7 @@
     "poller_status_text": "Last poll: {{last}} · Tracked: {{tracked}} · New (last): {{new}}",
     "poller_polling": "Polling…",
     "poller_polled_msg": "Polled: {{fetched}} fetched, {{new}} new",
+    "poller_scan_progress": "{{scanned}} / ? · {{new}} new",
     "poller_scan_started": "Scan started — results will appear in Discord",
     "poller_scan_inprogress": "Scan already in progress…",
     "poller_scan_cap_hit": "Limit reached, click again for more",

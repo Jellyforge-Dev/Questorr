@@ -420,6 +420,7 @@
     "poller_status_text": "Última verificação: {{last}} · Rastreados: {{tracked}} · Novos (última vez): {{new}}",
     "poller_polling": "Verificando…",
     "poller_polled_msg": "Verificado: {{fetched}} obtidos, {{new}} novos",
+    "poller_scan_progress": "{{scanned}} / ? · {{new}} novos",
     "poller_scan_started": "Verificação iniciada — os resultados aparecerão no Discord",
     "poller_scan_inprogress": "Verificação já em andamento…",
     "poller_scan_cap_hit": "Limite atingido, clique novamente para mais",

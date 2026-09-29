@@ -490,6 +490,7 @@
     "poller_status_text": "Letzter Check: vor {{last}} · Erfasst: {{tracked}} · Neu (zuletzt): {{new}}",
     "poller_polling": "Prüfe…",
     "poller_polled_msg": "Geprüft: {{fetched}} abgerufen, {{new}} neu",
+    "poller_scan_progress": "{{scanned}} / ? · {{new}} neu",
     "poller_scan_started": "Scan gestartet — Ergebnisse erscheinen in Discord",
     "poller_scan_inprogress": "Scan läuft bereits …",
     "poller_scan_cap_hit": "Limit erreicht, ggf. erneut klicken",

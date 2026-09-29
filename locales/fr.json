@@ -420,6 +420,7 @@
     "poller_status_text": "Dernier sondage : {{last}} · Suivis : {{tracked}} · Nouveaux (dernier) : {{new}}",
     "poller_polling": "Sondage en cours…",
     "poller_polled_msg": "Sondé : {{fetched}} récupérés, {{new}} nouveaux",
+    "poller_scan_progress": "{{scanned}} / ? · {{new}} nouveaux",
     "poller_scan_started": "Analyse démarrée — les résultats apparaîtront sur Discord",
     "poller_scan_inprogress": "Une analyse est déjà en cours…",
     "poller_scan_cap_hit": "Limite atteinte, cliquez à nouveau pour plus",

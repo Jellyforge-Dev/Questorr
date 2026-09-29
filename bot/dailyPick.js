@@ -351,16 +351,33 @@ export async function sendDailyRecommendation(client) {
     let backdropUrl = null;
     let posterUrl = null;
 
+    // Some Jellyfin items (in particular collection/compilation entries) end up
+    // with a stale or wrong ProviderIds.Tmdb value — e.g. a TMDB *collection* ID
+    // that happens to collide with an unrelated movie/tv ID in TMDB's separate
+    // movie/tv ID namespace. Blindly trusting it produced a Seerr link, poster
+    // and overview for a completely different title while the Jellyfin "Watch
+    // Now" link (built from Jellyfin's own item ID, not TMDB) stayed correct.
+    // tmdbResolveJellyfinItem() cross-checks the release year and, if that's
+    // inconclusive (a genuine collection has no release date at all — exactly
+    // what a naive year-check would miss), also tries the collection endpoint.
     let tmdbOverview = null;
+    let tmdbMismatch = false;
+    let tmdbResolvedType = isMovie ? "movie" : "tv";
     if (tmdbId && tmdbApiKey) {
-      try {
-        const tmdbType = isMovie ? "movie" : "tv";
-        const tmdb = await tmdbApi.tmdbGetDetails(tmdbId, tmdbType, tmdbApiKey);
+      const resolved = await tmdbApi.tmdbResolveJellyfinItem(tmdbId, tmdbResolvedType, tmdbApiKey, year, item.Name);
+      if (!resolved) {
+        tmdbMismatch = true;
+        logger.warn(
+          `[Daily Recommendation] TMDB id ${tmdbId} (${tmdbResolvedType}) on Jellyfin item "${item.Name}" (${year}) ` +
+          `did not resolve to a matching movie/tv/collection — treating ProviderIds.Tmdb as unreliable ` +
+          `for this item (skipping TMDB overview/poster/Seerr link).`
+        );
+      } else {
+        tmdbResolvedType = resolved.type;
+        const tmdb = resolved.data;
         if (tmdb.backdrop_path) backdropUrl = `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}`;
         if (tmdb.poster_path) posterUrl = `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`;
         if (tmdb.overview) tmdbOverview = tmdb.overview;
-      } catch (e) {
-        logger.debug("[Daily Recommendation] TMDB fetch failed:", e.message);
       }
     }
 
@@ -414,10 +431,11 @@ export async function sendDailyRecommendation(client) {
       );
     }
 
-    // Seerr media page
+    // Seerr media page — tmdbResolvedType is "movie"/"tv"/"collection" and
+    // matches Seerr's own URL scheme (/movie/{id}, /tv/{id}, /collection/{id}).
     const seerrBase = normalizeSeerrUrl(process.env.SEERR_URL || "");
-    if (_showRec("seerr") && seerrBase && tmdbId) {
-      const seerrPageUrl = `${seerrBase}/${isMovie ? "movie" : "tv"}/${tmdbId}`;
+    if (_showRec("seerr") && seerrBase && tmdbId && !tmdbMismatch) {
+      const seerrPageUrl = `${seerrBase}/${tmdbResolvedType}/${tmdbId}`;
       if (isValidUrl(seerrPageUrl)) {
         buttonComponents.push(
           new ButtonBuilder()
@@ -428,10 +446,10 @@ export async function sendDailyRecommendation(client) {
       }
     }
 
-    // YouTube trailer (best-effort)
-    if (_showRec("trailer") && tmdbId && tmdbApiKey) {
+    // YouTube trailer (best-effort) — not applicable to collections.
+    if (_showRec("trailer") && tmdbId && tmdbApiKey && !tmdbMismatch && tmdbResolvedType !== "collection") {
       try {
-        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbId, isMovie ? "movie" : "tv", tmdbApiKey);
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbId, tmdbResolvedType, tmdbApiKey);
         if (trailerUrl && isValidUrl(trailerUrl)) {
           buttonComponents.push(
             new ButtonBuilder()
