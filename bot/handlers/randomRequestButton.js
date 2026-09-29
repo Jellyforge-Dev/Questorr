@@ -39,10 +39,26 @@ export async function handleRandomRequestButton(interaction) {
       mediaType
     );
 
+    // Seerr silently no-ops a seasons: [] request (200 OK, no webhook) instead
+    // of actually requesting all seasons, so resolve "all" to the explicit
+    // season list first — mirrors requestButton.js / search.js.
+    let seasonsToRequest = mediaType === "tv" ? ["all"] : undefined;
+    if (mediaType === "tv" && details.seasons) {
+      const seasonNumbers = details.seasons
+        .filter((s) => s.season_number > 0)
+        .map((s) => s.season_number);
+      if (seasonNumbers.length > 0) {
+        seasonsToRequest = seasonNumbers;
+        logger.info(
+          `[RANDOM REQUEST] Resolved 'all' seasons to explicit list: ${seasonsToRequest.join(", ")}`
+        );
+      }
+    }
+
     const createdRequest = await seerrApi.sendRequest({
       tmdbId,
       mediaType,
-      seasons: mediaType === "tv" ? ["all"] : undefined,
+      seasons: seasonsToRequest,
       profileId,
       serverId,
       seerrUrl: getSeerrUrl(),
@@ -51,6 +67,9 @@ export async function handleRandomRequestButton(interaction) {
       userMappings: getUserMappings(),
       isAutoApproved: getSeerrAutoApprove(),
     });
+    logger.info(
+      `[RANDOM REQUEST] Discord User ${interaction.user.id} requested ${mediaType} ${tmdbId}. Auto-Approve: ${getSeerrAutoApprove()}`
+    );
 
     // Mirror requestButton.js: record the request in the lifecycle store keyed on
     // the Seerr requestId so /queue can show its status.

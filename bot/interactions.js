@@ -40,12 +40,22 @@ import logger from "../utils/logger.js";
 export function registerInteractions(client) {
   client.on("interactionCreate", async (interaction) => {
     try {
-      // Check role permissions for all commands and non-special select menus
+      // Check role permissions for commands, select menus, and buttons — except
+      // admin-only buttons (issue actions, approve/decline), which only ever
+      // appear in the admin-restricted channel and aren't covered by the
+      // requester ROLE_ALLOWLIST/ROLE_BLOCKLIST.
+      const isAdminOnlyButton =
+        interaction.isButton() &&
+        (interaction.customId.startsWith("issue_comment|") ||
+          interaction.customId.startsWith("issue_resolve|") ||
+          interaction.customId.startsWith("seerr_approve|") ||
+          interaction.customId.startsWith("seerr_decline|"));
+
       if (
-        interaction.isCommand() ||
-        (interaction.isStringSelectMenu() &&
-          !interaction.customId.startsWith("request_seasons|") &&
-          !interaction.customId.startsWith("request_with_tags|"))
+        !isAdminOnlyButton &&
+        (interaction.isCommand() ||
+          interaction.isButton() ||
+          interaction.isStringSelectMenu())
       ) {
         if (!checkRolePermission(interaction.member)) {
           return interaction.reply({
