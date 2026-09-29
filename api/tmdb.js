@@ -557,40 +557,43 @@ export async function tmdbGetCollection(collectionId, apiKey) {
 export async function tmdbResolveJellyfinItem(tmdbId, mediaType, apiKey, expectedYear) {
   if (!tmdbId || !apiKey) return null;
 
-  let details = null;
-  try {
-    details = await tmdbGetDetails(tmdbId, mediaType, apiKey);
-  } catch (_) {
-    details = null;
+  // Check the collection endpoint unconditionally, in parallel with movie/tv,
+  // and PREFER it whenever TMDB has real data there — not just as a fallback
+  // when the movie/tv response "looks" wrong. A first attempt only fell back
+  // to the collection check when the movie/tv release date was missing or
+  // mismatched, which silently never triggered whenever the colliding
+  // movie/tv id happened to also carry a plausible-looking date. A random,
+  // unrelated movie/tv id coincidentally ALSO being a populated, named TMDB
+  // collection at the exact same number is vanishingly unlikely, so a
+  // successful collection lookup is already strong evidence on its own.
+  const [details, asCollection] = await Promise.all([
+    tmdbGetDetails(tmdbId, mediaType, apiKey).catch(() => null),
+    tmdbGetCollection(tmdbId, apiKey).catch(() => null),
+  ]);
+
+  if (asCollection && asCollection.name) {
+    logger.info(
+      `[tmdbResolveJellyfinItem] id ${tmdbId} resolved as TMDB collection "${asCollection.name}" ` +
+      `(requested as ${mediaType}) — using /collection/${tmdbId} instead.`
+    );
+    return { type: "collection", data: asCollection };
   }
 
   if (details) {
     const dateStr = mediaType === "movie" ? details.release_date : details.first_air_date;
     const detailYear = dateStr ? parseInt(String(dateStr).slice(0, 4), 10) : null;
     const yearMismatch = !!(expectedYear && detailYear && Math.abs(detailYear - expectedYear) > 1);
-    const missingDate = !dateStr;
-
-    if (!yearMismatch && !missingDate) {
+    if (!yearMismatch) {
       return { type: mediaType, data: details };
     }
-
-    const asCollection = await tmdbGetCollection(tmdbId, apiKey).catch(() => null);
-    if (asCollection && asCollection.name) {
-      return { type: "collection", data: asCollection };
-    }
-
-    // Missing date but no collection match either — most likely just sparse
-    // movie/tv metadata (not a type mismatch), so still trust it. A clear
-    // year mismatch with no collection match, though, means the id itself is
-    // untrustworthy for this item.
-    return yearMismatch ? null : { type: mediaType, data: details };
+    logger.warn(
+      `[tmdbResolveJellyfinItem] id ${tmdbId} (${mediaType}) resolved to "${details.title || details.name}" ` +
+      `(${detailYear}) but expected year ${expectedYear} doesn't match, and no collection match either — ` +
+      `treating this id as untrustworthy.`
+    );
+    return null; // confirmed year mismatch and no collection match — untrustworthy id
   }
 
-  // Movie/TV fetch failed outright — last resort, try the collection endpoint.
-  const asCollection = await tmdbGetCollection(tmdbId, apiKey).catch(() => null);
-  if (asCollection && asCollection.name) {
-    return { type: "collection", data: asCollection };
-  }
   return null;
 }
 
