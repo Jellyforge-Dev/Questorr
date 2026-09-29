@@ -53,7 +53,7 @@ import {
   resolveTargetChannel,
 } from "../jellyfin/libraryResolver.js";
 import { findLibraryByAncestors, fetchLatestAdditions, fetchItemsAddedSince, scanAllItemsForUnseen, seedAllItemIds, fetchItemDetails, jellyfinAuthHeaders } from "../api/jellyfin.js";
-import { findBestBackdrop } from "../api/tmdb.js";
+import { findBestBackdrop, tmdbResolveJellyfinItem } from "../api/tmdb.js";
 import { CONFIG_PATH } from "../utils/configFile.js";
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -862,18 +862,15 @@ async function buildEmbed(item, itemType, tmdbId, imdbId, tmdbType, typeSettings
   const footerText = process.env.EMBED_FOOTER_TEXT;
   if (footerText) embed.setFooter({ text: footerText });
 
-  // Enrich via TMDB
+  // Enrich via TMDB. tmdbResolveJellyfinItem() guards against a Jellyfin
+  // item's ProviderIds.Tmdb actually being a TMDB *collection* id (a separate
+  // id namespace from movie/tv) rather than blindly trusting it and showing
+  // a wrong poster/overview for the notification.
   let tmdbData = null;
   if (tmdbId && process.env.TMDB_API_KEY && (itemType === "Movie" || itemType === "Series")) {
     try {
-      const endpoint = tmdbType === "movie"
-        ? `https://api.themoviedb.org/3/movie/${tmdbId}`
-        : `https://api.themoviedb.org/3/tv/${tmdbId}`;
-      const res = await axios.get(endpoint, {
-        params: { api_key: process.env.TMDB_API_KEY, language: getTmdbLanguage(), append_to_response: "images" },
-        timeout: 8000,
-      });
-      tmdbData = res.data;
+      const resolved = await tmdbResolveJellyfinItem(tmdbId, tmdbType, process.env.TMDB_API_KEY, year);
+      tmdbData = resolved?.data || null;
     } catch (_) { /* non-fatal */ }
   }
 

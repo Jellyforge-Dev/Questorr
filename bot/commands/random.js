@@ -36,13 +36,25 @@ export async function handleRandomCommand(interaction) {
     const runtimeMin = item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null;
     const runtime = runtimeMin ? `${Math.floor(runtimeMin / 60)}h ${runtimeMin % 60}m` : null;
 
-    // Fetch TMDB details first — prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text
+    // Fetch TMDB details first — prefer TMDB overview (respects BOT_LANGUAGE) over Jellyfin text.
+    // tmdbResolveJellyfinItem() guards against a Jellyfin item's ProviderIds.Tmdb
+    // actually being a TMDB *collection* id (a separate id namespace from
+    // movie/tv) rather than blindly trusting it and showing wrong TMDB data.
     const tmdbIdFromJf = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb || item.ProviderIds?.TMDB;
     let tmdbDataR = null;
+    let tmdbResolvedTypeR = itemType === "Movie" ? "movie" : "tv";
+    let tmdbUnresolvedR = false;
     if (tmdbIdFromJf && getTmdbApiKey()) {
       try {
-        const tmdbType = itemType === "Movie" ? "movie" : "tv";
-        tmdbDataR = await tmdbApi.tmdbGetDetails(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        const resolved = await tmdbApi.tmdbResolveJellyfinItem(
+          tmdbIdFromJf, tmdbResolvedTypeR, getTmdbApiKey(), item.ProductionYear
+        );
+        if (resolved) {
+          tmdbResolvedTypeR = resolved.type;
+          tmdbDataR = resolved.data;
+        } else {
+          tmdbUnresolvedR = true;
+        }
       } catch (err) {
         logger.error("[random] Failed to fetch TMDB details:", err.message);
       }
@@ -79,11 +91,12 @@ export async function handleRandomCommand(interaction) {
     if (_showRandom("watch") && watchUrl && isValidUrl(watchUrl)) {
       components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_watch_now")).setURL(watchUrl));
     }
-    // Trailer (YouTube link from TMDB) — best-effort, swallowed on failure
-    if (_showRandom("trailer") && tmdbIdFromJf) {
+    // Trailer (YouTube link from TMDB) — best-effort, swallowed on failure.
+    // Not applicable to collections, and skipped if resolution found the
+    // Jellyfin item's TMDB id untrustworthy for this item.
+    if (_showRandom("trailer") && tmdbIdFromJf && !tmdbUnresolvedR && tmdbResolvedTypeR !== "collection") {
       try {
-        const tmdbType = itemType === "Movie" ? "movie" : "tv";
-        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbIdFromJf, tmdbType, getTmdbApiKey());
+        const trailerUrl = await tmdbApi.tmdbGetTrailer(tmdbIdFromJf, tmdbResolvedTypeR, getTmdbApiKey());
         if (trailerUrl && isValidUrl(trailerUrl)) {
           components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_trailer")).setURL(trailerUrl));
         }
@@ -92,10 +105,9 @@ export async function handleRandomCommand(interaction) {
       }
     }
     const seerrBaseR = (process.env.SEERR_URL || "").replace(/\/$/, "");
-    const tmdbIdForSeerr = item.ProviderIds?.Tmdb || item.ProviderIds?.tmdb;
-    if (_showRandom("seerr") && seerrBaseR && tmdbIdForSeerr) {
-      const seerrTypeR = item.Type === "Series" ? "tv" : "movie";
-      const seerrUrlR = seerrBaseR + "/" + seerrTypeR + "/" + tmdbIdForSeerr;
+    const tmdbIdForSeerr = tmdbIdFromJf;
+    if (_showRandom("seerr") && seerrBaseR && tmdbIdForSeerr && !tmdbUnresolvedR) {
+      const seerrUrlR = seerrBaseR + "/" + tmdbResolvedTypeR + "/" + tmdbIdForSeerr;
       if (isValidUrl(seerrUrlR)) components.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(t("btn_view_seerr")).setURL(seerrUrlR));
     }
     const _pids = item.ProviderIds || {};
@@ -117,9 +129,10 @@ export async function handleRandomCommand(interaction) {
       allRows.push(new ActionRowBuilder().addComponents(components));
     }
     // Append the contextual action buttons (🔗 Similar | 📦 Collection | 🎭 Cast | ⭐ Recommend)
-    if (tmdbIdForSeerr) {
+    // — these only make sense for a real movie/tv id, not a collection id.
+    if (tmdbIdForSeerr && !tmdbUnresolvedR && tmdbResolvedTypeR !== "collection") {
       const { buildActionButtons } = await import("../embeds.js");
-      const actionRow = buildActionButtons(tmdbIdForSeerr, item.Type === "Series" ? "tv" : "movie");
+      const actionRow = buildActionButtons(tmdbIdForSeerr, tmdbResolvedTypeR);
       if (actionRow) allRows.push(actionRow);
     }
     if (allRows.length > 0) replyOptsR.components = allRows;
