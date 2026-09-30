@@ -803,11 +803,17 @@ router.get("/status", authenticateToken, (req, res) => {
 
 export function createBotRoutes({ startBot, stopBot }) {
   router.post("/start-bot", botControlLimiter, authenticateToken, async (req, res) => {
-    if (botState.isBotRunning) {
+    if (botState.isBotRunning || botState.isStarting) {
       return res.status(400).json({ messageKey: "api.bot_already_running" });
     }
     try {
       const result = await startBot();
+      if (!result.success) {
+        // startBot() itself lost the isStarting race (e.g. a second request
+        // slipped in between the check above and its own guard) — not an
+        // error, just nothing new happened here.
+        return res.status(400).json({ messageKey: "api.bot_already_running" });
+      }
       recordAudit({ actor: req.user?.username || "unknown", action: "bot_start", target: "", detail: req.ip });
       res.status(200).json({ messageKey: "api.bot_started", messageParams: { detail: result.message } });
     } catch (error) {

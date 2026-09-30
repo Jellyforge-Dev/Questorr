@@ -87,10 +87,10 @@ export async function handleReportCommand(interaction) {
               { name: t("report_field_reporter"), value: `<@${interaction.user.id}>`, inline: true }
             )
             .setTimestamp();
-          if (mediaType === "tv" && (season || episode)) {
+          if (mediaType === "tv" && (season != null || episode != null)) {
             const se =
-              (season ? `S${String(season).padStart(2, "0")}` : "") +
-              (episode ? `E${String(episode).padStart(2, "0")}` : "");
+              (season != null ? `S${String(season).padStart(2, "0")}` : "") +
+              (episode != null ? `E${String(episode).padStart(2, "0")}` : "");
             embed.addFields({ name: t("report_field_episode"), value: se, inline: true });
           }
           if (message) embed.addFields({ name: t("report_field_message"), value: message, inline: false });
@@ -114,10 +114,10 @@ export async function handleReportCommand(interaction) {
           { name: t("report_field_type"), value: typeLabel, inline: true }
         )
         .setTimestamp();
-      if (mediaType === "tv" && (season || episode)) {
+      if (mediaType === "tv" && (season != null || episode != null)) {
         const se =
-          (season ? `S${String(season).padStart(2, "0")}` : "") +
-          (episode ? `E${String(episode).padStart(2, "0")}` : "");
+          (season != null ? `S${String(season).padStart(2, "0")}` : "") +
+          (episode != null ? `E${String(episode).padStart(2, "0")}` : "");
         dmEmbed.addFields({ name: t("report_field_episode"), value: se, inline: true });
       }
       if (message) dmEmbed.addFields({ name: t("report_field_message"), value: message, inline: false });

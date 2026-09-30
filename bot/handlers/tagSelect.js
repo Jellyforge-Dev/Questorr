@@ -8,7 +8,13 @@ import logger from "../../utils/logger.js";
 export async function handleTagSelect(interaction) {
   const parts = interaction.customId.split("|");
   const tmdbId = parseInt(parts[1], 10);
-  const selectedSeasonsParam = parts[2] || "";
+  // mediaType is carried explicitly in the customId (set by search.js for
+  // movies and seasonSelect.js for tv) — it used to be guessed from whether
+  // any seasons were selected, which misclassified a tv show as a movie
+  // whenever the user picked zero seasons across the multi-menu picker
+  // shown for shows with more than 24 seasons.
+  const mediaType = parts[2] === "tv" ? "tv" : "movie";
+  const selectedSeasonsParam = parts[3] || "";
   const selectedSeasons = selectedSeasonsParam
     ? selectedSeasonsParam.split(",")
     : [];
@@ -24,8 +30,6 @@ export async function handleTagSelect(interaction) {
   await interaction.deferUpdate();
 
   try {
-    const mediaType = selectedSeasons.length > 0 ? "tv" : "movie";
-
     const details = await tmdbApi.tmdbGetDetails(
       tmdbId,
       mediaType,

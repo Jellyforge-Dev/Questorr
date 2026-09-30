@@ -32,7 +32,7 @@ describe("approval-DM dedup via the dispatcher", () => {
 
   it("markApprovalDmSent marks dedup and records a posted entry", () => {
     markApprovalDmSent({ eventType: "MEDIA_APPROVED", requestId: 12, source: "seerr-webhook", title: "X", tmdbId: 3, channelId: null });
-    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-12");
+    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-12", undefined, undefined);
     expect(recordNotification).toHaveBeenCalledWith(
       expect.objectContaining({ status: "posted", source: "seerr-webhook", tmdbId: 3 })
     );
@@ -40,7 +40,7 @@ describe("approval-DM dedup via the dispatcher", () => {
 
   it("suppressApprovalDm marks dedup and records a skipped entry with the given reason", () => {
     suppressApprovalDm({ eventType: "MEDIA_APPROVED", requestId: 8, source: "seerr-status-poller", reason: "no-title" });
-    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-8");
+    expect(markNotified).toHaveBeenCalledWith("approval", "MEDIA_APPROVED-8", undefined, undefined);
     expect(recordNotification).toHaveBeenCalledWith(
       expect.objectContaining({ status: "skipped", reason: "no-title" })
     );

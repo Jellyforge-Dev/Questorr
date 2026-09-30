@@ -31,7 +31,8 @@
     "no_account": "Noch kein Konto?",
     "have_account": "Bereits ein Konto?",
     "login_failed": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
-    "register_failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen."
+    "register_failed": "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
+    "session_expired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
   },
   "navigation": {
     "about": "Über",

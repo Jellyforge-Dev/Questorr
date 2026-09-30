@@ -62,15 +62,20 @@ export function shouldSendApprovalDm({ eventType, requestId, source, title, tmdb
   return { send: true, reason: "new" };
 }
 
-/** A DM was sent: mark dedup and record a posted audit entry. */
-export function markApprovalDmSent({ eventType, requestId, source, title, tmdbId, channelId }) {
-  markNotified("approval", approvalKey(eventType, requestId));
+/**
+ * A DM was sent: mark dedup and record a posted audit entry.
+ * @param {number} [ttlMs] - pass a short TTL when requestId is a weaker
+ *   fallback identifier (e.g. bare tmdbId, used when Seerr's webhook didn't
+ *   include a real request_id) — see markNotified() for why.
+ */
+export function markApprovalDmSent({ eventType, requestId, source, title, tmdbId, channelId, ttlMs }) {
+  markNotified("approval", approvalKey(eventType, requestId), undefined, ttlMs);
   recordNotification({ eventType, tmdbId, source, title, channelId, status: "posted", reason: "dm-sent" });
 }
 
 /** A DM was intentionally not sent (e.g. no title) but we still mark dedup so
  *  the other sources don't loop. Recorded as a skip with the given reason. */
-export function suppressApprovalDm({ eventType, requestId, source, title, tmdbId, reason }) {
-  markNotified("approval", approvalKey(eventType, requestId));
+export function suppressApprovalDm({ eventType, requestId, source, title, tmdbId, reason, ttlMs }) {
+  markNotified("approval", approvalKey(eventType, requestId), undefined, ttlMs);
   recordNotification({ eventType, tmdbId, source, title, status: "skipped", reason: reason || "suppressed" });
 }

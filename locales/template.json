@@ -31,7 +31,8 @@
     "no_account": "",
     "have_account": "",
     "login_failed": "",
-    "register_failed": ""
+    "register_failed": "",
+    "session_expired": ""
   },
   "navigation": {
     "about": "",

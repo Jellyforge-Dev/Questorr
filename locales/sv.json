@@ -31,7 +31,8 @@
     "no_account": "Har du inget konto?",
     "have_account": "Har du redan ett konto?",
     "login_failed": "Inloggningen misslyckades. Försök igen.",
-    "register_failed": "Registreringen misslyckades. Försök igen."
+    "register_failed": "Registreringen misslyckades. Försök igen.",
+    "session_expired": "Din session har gått ut. Logga in igen."
   },
   "navigation": {
     "about": "Om",

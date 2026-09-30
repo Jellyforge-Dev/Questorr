@@ -31,7 +31,8 @@
     "no_account": "Don't have an account?",
     "have_account": "Already have an account?",
     "login_failed": "Login failed. Please try again.",
-    "register_failed": "Registration failed. Please try again."
+    "register_failed": "Registration failed. Please try again.",
+    "session_expired": "Your session has expired. Please log in again."
   },
   "navigation": {
     "about": "About",

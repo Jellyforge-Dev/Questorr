@@ -104,7 +104,11 @@ export async function handleStatusCommand(interaction) {
       if (_footer) embed.setFooter({ text: _footer });
       const nfButtons = [
         new ButtonBuilder()
-          .setCustomId(`status_request_btn|${tmdbId}|${mediaType}|${titleFromOption}`)
+          // titleFromOption is intentionally omitted here — handleSearchOrRequest()
+          // only ever reads the tmdbId/mediaType segments (rawInput.split("|")),
+          // and a long title can push the customId past Discord's 100-char limit,
+          // throwing a RangeError that aborts the whole reply.
+          .setCustomId(`status_request_btn|${tmdbId}|${mediaType}`)
           .setLabel(t("btn_request"))
           .setStyle(ButtonStyle.Primary),
       ];

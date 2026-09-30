@@ -31,7 +31,8 @@
     "no_account": "¿No tienes cuenta?",
     "have_account": "¿Ya tienes cuenta?",
     "login_failed": "Error al iniciar sesión. Inténtalo de nuevo.",
-    "register_failed": "Error en el registro. Inténtalo de nuevo."
+    "register_failed": "Error en el registro. Inténtalo de nuevo.",
+    "session_expired": "Tu sesión ha expirado. Por favor, inicia sesión de nuevo."
   },
   "navigation": {
     "about": "Acerca de",

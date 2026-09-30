@@ -10,6 +10,15 @@ export const botState = {
   discordClient: null,
   /** Timestamp (ms) when the bot was last started, or null if stopped */
   botStartedAt: null,
+  /**
+   * True from the moment startBot() is called until Discord login settles
+   * (clientReady or a login failure). isBotRunning alone doesn't cover this
+   * window — it's only set in the clientReady handler, so a second start
+   * trigger (two dashboard tabs, or AUTO_START_BOT racing a manual click)
+   * during the 1-5s login window would pass the isBotRunning guard and spin
+   * up a second Client.
+   */
+  isStarting: false,
 };
 
 // --- PENDING REQUESTS TRACKING ---

@@ -31,7 +31,8 @@
     "no_account": "Não tem uma conta?",
     "have_account": "Já tem uma conta?",
     "login_failed": "Falha no login. Tente novamente.",
-    "register_failed": "Falha no registro. Tente novamente."
+    "register_failed": "Falha no registro. Tente novamente.",
+    "session_expired": "Sua sessão expirou. Por favor, faça login novamente."
   },
   "navigation": {
     "about": "Sobre",

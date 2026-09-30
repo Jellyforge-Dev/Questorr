@@ -311,6 +311,28 @@ function showToast(message, duration = 3000) {
   setTimeout(() => toastEl.classList.remove("show"), duration);
 }
 
+// ─── Global 401 handler ───────────────────────────────────────────────────────
+// A Bearer token can expire while the dashboard stays open (e.g. left in a
+// background tab). Without this, every subsequent authenticated fetch() just
+// failed with a generic error and no indication that logging in again would
+// fix it. Wrapping window.fetch once here covers every existing call site
+// without touching each of them individually.
+let sessionExpiredHandled = false;
+const _originalFetch = window.fetch.bind(window);
+window.fetch = async function (...args) {
+  const response = await _originalFetch(...args);
+  if (response.status === 401 && !sessionExpiredHandled) {
+    const hadToken = !!localStorage.getItem("questorr_token");
+    if (hadToken) {
+      sessionExpiredHandled = true;
+      localStorage.removeItem("questorr_token");
+      showToast(t("auth.session_expired"), 4000);
+      setTimeout(() => location.reload(), 1500);
+    }
+  }
+  return response;
+};
+
 // ─── Event delegation for collapsible buttons ────────────────────────────────
 document.addEventListener("click", function(e) {
   const btn = e.target.closest("[data-collapse-target]");
