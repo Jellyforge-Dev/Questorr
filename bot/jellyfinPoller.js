@@ -153,8 +153,8 @@ const TYPE_SETTINGS = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getTmdbLanguage() {
-  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase().split("-")[0];
-  const map = { de: "de-DE", en: "en-US", sv: "sv-SE", fr: "fr-FR", es: "es-ES", pt: "pt-BR", nl: "nl-NL", it: "it-IT", pl: "pl-PL", ru: "ru-RU" };
+  const lang = (process.env.BOT_LANGUAGE || "en").toLowerCase();
+  const map = { de: "de-DE", en: "en-US", sv: "sv-SE", fr: "fr-FR", es: "es-ES", pt_br: "pt-BR", pt: "pt-BR", nl: "nl-NL", it: "it-IT", pl: "pl-PL", ru: "ru-RU" };
   return map[lang] || "en-US";
 }
 

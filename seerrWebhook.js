@@ -996,11 +996,34 @@ async function findJellyfinItemId(tmdbId, mediaType) {
 
 // ─── Embed Builder ────────────────────────────────────────────────────────────
 
+// Media events' subject/message come straight from Seerr's webhook payload,
+// formatted in whatever language Seerr itself is configured for — independent
+// of Questorr's own BOT_LANGUAGE. TMDB is already fetched via getTmdbLanguage()
+// (tied to BOT_LANGUAGE), so for real media events prefer its title/overview —
+// the year suffix mirrors Seerr's own "Title (YYYY)" formatting — falling back
+// to Seerr's subject/message only when TMDB data isn't available.
+const MEDIA_EVENT_TYPES = new Set([
+  "MEDIA_PENDING", "MEDIA_APPROVED", "MEDIA_AUTO_APPROVED",
+  "MEDIA_AVAILABLE", "MEDIA_DECLINED", "MEDIA_FAILED",
+]);
+
+export function localizedTitle(tmdbDetails, mediaType) {
+  const name = tmdbDetails?.title || tmdbDetails?.name;
+  if (!name) return null;
+  const dateStr = mediaType === "movie" ? tmdbDetails.release_date : tmdbDetails.first_air_date;
+  const year = dateStr ? dateStr.slice(0, 4) : null;
+  return year ? `${name} (${year})` : name;
+}
+
 async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, subject, message, image, request, issue, comment, extra) {
+  const isMediaEvent = MEDIA_EVENT_TYPES.has(eventType);
+  const titleOverride = isMediaEvent ? localizedTitle(tmdbDetails, mediaType) : null;
+  const overviewOverride = isMediaEvent ? tmdbDetails?.overview : null;
+
   const embed = new EmbedBuilder()
     .setColor(cfg.color)
     .setAuthor({ name: `${cfg.emoji} ${cfg.label}` })
-    .setTitle(subject || "Questorr Notification")
+    .setTitle(titleOverride || subject || "Questorr Notification")
     .setTimestamp();
 
   const footerText = process.env.EMBED_FOOTER_TEXT;
@@ -1047,7 +1070,8 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     }
   }
 
-  if (message) embed.setDescription(message);
+  if (overviewOverride) embed.setDescription(overviewOverride);
+  else if (message) embed.setDescription(message);
 
   switch (eventType) {
     case "MEDIA_PENDING":
@@ -1286,7 +1310,10 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
 
   try {
     const user = await client.users.fetch(discordId);
-    const title = data.subject || "Questorr Notification";
+    // Reuse the already-localized title from the channel embed (built via
+    // buildEmbed(), which prefers TMDB's BOT_LANGUAGE-fetched title over
+    // Seerr's own subject) instead of re-reading data.subject directly.
+    const title = embed?.data?.title || data.subject || "Questorr Notification";
     const mediaType = data.media?.media_type;
     const mediaTypeLabel = mediaType === "movie" ? t("field_type_movie") : t("field_type_tv");
     const footerText = process.env.EMBED_FOOTER_TEXT;
