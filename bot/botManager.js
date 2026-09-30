@@ -103,20 +103,16 @@ export async function startBot() {
     // ----------------- REGISTER COMMANDS -----------------
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-    try {
-      await registerCommands(
-        rest,
-        process.env.BOT_ID,
-        process.env.GUILD_ID,
-        logger
-      );
-    } catch (err) {
-      logger.error(
-        `[REGISTER COMMANDS] Failed to register Discord commands:`,
-        err
-      );
-      throw new Error(`Failed to register Discord commands: ${err.message}`);
-    }
+    // registerCommands() already logs the full error and throws a fully
+    // formatted "Failed to register Discord commands: ..." Error — wrapping
+    // it again here just duplicated that same prefix in the message the
+    // dashboard shows the user. Let it propagate as-is.
+    await registerCommands(
+      rest,
+      process.env.BOT_ID,
+      process.env.GUILD_ID,
+      logger
+    );
 
     // ----------------- REGISTER INTERACTIONS -----------------
     registerInteractions(client);

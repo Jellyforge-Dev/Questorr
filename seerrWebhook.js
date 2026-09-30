@@ -709,7 +709,21 @@ async function processEvent(data, eventType, cfg, client) {
       if (eventType === "ISSUE_CREATED") {
         // Only surface issues that did NOT originate from /report (those already
         // posted to admin) — i.e. issues filed directly in Seerr.
-        if (!issueId || !getIssueReporter(issueId)) {
+        //
+        // Race: Seerr can fire this webhook before /report's own
+        // recordIssueReporter() call (which only runs once its createIssue()
+        // await resolves) has had a chance to run, since the webhook is a
+        // separate incoming request that isn't ordered relative to that
+        // continuation. Without this, the two code paths would both decide
+        // "not yet recorded" and both post — a guaranteed double-post, not
+        // just an occasional race. Give recordIssueReporter() a brief moment
+        // to catch up before concluding this issue is unrelated to /report.
+        let reporterRecord = issueId ? getIssueReporter(issueId) : null;
+        if (issueId && !reporterRecord) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          reporterRecord = getIssueReporter(issueId);
+        }
+        if (!issueId || !reporterRecord) {
           const adminChannelId = resolveAdminChannel();
           if (adminChannelId) {
             const adminChannel = await client.channels.fetch(adminChannelId);
