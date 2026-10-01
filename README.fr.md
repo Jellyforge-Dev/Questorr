@@ -288,12 +288,23 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 
 ![Flux de demande](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` trouve un titre via TMDB ; cliquer sur **Request** l'envoie à
+> Seerr. Si **Auto-Approve Requests** de Seerr est désactivé, la demande
+> atterrit dans le salon admin pour Approuver/Refuser (voir l'étape 7
+> ci-dessous) — sinon elle est demandée immédiatement et Discord repostera
+> une fois disponible.
+
 </details>
 
 <details>
 <summary><b>L'assistant /help — boutons d'action rapide pour chaque fonctionnalité</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` ouvre un assistant avec des boutons en un clic pour chaque
+> fonctionnalité ci-dessous — pas besoin de mémoriser les commandes.
+> **For You** construit des recommandations TMDB à partir de ton
+> historique de visionnage Jellyfin réel.
 
 </details>
 
@@ -302,12 +313,21 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 
 ![Film / Série aléatoire](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` choisit un titre directement dans ta **bibliothèque Jellyfin**
+> (pas TMDB) — pratique pour « qu'est-ce que je regarde ce soir » plutôt
+> que pour découvrir quelque chose de nouveau à demander.
+
 </details>
 
 <details>
 <summary><b>Recommandations quotidiennes & le widget de statut intégrable</b></summary>
 
 ![Recommandations](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> Daily Random Pick et Daily Recommendation postent automatiquement selon
+> un horaire que tu définis à l'étape 7. Le **widget de statut**
+> intégrable montré à la fin peut afficher des stats du bot en direct sur
+> un tableau de bord externe comme Homarr ou Homepage.
 
 </details>
 
@@ -319,6 +339,10 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 <summary><b>Étape 1 – Paramètres Discord</b></summary>
 
 ![Configuration Discord](GIFs/Discord-BotSetup.gif)
+
+> Questorr téléverse automatiquement son propre logo comme avatar Discord
+> du bot au premier démarrage — pas besoin d'en définir un manuellement,
+> sauf si tu veux quelque chose de différent.
 
 </details>
 
@@ -340,6 +364,13 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 <summary><b>Étape 3 – Bases de données média (TMDB / OMDb)</b></summary>
 
 ![Configuration des bases de données média](GIFs/Media_Databases-BotSetup.gif)
+
+> Obtiens une **clé API TMDB** gratuite sur
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (requise pour la recherche et les posters), et une **clé API OMDb**
+> optionnelle sur
+> [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) pour des
+> données de notation plus riches.
 
 </details>
 
@@ -366,6 +397,12 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 
 ![Configuration de l'association d'utilisateurs](GIFs/User_Mapping-BotSetup.gif)
 
+> Associer un utilisateur Discord à son compte Seerr fait apparaître ses
+> demandes sous son vrai nom dans Seerr (pas « Admin »), alimente la vue
+> « mes demandes » de `/watchlist filter:mine`, et permet à **For You** de
+> tirer des recommandations personnalisées de l'historique de visionnage
+> Jellyfin de cet utilisateur.
+
 </details>
 
 <details>
@@ -373,12 +410,25 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 
 ![Configuration des permissions par rôle](GIFs/Role_Permissions-BotSetup.gif)
 
+> Restreins qui peut utiliser le bot via une liste d'autorisation/blocage
+> de rôles Discord, et plafonne optionnellement le nombre de demandes que
+> chaque utilisateur peut faire sur une fenêtre glissante de 7 jours —
+> utile si tu partages ton serveur avec beaucoup de monde.
+
 </details>
 
 <details>
 <summary><b>Étape 7 – Divers (Widget, abonnements, sélection quotidienne)</b></summary>
 
 ![Configuration divers](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ **Auto-Approve Requests** de Seerr (basculé ici) détermine si une
+> demande est approuvée instantanément ou atterrit dans le salon admin que
+> tu as assigné à l'étape 2, pour qu'un humain l'approuve/refuse. Avec
+> l'auto-approbation désactivée, **assure-toi que les permissions Discord
+> de ce salon admin sont restreintes aux admins/modérateurs de confiance
+> uniquement** — les boutons Approuver/Refuser ont le même pouvoir que ta
+> clé API Seerr, sans vérification de permission séparée.
 
 </details>
 

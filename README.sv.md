@@ -288,12 +288,21 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ![Förfrågningsflöde](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` hittar en titel via TMDB; ett klick på **Request** skickar
+> den till Seerr. Om Seerrs **Auto-Approve Requests** är avstängt hamnar
+> den i adminkanalen för Godkänn/Neka (se steg 7 nedan) — annars begärs
+> den direkt, och Discord postar igen så fort den blir tillgänglig.
+
 </details>
 
 <details>
 <summary><b>/help-guiden — snabbknappar för varje funktion</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` öppnar en guide med ett-klicks-knappar för varje funktion
+> nedan — inget behov av att memorera kommandon. **For You** bygger
+> TMDB-rekommendationer utifrån din faktiska Jellyfin-tittarhistorik.
 
 </details>
 
@@ -302,12 +311,21 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ![Slumpmässig film/serie](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` väljer en titel direkt från ditt **Jellyfin-bibliotek** (inte
+> TMDB) — praktiskt för "vad ska jag se ikväll" snarare än att upptäcka
+> något nytt att begära.
+
 </details>
 
 <details>
 <summary><b>Dagliga rekommendationer & den inbäddningsbara statuswidgeten</b></summary>
 
 ![Rekommendationer](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> Dagligt slumpval och daglig rekommendation postas automatiskt enligt
+> ett schema du ställer in i steg 7. Den inbäddningsbara
+> **statuswidgeten** som visas på slutet kan visa live bot-statistik på
+> en extern dashboard som Homarr eller Homepage.
 
 </details>
 
@@ -319,6 +337,10 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <summary><b>Steg 1 – Discord-inställningar</b></summary>
 
 ![Discord-konfiguration](GIFs/Discord-BotSetup.gif)
+
+> Questorr laddar automatiskt upp sin egen logotyp som botens
+> Discord-avatar första gången den startar — ingen anledning att ställa
+> in en manuellt om du inte vill ha något annat.
 
 </details>
 
@@ -339,6 +361,12 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <summary><b>Steg 3 – Mediedatabaser (TMDB / OMDb)</b></summary>
 
 ![Mediedatabaser-konfiguration](GIFs/Media_Databases-BotSetup.gif)
+
+> Skaffa en gratis **TMDB API-nyckel** på
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (krävs för sökning och affischer) och en valfri **OMDb API-nyckel** på
+> [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) för
+> rikare betygsdata.
 
 </details>
 
@@ -364,6 +392,12 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ![Användarkoppling-konfiguration](GIFs/User_Mapping-BotSetup.gif)
 
+> Att koppla en Discord-användare till deras Seerr-konto gör att deras
+> förfrågningar visas som den personen i Seerr (inte "Admin"), driver
+> `/watchlist filter:mine`s egna-förfrågningar-vy, och låter **For You**
+> hämta personliga rekommendationer från den personens
+> Jellyfin-tittarhistorik.
+
 </details>
 
 <details>
@@ -371,12 +405,25 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ![Rollbehörigheter-konfiguration](GIFs/Role_Permissions-BotSetup.gif)
 
+> Begränsa vem som får använda boten alls via en allowlist/blocklist av
+> Discord-roller, och sätt eventuellt ett tak för hur många
+> förfrågningar varje användare kan göra under ett rullande
+> 7-dagarsfönster — användbart om du delar din server med många
+> personer.
+
 </details>
 
 <details>
 <summary><b>Steg 7 – Övrigt (Widget, prenumerationer, daglig utvald)</b></summary>
 
 ![Övrigt-konfiguration](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ **Seerr Auto-Approve Requests** (togglas här) avgör om en förfrågan
+> godkänns direkt eller hamnar i adminkanalen du tilldelade i steg 2 för
+> att en människa ska Godkänna/Neka den. Med auto-godkännande avstängt,
+> **se till att den adminkanalens Discord-behörigheter är begränsade
+> till betrodda admins/moderatorer** — Godkänn-/Neka-knapparna har samma
+> makt som din Seerr-API-nyckel, utan egen behörighetskontroll.
 
 </details>
 
