@@ -328,6 +328,13 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ![Configuración de Seerr](GIFs/Seerr-BotSetup.gif)
 
+> **Root Folder → Channel Mapping** enruta las notificaciones de "ya
+> disponible" según la carpeta raíz de Radarr/Sonarr donde cayó la
+> descarga (p. ej. tu carpeta raíz de Anime → `#anime`). Esto requiere que
+> Seerr se comunique con Radarr/Sonarr, y es el *primer* nivel de
+> enrutamiento que prueba Questorr — mira el paso 4 más abajo para ver qué
+> pasa cuando no coincide (o no está configurado en absoluto).
+
 </details>
 
 <details>
@@ -341,6 +348,17 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <summary><b>Paso 4 – Conexión con Jellyfin</b></summary>
 
 ![Configuración de Jellyfin](GIFs/Jellyfin-BotSetup.gif)
+
+> **Jellyfin Library → Channel Mapping** cumple dos funciones. Primero, es
+> el *segundo* nivel de enrutamiento para notificaciones disparadas por
+> Seerr, usado cuando el mapeo por carpeta raíz de arriba (paso 2) no
+> coincide. Segundo — e independientemente — alimenta el propio vigilante
+> de biblioteca de Jellyfin de Questorr, que detecta contenido nuevo
+> directamente en Jellyfin (sin importar cómo llegó ahí) y publica en el
+> canal correspondiente a esa biblioteca. **Puedes configurar solo este
+> paso y saltarte Seerr/Radarr/Sonarr por completo** si lo único que
+> quieres es que Discord anuncie contenido nuevo de la biblioteca, sin
+> ningún flujo de solicitud/aprobación.
 
 </details>
 

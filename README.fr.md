@@ -327,6 +327,13 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 
 ![Configuration Seerr](GIFs/Seerr-BotSetup.gif)
 
+> **Root Folder → Channel Mapping** route les notifications « maintenant
+> disponible » selon le dossier racine Radarr/Sonarr où le téléchargement a
+> atterri (ex. ton dossier racine Anime → `#anime`). Cela nécessite que Seerr
+> communique avec Radarr/Sonarr, et c'est le *premier* niveau de routage que
+> Questorr essaie — voir l'étape 4 ci-dessous pour ce qui se passe quand ça
+> ne correspond pas (ou n'est pas configuré du tout).
+
 </details>
 
 <details>
@@ -340,6 +347,17 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 <summary><b>Étape 4 – Connexion Jellyfin</b></summary>
 
 ![Configuration Jellyfin](GIFs/Jellyfin-BotSetup.gif)
+
+> **Jellyfin Library → Channel Mapping** remplit deux rôles. D'abord, c'est
+> le *deuxième* niveau de routage pour les notifications déclenchées par
+> Seerr, utilisé quand le mapping par dossier racine ci-dessus (étape 2) ne
+> correspond pas. Ensuite — et indépendamment — il alimente le propre
+> détecteur de bibliothèque Jellyfin de Questorr, qui détecte le nouveau
+> contenu directement dans Jellyfin (peu importe comment il y est arrivé)
+> et poste dans le salon correspondant à cette bibliothèque. **Tu peux
+> configurer uniquement cette étape et ignorer complètement Seerr/Radarr/
+> Sonarr** si tout ce que tu veux, c'est que Discord annonce le nouveau
+> contenu de la bibliothèque, sans aucun flux de demande/approbation.
 
 </details>
 

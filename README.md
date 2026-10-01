@@ -327,6 +327,12 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ![Seerr setup](GIFs/Seerr-BotSetup.gif)
 
+> **Root Folder → Channel Mapping** routes "now available" notifications by
+> which Radarr/Sonarr root folder a download landed in (e.g. your Anime
+> root folder → `#anime`). This needs Seerr talking to Radarr/Sonarr, and
+> it's the *first* routing tier Questorr tries — see Step 4 below for what
+> happens when it doesn't match (or isn't set up at all).
+
 </details>
 
 <details>
@@ -340,6 +346,15 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 <summary><b>Step 4 – Jellyfin Connection</b></summary>
 
 ![Jellyfin setup](GIFs/Jellyfin-BotSetup.gif)
+
+> **Jellyfin Library → Channel Mapping** does two jobs. First, it's the
+> *second* routing tier for Seerr-triggered notifications, used when the
+> root-folder mapping above (Step 2) doesn't match. Second — and
+> independently — it powers Questorr's own Jellyfin library watcher, which
+> detects new content directly in Jellyfin (however it got there) and posts
+> to the channel matching that library. **You can configure only this step
+> and skip Seerr/Radarr/Sonarr entirely** if all you want is Discord
+> announcing new library content, with no request/approval workflow at all.
 
 </details>
 
