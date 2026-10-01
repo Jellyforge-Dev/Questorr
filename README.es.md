@@ -21,7 +21,7 @@
 > **📸 Aviso de demo:** Todos los GIF de este README proceden de un servidor de prueba y no muestran datos reales de usuarios. La versión en vivo puede verse ligeramente distinta y mostrar más contenido según tu configuración.
 
 <div align="center">
-  <img src="GIFs/Request_Process-BotSetup.gif" alt="Búsqueda, solicitud, aprobación de administrador y notificación de disponibilidad en acción" width="100%"/>
+  <img src="docs/GIFs/Request_Process-BotSetup.gif" alt="Búsqueda, solicitud, aprobación de administrador y notificación de disponibilidad en acción" width="100%"/>
 </div>
 
 ---
@@ -287,7 +287,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>El flujo completo de solicitud — buscar, solicitar, aprobación de administrador, "ya disponible"</b></summary>
 
-![Flujo de solicitud](GIFs/Request_Process-BotSetup.gif)
+![Flujo de solicitud](docs/GIFs/Request_Process-BotSetup.gif)
 
 > `/search` encuentra un título vía TMDB; al pulsar **Request** se envía a
 > Seerr. Si **Auto-Approve Requests** de Seerr está desactivado, la
@@ -300,7 +300,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>El asistente /help — botones de acción rápida para cada función</b></summary>
 
-![For You](GIFs/ForYou-BotSetup.gif)
+![For You](docs/GIFs/ForYou-BotSetup.gif)
 
 > `/help` abre un asistente con botones de un clic para cada función de
 > abajo — sin necesidad de memorizar comandos. **For You** genera
@@ -312,7 +312,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Película / Serie aleatoria</b></summary>
 
-![Película / Serie aleatoria](GIFs/Random_Movie_Series-BotSetup.gif)
+![Película / Serie aleatoria](docs/GIFs/Random_Movie_Series-BotSetup.gif)
 
 > `/random` elige un título directamente de tu **biblioteca de Jellyfin**
 > (no de TMDB) — útil para "qué veo esta noche" en lugar de descubrir algo
@@ -323,7 +323,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
-![Recomendaciones](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+![Recomendaciones](docs/GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick y Daily Recommendation publican automáticamente según
 > un horario que configuras en el paso 7 — uno muestra un título
@@ -339,7 +339,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 1 – Configuración de Discord</b></summary>
 
-![Configuración de Discord](GIFs/Discord-BotSetup.gif)
+![Configuración de Discord](docs/GIFs/Discord-BotSetup.gif)
 
 > Questorr sube automáticamente su propio logo como avatar de Discord del
 > bot la primera vez que arranca — no hace falta configurar uno
@@ -350,7 +350,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 2 – Configuración de Seerr</b></summary>
 
-![Configuración de Seerr](GIFs/Seerr-BotSetup.gif)
+![Configuración de Seerr](docs/GIFs/Seerr-BotSetup.gif)
 
 > **Root Folder → Channel Mapping** enruta las notificaciones de "ya
 > disponible" según la carpeta raíz de Radarr/Sonarr donde cayó la
@@ -364,7 +364,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 3 – Bases de datos multimedia (TMDB / OMDb)</b></summary>
 
-![Configuración de bases de datos multimedia](GIFs/Media_Databases-BotSetup.gif)
+![Configuración de bases de datos multimedia](docs/GIFs/Media_Databases-BotSetup.gif)
 
 > Consigue una **clave API de TMDB** gratuita en
 > [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
@@ -378,7 +378,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 4 – Conexión con Jellyfin</b></summary>
 
-![Configuración de Jellyfin](GIFs/Jellyfin-BotSetup.gif)
+![Configuración de Jellyfin](docs/GIFs/Jellyfin-BotSetup.gif)
 
 > **Jellyfin Library → Channel Mapping** cumple dos funciones. Primero, es
 > el *segundo* nivel de enrutamiento para notificaciones disparadas por
@@ -396,7 +396,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 5 – Vinculación de usuarios</b></summary>
 
-![Configuración de vinculación de usuarios](GIFs/User_Mapping-BotSetup.gif)
+![Configuración de vinculación de usuarios](docs/GIFs/User_Mapping-BotSetup.gif)
 
 > Vincular a un usuario de Discord con su cuenta de Seerr hace que sus
 > solicitudes aparezcan con su nombre real en Seerr (no "Admin"), alimenta
@@ -409,7 +409,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 6 – Permisos por rol y cuota de solicitudes</b></summary>
 
-![Configuración de permisos por rol](GIFs/Role_Permissions-BotSetup.gif)
+![Configuración de permisos por rol](docs/GIFs/Role_Permissions-BotSetup.gif)
 
 > Restringe quién puede usar el bot mediante una lista de permitidos/
 > bloqueados de roles de Discord, y opcionalmente limita cuántas
@@ -421,7 +421,7 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <details>
 <summary><b>Paso 7 – Varios (widget, suscripciones, selección diaria)</b></summary>
 
-![Configuración de varios](GIFs/Miscellaneous_Widget-BotSetup.gif)
+![Configuración de varios](docs/GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 > ⚠️ **Auto-Approve Requests** de Seerr (se activa aquí) decide si una
 > solicitud se aprueba al instante o va al canal de administración que
