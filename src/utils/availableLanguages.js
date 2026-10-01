@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import logger from "./logger.js";
 
-const LOCALES_DIR = path.join(process.cwd(), "locales");
+const LOCALES_DIR = path.join(process.cwd(), "src", "locales");
 const FALLBACK = [
   { code: "en", name: "English" },
   { code: "de", name: "Deutsch" },

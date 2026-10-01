@@ -17,7 +17,7 @@ vi.mock("../bot/botState.js", () => ({ pendingRequests: new Map(), savePendingRe
 vi.mock("axios", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock("../api/tmdb.js", () => ({ findBestBackdrop: vi.fn(), getTmdbLanguage: vi.fn(() => "en") }));
 
-const { getEventLabel } = await import("../seerrWebhook.js");
+const { getEventLabel } = await import("../../seerrWebhook.js");
 
 beforeEach(() => {
   delete process.env.NOTIF_TITLE_MEDIA_AVAILABLE;

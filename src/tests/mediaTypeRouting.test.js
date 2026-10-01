@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { resolveMediaTypeChannel } from "../seerrWebhook.js";
+import { resolveMediaTypeChannel } from "../../seerrWebhook.js";
 
 describe("resolveMediaTypeChannel", () => {
   const origEnv = { ...process.env };

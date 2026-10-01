@@ -21,7 +21,7 @@ import { loadConfigToEnv } from "../utils/configFile.js";
 import logger from "../utils/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_BOT_AVATAR_PATH = path.join(__dirname, "..", "assets", "discord-avatar.png");
+const DEFAULT_BOT_AVATAR_PATH = path.join(__dirname, "..", "..", "assets", "discord-avatar.png");
 
 /**
  * Uploads the Questorr logo as the bot's Discord avatar, but only the first

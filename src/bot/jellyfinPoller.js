@@ -958,7 +958,7 @@ async function buildButtons(item, itemType, imdbId, baseUrl) {
   // if they are explicitly set, they take priority over the matrix value.
   let showWatch, showImdb, showLetterboxd;
   try {
-    const { getEventButtons } = await import("../seerrWebhook.js");
+    const { getEventButtons } = await import("../../seerrWebhook.js");
     const btns = getEventButtons("MEDIA_AVAILABLE", "CHANNEL");
     showWatch      = process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH      !== undefined
                        ? process.env.JELLYFIN_POLLER_SHOW_BUTTON_WATCH !== "false"

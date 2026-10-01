@@ -19,7 +19,7 @@
 
 import { fetchRequests } from "../api/seerr.js";
 import { updateFromSeerr, prune as pruneRequestStore } from "../utils/requestStore.js";
-import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../seerrWebhook.js";
+import { sendRequesterDm, getAdminPendingMsg, removeAdminPendingMsg } from "../../seerrWebhook.js";
 import { shouldSendApprovalDm, suppressApprovalDm } from "../utils/notificationDispatcher.js";
 import logger from "../utils/logger.js";
 import { botState } from "./botState.js";

@@ -87,7 +87,7 @@ describe("sendWeeklyDigest", () => {
     vi.clearAllMocks();
     process.env.DIGEST_ENABLED = "true";
     process.env.DIGEST_CHANNEL_ID = "chan1";
-    process.env.JELLYFIN_API_KEY = "k";
+    process.env.JELLYFIN_API_KEY = "REPLACE_ME";
     process.env.JELLYFIN_BASE_URL = "http://jf";
     delete process.env.JELLYFIN_CHANNEL_ID;
   });

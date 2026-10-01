@@ -35,9 +35,9 @@ describe("stripOrphanedConfigKeys", () => {
   });
 
   it("is a no-op on a config with none of the orphaned keys", () => {
-    const config = { SEERR_URL: "x", JELLYFIN_API_KEY: "y" };
+    const config = { SEERR_URL: "x", JELLYFIN_API_KEY: "REPLACE_ME" };
     const changed = stripOrphanedConfigKeys(config);
     expect(changed).toBe(false);
-    expect(config).toEqual({ SEERR_URL: "x", JELLYFIN_API_KEY: "y" });
+    expect(config).toEqual({ SEERR_URL: "x", JELLYFIN_API_KEY: "REPLACE_ME" });
   });
 });

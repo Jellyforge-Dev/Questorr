@@ -9,40 +9,40 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
-import { normalizeSeerrUrl } from "./utils/seerrUrl.js";
-import { configTemplate } from "./lib/config.js";
-import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
-import { runCleanupAdvisor } from "./bot/cleanupAdvisor.js";
-import apiCache from "./utils/cache.js";
+import { normalizeSeerrUrl } from "./src/utils/seerrUrl.js";
+import { configTemplate } from "./src/lib/config.js";
+import { sendDailyRandomPick, sendDailyRecommendation } from "./src/bot/dailyPick.js";
+import { runCleanupAdvisor } from "./src/bot/cleanupAdvisor.js";
+import apiCache from "./src/utils/cache.js";
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- MODULE IMPORTS ---
-import logger from "./utils/logger.js";
-import { validateBody, configSchema } from "./utils/validation.js";
-import { authenticateToken, WEBHOOK_SECRET } from "./utils/auth.js";
-import logRouter from "./routes/logRoutes.js";
-import authRouter from "./routes/authRoutes.js";
-import userMappingRouter from "./routes/userMappingRoutes.js";
-import configRouter from "./routes/configRoutes.js";
-import seerrRouter from "./routes/seerrRoutes.js";
-import jellyfinRouter from "./routes/jellyfinRoutes.js";
-import { botState, pendingRequests, savePendingRequests } from "./bot/botState.js";
-import { createBotRoutes } from "./routes/botRoutes.js";
-import { startBot, stopBot } from "./bot/botManager.js";
-import { rescheduleTimedJobs } from "./bot/jobScheduler.js";
-import { registerCommands } from "./discord/commands.js";
+import logger from "./src/utils/logger.js";
+import { validateBody, configSchema } from "./src/utils/validation.js";
+import { authenticateToken, WEBHOOK_SECRET } from "./src/utils/auth.js";
+import logRouter from "./src/routes/logRoutes.js";
+import authRouter from "./src/routes/authRoutes.js";
+import userMappingRouter from "./src/routes/userMappingRoutes.js";
+import configRouter from "./src/routes/configRoutes.js";
+import seerrRouter from "./src/routes/seerrRoutes.js";
+import jellyfinRouter from "./src/routes/jellyfinRoutes.js";
+import { botState, pendingRequests, savePendingRequests } from "./src/bot/botState.js";
+import { createBotRoutes } from "./src/routes/botRoutes.js";
+import { startBot, stopBot } from "./src/bot/botManager.js";
+import { rescheduleTimedJobs } from "./src/bot/jobScheduler.js";
+import { registerCommands } from "./src/discord/commands.js";
 import { REST } from "@discordjs/rest";
 import {
   CONFIG_PATH,
   readConfig,
   writeConfig,
   loadConfigToEnv,
-} from "./utils/configFile.js";
-import { SENSITIVE_FIELDS, isMaskedValue } from "./utils/configSanitize.js";
-import { recordAudit } from "./utils/adminAudit.js";
+} from "./src/utils/configFile.js";
+import { SENSITIVE_FIELDS, isMaskedValue } from "./src/utils/configSanitize.js";
+import { recordAudit } from "./src/utils/adminAudit.js";
 
 // --- Helper Functions ---
 // --- CONFIGURATION ---
@@ -701,7 +701,7 @@ function configureWebServer() {
   // Static file serving — must be BEFORE the error handler so that
   // CSS, JS, images and locale files are served for unauthenticated visitors.
   app.use("/assets", express.static(path.join(__dirname, "assets")));
-  app.use("/locales", express.static(path.join(__dirname, "locales")));
+  app.use("/locales", express.static(path.join(__dirname, "src", "locales")));
 
   // Cache-busting: derive a version token from the asset mtimes. Whenever
   // script.js/style.css change (a redeploy), the token changes, so the
@@ -709,8 +709,8 @@ function configureWebServer() {
   // Proxy Manager) can serve a stale bundle — even if it ignores no-store.
   const assetVersion = () => {
     try {
-      const js = fs.statSync(path.join(__dirname, "web", "script.js")).mtimeMs;
-      const css = fs.statSync(path.join(__dirname, "web", "style.css")).mtimeMs;
+      const js = fs.statSync(path.join(__dirname, "src", "web", "script.js")).mtimeMs;
+      const css = fs.statSync(path.join(__dirname, "src", "web", "style.css")).mtimeMs;
       return Math.floor(Math.max(js, css)).toString(36);
     } catch {
       return Date.now().toString(36);
@@ -723,7 +723,7 @@ function configureWebServer() {
   const serveDashboardShell = (_req, res) => {
     try {
       const v = assetVersion();
-      let html = fs.readFileSync(path.join(__dirname, "web", "index.html"), "utf-8");
+      let html = fs.readFileSync(path.join(__dirname, "src", "web", "index.html"), "utf-8");
       html = html
         .replace('src="script.js"', `src="script.js?v=${v}"`)
         .replace('href="style.css"', `href="style.css?v=${v}"`);
@@ -739,7 +739,7 @@ function configureWebServer() {
   // Disable caching for dashboard JS/CSS so updates are always picked up
   // immediately. index:false so the static layer never serves index.html
   // directly — the cache-busting injector above owns that.
-  app.use(express.static(path.join(__dirname, "web"), {
+  app.use(express.static(path.join(__dirname, "src", "web"), {
     index: false,
     etag: false,
     lastModified: false,
@@ -1224,7 +1224,7 @@ function configureWebServer() {
       }
       const channel = await botState.discordClient.channels.fetch(channelId);
       const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import("discord.js");
-      const { setEmbedThumbnail } = await import("./utils/embedImages.js");
+      const { setEmbedThumbnail } = await import("./src/utils/embedImages.js");
 
       const eventType = (req.body && req.body.eventType) || "MEDIA_AVAILABLE";
 

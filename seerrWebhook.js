@@ -19,12 +19,12 @@
 
 import { readFileSync, writeFileSync, existsSync, renameSync } from "fs";
 import path from "path";
-import { t, tNotif } from "./utils/botStrings.js";
-import { shouldPost, markPosted, markApprovalDmSent } from "./utils/notificationDispatcher.js";
+import { t, tNotif } from "./src/utils/botStrings.js";
+import { shouldPost, markPosted, markApprovalDmSent } from "./src/utils/notificationDispatcher.js";
 // Round 12: clean up pendingRequests entries after MEDIA_AVAILABLE so the map
 // (which doubles as the poller's "via Questorr" dedup source) doesn't grow
 // unbounded over time.
-import { pendingRequests, savePendingRequests } from "./bot/botState.js";
+import { pendingRequests, savePendingRequests } from "./src/bot/botState.js";
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -32,15 +32,15 @@ import {
   ButtonStyle,
 } from "discord.js";
 import axios from "axios";
-import logger from "./utils/logger.js";
-import { isValidUrl, buildSeerrUrl, buildJellyfinUrl } from "./utils/url.js";
-import { setEmbedImage, setEmbedThumbnail } from "./utils/embedImages.js";
-import { findBestBackdrop, getTmdbLanguage } from "./api/tmdb.js";
-import { jellyfinAuthHeaders } from "./api/jellyfin.js";
-import { CONFIG_PATH } from "./utils/configFile.js";
-import { getIssueReporter, removeIssueReporter } from "./utils/issueReporters.js";
-import { buildIssueAdminButtons } from "./bot/handlers/issueActions.js";
-import { getPendingByMedia } from "./utils/requestStore.js";
+import logger from "./src/utils/logger.js";
+import { isValidUrl, buildSeerrUrl, buildJellyfinUrl } from "./src/utils/url.js";
+import { setEmbedImage, setEmbedThumbnail } from "./src/utils/embedImages.js";
+import { findBestBackdrop, getTmdbLanguage } from "./src/api/tmdb.js";
+import { jellyfinAuthHeaders } from "./src/api/jellyfin.js";
+import { CONFIG_PATH } from "./src/utils/configFile.js";
+import { getIssueReporter, removeIssueReporter } from "./src/utils/issueReporters.js";
+import { buildIssueAdminButtons } from "./src/bot/handlers/issueActions.js";
+import { getPendingByMedia } from "./src/utils/requestStore.js";
 
 // ─── Admin Pending Messages persistence ──────────────────────────────────────
 // Maps requestId → { channelId, messageId } so the status poller can edit the
@@ -289,7 +289,7 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
     // Round 9: Logs upgraded from debug→info so the failure mode is visible.
     try {
       const { fetchArrConnections, fetchMoviePathFromRadarr, fetchSeriesPathFromSonarr } =
-        await import("./api/seerr.js");
+        await import("./src/api/seerr.js");
       const { radarr, sonarr } = await fetchArrConnections(seerrUrl, seerrApiKey);
 
       if (mediaType === "movie") {
@@ -317,7 +317,7 @@ async function fetchRootFolderFromSeerr(tmdbId, mediaType, requestId = null) {
           const tmdbApiKey = process.env.TMDB_API_KEY;
           let tvdbId = null;
           if (tmdbApiKey) {
-            const { tmdbGetExternalTvdb } = await import("./api/tmdb.js");
+            const { tmdbGetExternalTvdb } = await import("./src/api/tmdb.js");
             tvdbId = await tmdbGetExternalTvdb(tmdbId, tmdbApiKey);
           }
           if (tvdbId) {
@@ -450,7 +450,7 @@ export async function findVerifiedJellyfinItem(tmdbId, mediaType) {
 
   // ── Pass 1: provider-ID query (language-agnostic) ──────────────────────────
   try {
-    const { findItemByTmdbId } = await import("./api/jellyfin.js");
+    const { findItemByTmdbId } = await import("./src/api/jellyfin.js");
     const itemId = await findItemByTmdbId(tmdbId, mediaType, apiKey, baseUrl);
     if (itemId) {
       logger.info(`[SEERR WEBHOOK] ✅ Found via TMDB-ID query: Jellyfin ID=${itemId} (TMDB ${tmdbId})`);
@@ -586,7 +586,7 @@ async function resolveChannelViaJellyfin(tmdbId, mediaType) {
       return null;
     }
 
-    const { fetchLibraries, findLibraryByAncestors } = await import("./api/jellyfin.js");
+    const { fetchLibraries, findLibraryByAncestors } = await import("./src/api/jellyfin.js");
     const libraries = await fetchLibraries(apiKey, baseUrl);
     if (!libraries || libraries.length === 0) return null;
 
@@ -834,7 +834,7 @@ async function processEvent(data, eventType, cfg, client) {
   // which directly matches a SEERR_ROOT_FOLDER_CHANNELS entry.
   if (!cfg.adminOnly && jellyfinItemId && (!channelId || channelId === fallback)) {
     try {
-      const { fetchItemPath } = await import("./api/jellyfin.js");
+      const { fetchItemPath } = await import("./src/api/jellyfin.js");
       const jfApiKey = process.env.JELLYFIN_API_KEY;
       const jfBase = process.env.JELLYFIN_BASE_URL;
       if (jfApiKey && jfBase) {

@@ -3,7 +3,7 @@ import { getSeerrUrl, getSeerrApiKey } from "../helpers.js";
 import { t } from "../../utils/botStrings.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import logger from "../../utils/logger.js";
-import { removeAdminPendingMsg } from "../../seerrWebhook.js";
+import { removeAdminPendingMsg } from "../../../seerrWebhook.js";
 import { recordAudit } from "../../utils/adminAudit.js";
 
 /**

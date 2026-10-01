@@ -10,7 +10,7 @@ vi.mock("../api/seerr.js", () => ({ checkMediaStatus }));
 vi.mock("axios", () => ({ default: { get: axiosGet } }));
 // buildButtons dynamically imports seerrWebhook for the button matrix — stub it
 // so the heavy module (and its side effects) never load during the test.
-vi.mock("../seerrWebhook.js", () => ({
+vi.mock("../../seerrWebhook.js", () => ({
   getEventButtons: () => ({ showWatch: false, showImdb: false, showLetterboxd: false }),
 }));
 vi.mock("../utils/logger.js", () => ({
@@ -65,7 +65,7 @@ describe("jellyfinPoller doNotify → notifyDedup", () => {
 });
 
 describe("hasFullMetadata", () => {
-  beforeEach(() => { process.env.TMDB_API_KEY = "tk"; });
+  beforeEach(() => { process.env.TMDB_API_KEY = "REPLACE_ME"; });
   afterEach(() => { delete process.env.TMDB_API_KEY; });
 
   it("is true when TMDB returns both an image and an overview", async () => {
@@ -127,7 +127,7 @@ describe("jellyfinPoller header title", () => {
 describe("jellyfinPoller doNotify → Seerr-tracked dedup (#3)", () => {
   beforeEach(() => {
     process.env.SEERR_URL = "http://seerr";
-    process.env.SEERR_API_KEY = "k";
+    process.env.SEERR_API_KEY = "REPLACE_ME";
   });
   afterEach(() => {
     delete process.env.SEERR_URL;
@@ -141,7 +141,7 @@ describe("jellyfinPoller doNotify → Seerr-tracked dedup (#3)", () => {
 
     await doNotify(makeClient(send), item, "key", "http://jf", {}, {}, {});
 
-    expect(checkMediaStatus).toHaveBeenCalledWith("693134", "movie", [], "http://seerr", "k");
+    expect(checkMediaStatus).toHaveBeenCalledWith("693134", "movie", [], "http://seerr", "REPLACE_ME");
     expect(send).not.toHaveBeenCalled();
     expect(markPosted).not.toHaveBeenCalled();
   });

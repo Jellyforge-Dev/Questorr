@@ -7,7 +7,7 @@ const suppressApprovalDm = vi.fn();
 
 vi.mock("../api/seerr.js", () => ({ fetchRequests }));
 vi.mock("../utils/requestStore.js", () => ({ updateFromSeerr: vi.fn(), prune: vi.fn() }));
-vi.mock("../seerrWebhook.js", () => ({
+vi.mock("../../seerrWebhook.js", () => ({
   sendRequesterDm,
   getAdminPendingMsg: vi.fn(() => null), // no admin embed to edit → skip that branch
   removeAdminPendingMsg: vi.fn(),

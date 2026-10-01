@@ -33,7 +33,7 @@ function interaction(sub, opts = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  process.env.JELLYFIN_API_KEY = "k";
+  process.env.JELLYFIN_API_KEY = "REPLACE_ME";
   process.env.JELLYFIN_BASE_URL = "http://jf";
 });
 

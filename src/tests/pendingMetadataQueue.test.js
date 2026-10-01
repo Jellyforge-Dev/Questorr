@@ -8,7 +8,7 @@ const fetchLibraryMap = vi.fn(async () => ({ libraries: [], libraryIdMap: new Ma
 
 vi.mock("../utils/notificationDispatcher.js", () => ({ markPosted, shouldPost }));
 vi.mock("../api/seerr.js", () => ({ checkMediaStatus }));
-vi.mock("../seerrWebhook.js", () => ({ getEventButtons: () => ({ showWatch: false, showImdb: false, showLetterboxd: false }) }));
+vi.mock("../../seerrWebhook.js", () => ({ getEventButtons: () => ({ showWatch: false, showImdb: false, showLetterboxd: false }) }));
 vi.mock("../utils/logger.js", () => ({ default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../api/jellyfin.js", () => ({
   findLibraryByAncestors: vi.fn(async () => null),
@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   pending.clear();
   process.env.JELLYFIN_CHANNEL_ID = "chan-1";
-  process.env.TMDB_API_KEY = "tk";
+  process.env.TMDB_API_KEY = "REPLACE_ME";
   delete process.env.SEERR_URL;
   delete process.env.SEERR_API_KEY;
 });

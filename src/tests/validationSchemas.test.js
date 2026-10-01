@@ -9,17 +9,17 @@ const ok = (schema, value) => expect(schema.validate(value).error).toBeUndefined
 const bad = (schema, value) => expect(schema.validate(value).error).toBeDefined();
 
 describe("seerrConnectionSchema", () => {
-  it("accepts a url + apiKey", () => ok(seerrConnectionSchema, { url: "http://seerr:5055", apiKey: "abc123" }));
-  it("rejects a missing url", () => bad(seerrConnectionSchema, { apiKey: "abc123" }));
+  it("accepts a url + apiKey", () => ok(seerrConnectionSchema, { url: "http://seerr:5055", apiKey: "REPLACE_ME" }));
+  it("rejects a missing url", () => bad(seerrConnectionSchema, { apiKey: "REPLACE_ME" }));
   it("rejects a missing apiKey", () => bad(seerrConnectionSchema, { url: "http://seerr:5055" }));
-  it("rejects a non-string url", () => bad(seerrConnectionSchema, { url: 12345, apiKey: "abc" }));
-  it("rejects an oversized url", () => bad(seerrConnectionSchema, { url: "http://" + "x".repeat(3000), apiKey: "abc" }));
+  it("rejects a non-string url", () => bad(seerrConnectionSchema, { url: 12345, apiKey: "REPLACE_ME" }));
+  it("rejects an oversized url", () => bad(seerrConnectionSchema, { url: "http://" + "x".repeat(3000), apiKey: "REPLACE_ME" }));
 });
 
 describe("jellyfinConnectionSchema", () => {
   it("accepts url alone (apiKey optional — test uses saved key)", () =>
     ok(jellyfinConnectionSchema, { url: "http://jellyfin:8096" }));
-  it("accepts url + apiKey", () => ok(jellyfinConnectionSchema, { url: "http://jellyfin:8096", apiKey: "k" }));
+  it("accepts url + apiKey", () => ok(jellyfinConnectionSchema, { url: "http://jellyfin:8096", apiKey: "REPLACE_ME" }));
   it("rejects a missing url", () => bad(jellyfinConnectionSchema, {}));
 });
 

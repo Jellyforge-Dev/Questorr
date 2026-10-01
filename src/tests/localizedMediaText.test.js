@@ -12,7 +12,7 @@ vi.mock("../bot/botState.js", () => ({ pendingRequests: new Map(), savePendingRe
 vi.mock("axios", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock("../api/tmdb.js", () => ({ findBestBackdrop: vi.fn(), getTmdbLanguage: vi.fn(() => "en") }));
 
-const { localizedTitle, sendRequesterDm } = await import("../seerrWebhook.js");
+const { localizedTitle, sendRequesterDm } = await import("../../seerrWebhook.js");
 
 describe("localizedTitle", () => {
   it("appends the release year for a movie", () => {

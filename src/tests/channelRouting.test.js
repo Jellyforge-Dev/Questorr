@@ -20,7 +20,7 @@ vi.mock("axios", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock("../api/tmdb.js", () => ({ findBestBackdrop: vi.fn(), getTmdbLanguage: vi.fn(() => "en") }));
 
 const { matchRootFolderToChannel, resolveMediaTypeChannel, resolveChannel } =
-  await import("../seerrWebhook.js");
+  await import("../../seerrWebhook.js");
 
 const ENV_KEYS = ["SEERR_ROOT_FOLDER_CHANNELS", "CHANNEL_MOVIES", "CHANNEL_SERIES", "SEERR_CHANNEL_ID", "JELLYFIN_CHANNEL_ID"];
 beforeEach(() => {

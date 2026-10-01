@@ -18,7 +18,7 @@ vi.mock("../bot/botState.js", () => ({ pendingRequests: new Map(), savePendingRe
 vi.mock("axios", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock("../api/tmdb.js", () => ({ findBestBackdrop: vi.fn(), getTmdbLanguage: vi.fn(() => "en") }));
 
-const { findDiscordIdForSeerrUser } = await import("../seerrWebhook.js");
+const { findDiscordIdForSeerrUser } = await import("../../seerrWebhook.js");
 
 const VALID = "123456789012345678"; // 18-digit snowflake
 const MAPPINGS = JSON.stringify([

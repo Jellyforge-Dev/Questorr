@@ -9,7 +9,7 @@ const suppressApprovalDm = vi.fn();
 
 vi.mock("../api/seerr.js", () => ({ fetchRequests }));
 vi.mock("../utils/requestStore.js", () => ({ updateFromSeerr, prune }));
-vi.mock("../seerrWebhook.js", () => ({
+vi.mock("../../seerrWebhook.js", () => ({
   sendRequesterDm,
   getAdminPendingMsg: vi.fn(() => null),
   removeAdminPendingMsg: vi.fn(),

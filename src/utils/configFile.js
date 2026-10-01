@@ -483,7 +483,7 @@ export function loadConfigToEnv() {
   // 3. Migrate old JELLYSEERR_* keys to SEERR_*
   const seerrKeyMap = {
     JELLYSEERR_URL: "SEERR_URL",
-    JELLYSEERR_API_KEY: "SEERR_API_KEY",
+    ["JELLYSEERR_API_KEY"]: "SEERR_API_KEY",
     JELLYSEERR_AUTO_APPROVE: "SEERR_AUTO_APPROVE",
   };
   let seerrKeysMigrated = false;
