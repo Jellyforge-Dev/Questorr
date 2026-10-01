@@ -327,6 +327,12 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ![Seerr-konfiguration](GIFs/Seerr-BotSetup.gif)
 
+> **Root Folder → Channel Mapping** routar "nu tillgänglig"-notiser utifrån
+> vilken Radarr/Sonarr-rotmapp en nedladdning hamnade i (t.ex. din
+> Anime-rotmapp → `#anime`). Det kräver att Seerr pratar med Radarr/Sonarr,
+> och det är den *första* routningsnivån Questorr provar — se steg 4 nedan
+> för vad som händer när den inte matchar (eller inte är inställd alls).
+
 </details>
 
 <details>
@@ -340,6 +346,16 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <summary><b>Steg 4 – Jellyfin-anslutning</b></summary>
 
 ![Jellyfin-konfiguration](GIFs/Jellyfin-BotSetup.gif)
+
+> **Jellyfin Library → Channel Mapping** har två jobb. Först är det den
+> *andra* routningsnivån för Seerr-utlösta notiser, som används när
+> rotmapp-mappningen ovan (steg 2) inte matchar. För det andra — och
+> oberoende av det — driver den Questorrs egen Jellyfin-bibliotekswatcher,
+> som upptäcker nytt innehåll direkt i Jellyfin (oavsett hur det hamnade
+> där) och postar i kanalen som matchar det biblioteket. **Du kan
+> konfigurera enbart det här steget och hoppa över Seerr/Radarr/Sonarr
+> helt** om allt du vill är att Discord ska meddela nytt
+> biblioteksinnehåll, helt utan förfråg-/godkännandeflöde.
 
 </details>
 
