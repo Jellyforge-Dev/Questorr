@@ -18,19 +18,10 @@
 
 ---
 
-> **📸 Screenshot-Hinweis:** Alle Screenshots in dieser README wurden in einer Demo-Umgebung aufgenommen und enthalten keine echten Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
+> **📸 Demo-Hinweis:** Alle GIFs in dieser README stammen von einem Testserver ohne echte Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="50%"><code>/search</code> — einen Titel finden und anfragen</td>
-      <td align="center" width="50%">Eine "jetzt verfügbar"-Benachrichtigung, automatisch in den richtigen Kanal geroutet</td>
-    </tr>
-    <tr>
-      <td><img src="assets/discord/search-example.png" alt="/search Befehl Beispiel" width="100%"/></td>
-      <td><img src="assets/discord/notification-example.png" alt="Beispiel einer Bibliotheks-Benachrichtigung" width="100%"/></td>
-    </tr>
-  </table>
+  <img src="GIFs/Request_Process-BotSetup.gif" alt="Suchen, Anfragen, Admin-Genehmigung und Verfügbarkeits-Benachrichtigung in Aktion" width="100%"/>
 </div>
 
 ---
@@ -203,7 +194,7 @@ In **Seerr → Einstellungen → Benachrichtigungen → Webhook** folgendes eint
 
 | Seerr-Event | Was Questorr macht |
 |---|---|
-| Anfrage ausstehend | Sendet DM nur an den Anfrager |
+| Anfrage ausstehend | Postet in den **Admin-Kanal** (mit Genehmigen-/Ablehnen-Buttons) · sendet DM an Anfrager |
 | Anfrage genehmigt / automatisch genehmigt | Postet in Standard-Kanal · sendet DM an Anfrager |
 | Medium verfügbar | Postet in den passenden Root-Folder-Kanal · sendet DM an Anfrager |
 | Anfrage abgelehnt | Sendet DM nur an den Anfrager |
@@ -217,6 +208,16 @@ In **Seerr → Einstellungen → Benachrichtigungen → Webhook** folgendes eint
 > handelt, braucht dieser User je Aktion die passende Seerr-Berechtigung —
 > **Anfragen** zum Requesten, **Auto-Genehmigen** für sofortige Freigabe,
 > **Probleme melden** für `/report`.
+
+> ⚠️ **Mache deinen Admin-Kanal privat.** Die Genehmigen-/Ablehnen-Buttons bei
+> einer ausstehenden Anfrage haben **keine eigene Berechtigungsprüfung** —
+> ein Klick ruft Seerr mit Questorrs eigenem API-Key auf, der berechtigt ist,
+> *jede* Anfrage zu genehmigen oder abzulehnen. Wer diesen Kanal sehen kann,
+> kann effektiv dieselbe Macht wie dein Seerr-API-Key ausüben. Falls du
+> Seerrs Auto-Genehmigung nicht nutzt, beschränke die Discord-Berechtigungen
+> des Admin-Kanals so, dass nur vertrauenswürdige Admins/Moderatoren ihn
+> sehen können — sonst kann jedes Mitglied, das zufällig Zugriff auf diesen
+> Kanal hat, seine eigenen (oder fremde) Anfragen genehmigen.
 
 ### 4. Channel-Routing
 
@@ -277,84 +278,90 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 
 ---
 
-## 📸 Screenshots
+## 🎬 In Aktion
 
-> Screenshots sind aus einer Demo-Umgebung ohne echte Daten. Die Live-Version kann leicht abweichen.
+> GIFs sind von einem Testserver ohne echte Nutzerdaten aufgenommen.
 
-### Desktop
+### Den Bot nutzen
 
 <details>
-<summary><b>Authentifizierung</b></summary>
+<summary><b>Der komplette Anfrage-Flow — Suchen, Anfragen, Admin-Genehmigung, "jetzt verfügbar"</b></summary>
 
-| Registrieren | Anmelden |
-|---|---|
-| ![Registrieren](assets/Screenshots/DE/Desktop/DE_registrieren.png) | ![Anmelden](assets/Screenshots/DE/Desktop/DE_anmelden.png) |
+![Anfrage-Flow](GIFs/Request_Process-BotSetup.gif)
 
 </details>
 
 <details>
+<summary><b>Der /help-Wizard — Quick-Action-Buttons für jede Funktion</b></summary>
+
+![For You](GIFs/ForYou-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Zufälliger Film / Zufällige Serie</b></summary>
+
+![Random Movie / Series](GIFs/Random_Movie_Series-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Tägliche Empfehlungen & das einbettbare Status-Widget</b></summary>
+
+![Empfehlungen](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+</details>
+
+---
+
+### Dashboard-Einrichtung
+
+<details>
 <summary><b>Schritt 1 – Discord-Einstellungen</b></summary>
 
-| Teil 1 | Teil 2 |
-|---|---|
-| ![Discord 1/2](assets/Screenshots/DE/Desktop/DE_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/DE/Desktop/DE_discord_2-2.png) |
+![Discord-Einrichtung](GIFs/Discord-BotSetup.gif)
 
 </details>
 
 <details>
 <summary><b>Schritt 2 – Seerr-Konfiguration</b></summary>
 
-| Teil 1 | Teil 2 |
-|---|---|
-| ![Seerr 1/2](assets/Screenshots/DE/Desktop/DE_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/DE/Desktop/DE_seerr_2-2.png) |
+![Seerr-Einrichtung](GIFs/Seerr-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Schritt 3–4 – Mediendatenbanken & Jellyfin</b></summary>
+<summary><b>Schritt 3 – Mediendatenbanken (TMDB / OMDb)</b></summary>
 
-| Mediendatenbanken | Jellyfin |
-|---|---|
-| ![Mediendatenbanken](assets/Screenshots/DE/Desktop/DE_mediendatenbanken.png) | ![Jellyfin](assets/Screenshots/DE/Desktop/DE_jellyfin.png) |
+![Mediendatenbanken-Einrichtung](GIFs/Media_Databases-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Schritt 5–6 – Nutzerzuordnung & Rollenberechtigungen</b></summary>
+<summary><b>Schritt 4 – Jellyfin-Verbindung</b></summary>
 
-| Nutzerzuordnung | Rollenberechtigungen |
-|---|---|
-| ![Nutzerzuordnung](assets/Screenshots/DE/Desktop/DE_benutzerzuordnung.png) | ![Rollenberechtigungen](assets/Screenshots/DE/Desktop/DE_rollenberechtigungen.png) |
+![Jellyfin-Einrichtung](GIFs/Jellyfin-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Schritt 7 – Verschiedenes & Protokolle</b></summary>
+<summary><b>Schritt 5 – Nutzerzuordnung</b></summary>
 
-| Verschiedenes 1/2 | Verschiedenes 2/2 | Protokolle |
-|---|---|---|
-| ![Verschiedenes 1/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_1-2.png) | ![Verschiedenes 2/2](assets/Screenshots/DE/Desktop/DE_verschiedenes_2-2.png) | ![Protokolle](assets/Screenshots/DE/Desktop/DE_protokolle.png) |
+![Nutzerzuordnung-Einrichtung](GIFs/User_Mapping-BotSetup.gif)
 
 </details>
 
----
+<details>
+<summary><b>Schritt 6 – Rollenberechtigungen & Anfrage-Kontingent</b></summary>
 
-### Mobil
+![Rollenberechtigungen-Einrichtung](GIFs/Role_Permissions-BotSetup.gif)
+
+</details>
 
 <details>
-<summary><b>Mobile Ansichten</b></summary>
+<summary><b>Schritt 7 – Verschiedenes (Widget, Abos, Daily Pick)</b></summary>
 
-| Registrieren | Anmelden | Discord | Seerr |
-|---|---|---|---|
-| ![Registrieren](assets/Screenshots/DE/Mobile/DE_registrieren.jpg) | ![Anmelden](assets/Screenshots/DE/Mobile/DE_anmelden.png) | ![Discord](assets/Screenshots/DE/Mobile/DE_discord.png) | ![Seerr](assets/Screenshots/DE/Mobile/DE_seerr.png) |
-
-| Mediendatenbanken | Jellyfin | Nutzerzuordnung | Rollenberechtigungen |
-|---|---|---|---|
-| ![Mediendatenbanken](assets/Screenshots/DE/Mobile/DE_mediendatenbanken.png) | ![Jellyfin](assets/Screenshots/DE/Mobile/DE_jellyfin.png) | ![Nutzerzuordnung](assets/Screenshots/DE/Mobile/DE_benutzerzuordnung.png) | ![Rollenberechtigungen](assets/Screenshots/DE/Mobile/DE_rollenberechtigungen.png) |
-
-| Verschiedenes | Protokolle |
-|---|---|
-| ![Verschiedenes](assets/Screenshots/DE/Mobile/DE_verschiedenes.png) | ![Protokolle](assets/Screenshots/DE/Mobile/DE_protokolle.jpg) |
+![Verschiedenes-Einrichtung](GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 </details>
 

@@ -18,19 +18,10 @@
 
 ---
 
-> **📸 Aviso sobre screenshots:** Todas as capturas de tela deste README foram tiradas de um ambiente de demonstração e não mostram dados reais de usuários. A versão em produção pode ter uma aparência ligeiramente diferente e mostrar mais conteúdo dependendo da sua configuração.
+> **📸 Aviso de demo:** Todos os GIFs deste README vêm de um servidor de teste e não mostram dados reais de usuários. A versão em produção pode ter uma aparência ligeiramente diferente e mostrar mais conteúdo dependendo da sua configuração.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="50%"><code>/search</code> — encontre e solicite um título</td>
-      <td align="center" width="50%">Uma notificação de "disponível agora", roteada automaticamente para o canal certo</td>
-    </tr>
-    <tr>
-      <td><img src="assets/discord/search-example.png" alt="Exemplo do comando /search" width="100%"/></td>
-      <td><img src="assets/discord/notification-example.png" alt="Exemplo de notificação de biblioteca" width="100%"/></td>
-    </tr>
-  </table>
+  <img src="GIFs/Request_Process-BotSetup.gif" alt="Busca, solicitação, aprovação do administrador e notificação de disponibilidade em ação" width="100%"/>
 </div>
 
 ---
@@ -203,7 +194,7 @@ Em **Seerr → Settings → Notifications → Webhook**, configure o seguinte:
 
 | Evento do Seerr | O que o Questorr faz |
 |---|---|
-| Solicitação pendente de aprovação | Envia DM apenas ao solicitante |
+| Solicitação pendente de aprovação | Publica no **canal de administração** (com botões Aprovar/Recusar) · envia DM ao solicitante |
 | Solicitação aprovada / aprovada automaticamente | Publica no canal padrão · envia DM ao solicitante |
 | Mídia disponível | Publica no canal da pasta raiz correspondente · envia DM ao solicitante |
 | Solicitação recusada | Envia DM apenas ao solicitante |
@@ -216,6 +207,17 @@ Em **Seerr → Settings → Notifications → Webhook**, configure o seguinte:
 > Como o Questorr atua como o **usuário do Seerr vinculado** (Etapa 5), esse usuário
 > precisa da permissão correspondente do Seerr para cada ação — **Request** para
 > solicitar, **Auto-Approve** para aprovação instantânea, **Report Issues** para `/report`.
+
+> ⚠️ **Deixe seu canal de administração privado.** Os botões de Aprovar/
+> Recusar em uma solicitação pendente **não têm verificação de permissão
+> própria** — clicar neles chama o Seerr com a própria chave de API do
+> Questorr, que tem permissão para aprovar ou recusar *qualquer* solicitação.
+> Qualquer pessoa que consiga ver esse canal pode, na prática, agir com o
+> mesmo poder da sua chave de API do Seerr. Se você não usa a aprovação
+> automática do Seerr, restrinja as permissões do Discord do canal de
+> administração para que somente admins/moderadores de confiança possam
+> vê-lo — caso contrário, qualquer membro que acabe tendo acesso a esse
+> canal pode aprovar suas próprias solicitações (ou as de outras pessoas).
 
 ### 4. Roteamento de Canais
 
@@ -276,86 +278,92 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 ---
 
-## 📸 Screenshots
+## 🎬 Veja em ação
 
-> As screenshots são de um ambiente de demonstração sem dados reais. A versão em produção pode ter uma aparência ligeiramente diferente.
+> Os GIFs vêm de um servidor de teste sem dados reais.
 
-*Como ainda não há capturas de tela em português, as imagens abaixo mostram a versão em inglês do dashboard.*
-
-### Desktop
+### Usando o bot
 
 <details>
-<summary><b>Autenticação</b></summary>
+<summary><b>O fluxo completo de solicitação — busca, solicitação, aprovação do administrador, "disponível agora"</b></summary>
 
-| Registrar | Login |
-|---|---|
-| ![Registrar](assets/Screenshots/EN/Desktop/EN_register.png) | ![Login](assets/Screenshots/EN/Desktop/EN_login.png) |
+![Fluxo de solicitação](GIFs/Request_Process-BotSetup.gif)
 
 </details>
 
 <details>
+<summary><b>O assistente /help — botões de ação rápida para cada funcionalidade</b></summary>
+
+![For You](GIFs/ForYou-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Filme / Série aleatória</b></summary>
+
+![Filme / Série aleatória](GIFs/Random_Movie_Series-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Recomendações diárias e o widget de status incorporável</b></summary>
+
+![Recomendações](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+</details>
+
+---
+
+### Configuração do dashboard
+
+<details>
 <summary><b>Etapa 1 – Configurações do Discord</b></summary>
 
-| Parte 1 | Parte 2 |
-|---|---|
-| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+![Configuração do Discord](GIFs/Discord-BotSetup.gif)
 
 </details>
 
 <details>
 <summary><b>Etapa 2 – Configuração do Seerr</b></summary>
 
-| Parte 1 | Parte 2 |
-|---|---|
-| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+![Configuração do Seerr](GIFs/Seerr-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Etapa 3–4 – Bancos de Dados de Mídia & Jellyfin</b></summary>
+<summary><b>Etapa 3 – Bancos de Dados de Mídia (TMDB / OMDb)</b></summary>
 
-| Bancos de Dados de Mídia | Jellyfin |
-|---|---|
-| ![Bancos de Dados de Mídia](assets/Screenshots/EN/Desktop/EN_mediadatabases.png) | ![Jellyfin](assets/Screenshots/EN/Desktop/EN_jellyfin.png) |
+![Configuração dos bancos de dados de mídia](GIFs/Media_Databases-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Etapa 5–6 – Vinculação de Usuários & Permissões por Cargo</b></summary>
+<summary><b>Etapa 4 – Conexão com o Jellyfin</b></summary>
 
-| Vinculação de Usuários | Permissões por Cargo |
-|---|---|
-| ![Vinculação de Usuários](assets/Screenshots/EN/Desktop/EN_usermapping.png) | ![Permissões por Cargo](assets/Screenshots/EN/Desktop/EN_rolepermissions.png) |
+![Configuração do Jellyfin](GIFs/Jellyfin-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Etapa 7 – Diversos & Logs</b></summary>
+<summary><b>Etapa 5 – Vinculação de Usuários</b></summary>
 
-| Diversos 1/2 | Diversos 2/2 | Logs |
-|---|---|---|
-| ![Diversos 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Diversos 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
+![Configuração da vinculação de usuários](GIFs/User_Mapping-BotSetup.gif)
 
 </details>
 
----
+<details>
+<summary><b>Etapa 6 – Permissões por Cargo & cota de solicitações</b></summary>
 
-### Mobile
+![Configuração das permissões por cargo](GIFs/Role_Permissions-BotSetup.gif)
+
+</details>
 
 <details>
-<summary><b>Visualizações Mobile</b></summary>
+<summary><b>Etapa 7 – Diversos (Widget, assinaturas, seleção diária)</b></summary>
 
-| Registrar | Login | Discord | Seerr |
-|---|---|---|---|
-| ![Registrar](assets/Screenshots/EN/Mobile/EN_register.png) | ![Login](assets/Screenshots/EN/Mobile/EN_login.png) | ![Discord](assets/Screenshots/EN/Mobile/EN_discord.png) | ![Seerr](assets/Screenshots/EN/Mobile/EN_seerr.png) |
+![Configuração diversos](GIFs/Miscellaneous_Widget-BotSetup.gif)
 
-| Bancos de Dados de Mídia | Jellyfin | Vinculação de Usuários | Permissões por Cargo |
-|---|---|---|---|
-| ![Bancos de Dados de Mídia](assets/Screenshots/EN/Mobile/EN_mediadatabases.jpg) | ![Jellyfin](assets/Screenshots/EN/Mobile/EN_jellyfin.png) | ![Vinculação de Usuários](assets/Screenshots/EN/Mobile/EN_usermapping.png) | ![Permissões](assets/Screenshots/EN/Mobile/EN_rolepermissions.png) |
-
-| Diversos | Logs |
-|---|---|
-| ![Diversos](assets/Screenshots/EN/Mobile/EN_miscellaneous.png) | ![Logs](assets/Screenshots/EN/Mobile/EN_logs.jpg) |
+</details>
 
 </details>
 

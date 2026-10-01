@@ -18,19 +18,10 @@
 
 ---
 
-> **📸 Aviso sobre las capturas:** Todas las capturas de pantalla de este README se tomaron en un entorno de demostración y no muestran datos reales de usuarios. La versión en vivo puede verse ligeramente distinta y mostrar más contenido según tu configuración.
+> **📸 Aviso de demo:** Todos los GIF de este README proceden de un servidor de prueba y no muestran datos reales de usuarios. La versión en vivo puede verse ligeramente distinta y mostrar más contenido según tu configuración.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="50%"><code>/search</code> — buscar y solicitar un título</td>
-      <td align="center" width="50%">Una notificación de "ya disponible", enrutada automáticamente al canal correcto</td>
-    </tr>
-    <tr>
-      <td><img src="assets/discord/search-example.png" alt="Ejemplo del comando /search" width="100%"/></td>
-      <td><img src="assets/discord/notification-example.png" alt="Ejemplo de notificación de biblioteca" width="100%"/></td>
-    </tr>
-  </table>
+  <img src="GIFs/Request_Process-BotSetup.gif" alt="Búsqueda, solicitud, aprobación de administrador y notificación de disponibilidad en acción" width="100%"/>
 </div>
 
 ---
@@ -203,7 +194,7 @@ En **Seerr → Configuración → Notificaciones → Webhook**, configura lo sig
 
 | Evento de Seerr | Qué hace Questorr |
 |---|---|
-| Solicitud pendiente de aprobación | Envía un DM solo al solicitante |
+| Solicitud pendiente de aprobación | Publica en el **canal de administración** (con botones de Aprobar/Rechazar) · envía un DM al solicitante |
 | Solicitud aprobada / aprobada automáticamente | Publica en el canal por defecto · envía un DM al solicitante |
 | Contenido disponible | Publica en el canal de la carpeta raíz correspondiente · envía un DM al solicitante |
 | Solicitud rechazada | Envía un DM solo al solicitante |
@@ -216,6 +207,17 @@ En **Seerr → Configuración → Notificaciones → Webhook**, configura lo sig
 > Como Questorr actúa como el **usuario de Seerr vinculado** (Paso 5), ese usuario necesita
 > el permiso correspondiente de Seerr para cada acción — **Solicitar** para pedir,
 > **Auto-aprobar** para aprobación instantánea, **Reportar incidencias** para `/report`.
+
+> ⚠️ **Haz privado tu canal de administración.** Los botones de Aprobar/Rechazar
+> de una solicitud pendiente **no tienen ninguna verificación de permisos
+> propia** — al pulsarlos se llama a Seerr con la propia clave API de
+> Questorr, que puede aprobar o rechazar *cualquier* solicitud. Cualquiera
+> que pueda ver ese canal puede actuar con el mismo poder que tu clave API
+> de Seerr. Si no usas la auto-aprobación de Seerr, restringe los permisos
+> de Discord del canal de administración para que solo administradores/
+> moderadores de confianza puedan verlo — de lo contrario, cualquier
+> miembro que termine en ese canal podrá aprobar sus propias solicitudes
+> (o las de otros).
 
 ### 4. Enrutamiento de canales
 
@@ -276,84 +278,92 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ---
 
-## 📸 Capturas de pantalla
+## 🎬 En acción
 
-> Las capturas son de un entorno de demostración sin datos reales. La versión en vivo puede verse ligeramente distinta.
+> Los GIF proceden de un servidor de prueba sin datos reales.
 
-### Escritorio
+### Usar el bot
 
 <details>
-<summary><b>Autenticación</b></summary>
+<summary><b>El flujo completo de solicitud — buscar, solicitar, aprobación de administrador, "ya disponible"</b></summary>
 
-| Registro | Inicio de sesión |
-|---|---|
-| ![Registro](assets/Screenshots/EN/Desktop/EN_register.png) | ![Inicio de sesión](assets/Screenshots/EN/Desktop/EN_login.png) |
+![Flujo de solicitud](GIFs/Request_Process-BotSetup.gif)
 
 </details>
 
 <details>
+<summary><b>El asistente /help — botones de acción rápida para cada función</b></summary>
+
+![For You](GIFs/ForYou-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Película / Serie aleatoria</b></summary>
+
+![Película / Serie aleatoria](GIFs/Random_Movie_Series-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Recomendaciones diarias y el widget de estado integrable</b></summary>
+
+![Recomendaciones](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+</details>
+
+---
+
+### Configuración del panel
+
+<details>
 <summary><b>Paso 1 – Configuración de Discord</b></summary>
 
-| Parte 1 | Parte 2 |
-|---|---|
-| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+![Configuración de Discord](GIFs/Discord-BotSetup.gif)
 
 </details>
 
 <details>
 <summary><b>Paso 2 – Configuración de Seerr</b></summary>
 
-| Parte 1 | Parte 2 |
-|---|---|
-| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+![Configuración de Seerr](GIFs/Seerr-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Paso 3–4 – Bases de datos multimedia y Jellyfin</b></summary>
+<summary><b>Paso 3 – Bases de datos multimedia (TMDB / OMDb)</b></summary>
 
-| Bases de datos multimedia | Jellyfin |
-|---|---|
-| ![Bases de datos multimedia](assets/Screenshots/EN/Desktop/EN_mediadatabases.png) | ![Jellyfin](assets/Screenshots/EN/Desktop/EN_jellyfin.png) |
+![Configuración de bases de datos multimedia](GIFs/Media_Databases-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Paso 5–6 – Vinculación de usuarios y permisos por rol</b></summary>
+<summary><b>Paso 4 – Conexión con Jellyfin</b></summary>
 
-| Vinculación de usuarios | Permisos por rol |
-|---|---|
-| ![Vinculación de usuarios](assets/Screenshots/EN/Desktop/EN_usermapping.png) | ![Permisos por rol](assets/Screenshots/EN/Desktop/EN_rolepermissions.png) |
+![Configuración de Jellyfin](GIFs/Jellyfin-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Paso 7 – Varios y registros</b></summary>
+<summary><b>Paso 5 – Vinculación de usuarios</b></summary>
 
-| Varios 1/2 | Varios 2/2 | Registros |
-|---|---|---|
-| ![Varios 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Varios 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Registros](assets/Screenshots/EN/Desktop/EN_logs.png) |
+![Configuración de vinculación de usuarios](GIFs/User_Mapping-BotSetup.gif)
 
 </details>
 
----
+<details>
+<summary><b>Paso 6 – Permisos por rol y cuota de solicitudes</b></summary>
 
-### Móvil
+![Configuración de permisos por rol](GIFs/Role_Permissions-BotSetup.gif)
+
+</details>
 
 <details>
-<summary><b>Vistas móviles</b></summary>
+<summary><b>Paso 7 – Varios (widget, suscripciones, selección diaria)</b></summary>
 
-| Registro | Inicio de sesión | Discord | Seerr |
-|---|---|---|---|
-| ![Registro](assets/Screenshots/EN/Mobile/EN_register.png) | ![Inicio de sesión](assets/Screenshots/EN/Mobile/EN_login.png) | ![Discord](assets/Screenshots/EN/Mobile/EN_discord.png) | ![Seerr](assets/Screenshots/EN/Mobile/EN_seerr.png) |
+![Configuración de varios](GIFs/Miscellaneous_Widget-BotSetup.gif)
 
-| Bases de datos multimedia | Jellyfin | Vinculación de usuarios | Permisos por rol |
-|---|---|---|---|
-| ![Bases de datos multimedia](assets/Screenshots/EN/Mobile/EN_mediadatabases.jpg) | ![Jellyfin](assets/Screenshots/EN/Mobile/EN_jellyfin.png) | ![Vinculación de usuarios](assets/Screenshots/EN/Mobile/EN_usermapping.png) | ![Permisos por rol](assets/Screenshots/EN/Mobile/EN_rolepermissions.png) |
-
-| Varios | Registros |
-|---|---|
-| ![Varios](assets/Screenshots/EN/Mobile/EN_miscellaneous.png) | ![Registros](assets/Screenshots/EN/Mobile/EN_logs.jpg) |
+</details>
 
 </details>
 
