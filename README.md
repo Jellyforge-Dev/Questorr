@@ -318,14 +318,13 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 </details>
 
 <details>
-<summary><b>Daily recommendations & the embeddable status widget</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Recommendations](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick and Daily Recommendation post automatically on a
-> schedule you set in Step 7. The embeddable **status widget** shown at
-> the end can display live bot stats on an external dashboard like Homarr
-> or Homepage.
+> schedule you set in Step 7 — one surfaces a random title from your
+> existing Jellyfin library, the other a fresh TMDB suggestion.
 
 </details>
 

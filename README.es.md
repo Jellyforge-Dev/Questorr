@@ -321,14 +321,14 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 </details>
 
 <details>
-<summary><b>Recomendaciones diarias y el widget de estado integrable</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Recomendaciones](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick y Daily Recommendation publican automáticamente según
-> un horario que configuras en el paso 7. El **widget de estado**
-> integrable mostrado al final puede mostrar estadísticas del bot en
-> vivo en un panel externo como Homarr o Homepage.
+> un horario que configuras en el paso 7 — uno muestra un título
+> aleatorio de tu biblioteca de Jellyfin existente, el otro una nueva
+> sugerencia de TMDB.
 
 </details>
 

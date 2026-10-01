@@ -320,14 +320,14 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 </details>
 
 <details>
-<summary><b>Tägliche Empfehlungen & das einbettbare Status-Widget</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Empfehlungen](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick und Daily Recommendation posten automatisch nach
-> einem Zeitplan, den du in Schritt 7 einstellst. Das am Ende gezeigte
-> einbettbare **Status-Widget** kann live Bot-Statistiken auf einem
-> externen Dashboard wie Homarr oder Homepage anzeigen.
+> einem Zeitplan, den du in Schritt 7 einstellst — einmal ein zufälliger
+> Titel aus deiner bestehenden Jellyfin-Bibliothek, einmal ein frischer
+> TMDB-Vorschlag.
 
 </details>
 

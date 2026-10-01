@@ -321,14 +321,14 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 </details>
 
 <details>
-<summary><b>Recomendações diárias e o widget de status incorporável</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Recomendações](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > A seleção aleatória diária e a recomendação diária são publicadas
-> automaticamente em um horário que você define na Etapa 7. O **widget de
-> status** incorporável mostrado no final pode exibir estatísticas ao
-> vivo do bot em um dashboard externo como Homarr ou Homepage.
+> automaticamente em um horário que você define na Etapa 7 — uma mostra
+> um título aleatório da sua biblioteca Jellyfin existente, a outra uma
+> nova sugestão do TMDB.
 
 </details>
 
