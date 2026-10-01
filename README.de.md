@@ -289,12 +289,22 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 
 ![Anfrage-Flow](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` findet einen Titel über TMDB; ein Klick auf **Request** schickt
+> ihn an Seerr. Ist Seerrs **Auto-Approve Requests** deaktiviert, landet die
+> Anfrage im Admin-Channel zum Genehmigen/Ablehnen (siehe Schritt 7 unten)
+> — sonst wird sofort angefragt, und Discord postet erneut, sobald es
+> verfügbar ist.
+
 </details>
 
 <details>
 <summary><b>Der /help-Wizard — Quick-Action-Buttons für jede Funktion</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` öffnet einen Wizard mit Ein-Klick-Buttons für jede Funktion
+> unten — kein Auswendiglernen von Befehlen nötig. **For You** baut
+> TMDB-Empfehlungen aus deiner echten Jellyfin-Sehhistorie.
 
 </details>
 
@@ -303,12 +313,21 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 
 ![Random Movie / Series](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` wählt einen Titel direkt aus deiner **Jellyfin-Bibliothek**
+> (nicht TMDB) — praktisch für "was schaue ich heute Abend" statt zum
+> Entdecken neuer, anzufragender Inhalte.
+
 </details>
 
 <details>
 <summary><b>Tägliche Empfehlungen & das einbettbare Status-Widget</b></summary>
 
 ![Empfehlungen](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> Daily Random Pick und Daily Recommendation posten automatisch nach
+> einem Zeitplan, den du in Schritt 7 einstellst. Das am Ende gezeigte
+> einbettbare **Status-Widget** kann live Bot-Statistiken auf einem
+> externen Dashboard wie Homarr oder Homepage anzeigen.
 
 </details>
 
@@ -320,6 +339,10 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <summary><b>Schritt 1 – Discord-Einstellungen</b></summary>
 
 ![Discord-Einrichtung](GIFs/Discord-BotSetup.gif)
+
+> Questorr lädt beim ersten Start automatisch sein eigenes Logo als
+> Bot-Avatar hoch — du musst keins manuell setzen, außer du willst ein
+> anderes.
 
 </details>
 
@@ -341,6 +364,12 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <summary><b>Schritt 3 – Mediendatenbanken (TMDB / OMDb)</b></summary>
 
 ![Mediendatenbanken-Einrichtung](GIFs/Media_Databases-BotSetup.gif)
+
+> Einen kostenlosen **TMDB-API-Key** bekommst du unter
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (erforderlich für Suche und Poster), einen optionalen **OMDb-API-Key**
+> unter [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) für
+> ausführlichere Bewertungsdaten.
 
 </details>
 
@@ -366,6 +395,12 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 
 ![Nutzerzuordnung-Einrichtung](GIFs/User_Mapping-BotSetup.gif)
 
+> Die Zuordnung eines Discord-Nutzers zu seinem Seerr-Account sorgt dafür,
+> dass dessen Anfragen in Seerr unter dem echten Namen (statt "Admin")
+> erscheinen, treibt die Eigene-Anfragen-Ansicht von `/watchlist
+> filter:mine` an und lässt **For You** personalisierte Empfehlungen aus
+> der Jellyfin-Sehhistorie dieses Nutzers ziehen.
+
 </details>
 
 <details>
@@ -373,12 +408,26 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 
 ![Rollenberechtigungen-Einrichtung](GIFs/Role_Permissions-BotSetup.gif)
 
+> Beschränke per Allowlist/Blocklist von Discord-Rollen, wer den Bot
+> überhaupt nutzen darf, und begrenze optional, wie viele Anfragen jeder
+> Nutzer in einem gleitenden 7-Tage-Fenster stellen darf — praktisch, wenn
+> du deinen Server mit vielen Leuten teilst.
+
 </details>
 
 <details>
 <summary><b>Schritt 7 – Verschiedenes (Widget, Abos, Daily Pick)</b></summary>
 
 ![Verschiedenes-Einrichtung](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ **Seerr Auto-Approve Requests** (hier umschaltbar) entscheidet, ob
+> eine Anfrage sofort genehmigt wird oder im Admin-Channel landet, den du
+> in Schritt 2 zugewiesen hast, damit ein Mensch sie genehmigt/ablehnt.
+> Bei deaktivierter Auto-Genehmigung **stelle sicher, dass die
+> Discord-Berechtigungen dieses Admin-Channels auf vertrauenswürdige
+> Admins/Moderatoren beschränkt sind** — die Genehmigen-/Ablehnen-Buttons
+> haben dieselbe Macht wie dein Seerr-API-Key, ohne eigene
+> Berechtigungsprüfung.
 
 </details>
 

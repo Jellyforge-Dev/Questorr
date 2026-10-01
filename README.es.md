@@ -289,12 +289,23 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ![Flujo de solicitud](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` encuentra un título vía TMDB; al pulsar **Request** se envía a
+> Seerr. Si **Auto-Approve Requests** de Seerr está desactivado, la
+> solicitud va al canal de administración para Aprobar/Rechazar (ver el
+> paso 7 más abajo) — si no, se solicita de inmediato y Discord vuelve a
+> publicar cuando esté disponible.
+
 </details>
 
 <details>
 <summary><b>El asistente /help — botones de acción rápida para cada función</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` abre un asistente con botones de un clic para cada función de
+> abajo — sin necesidad de memorizar comandos. **For You** genera
+> recomendaciones de TMDB a partir de tu historial real de visualización
+> en Jellyfin.
 
 </details>
 
@@ -303,12 +314,21 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ![Película / Serie aleatoria](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` elige un título directamente de tu **biblioteca de Jellyfin**
+> (no de TMDB) — útil para "qué veo esta noche" en lugar de descubrir algo
+> nuevo que solicitar.
+
 </details>
 
 <details>
 <summary><b>Recomendaciones diarias y el widget de estado integrable</b></summary>
 
 ![Recomendaciones](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> Daily Random Pick y Daily Recommendation publican automáticamente según
+> un horario que configuras en el paso 7. El **widget de estado**
+> integrable mostrado al final puede mostrar estadísticas del bot en
+> vivo en un panel externo como Homarr o Homepage.
 
 </details>
 
@@ -320,6 +340,10 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <summary><b>Paso 1 – Configuración de Discord</b></summary>
 
 ![Configuración de Discord](GIFs/Discord-BotSetup.gif)
+
+> Questorr sube automáticamente su propio logo como avatar de Discord del
+> bot la primera vez que arranca — no hace falta configurar uno
+> manualmente salvo que quieras algo distinto.
 
 </details>
 
@@ -341,6 +365,13 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 <summary><b>Paso 3 – Bases de datos multimedia (TMDB / OMDb)</b></summary>
 
 ![Configuración de bases de datos multimedia](GIFs/Media_Databases-BotSetup.gif)
+
+> Consigue una **clave API de TMDB** gratuita en
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (necesaria para buscar y para los pósters), y una **clave API de OMDb**
+> opcional en
+> [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) para
+> datos de valoración más completos.
 
 </details>
 
@@ -367,6 +398,12 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ![Configuración de vinculación de usuarios](GIFs/User_Mapping-BotSetup.gif)
 
+> Vincular a un usuario de Discord con su cuenta de Seerr hace que sus
+> solicitudes aparezcan con su nombre real en Seerr (no "Admin"), alimenta
+> la vista de "mis solicitudes" de `/watchlist filter:mine`, y permite que
+> **For You** saque recomendaciones personalizadas del historial de
+> visualización en Jellyfin de ese usuario.
+
 </details>
 
 <details>
@@ -374,12 +411,26 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 ![Configuración de permisos por rol](GIFs/Role_Permissions-BotSetup.gif)
 
+> Restringe quién puede usar el bot mediante una lista de permitidos/
+> bloqueados de roles de Discord, y opcionalmente limita cuántas
+> solicitudes puede hacer cada usuario en una ventana móvil de 7 días —
+> útil si compartes tu servidor con mucha gente.
+
 </details>
 
 <details>
 <summary><b>Paso 7 – Varios (widget, suscripciones, selección diaria)</b></summary>
 
 ![Configuración de varios](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ **Auto-Approve Requests** de Seerr (se activa aquí) decide si una
+> solicitud se aprueba al instante o va al canal de administración que
+> asignaste en el paso 2 para que un humano la Apruebe/Rechace. Con la
+> auto-aprobación desactivada, **asegúrate de que los permisos de Discord
+> de ese canal de administración estén restringidos solo a
+> administradores/moderadores de confianza** — los botones de Aprobar/
+> Rechazar tienen el mismo poder que tu clave API de Seerr, sin
+> verificación de permisos propia.
 
 </details>
 

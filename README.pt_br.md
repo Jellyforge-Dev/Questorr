@@ -289,12 +289,23 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 ![Fluxo de solicitação](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` encontra um título via TMDB; clicar em **Solicitar** o envia
+> ao Seerr. Se o **Auto-Approve Requests** do Seerr estiver desativado, a
+> solicitação vai para o canal de administração para Aprovar/Recusar (veja
+> a Etapa 7 abaixo) — caso contrário, é solicitada imediatamente e o
+> Discord publica novamente assim que estiver disponível.
+
 </details>
 
 <details>
 <summary><b>O assistente /help — botões de ação rápida para cada funcionalidade</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` abre um assistente com botões de um clique para cada
+> funcionalidade abaixo — sem precisar decorar comandos. **For You**
+> monta recomendações do TMDB a partir do seu histórico real de
+> visualização no Jellyfin.
 
 </details>
 
@@ -303,12 +314,21 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 ![Filme / Série aleatória](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` escolhe um título direto da sua **biblioteca Jellyfin** (não
+> do TMDB) — útil para "o que assistir hoje à noite" em vez de descobrir
+> algo novo para solicitar.
+
 </details>
 
 <details>
 <summary><b>Recomendações diárias e o widget de status incorporável</b></summary>
 
 ![Recomendações](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> A seleção aleatória diária e a recomendação diária são publicadas
+> automaticamente em um horário que você define na Etapa 7. O **widget de
+> status** incorporável mostrado no final pode exibir estatísticas ao
+> vivo do bot em um dashboard externo como Homarr ou Homepage.
 
 </details>
 
@@ -320,6 +340,10 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <summary><b>Etapa 1 – Configurações do Discord</b></summary>
 
 ![Configuração do Discord](GIFs/Discord-BotSetup.gif)
+
+> O Questorr faz upload automático do próprio logo como avatar do bot no
+> Discord na primeira vez que inicia — não é necessário definir um
+> manualmente, a menos que você queira algo diferente.
 
 </details>
 
@@ -341,6 +365,12 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <summary><b>Etapa 3 – Bancos de Dados de Mídia (TMDB / OMDb)</b></summary>
 
 ![Configuração dos bancos de dados de mídia](GIFs/Media_Databases-BotSetup.gif)
+
+> Obtenha uma **chave de API do TMDB** gratuita em
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (obrigatória para busca e pôsteres) e uma **chave de API do OMDb**
+> opcional em [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx)
+> para dados de avaliação mais completos.
 
 </details>
 
@@ -367,6 +397,13 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 ![Configuração da vinculação de usuários](GIFs/User_Mapping-BotSetup.gif)
 
+> Vincular um usuário do Discord à sua conta do Seerr faz com que as
+> solicitações dessa pessoa apareçam em seu nome no Seerr (não como
+> "Admin"), habilita o `/watchlist filter:mine` para mostrar apenas as
+> próprias solicitações e permite que o **For You** monte recomendações
+> personalizadas a partir do histórico de visualização dessa pessoa no
+> Jellyfin.
+
 </details>
 
 <details>
@@ -374,12 +411,26 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 ![Configuração das permissões por cargo](GIFs/Role_Permissions-BotSetup.gif)
 
+> Restrinja quem pode usar o bot através de uma allowlist/blocklist de
+> cargos do Discord e, opcionalmente, limite quantas solicitações cada
+> usuário pode fazer em uma janela móvel de 7 dias — útil se você
+> compartilha seu servidor com muita gente.
+
 </details>
 
 <details>
 <summary><b>Etapa 7 – Diversos (Widget, assinaturas, seleção diária)</b></summary>
 
 ![Configuração diversos](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ O **Seerr Auto-Approve Requests** (ativado aqui) decide se uma
+> solicitação é aprovada instantaneamente ou cai no canal de
+> administração que você atribuiu na Etapa 2 para um humano
+> Aprovar/Recusar. Com a aprovação automática desativada, **garanta que
+> as permissões do Discord desse canal de administração estejam
+> restritas apenas a admins/moderadores de confiança** — os botões de
+> Aprovar/Recusar têm o mesmo poder que sua chave de API do Seerr, sem
+> verificação de permissão própria.
 
 </details>
 

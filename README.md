@@ -288,12 +288,21 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ![Request flow](GIFs/Request_Process-BotSetup.gif)
 
+> `/search` finds a title via TMDB; clicking **Request** sends it to Seerr.
+> If Seerr's **Auto-Approve Requests** is off, it goes to the admin channel
+> for Approve/Decline (see Step 7 below) — otherwise it's requested
+> immediately and Discord posts again once it's available.
+
 </details>
 
 <details>
 <summary><b>The /help wizard — quick-action buttons for every feature</b></summary>
 
 ![For You](GIFs/ForYou-BotSetup.gif)
+
+> `/help` opens a wizard with one-click buttons for every feature below —
+> no need to memorize commands. **For You** builds TMDB recommendations
+> from your actual Jellyfin watch history.
 
 </details>
 
@@ -302,12 +311,21 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ![Random Movie / Series](GIFs/Random_Movie_Series-BotSetup.gif)
 
+> `/random` picks a title straight from your **Jellyfin library** (not
+> TMDB) — handy for "what should I watch tonight" rather than discovering
+> something new to request.
+
 </details>
 
 <details>
 <summary><b>Daily recommendations & the embeddable status widget</b></summary>
 
 ![Recommendations](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+> Daily Random Pick and Daily Recommendation post automatically on a
+> schedule you set in Step 7. The embeddable **status widget** shown at
+> the end can display live bot stats on an external dashboard like Homarr
+> or Homepage.
 
 </details>
 
@@ -319,6 +337,10 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 <summary><b>Step 1 – Discord Settings</b></summary>
 
 ![Discord setup](GIFs/Discord-BotSetup.gif)
+
+> Questorr automatically uploads its own logo as the bot's Discord avatar
+> the first time it starts — no need to set one manually unless you want
+> something different.
 
 </details>
 
@@ -339,6 +361,12 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 <summary><b>Step 3 – Media Databases (TMDB / OMDb)</b></summary>
 
 ![Media Databases setup](GIFs/Media_Databases-BotSetup.gif)
+
+> Get a free **TMDB API key** at
+> [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+> (required for search and posters) and an optional **OMDb API key** at
+> [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx) for
+> richer ratings data.
 
 </details>
 
@@ -363,6 +391,11 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ![User Mapping setup](GIFs/User_Mapping-BotSetup.gif)
 
+> Mapping a Discord user to their Seerr account makes their requests show
+> up as that person in Seerr (not "Admin"), powers `/watchlist
+> filter:mine`'s own-requests view, and lets **For You** pull personalised
+> recommendations from that user's Jellyfin watch history.
+
 </details>
 
 <details>
@@ -370,12 +403,24 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ![Role Permissions setup](GIFs/Role_Permissions-BotSetup.gif)
 
+> Restrict who can use the bot at all via an allowlist/blocklist of
+> Discord roles, and optionally cap how many requests each user can make
+> in a rolling 7-day window — useful if you share your server with a lot
+> of people.
+
 </details>
 
 <details>
 <summary><b>Step 7 – Miscellaneous (Widget, Subscriptions, Daily Pick)</b></summary>
 
 ![Miscellaneous setup](GIFs/Miscellaneous_Widget-BotSetup.gif)
+
+> ⚠️ **Seerr Auto-Approve Requests** (toggled here) decides whether a
+> request is approved instantly or lands in the admin channel you assigned
+> back in Step 2 for a human to Approve/Decline. With auto-approve off,
+> **make sure that admin channel's Discord permissions are restricted to
+> trusted admins/moderators only** — the Approve/Decline buttons carry the
+> same power as your Seerr API key with no separate permission check.
 
 </details>
 
