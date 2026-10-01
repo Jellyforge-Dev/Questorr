@@ -5,7 +5,7 @@
 
   **En självhostad Discord-bot som länkar samman Jellyfin och Seerr — med smarta notiser, automatisk kanalroutning och ett fullständigt webbdashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.4-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.5-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Gå%20med-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -143,7 +143,7 @@ Inställningar för reverse proxy-vidarebefordran: Schema: `http` · Host / vida
 |---|---|
 | `latest` | Senaste stabila version |
 | `dev` | Utvecklingsbygge (kan vara instabilt) |
-| t.ex. `2.4.4` | Specifik fastsatt version — se [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) för alla taggar |
+| t.ex. `2.4.5` | Specifik fastsatt version — se [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) för alla taggar |
 
 ### Manuellt (utveckling)
 

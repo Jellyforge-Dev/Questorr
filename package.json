@@ -1,6 +1,6 @@
 {
   "name": "questorr",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
