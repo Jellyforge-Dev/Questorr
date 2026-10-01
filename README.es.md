@@ -365,8 +365,6 @@ Las solicitudes de funciones aprobadas se siguen en el tablero público del proy
 
 </details>
 
-</details>
-
 ---
 
 ## 🐳 Actualización

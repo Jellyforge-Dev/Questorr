@@ -364,8 +364,6 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 </details>
 
-</details>
-
 ---
 
 ## 🐳 Uppdatering

@@ -365,8 +365,6 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 
 </details>
 
-</details>
-
 ---
 
 ## 🐳 Atualização
