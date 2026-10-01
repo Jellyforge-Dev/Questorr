@@ -318,14 +318,14 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 </details>
 
 <details>
-<summary><b>Dagliga rekommendationer & den inbäddningsbara statuswidgeten</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Rekommendationer](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Dagligt slumpval och daglig rekommendation postas automatiskt enligt
-> ett schema du ställer in i steg 7. Den inbäddningsbara
-> **statuswidgeten** som visas på slutet kan visa live bot-statistik på
-> en extern dashboard som Homarr eller Homepage.
+> ett schema du ställer in i steg 7 — den ena visar en slumpmässig titel
+> från ditt befintliga Jellyfin-bibliotek, den andra ett nytt
+> TMDB-förslag.
 
 </details>
 

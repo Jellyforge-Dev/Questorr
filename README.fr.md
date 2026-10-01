@@ -320,14 +320,14 @@ Tu as une idée ? [Ouvre une demande de fonctionnalité](https://github.com/Jell
 </details>
 
 <details>
-<summary><b>Recommandations quotidiennes & le widget de statut intégrable</b></summary>
+<summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
 ![Recommandations](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick et Daily Recommendation postent automatiquement selon
-> un horaire que tu définis à l'étape 7. Le **widget de statut**
-> intégrable montré à la fin peut afficher des stats du bot en direct sur
-> un tableau de bord externe comme Homarr ou Homepage.
+> un horaire que tu définis à l'étape 7 — l'un fait ressortir un titre
+> aléatoire de ta bibliothèque Jellyfin existante, l'autre une nouvelle
+> suggestion TMDB.
 
 </details>
 
