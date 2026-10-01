@@ -21,7 +21,7 @@
 > **📸 Aviso de demo:** Todos os GIFs deste README vêm de um servidor de teste e não mostram dados reais de usuários. A versão em produção pode ter uma aparência ligeiramente diferente e mostrar mais conteúdo dependendo da sua configuração.
 
 <div align="center">
-  <img src="GIFs/Request_Process-BotSetup.gif" alt="Busca, solicitação, aprovação do administrador e notificação de disponibilidade em ação" width="100%"/>
+  <img src="docs/GIFs/Request_Process-BotSetup.gif" alt="Busca, solicitação, aprovação do administrador e notificação de disponibilidade em ação" width="100%"/>
 </div>
 
 ---
@@ -287,7 +287,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>O fluxo completo de solicitação — busca, solicitação, aprovação do administrador, "disponível agora"</b></summary>
 
-![Fluxo de solicitação](GIFs/Request_Process-BotSetup.gif)
+![Fluxo de solicitação](docs/GIFs/Request_Process-BotSetup.gif)
 
 > `/search` encontra um título via TMDB; clicar em **Solicitar** o envia
 > ao Seerr. Se o **Auto-Approve Requests** do Seerr estiver desativado, a
@@ -300,7 +300,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>O assistente /help — botões de ação rápida para cada funcionalidade</b></summary>
 
-![For You](GIFs/ForYou-BotSetup.gif)
+![For You](docs/GIFs/ForYou-BotSetup.gif)
 
 > `/help` abre um assistente com botões de um clique para cada
 > funcionalidade abaixo — sem precisar decorar comandos. **For You**
@@ -312,7 +312,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Filme / Série aleatória</b></summary>
 
-![Filme / Série aleatória](GIFs/Random_Movie_Series-BotSetup.gif)
+![Filme / Série aleatória](docs/GIFs/Random_Movie_Series-BotSetup.gif)
 
 > `/random` escolhe um título direto da sua **biblioteca Jellyfin** (não
 > do TMDB) — útil para "o que assistir hoje à noite" em vez de descobrir
@@ -323,7 +323,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
-![Recomendações](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+![Recomendações](docs/GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > A seleção aleatória diária e a recomendação diária são publicadas
 > automaticamente em um horário que você define na Etapa 7 — uma mostra
@@ -339,7 +339,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 1 – Configurações do Discord</b></summary>
 
-![Configuração do Discord](GIFs/Discord-BotSetup.gif)
+![Configuração do Discord](docs/GIFs/Discord-BotSetup.gif)
 
 > O Questorr faz upload automático do próprio logo como avatar do bot no
 > Discord na primeira vez que inicia — não é necessário definir um
@@ -350,7 +350,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 2 – Configuração do Seerr</b></summary>
 
-![Configuração do Seerr](GIFs/Seerr-BotSetup.gif)
+![Configuração do Seerr](docs/GIFs/Seerr-BotSetup.gif)
 
 > **Root Folder → Channel Mapping** roteia notificações de "disponível
 > agora" de acordo com a pasta raiz do Radarr/Sonarr onde o download caiu
@@ -364,7 +364,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 3 – Bancos de Dados de Mídia (TMDB / OMDb)</b></summary>
 
-![Configuração dos bancos de dados de mídia](GIFs/Media_Databases-BotSetup.gif)
+![Configuração dos bancos de dados de mídia](docs/GIFs/Media_Databases-BotSetup.gif)
 
 > Obtenha uma **chave de API do TMDB** gratuita em
 > [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
@@ -377,7 +377,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 4 – Conexão com o Jellyfin</b></summary>
 
-![Configuração do Jellyfin](GIFs/Jellyfin-BotSetup.gif)
+![Configuração do Jellyfin](docs/GIFs/Jellyfin-BotSetup.gif)
 
 > **Jellyfin Library → Channel Mapping** cumpre duas funções. Primeiro, é
 > o *segundo* nível de roteamento para notificações disparadas pelo Seerr,
@@ -395,7 +395,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 5 – Vinculação de Usuários</b></summary>
 
-![Configuração da vinculação de usuários](GIFs/User_Mapping-BotSetup.gif)
+![Configuração da vinculação de usuários](docs/GIFs/User_Mapping-BotSetup.gif)
 
 > Vincular um usuário do Discord à sua conta do Seerr faz com que as
 > solicitações dessa pessoa apareçam em seu nome no Seerr (não como
@@ -409,7 +409,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 6 – Permissões por Cargo & cota de solicitações</b></summary>
 
-![Configuração das permissões por cargo](GIFs/Role_Permissions-BotSetup.gif)
+![Configuração das permissões por cargo](docs/GIFs/Role_Permissions-BotSetup.gif)
 
 > Restrinja quem pode usar o bot através de uma allowlist/blocklist de
 > cargos do Discord e, opcionalmente, limite quantas solicitações cada
@@ -421,7 +421,7 @@ Tem uma ideia? [Abra uma solicitação de funcionalidade](https://github.com/Jel
 <details>
 <summary><b>Etapa 7 – Diversos (Widget, assinaturas, seleção diária)</b></summary>
 
-![Configuração diversos](GIFs/Miscellaneous_Widget-BotSetup.gif)
+![Configuração diversos](docs/GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 > ⚠️ O **Seerr Auto-Approve Requests** (ativado aqui) decide se uma
 > solicitação é aprovada instantaneamente ou cai no canal de

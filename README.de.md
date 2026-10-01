@@ -21,7 +21,7 @@
 > **📸 Demo-Hinweis:** Alle GIFs in dieser README stammen von einem Testserver ohne echte Nutzerdaten. Die Live-Version kann leicht abweichen und zeigt je nach Konfiguration mehr Inhalte.
 
 <div align="center">
-  <img src="GIFs/Request_Process-BotSetup.gif" alt="Suchen, Anfragen, Admin-Genehmigung und Verfügbarkeits-Benachrichtigung in Aktion" width="100%"/>
+  <img src="docs/GIFs/Request_Process-BotSetup.gif" alt="Suchen, Anfragen, Admin-Genehmigung und Verfügbarkeits-Benachrichtigung in Aktion" width="100%"/>
 </div>
 
 ---
@@ -287,7 +287,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Der komplette Anfrage-Flow — Suchen, Anfragen, Admin-Genehmigung, "jetzt verfügbar"</b></summary>
 
-![Anfrage-Flow](GIFs/Request_Process-BotSetup.gif)
+![Anfrage-Flow](docs/GIFs/Request_Process-BotSetup.gif)
 
 > `/search` findet einen Titel über TMDB; ein Klick auf **Request** schickt
 > ihn an Seerr. Ist Seerrs **Auto-Approve Requests** deaktiviert, landet die
@@ -300,7 +300,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Der /help-Wizard — Quick-Action-Buttons für jede Funktion</b></summary>
 
-![For You](GIFs/ForYou-BotSetup.gif)
+![For You](docs/GIFs/ForYou-BotSetup.gif)
 
 > `/help` öffnet einen Wizard mit Ein-Klick-Buttons für jede Funktion
 > unten — kein Auswendiglernen von Befehlen nötig. **For You** baut
@@ -311,7 +311,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Zufälliger Film / Zufällige Serie</b></summary>
 
-![Random Movie / Series](GIFs/Random_Movie_Series-BotSetup.gif)
+![Random Movie / Series](docs/GIFs/Random_Movie_Series-BotSetup.gif)
 
 > `/random` wählt einen Titel direkt aus deiner **Jellyfin-Bibliothek**
 > (nicht TMDB) — praktisch für "was schaue ich heute Abend" statt zum
@@ -322,7 +322,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
-![Empfehlungen](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+![Empfehlungen](docs/GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Daily Random Pick und Daily Recommendation posten automatisch nach
 > einem Zeitplan, den du in Schritt 7 einstellst — einmal ein zufälliger
@@ -338,7 +338,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 1 – Discord-Einstellungen</b></summary>
 
-![Discord-Einrichtung](GIFs/Discord-BotSetup.gif)
+![Discord-Einrichtung](docs/GIFs/Discord-BotSetup.gif)
 
 > Questorr lädt beim ersten Start automatisch sein eigenes Logo als
 > Bot-Avatar hoch — du musst keins manuell setzen, außer du willst ein
@@ -349,7 +349,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 2 – Seerr-Konfiguration</b></summary>
 
-![Seerr-Einrichtung](GIFs/Seerr-BotSetup.gif)
+![Seerr-Einrichtung](docs/GIFs/Seerr-BotSetup.gif)
 
 > **Root Folder → Channel Mapping** routet "jetzt verfügbar"-Benachrichtigungen
 > danach, in welchem Radarr/Sonarr-Root-Folder ein Download gelandet ist
@@ -363,7 +363,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 3 – Mediendatenbanken (TMDB / OMDb)</b></summary>
 
-![Mediendatenbanken-Einrichtung](GIFs/Media_Databases-BotSetup.gif)
+![Mediendatenbanken-Einrichtung](docs/GIFs/Media_Databases-BotSetup.gif)
 
 > Einen kostenlosen **TMDB-API-Key** bekommst du unter
 > [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
@@ -376,7 +376,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 4 – Jellyfin-Verbindung</b></summary>
 
-![Jellyfin-Einrichtung](GIFs/Jellyfin-BotSetup.gif)
+![Jellyfin-Einrichtung](docs/GIFs/Jellyfin-BotSetup.gif)
 
 > **Jellyfin Library → Channel Mapping** erfüllt zwei Aufgaben. Erstens ist
 > es die *zweite* Routing-Stufe für Seerr-ausgelöste Benachrichtigungen,
@@ -393,7 +393,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 5 – Nutzerzuordnung</b></summary>
 
-![Nutzerzuordnung-Einrichtung](GIFs/User_Mapping-BotSetup.gif)
+![Nutzerzuordnung-Einrichtung](docs/GIFs/User_Mapping-BotSetup.gif)
 
 > Die Zuordnung eines Discord-Nutzers zu seinem Seerr-Account sorgt dafür,
 > dass dessen Anfragen in Seerr unter dem echten Namen (statt "Admin")
@@ -406,7 +406,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 6 – Rollenberechtigungen & Anfrage-Kontingent</b></summary>
 
-![Rollenberechtigungen-Einrichtung](GIFs/Role_Permissions-BotSetup.gif)
+![Rollenberechtigungen-Einrichtung](docs/GIFs/Role_Permissions-BotSetup.gif)
 
 > Beschränke per Allowlist/Blocklist von Discord-Rollen, wer den Bot
 > überhaupt nutzen darf, und begrenze optional, wie viele Anfragen jeder
@@ -418,7 +418,7 @@ Du hast eine Idee? [Stelle einen Feature-Request](https://github.com/Jellyforge-
 <details>
 <summary><b>Schritt 7 – Verschiedenes (Widget, Abos, Daily Pick)</b></summary>
 
-![Verschiedenes-Einrichtung](GIFs/Miscellaneous_Widget-BotSetup.gif)
+![Verschiedenes-Einrichtung](docs/GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 > ⚠️ **Seerr Auto-Approve Requests** (hier umschaltbar) entscheidet, ob
 > eine Anfrage sofort genehmigt wird oder im Admin-Channel landet, den du

@@ -21,7 +21,7 @@
 > **📸 Demo-notis:** Alla GIF:ar i denna README är inspelade från en testserver och visar ingen riktig användardata. Livemiljön kan se lite annorlunda ut och visa mer innehåll beroende på din konfiguration.
 
 <div align="center">
-  <img src="GIFs/Request_Process-BotSetup.gif" alt="Sökning, förfrågan, admin-godkännande och tillgänglighetsnotis i praktiken" width="100%"/>
+  <img src="docs/GIFs/Request_Process-BotSetup.gif" alt="Sökning, förfrågan, admin-godkännande och tillgänglighetsnotis i praktiken" width="100%"/>
 </div>
 
 ---
@@ -286,7 +286,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Hela förfrågningsflödet — sök, begär, admin-godkännande, "nu tillgänglig"</b></summary>
 
-![Förfrågningsflöde](GIFs/Request_Process-BotSetup.gif)
+![Förfrågningsflöde](docs/GIFs/Request_Process-BotSetup.gif)
 
 > `/search` hittar en titel via TMDB; ett klick på **Request** skickar
 > den till Seerr. Om Seerrs **Auto-Approve Requests** är avstängt hamnar
@@ -298,7 +298,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>/help-guiden — snabbknappar för varje funktion</b></summary>
 
-![For You](GIFs/ForYou-BotSetup.gif)
+![For You](docs/GIFs/ForYou-BotSetup.gif)
 
 > `/help` öppnar en guide med ett-klicks-knappar för varje funktion
 > nedan — inget behov av att memorera kommandon. **For You** bygger
@@ -309,7 +309,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Slumpmässig film / serie</b></summary>
 
-![Slumpmässig film/serie](GIFs/Random_Movie_Series-BotSetup.gif)
+![Slumpmässig film/serie](docs/GIFs/Random_Movie_Series-BotSetup.gif)
 
 > `/random` väljer en titel direkt från ditt **Jellyfin-bibliotek** (inte
 > TMDB) — praktiskt för "vad ska jag se ikväll" snarare än att upptäcka
@@ -320,7 +320,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Daily Random Pick & Daily Recommendation</b></summary>
 
-![Rekommendationer](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+![Rekommendationer](docs/GIFs/Miscellaneous_Recommendation-BotSetup.gif)
 
 > Dagligt slumpval och daglig rekommendation postas automatiskt enligt
 > ett schema du ställer in i steg 7 — den ena visar en slumpmässig titel
@@ -336,7 +336,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 1 – Discord-inställningar</b></summary>
 
-![Discord-konfiguration](GIFs/Discord-BotSetup.gif)
+![Discord-konfiguration](docs/GIFs/Discord-BotSetup.gif)
 
 > Questorr laddar automatiskt upp sin egen logotyp som botens
 > Discord-avatar första gången den startar — ingen anledning att ställa
@@ -347,7 +347,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 2 – Seerr-konfiguration</b></summary>
 
-![Seerr-konfiguration](GIFs/Seerr-BotSetup.gif)
+![Seerr-konfiguration](docs/GIFs/Seerr-BotSetup.gif)
 
 > **Root Folder → Channel Mapping** routar "nu tillgänglig"-notiser utifrån
 > vilken Radarr/Sonarr-rotmapp en nedladdning hamnade i (t.ex. din
@@ -360,7 +360,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 3 – Mediedatabaser (TMDB / OMDb)</b></summary>
 
-![Mediedatabaser-konfiguration](GIFs/Media_Databases-BotSetup.gif)
+![Mediedatabaser-konfiguration](docs/GIFs/Media_Databases-BotSetup.gif)
 
 > Skaffa en gratis **TMDB API-nyckel** på
 > [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
@@ -373,7 +373,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 4 – Jellyfin-anslutning</b></summary>
 
-![Jellyfin-konfiguration](GIFs/Jellyfin-BotSetup.gif)
+![Jellyfin-konfiguration](docs/GIFs/Jellyfin-BotSetup.gif)
 
 > **Jellyfin Library → Channel Mapping** har två jobb. Först är det den
 > *andra* routningsnivån för Seerr-utlösta notiser, som används när
@@ -390,7 +390,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 5 – Användarkoppling</b></summary>
 
-![Användarkoppling-konfiguration](GIFs/User_Mapping-BotSetup.gif)
+![Användarkoppling-konfiguration](docs/GIFs/User_Mapping-BotSetup.gif)
 
 > Att koppla en Discord-användare till deras Seerr-konto gör att deras
 > förfrågningar visas som den personen i Seerr (inte "Admin"), driver
@@ -403,7 +403,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 6 – Rollbehörigheter & förfrågningskvot</b></summary>
 
-![Rollbehörigheter-konfiguration](GIFs/Role_Permissions-BotSetup.gif)
+![Rollbehörigheter-konfiguration](docs/GIFs/Role_Permissions-BotSetup.gif)
 
 > Begränsa vem som får använda boten alls via en allowlist/blocklist av
 > Discord-roller, och sätt eventuellt ett tak för hur många
@@ -416,7 +416,7 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 <details>
 <summary><b>Steg 7 – Övrigt (Widget, prenumerationer, daglig utvald)</b></summary>
 
-![Övrigt-konfiguration](GIFs/Miscellaneous_Widget-BotSetup.gif)
+![Övrigt-konfiguration](docs/GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 > ⚠️ **Seerr Auto-Approve Requests** (togglas här) avgör om en förfrågan
 > godkänns direkt eller hamnar i adminkanalen du tilldelade i steg 2 för
