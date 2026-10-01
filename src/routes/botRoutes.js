@@ -21,7 +21,7 @@ import logger from "../utils/logger.js";
 import { jellyfinAuthHeaders } from "../api/jellyfin.js";
 
 const require = createRequire(import.meta.url);
-const { version: APP_VERSION } = require("../package.json");
+const { version: APP_VERSION } = require("../../package.json");
 
 // ── Widget locale helpers ────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
