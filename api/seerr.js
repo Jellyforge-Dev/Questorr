@@ -636,12 +636,14 @@ export async function updateIssueStatus(issueId, status, seerrUrl, apiKey) {
  * @param {number} take - Number of requests to fetch
  * @returns {Promise<Object>} Response with results array and pageInfo
  */
-export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all") {
+export async function fetchRequests(seerrUrl, apiKey, take = 20, filter = "all", requestedBy = undefined) {
   const apiUrl = normalizeApiUrl(seerrUrl);
+  const params = { take, sort: "modified", filter };
+  if (requestedBy != null) params.requestedBy = requestedBy;
   const response = await withRetry(
     () => axios.get(`${apiUrl}/request`, {
       headers: { "X-Api-Key": apiKey },
-      params: { take, sort: "modified", filter },
+      params,
       timeout: TIMEOUTS.SEERR_API,
     }),
     { label: "Seerr fetch requests" }

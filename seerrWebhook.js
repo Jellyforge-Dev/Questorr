@@ -709,7 +709,21 @@ async function processEvent(data, eventType, cfg, client) {
       if (eventType === "ISSUE_CREATED") {
         // Only surface issues that did NOT originate from /report (those already
         // posted to admin) — i.e. issues filed directly in Seerr.
-        if (!issueId || !getIssueReporter(issueId)) {
+        //
+        // Race: Seerr can fire this webhook before /report's own
+        // recordIssueReporter() call (which only runs once its createIssue()
+        // await resolves) has had a chance to run, since the webhook is a
+        // separate incoming request that isn't ordered relative to that
+        // continuation. Without this, the two code paths would both decide
+        // "not yet recorded" and both post — a guaranteed double-post, not
+        // just an occasional race. Give recordIssueReporter() a brief moment
+        // to catch up before concluding this issue is unrelated to /report.
+        let reporterRecord = issueId ? getIssueReporter(issueId) : null;
+        if (issueId && !reporterRecord) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          reporterRecord = getIssueReporter(issueId);
+        }
+        if (!issueId || !reporterRecord) {
           const adminChannelId = resolveAdminChannel();
           if (adminChannelId) {
             const adminChannel = await client.channels.fetch(adminChannelId);
@@ -1103,19 +1117,19 @@ async function buildEmbed(data, eventType, cfg, tmdbDetails, mediaType, tmdbId, 
     case "ISSUE_CREATED":
     case "ISSUE_REOPENED": {
       const fields = [];
-      if (issue?.issue_type) fields.push({ name: "Issue Type", value: issue.issue_type, inline: true });
-      if (issue?.reportedBy_username) fields.push({ name: "Reported by", value: issue.reportedBy_username, inline: true });
-      if (mediaType) fields.push({ name: "Media Type", value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
+      if (issue?.issue_type) fields.push({ name: t("field_issue_type"), value: issue.issue_type, inline: true });
+      if (issue?.reportedBy_username) fields.push({ name: t("field_reported_by"), value: issue.reportedBy_username, inline: true });
+      if (mediaType) fields.push({ name: t("field_type"), value: mediaType === "movie" ? t("field_type_movie") : t("field_type_tv"), inline: true });
       if (fields.length > 0) embed.addFields(...fields);
       break;
     }
     case "ISSUE_COMMENT": {
       if (comment?.comment_message) embed.setDescription(comment.comment_message);
-      if (comment?.commentedBy_username) embed.addFields({ name: "Comment by", value: comment.commentedBy_username, inline: true });
+      if (comment?.commentedBy_username) embed.addFields({ name: t("field_commented_by"), value: comment.commentedBy_username, inline: true });
       break;
     }
     case "ISSUE_RESOLVED": {
-      if (issue?.resolvedBy_username) embed.addFields({ name: "Resolved by", value: issue.resolvedBy_username, inline: true });
+      if (issue?.resolvedBy_username) embed.addFields({ name: t("field_resolved_by"), value: issue.resolvedBy_username, inline: true });
       break;
     }
     case "TEST_NOTIFICATION":
@@ -1366,8 +1380,16 @@ export async function sendRequesterDm(data, eventType, cfg, client, embed, _lega
       eventType === "MEDIA_AUTO_APPROVED" ||
       eventType === "MEDIA_DECLINED"
     ) {
-      const reqId = data.request?.request_id ?? tmdbId;
-      if (reqId) markApprovalDmSent({ eventType, requestId: reqId, source: "seerr-webhook", title, tmdbId });
+      const realRequestId = data.request?.request_id;
+      const reqId = realRequestId ?? tmdbId;
+      // tmdbId alone is a weaker fallback key than Seerr's real request_id — two
+      // genuinely separate requests for the same title (e.g. season 1 last
+      // month, season 2 today) would collide under the default 48h TTL. Give
+      // the fallback a short TTL: still comfortably longer than the status
+      // poller's default 120s interval (so cross-source dedup still works),
+      // but short enough to not block an unrelated future request.
+      const ttlMs = realRequestId ? undefined : 30 * 60 * 1000;
+      if (reqId) markApprovalDmSent({ eventType, requestId: reqId, source: "seerr-webhook", title, tmdbId, ttlMs });
     }
   } catch (err) {
     logger.warn(`[SEERR WEBHOOK] Could not send DM to ${discordId}: ${err.message}`);

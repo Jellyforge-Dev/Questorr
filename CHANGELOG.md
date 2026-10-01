@@ -4,6 +4,39 @@
 
 ## English
 
+### 🛠️ v2.4.5
+
+#### 🐛 Fixes
+- `/report` double-posted to the admin channel for every report (movie and series) — Seerr's `ISSUE_CREATED` webhook could arrive before `/report`'s own bookkeeping call had finished, so both code paths decided "not yet recorded" and both posted. Added a brief retry before the webhook path concludes the issue is unrelated to `/report`.
+- `/report series`' season option rejected `0` ("Specials") at the Discord command level (`setMinValue(1)`), so it never reached the backend fix from the previous release. Changed to `setMinValue(0)`.
+- Fixed a doubled error message on a failed bot start ("Failed to register Discord commands: Failed to register Discord commands: ...") — the error was being wrapped with the same prefix twice.
+- `/status` could throw and abort the reply for any long, not-yet-requested title — its button's `customId` embedded the raw title, which Discord caps at 100 characters. That title segment was never actually used downstream, so it's dropped.
+- `/watchlist filter:mine` showed the server-wide request count instead of the user's own, and could miss a user's own older requests on a busy multi-user server — both fixed by using Seerr's own `requestedBy` filter server-side instead of filtering an unfiltered page client-side.
+- `formatDate()`/`formatTime()`'s "auto" mode only special-cased German (and Swedish for time) — French/Spanish/Brazilian Portuguese users got US date format and 12h AM/PM instead of their own conventions. Now maps all 6 supported languages explicitly.
+- 5 field names in Seerr issue-event embeds ("Issue Type", "Reported by", "Media Type", "Comment by", "Resolved by") were raw English literals that never went through the translation system — now localized across all 6 languages.
+- Media-event Discord notifications (channel + DM) showed their title/description in whatever language Seerr itself is configured for instead of Questorr's own `BOT_LANGUAGE` — TMDB's own `BOT_LANGUAGE`-fetched title and overview are now preferred over Seerr's raw webhook text.
+- `getTmdbLanguage()` never mapped `BOT_LANGUAGE=pt_br` to a TMDB locale, silently falling back to English for every Brazilian Portuguese install.
+- TV show requests made through For You, `/random`, `/recommend`, `/similar`, `/upcoming` or Daily Pick silently failed — the "all seasons" shortcut sent Seerr an empty season list, which it accepted without creating anything. Now resolves to the show's real season numbers first, same as `/search`.
+- `ROLE_ALLOWLIST`/`ROLE_BLOCKLIST` was silently bypassed by every button interaction (request buttons, the whole `/help` wizard, pagination) — the permission check only ran for slash commands and select menus. Buttons are now gated the same way, except admin-only approve/decline/issue buttons.
+- A show with multiple seasons becoming available close together only triggered one "now available" notification — season-availability dedup is now keyed per season, not just per title.
+- The dashboard's Library Insights movie count under-reported when a movie library contains files Jellyfin didn't tag with its internal "Movie" type — now uses the same `/Items/Counts` endpoint Jellyfin's own admin dashboard uses.
+- `tagSelect.js` could misclassify a tv show as a movie when a show with more than 24 seasons had zero seasons selected so far (multi-menu picker) — `mediaType` is now carried explicitly instead of guessed from the season selection.
+- Approval-DM dedup fell back to a bare TMDB id when Seerr's webhook omitted `request_id`, risking a second genuine approval for the same title being wrongly suppressed. The fallback now uses a short 30-minute TTL instead of the default 48h.
+- The bot could spin up two Discord clients if two start triggers landed within the ~1-5s Discord login window (e.g. two dashboard tabs, or `AUTO_START_BOT` racing a manual click).
+- The Jellyfin poller had no re-entrancy guard between the periodic tick and a manual "fast" trigger.
+- `SEERR_URL` now gets the same trailing-slash normalization on save as it already got on every actual API call.
+- No global handling of an expired dashboard session — an expired Bearer token now shows a localized "session expired" message and returns to login instead of failing silently.
+
+#### 📚 Docs
+- All 6 READMEs: replaced the static screenshot sections with GIFs — both the dashboard setup walkthrough and, new, actual bot usage (the full search → request → admin approval → available flow, the `/help` wizard, Random Movie/Series, daily recommendations).
+- Documented that the admin channel should be restricted to trusted admins/moderators when not using Seerr's auto-approve — the Approve/Decline buttons have no permission check of their own and call Seerr with Questorr's own API key.
+- Corrected a factual error in the notification table ("Request pending approval" was documented as DM-only; it actually posts to the admin channel with Approve/Decline buttons).
+- Removed unreferenced assets and docs (old screenshot set, `SCREENSHOTS.md`, internal planning notes) ahead of the project's public listing.
+
+All 402 tests pass (18 new).
+
+---
+
 ### 🌍 v2.4.4
 
 #### 🌍 Full French, Spanish, Brazilian Portuguese & Swedish support
@@ -244,6 +277,39 @@ The browser now warns before navigating away from the dashboard when there are u
 ---
 
 ## Deutsch
+
+### 🛠️ v2.4.5
+
+#### 🐛 Fixes
+- `/report` postete bei jedem Report (Film und Serie) doppelt in den Admin-Kanal — Seerrs `ISSUE_CREATED`-Webhook konnte ankommen, bevor `/report`s eigene Registrierung abgeschlossen war, wodurch beide Codepfade "noch nicht erfasst" annahmen und beide posteten. Kurzer Retry ergänzt, bevor der Webhook-Pfad selbst postet.
+- Die Staffel-Option bei `/report series` lehnte `0` ("Specials") bereits auf Discord-Command-Ebene ab (`setMinValue(1)`), wodurch der Backend-Fix aus dem letzten Release nie griff. Jetzt auf `setMinValue(0)` korrigiert.
+- Doppelten Fehlertext beim fehlgeschlagenen Bot-Start behoben ("Failed to register Discord commands: Failed to register Discord commands: ...") — der Fehler wurde zweimal mit demselben Präfix umwickelt.
+- `/status` konnte bei langen, noch nicht angefragten Titeln abstürzen und die Antwort abbrechen — der Button-customId enthielt den rohen Titel, den Discord auf 100 Zeichen begrenzt. Dieses Titel-Segment wurde nie tatsächlich genutzt und wird jetzt weggelassen.
+- `/watchlist filter:mine` zeigte die serverweite Anfragenzahl statt der eigenen und konnte eigene ältere Anfragen auf stark frequentierten Mehrbenutzer-Servern übersehen — beides behoben durch serverseitiges Filtern über Seerrs eigenen `requestedBy`-Parameter statt clientseitigem Filtern einer ungefilterten Seite.
+- `formatDate()`/`formatTime()`s "auto"-Modus kannte nur Deutsch (und Schwedisch bei der Zeit) als Sonderfall — Französisch/Spanisch/Brasilianisches Portugiesisch bekamen US-Datumsformat und 12h-AM/PM statt der eigenen Konventionen. Jetzt alle 6 unterstützten Sprachen explizit abgebildet.
+- 5 Feldnamen in Seerr-Issue-Event-Embeds ("Issue Type", "Reported by", "Media Type", "Comment by", "Resolved by") waren rohe englische Strings ohne Übersetzung — jetzt in allen 6 Sprachen lokalisiert.
+- Media-Event-Benachrichtigungen (Kanal + DM) zeigten Titel/Beschreibung in der Sprache, die in Seerr selbst eingestellt ist, statt in Questorrs eigenem `BOT_LANGUAGE` — TMDBs eigener, über `BOT_LANGUAGE` abgerufener Titel und Beschreibungstext wird jetzt bevorzugt.
+- `getTmdbLanguage()` hat `BOT_LANGUAGE=pt_br` nie auf eine TMDB-Sprache abgebildet und fiel dadurch bei jeder brasilianisch-portugiesischen Installation still auf Englisch zurück.
+- Serien-Anfragen über For You, `/random`, `/recommend`, `/similar`, `/upcoming` oder Daily Pick schlugen stillschweigend fehl — die "alle Staffeln"-Abkürzung schickte Seerr eine leere Staffelliste, die akzeptiert wurde, ohne etwas zu erzeugen. Staffeln werden jetzt vorher wie bei `/search` in echte Staffelnummern aufgelöst.
+- `ROLE_ALLOWLIST`/`ROLE_BLOCKLIST` wurde bei jeder Button-Interaktion stillschweigend umgangen (Request-Buttons, der komplette `/help`-Wizard, Pagination) — die Berechtigungsprüfung lief bisher nur bei Slash-Commands und Auswahlmenüs. Buttons werden jetzt genauso geprüft, mit Ausnahme der Admin-Buttons für Genehmigen/Ablehnen/Issues.
+- Bei einer Serie mit mehreren, kurz hintereinander verfügbar werdenden Staffeln kam nur eine "jetzt verfügbar"-Benachrichtigung — die Staffel-Verfügbarkeits-Dedup ist jetzt pro Staffel statt nur pro Titel geschlüsselt.
+- Die Filmanzahl unter Library Insights im Dashboard war zu niedrig, wenn eine Film-Bibliothek Dateien enthält, die Jellyfin intern nicht als "Movie"-Typ getaggt hat — nutzt jetzt denselben `/Items/Counts`-Endpunkt wie Jellyfins eigenes Admin-Dashboard.
+- `tagSelect.js` konnte eine Serie fälschlich als Film klassifizieren, wenn bei einer Serie mit mehr als 24 Staffeln noch keine Staffel ausgewählt war (Multi-Menü-Picker) — `mediaType` wird jetzt explizit übergeben statt aus der Staffelauswahl geraten.
+- Die Genehmigungs-DM-Dedup fiel auf eine bloße TMDB-ID zurück, wenn Seerrs Webhook `request_id` wegließ — das riskierte, eine zweite echte Genehmigung desselben Titels fälschlich zu unterdrücken. Der Fallback nutzt jetzt eine kurze 30-Minuten-TTL statt der Standard-48h.
+- Der Bot konnte zwei Discord-Clients starten, wenn zwei Start-Trigger innerhalb des ~1-5s-Discord-Login-Fensters lagen (z. B. zwei Dashboard-Tabs oder `AUTO_START_BOT` gleichzeitig mit einem manuellen Klick).
+- Der Jellyfin-Poller hatte keinen Re-Entrancy-Schutz zwischen dem periodischen Tick und einem manuellen "Fast"-Trigger.
+- `SEERR_URL` bekommt beim Speichern jetzt dieselbe Trailing-Slash-Normalisierung, die bereits bei jedem echten API-Call galt.
+- Keine globale Behandlung einer abgelaufenen Dashboard-Sitzung — ein abgelaufener Bearer-Token zeigt jetzt eine lokalisierte "Sitzung abgelaufen"-Meldung und kehrt zum Login zurück, statt still zu scheitern.
+
+#### 📚 Dokumentation
+- Alle 6 READMEs: statische Screenshot-Abschnitte durch GIFs ersetzt — sowohl den Dashboard-Setup-Walkthrough als auch, neu, die tatsächliche Bot-Nutzung (kompletter Suchen → Anfragen → Admin-Genehmigung → Verfügbar-Flow, der `/help`-Wizard, Random Movie/Series, tägliche Empfehlungen).
+- Dokumentiert, dass der Admin-Kanal auf vertrauenswürdige Admins/Moderatoren beschränkt sein sollte, wenn Seerrs Auto-Genehmigung nicht genutzt wird — die Genehmigen-/Ablehnen-Buttons haben keine eigene Berechtigungsprüfung und rufen Seerr mit Questorrs eigenem API-Key auf.
+- Faktischen Fehler in der Benachrichtigungstabelle korrigiert ("Anfrage ausstehend" war als reine DM dokumentiert; tatsächlich postet es mit Genehmigen-/Ablehnen-Buttons in den Admin-Kanal).
+- Unreferenzierte Assets und Dokumente entfernt (alter Screenshot-Satz, `SCREENSHOTS.md`, interne Planungsnotizen) im Vorfeld der öffentlichen Listung des Projekts.
+
+Alle 402 Tests grün (18 neu).
+
+---
 
 ### 🌍 v2.4.4
 

@@ -212,7 +212,7 @@ export async function handleSeasonSelect(interaction) {
 
           const tagMenu = new StringSelectMenuBuilder()
             .setCustomId(
-              `select_tags|${tmdbId}|${allSelectedSeasons.join(",")}`
+              `select_tags|${tmdbId}|tv|${allSelectedSeasons.join(",")}`
             )
             .setPlaceholder(t("select_tags_placeholder"))
             .addOptions(tagOptions)

@@ -204,16 +204,21 @@ export async function handleWatchlistCommand(interaction) {
     const discordId = interaction.user.id;
     const currentSeerrUserId = getSeerrUserIdFromDiscord(discordId);
 
-    const data = await fetchRequests(seerrUrl, apiKey, 50, filter === "mine" ? "all" : filter);
-    let requests = data?.results || [];
-
-    if (filter === "mine") {
-      if (currentSeerrUserId) {
-        requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
-      } else {
-        return interaction.editReply({ content: t("watchlist_no_mapping") });
-      }
+    if (filter === "mine" && !currentSeerrUserId) {
+      return interaction.editReply({ content: t("watchlist_no_mapping") });
     }
+
+    // "mine" is filtered server-side via Seerr's own requestedBy param instead
+    // of fetching an unfiltered "all" page and filtering client-side — that
+    // older approach both mis-reported the total (pageInfo.results was the
+    // server-wide count) and could hide a user's own older requests once a
+    // busy server had more than `take` requests from other users ahead of them.
+    const data = await fetchRequests(
+      seerrUrl, apiKey, 50,
+      filter === "mine" ? "all" : filter,
+      filter === "mine" ? currentSeerrUserId : undefined
+    );
+    const requests = data?.results || [];
 
     if (requests.length === 0) {
       return interaction.editReply({ content: t("watchlist_empty") });
@@ -257,12 +262,12 @@ export async function handleWatchlistPagination(interaction) {
     const discordId = interaction.user.id;
     const currentSeerrUserId = getSeerrUserIdFromDiscord(discordId);
 
-    const data = await fetchRequests(seerrUrl, apiKey, 50, filter === "mine" ? "all" : filter);
-    let requests = data?.results || [];
-
-    if (filter === "mine" && currentSeerrUserId) {
-      requests = requests.filter(r => String(r.requestedBy?.id) === currentSeerrUserId);
-    }
+    const data = await fetchRequests(
+      seerrUrl, apiKey, 50,
+      filter === "mine" ? "all" : filter,
+      filter === "mine" ? currentSeerrUserId : undefined
+    );
+    const requests = data?.results || [];
 
     const titlePromises = requests.map(r => {
       const tmdbId = r.media?.tmdbId;

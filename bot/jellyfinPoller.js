@@ -60,6 +60,11 @@ import { CONFIG_PATH } from "../utils/configFile.js";
 
 let pollerTimer = null;
 let initialized = false;
+// Guards the "fast" poll path (setInterval tick AND the manual "fast" trigger
+// both call poll() directly) against overlapping runs — a slow Jellyfin
+// response or a large batch could make one poll still be in flight when the
+// next interval tick (or a manual trigger) fires.
+let isPolling = false;
 let savedClient = null;
 let savedApiKey = null;
 let savedBaseUrl = null;
@@ -353,6 +358,11 @@ async function poll(client, apiKey, baseUrl) {
     logger.debug("[Jellyfin Poller] Bot not ready – skipping poll");
     return;
   }
+  if (isPolling) {
+    logger.debug("[Jellyfin Poller] Previous poll still running – skipping this tick");
+    return;
+  }
+  isPolling = true;
 
   const pollStartedAt = Date.now();
   try {
@@ -441,6 +451,8 @@ async function poll(client, apiKey, baseUrl) {
     pollerStats.lastPollAt = new Date(pollStartedAt).toISOString();
     pollerStats.lastPollDurationMs = Date.now() - pollStartedAt;
     throw err;
+  } finally {
+    isPolling = false;
   }
 }
 

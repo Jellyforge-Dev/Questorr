@@ -5,7 +5,7 @@
 
   **A self-hosted Discord bot that bridges Jellyfin and Seerr — with smart notifications, automatic channel routing, and a fully featured web dashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.4-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.5-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -18,19 +18,10 @@
 
 ---
 
-> **📸 Screenshot notice:** All screenshots in this README were taken from a demo environment and show no real user data. The live version may look slightly different and shows more content depending on your configuration.
+> **📸 Demo notice:** All GIFs in this README are recorded from a test server with no real user data. The live version may look slightly different and shows more content depending on your configuration.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="50%"><code>/search</code> — find and request a title</td>
-      <td align="center" width="50%">A "now available" notification, auto-routed to the right channel</td>
-    </tr>
-    <tr>
-      <td><img src="assets/discord/search-example.png" alt="/search command example" width="100%"/></td>
-      <td><img src="assets/discord/notification-example.png" alt="Library notification example" width="100%"/></td>
-    </tr>
-  </table>
+  <img src="GIFs/Request_Process-BotSetup.gif" alt="Search, request, admin approval and availability notification in action" width="100%"/>
 </div>
 
 ---
@@ -152,7 +143,7 @@ Reverse proxy forward settings: Scheme: `http` · Host / Forward hostname: `ques
 |---|---|
 | `latest` | Latest stable release |
 | `dev` | Development build (may be unstable) |
-| e.g. `2.4.4` | Specific pinned version — see [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) for all tags |
+| e.g. `2.4.5` | Specific pinned version — see [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) for all tags |
 
 ### Manual (Development)
 
@@ -203,7 +194,7 @@ In **Seerr → Settings → Notifications → Webhook**, configure the following
 
 | Seerr event | What Questorr does |
 |---|---|
-| Request pending approval | Sends DM to the requester only |
+| Request pending approval | Posts to the **admin channel** (with Approve/Decline buttons) · sends DM to requester |
 | Request approved / auto-approved | Posts to default channel · sends DM to requester |
 | Media available | Posts to the matching root folder channel · sends DM to requester |
 | Request declined | Sends DM to the requester only |
@@ -216,6 +207,16 @@ In **Seerr → Settings → Notifications → Webhook**, configure the following
 > Because Questorr acts as the **mapped Seerr user** (Step 5), that user needs
 > the matching Seerr permission for each action — **Request** to request,
 > **Auto-Approve** for instant approval, **Report Issues** for `/report`.
+
+> ⚠️ **Make your admin channel private.** The Approve/Decline buttons on a
+> pending-request post have **no separate permission check** of their own —
+> clicking them calls Seerr with Questorr's own API key, which is allowed to
+> approve or decline *any* request. Anyone who can see that channel can
+> effectively act with the same power as your Seerr API key. If you don't
+> use Seerr's auto-approve, restrict the admin channel's Discord permissions
+> so only trusted admins/moderators can view it — otherwise any member who
+> stumbles into that channel can approve their own (or anyone else's)
+> requests.
 
 ### 4. Channel Routing
 
@@ -276,84 +277,90 @@ Got an idea? [Open a feature request](https://github.com/Jellyforge-Dev/Questorr
 
 ---
 
-## 📸 Screenshots
+## 🎬 See it in action
 
-> Screenshots are from a demo environment with no real data. The live version may look slightly different.
+> GIFs are recorded from a test server with no real user data.
 
-### Desktop
+### Using the bot
 
 <details>
-<summary><b>Authentication</b></summary>
+<summary><b>The complete request flow — search, request, admin approval, "now available"</b></summary>
 
-| Register | Login |
-|---|---|
-| ![Register](assets/Screenshots/EN/Desktop/EN_register.png) | ![Login](assets/Screenshots/EN/Desktop/EN_login.png) |
+![Request flow](GIFs/Request_Process-BotSetup.gif)
 
 </details>
 
 <details>
+<summary><b>The /help wizard — quick-action buttons for every feature</b></summary>
+
+![For You](GIFs/ForYou-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Random Movie / Random Series</b></summary>
+
+![Random Movie / Series](GIFs/Random_Movie_Series-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Daily recommendations & the embeddable status widget</b></summary>
+
+![Recommendations](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+</details>
+
+---
+
+### Dashboard setup walkthrough
+
+<details>
 <summary><b>Step 1 – Discord Settings</b></summary>
 
-| Part 1 | Part 2 |
-|---|---|
-| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+![Discord setup](GIFs/Discord-BotSetup.gif)
 
 </details>
 
 <details>
 <summary><b>Step 2 – Seerr Configuration</b></summary>
 
-| Part 1 | Part 2 |
-|---|---|
-| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+![Seerr setup](GIFs/Seerr-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Step 3–4 – Media Databases & Jellyfin</b></summary>
+<summary><b>Step 3 – Media Databases (TMDB / OMDb)</b></summary>
 
-| Media Databases | Jellyfin |
-|---|---|
-| ![Media Databases](assets/Screenshots/EN/Desktop/EN_mediadatabases.png) | ![Jellyfin](assets/Screenshots/EN/Desktop/EN_jellyfin.png) |
+![Media Databases setup](GIFs/Media_Databases-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Step 5–6 – User Mapping & Role Permissions</b></summary>
+<summary><b>Step 4 – Jellyfin Connection</b></summary>
 
-| User Mapping | Role Permissions |
-|---|---|
-| ![User Mapping](assets/Screenshots/EN/Desktop/EN_usermapping.png) | ![Role Permissions](assets/Screenshots/EN/Desktop/EN_rolepermissions.png) |
+![Jellyfin setup](GIFs/Jellyfin-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Step 7 – Miscellaneous & Logs</b></summary>
+<summary><b>Step 5 – User Mapping</b></summary>
 
-| Miscellaneous 1/2 | Miscellaneous 2/2 | Logs |
-|---|---|---|
-| ![Misc 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Misc 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Logs](assets/Screenshots/EN/Desktop/EN_logs.png) |
+![User Mapping setup](GIFs/User_Mapping-BotSetup.gif)
 
 </details>
 
----
+<details>
+<summary><b>Step 6 – Role Permissions & Request Quota</b></summary>
 
-### Mobile
+![Role Permissions setup](GIFs/Role_Permissions-BotSetup.gif)
+
+</details>
 
 <details>
-<summary><b>Mobile Views</b></summary>
+<summary><b>Step 7 – Miscellaneous (Widget, Subscriptions, Daily Pick)</b></summary>
 
-| Register | Login | Discord | Seerr |
-|---|---|---|---|
-| ![Register](assets/Screenshots/EN/Mobile/EN_register.png) | ![Login](assets/Screenshots/EN/Mobile/EN_login.png) | ![Discord](assets/Screenshots/EN/Mobile/EN_discord.png) | ![Seerr](assets/Screenshots/EN/Mobile/EN_seerr.png) |
-
-| Media Databases | Jellyfin | User Mapping | Role Permissions |
-|---|---|---|---|
-| ![Media DB](assets/Screenshots/EN/Mobile/EN_mediadatabases.jpg) | ![Jellyfin](assets/Screenshots/EN/Mobile/EN_jellyfin.png) | ![User Mapping](assets/Screenshots/EN/Mobile/EN_usermapping.png) | ![Roles](assets/Screenshots/EN/Mobile/EN_rolepermissions.png) |
-
-| Miscellaneous | Logs |
-|---|---|
-| ![Misc](assets/Screenshots/EN/Mobile/EN_miscellaneous.png) | ![Logs](assets/Screenshots/EN/Mobile/EN_logs.jpg) |
+![Miscellaneous setup](GIFs/Miscellaneous_Widget-BotSetup.gif)
 
 </details>
 

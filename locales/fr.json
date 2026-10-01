@@ -31,7 +31,8 @@
     "no_account": "Vous n'avez pas de compte ?",
     "have_account": "Vous avez déjà un compte ?",
     "login_failed": "Échec de la connexion. Veuillez réessayer.",
-    "register_failed": "Échec de l'inscription. Veuillez réessayer."
+    "register_failed": "Échec de l'inscription. Veuillez réessayer.",
+    "session_expired": "Votre session a expiré. Veuillez vous reconnecter."
   },
   "navigation": {
     "about": "À propos",

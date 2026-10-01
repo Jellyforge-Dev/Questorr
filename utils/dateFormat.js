@@ -1,3 +1,8 @@
+// Maps every supported BOT_LANGUAGE to its toLocaleDateString() locale, used
+// by "auto" mode. Keep in sync with the language list in web/script.js
+// (getAvailableLanguages) and getTmdbLanguage() in api/tmdb.js.
+const DATE_LOCALES = { en: "en-US", de: "de-DE", fr: "fr-FR", es: "es-ES", pt_br: "pt-BR", sv: "sv-SE" };
+
 /**
  * Centralised date formatter for all bot embeds.
  *
@@ -25,7 +30,7 @@ export function formatDate(input) {
     case "yyyy-mm-dd": return `${yyyy}-${mm}-${dd}`;
     case "mm/dd/yyyy": return `${mm}/${dd}/${yyyy}`;
     default: {
-      const locale = process.env.BOT_LANGUAGE === "de" ? "de-DE" : "en-US";
+      const locale = DATE_LOCALES[process.env.BOT_LANGUAGE] || "en-US";
       return d.toLocaleDateString(locale);
     }
   }
@@ -33,7 +38,7 @@ export function formatDate(input) {
 
 /**
  * Time-of-day formatter. Reads TIME_FORMAT from env.
- *   - "auto" (default) → 24h for de/sv, 12h (AM/PM) for en
+ *   - "auto" (default) → 24h for every supported language except en (12h AM/PM)
  *   - "24h"            → 20:30
  *   - "12h"            → 8:30 PM
  *
@@ -55,7 +60,7 @@ export function formatTime(input) {
 
   const fmt = (process.env.TIME_FORMAT || "auto").toLowerCase();
   const resolved = fmt === "auto"
-    ? (["de", "sv"].includes(process.env.BOT_LANGUAGE) ? "24h" : "12h")
+    ? (process.env.BOT_LANGUAGE === "en" ? "12h" : "24h")
     : fmt;
 
   if (resolved === "24h") {

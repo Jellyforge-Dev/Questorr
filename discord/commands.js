@@ -117,7 +117,7 @@ export function getCommands() {
             .setName("series")
             .setDescription("Report a problem with a series episode")
             .addStringOption((o) => o.setName("title").setDescription("Series title").setRequired(true).setAutocomplete(true))
-            .addIntegerOption((o) => o.setName("season").setDescription("Season number").setRequired(true).setMinValue(1))
+            .addIntegerOption((o) => o.setName("season").setDescription("Season number (0 = Specials)").setRequired(true).setMinValue(0))
             .addIntegerOption((o) => o.setName("episode").setDescription("Episode number").setRequired(true).setMinValue(1))
             .addStringOption((o) =>
               o.setName("type").setDescription("Type of problem").setRequired(true).addChoices(

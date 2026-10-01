@@ -254,7 +254,7 @@ export async function handleSearchOrRequest(
           }));
 
           const tagMenu = new StringSelectMenuBuilder()
-            .setCustomId(`select_tags|${tmdbId}|`)
+            .setCustomId(`select_tags|${tmdbId}|${mediaType}|`)
             .setPlaceholder(t("select_tags_placeholder"))
             .addOptions(tagOptions)
             .setMinValues(0)

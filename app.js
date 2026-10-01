@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { handleSeerrWebhook } from "./seerrWebhook.js";
+import { normalizeSeerrUrl } from "./utils/seerrUrl.js";
 import { configTemplate } from "./lib/config.js";
 import { sendDailyRandomPick, sendDailyRecommendation } from "./bot/dailyPick.js";
 import { runCleanupAdvisor } from "./bot/cleanupAdvisor.js";
@@ -866,15 +867,14 @@ function configureWebServer() {
       const oldShowRandom = process.env.SHOW_RANDOM_COMMAND;
       const oldBotLanguage = process.env.BOT_LANGUAGE;
 
-      // Normalize SEERR_URL to remove /api/v1 suffix if present
+      // Normalize SEERR_URL the same way normalizeSeerrUrl() does for every
+      // actual API call — strips a trailing /api/v1 suffix AND a trailing
+      // slash, so what's saved always matches what's actually used.
       if (
         configData.SEERR_URL &&
         typeof configData.SEERR_URL === "string"
       ) {
-        configData.SEERR_URL = configData.SEERR_URL.replace(
-          /\/api\/v1\/?$/,
-          ""
-        );
+        configData.SEERR_URL = normalizeSeerrUrl(configData.SEERR_URL);
       }
 
       try {

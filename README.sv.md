@@ -5,7 +5,7 @@
 
   **En självhostad Discord-bot som länkar samman Jellyfin och Seerr — med smarta notiser, automatisk kanalroutning och ett fullständigt webbdashboard.**
 
-  [![Version](https://img.shields.io/badge/version-2.4.4-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.5-brightgreen)](https://github.com/Jellyforge-Dev/Questorr/releases)
   [![Docker](https://img.shields.io/badge/Docker-jellyforge%2Fquestorr-blue?logo=docker)](https://hub.docker.com/r/jellyforge/questorr)
   [![License](https://img.shields.io/badge/License-AGPL--3.0-blue)](LICENSE)
   [![Discord](https://img.shields.io/badge/Discord-Gå%20med-5865F2?logo=discord&logoColor=white)](https://discord.gg/rXANrXJqVf)
@@ -18,19 +18,10 @@
 
 ---
 
-> **📸 Skärmdumps-notis:** Alla skärmdumpar i denna README togs i en demomiljö och visar ingen riktig användardata. Livemiljön kan se lite annorlunda ut och visa mer innehåll beroende på din konfiguration.
+> **📸 Demo-notis:** Alla GIF:ar i denna README är inspelade från en testserver och visar ingen riktig användardata. Livemiljön kan se lite annorlunda ut och visa mer innehåll beroende på din konfiguration.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="50%"><code>/search</code> — hitta och begär en titel</td>
-      <td align="center" width="50%">En "nu tillgänglig"-notis, automatiskt routad till rätt kanal</td>
-    </tr>
-    <tr>
-      <td><img src="assets/discord/search-example.png" alt="Exempel på /search-kommandot" width="100%"/></td>
-      <td><img src="assets/discord/notification-example.png" alt="Exempel på biblioteksnotis" width="100%"/></td>
-    </tr>
-  </table>
+  <img src="GIFs/Request_Process-BotSetup.gif" alt="Sökning, förfrågan, admin-godkännande och tillgänglighetsnotis i praktiken" width="100%"/>
 </div>
 
 ---
@@ -152,7 +143,7 @@ Inställningar för reverse proxy-vidarebefordran: Schema: `http` · Host / vida
 |---|---|
 | `latest` | Senaste stabila version |
 | `dev` | Utvecklingsbygge (kan vara instabilt) |
-| t.ex. `2.4.4` | Specifik fastsatt version — se [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) för alla taggar |
+| t.ex. `2.4.5` | Specifik fastsatt version — se [Releases](https://github.com/Jellyforge-Dev/Questorr/releases) för alla taggar |
 
 ### Manuellt (utveckling)
 
@@ -203,7 +194,7 @@ I **Seerr → Settings → Notifications → Webhook**, ange följande:
 
 | Seerr-händelse | Vad Questorr gör |
 |---|---|
-| Förfrågan väntar på godkännande | Skickar DM endast till den som frågade |
+| Förfrågan väntar på godkännande | Postar i **adminkanalen** (med Godkänn-/Neka-knappar) · skickar DM till den som frågade |
 | Förfrågan godkänd / automatiskt godkänd | Postar i standardkanalen · skickar DM till den som frågade |
 | Media tillgänglig | Postar i matchande root-folder-kanal · skickar DM till den som frågade |
 | Förfrågan nekad | Skickar DM endast till den som frågade |
@@ -216,6 +207,16 @@ I **Seerr → Settings → Notifications → Webhook**, ange följande:
 > Eftersom Questorr agerar som den **kopplade Seerr-användaren** (steg 5) behöver
 > den användaren rätt Seerr-behörighet för varje åtgärd — **Request** för att
 > begära, **Auto-Approve** för direkt godkännande, **Report Issues** för `/report`.
+
+> ⚠️ **Gör din adminkanal privat.** Godkänn-/Neka-knapparna på en väntande
+> förfrågan har **ingen egen behörighetskontroll** — att klicka på dem
+> anropar Seerr med Questorrs egen API-nyckel, som har rätt att godkänna
+> eller neka *vilken* förfrågan som helst. Alla som kan se den kanalen kan
+> i praktiken agera med samma makt som din Seerr-API-nyckel. Om du inte
+> använder Seerrs auto-godkännande, begränsa adminkanalens Discord-
+> behörigheter så att bara betrodda admins/moderatorer kan se den — annars
+> kan vilken medlem som helst som hamnar i den kanalen godkänna sina egna
+> (eller andras) förfrågningar.
 
 ### 4. Kanalroutning
 
@@ -276,84 +277,92 @@ Har du en idé? [Skapa en funktionsförfrågan](https://github.com/Jellyforge-De
 
 ---
 
-## 📸 Skärmdumpar
+## 🎬 Se det i praktiken
 
-> Skärmdumpar är från en demomiljö utan riktig data. Livemiljön kan se lite annorlunda ut.
+> GIF:arna är inspelade från en testserver utan riktig data.
 
-### Desktop
+### Använda boten
 
 <details>
-<summary><b>Autentisering</b></summary>
+<summary><b>Hela förfrågningsflödet — sök, begär, admin-godkännande, "nu tillgänglig"</b></summary>
 
-| Registrera | Logga in |
-|---|---|
-| ![Registrera](assets/Screenshots/EN/Desktop/EN_register.png) | ![Logga in](assets/Screenshots/EN/Desktop/EN_login.png) |
+![Förfrågningsflöde](GIFs/Request_Process-BotSetup.gif)
 
 </details>
 
 <details>
+<summary><b>/help-guiden — snabbknappar för varje funktion</b></summary>
+
+![For You](GIFs/ForYou-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Slumpmässig film / serie</b></summary>
+
+![Slumpmässig film/serie](GIFs/Random_Movie_Series-BotSetup.gif)
+
+</details>
+
+<details>
+<summary><b>Dagliga rekommendationer & den inbäddningsbara statuswidgeten</b></summary>
+
+![Rekommendationer](GIFs/Miscellaneous_Recommendation-BotSetup.gif)
+
+</details>
+
+---
+
+### Dashboard-konfiguration
+
+<details>
 <summary><b>Steg 1 – Discord-inställningar</b></summary>
 
-| Del 1 | Del 2 |
-|---|---|
-| ![Discord 1/2](assets/Screenshots/EN/Desktop/EN_discord_1-2.png) | ![Discord 2/2](assets/Screenshots/EN/Desktop/EN_discord_2-2.png) |
+![Discord-konfiguration](GIFs/Discord-BotSetup.gif)
 
 </details>
 
 <details>
 <summary><b>Steg 2 – Seerr-konfiguration</b></summary>
 
-| Del 1 | Del 2 |
-|---|---|
-| ![Seerr 1/2](assets/Screenshots/EN/Desktop/EN_seerr_1-2.png) | ![Seerr 2/2](assets/Screenshots/EN/Desktop/EN_seerr_2-2.png) |
+![Seerr-konfiguration](GIFs/Seerr-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Steg 3–4 – Mediedatabaser & Jellyfin</b></summary>
+<summary><b>Steg 3 – Mediedatabaser (TMDB / OMDb)</b></summary>
 
-| Mediedatabaser | Jellyfin |
-|---|---|
-| ![Mediedatabaser](assets/Screenshots/EN/Desktop/EN_mediadatabases.png) | ![Jellyfin](assets/Screenshots/EN/Desktop/EN_jellyfin.png) |
+![Mediedatabaser-konfiguration](GIFs/Media_Databases-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Steg 5–6 – Användarkoppling & Rollbehörigheter</b></summary>
+<summary><b>Steg 4 – Jellyfin-anslutning</b></summary>
 
-| Användarkoppling | Rollbehörigheter |
-|---|---|
-| ![Användarkoppling](assets/Screenshots/EN/Desktop/EN_usermapping.png) | ![Rollbehörigheter](assets/Screenshots/EN/Desktop/EN_rolepermissions.png) |
+![Jellyfin-konfiguration](GIFs/Jellyfin-BotSetup.gif)
 
 </details>
 
 <details>
-<summary><b>Steg 7 – Övrigt & loggar</b></summary>
+<summary><b>Steg 5 – Användarkoppling</b></summary>
 
-| Övrigt 1/2 | Övrigt 2/2 | Loggar |
-|---|---|---|
-| ![Övrigt 1/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_1-2.png) | ![Övrigt 2/2](assets/Screenshots/EN/Desktop/EN_miscellaneous_2-2.png) | ![Loggar](assets/Screenshots/EN/Desktop/EN_logs.png) |
+![Användarkoppling-konfiguration](GIFs/User_Mapping-BotSetup.gif)
 
 </details>
 
----
+<details>
+<summary><b>Steg 6 – Rollbehörigheter & förfrågningskvot</b></summary>
 
-### Mobil
+![Rollbehörigheter-konfiguration](GIFs/Role_Permissions-BotSetup.gif)
+
+</details>
 
 <details>
-<summary><b>Mobilvyer</b></summary>
+<summary><b>Steg 7 – Övrigt (Widget, prenumerationer, daglig utvald)</b></summary>
 
-| Registrera | Logga in | Discord | Seerr |
-|---|---|---|---|
-| ![Registrera](assets/Screenshots/EN/Mobile/EN_register.png) | ![Logga in](assets/Screenshots/EN/Mobile/EN_login.png) | ![Discord](assets/Screenshots/EN/Mobile/EN_discord.png) | ![Seerr](assets/Screenshots/EN/Mobile/EN_seerr.png) |
+![Övrigt-konfiguration](GIFs/Miscellaneous_Widget-BotSetup.gif)
 
-| Mediedatabaser | Jellyfin | Användarkoppling | Rollbehörigheter |
-|---|---|---|---|
-| ![Mediedatabaser](assets/Screenshots/EN/Mobile/EN_mediadatabases.jpg) | ![Jellyfin](assets/Screenshots/EN/Mobile/EN_jellyfin.png) | ![Användarkoppling](assets/Screenshots/EN/Mobile/EN_usermapping.png) | ![Roller](assets/Screenshots/EN/Mobile/EN_rolepermissions.png) |
-
-| Övrigt | Loggar |
-|---|---|
-| ![Övrigt](assets/Screenshots/EN/Mobile/EN_miscellaneous.png) | ![Loggar](assets/Screenshots/EN/Mobile/EN_logs.jpg) |
+</details>
 
 </details>
 
